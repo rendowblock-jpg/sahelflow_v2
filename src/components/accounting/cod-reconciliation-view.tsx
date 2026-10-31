@@ -58,7 +58,7 @@ export function CodReconciliationView({
       {state !== "error" && flaggedOrders.length > 0 ? (
         <p
           role="alert"
-          className="rounded-control border border-destructive/30 bg-destructive-soft p-3 text-sm text-destructive"
+          className="rounded-control border border-destructive/30 bg-destructive-soft p-3 text-sm text-destructive-ink"
         >
           {t("codReconciliation.flaggedNotice")}:
           {flaggedOrders.slice(0, 5).map((entry, index) => (

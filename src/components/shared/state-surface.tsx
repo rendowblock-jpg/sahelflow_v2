@@ -30,15 +30,15 @@ const TONE_CLASSES: Record<
     frame: "border-primary/15 bg-primary-subtle",
   },
   success: {
-    icon: "border-success/20 bg-success-soft text-success",
+    icon: "border-success/20 bg-success-soft text-success-ink",
     frame: "border-success/15 bg-success-subtle",
   },
   warning: {
-    icon: "border-warning/25 bg-warning-soft text-warning",
+    icon: "border-warning/25 bg-warning-soft text-warning-ink",
     frame: "border-warning/20 bg-warning-subtle",
   },
   danger: {
-    icon: "border-destructive/20 bg-destructive-soft text-destructive",
+    icon: "border-destructive/20 bg-destructive-soft text-destructive-ink",
     frame: "border-destructive/15 bg-destructive-subtle",
   },
 };

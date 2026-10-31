@@ -237,7 +237,7 @@ function AgentRow({
           <span
             className={cn(
               "shrink-0 rounded-full px-2 py-0.5 text-caption font-medium",
-              active ? "bg-success-subtle text-success" : "bg-muted text-muted-foreground",
+              active ? "bg-success-subtle text-success-ink" : "bg-muted text-muted-foreground",
             )}
           >
             {active ? copy("statusActive") : copy("statusRevoked")}

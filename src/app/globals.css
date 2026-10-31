@@ -60,6 +60,10 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-destructive-ink: var(--destructive-ink);
+  --color-success-ink: var(--success-ink);
+  --color-warning-ink: var(--warning-ink);
+  --color-info-ink: var(--info-ink);
   --color-surface-0: var(--surface-0);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
@@ -200,6 +204,17 @@
      never reduces contrast against white. */
   --primary-hover: color-mix(in oklch, var(--primary) 88%, black);
 
+  /* Ink on a tint (31 Oct 2026). A feedback colour is AA as text on the page and on a card, but on its own tint
+     (bg-<kind>-subtle|soft|strong) it falls under 4.5:1 on every surface darker than a card: carnet red on the 8% tint
+     measures 4.39 on the page, 4.04 on the sunk step, 3.55 on the desk; the four presets 3.9 to 4.4, for all four
+     colours. text-<kind>-ink is the colour mixed 20% toward black (every look, tint and surface >= 4.55). The colour
+     tokens themselves stay as they are (white-on-fill and the selected-row calibration above). Dark mode keeps the
+     colour itself. Held by components/theme/__tests__/contrast-contract.test.ts, which also scans src for the bare pair. */
+  --destructive-ink: color-mix(in oklch, var(--destructive) 80%, black);
+  --success-ink: color-mix(in oklch, var(--success) 80%, black);
+  --warning-ink: color-mix(in oklch, var(--warning) 80%, black);
+  --info-ink: color-mix(in oklch, var(--info) 80%, black);
+
   /* 27 Oct 2026: destructive 0.577 -> 0.553, success 0.52 -> 0.51, warning 0.55 -> 0.543 (hue and chroma unchanged).
      A 4% primary tint, the selected table row, darkens its surface enough to take these three texts under 4.5:1
      (destructive 4.26, success 4.42, warning 4.45, worst preset); at these values each stays at 4.55:1 or better
@@ -262,6 +277,10 @@
   --warning-foreground: oklch(0.18 0 0);
   --info: oklch(0.68 0.19 240);
   --info-foreground: oklch(0.16 0.03 240);  /* light accent + dark text, like success/warning */
+  --destructive-ink: var(--destructive);
+  --success-ink: var(--success);
+  --warning-ink: var(--warning);
+  --info-ink: var(--info);
 
   /* ── Named shadow system (dark mode) ── */
   --shadow-btn-rested:
