@@ -7,7 +7,7 @@ vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
   return { ...actual, isTrustedActorContext: vi.fn(() => true) };
 });
 
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { cleanDb } from "@/lib/data/__tests__/helpers";
 import { db } from "@/lib/db";
 import { SEND_GUARD_HOLD_ERROR_CODE } from "@/lib/whatsapp/send-guard";
@@ -29,6 +29,9 @@ let phone: DeviceKeys; let phonePub = ""; let seq = 0;
 beforeAll(async () => { const made = await generateDeviceKeys(); if (!made.ok) throw new Error("setup: phone keys"); phone = made.keys; phonePub = made.publicKeys.encryptionPublicKey; }, 120_000);
 // cleanDb empties WhatsAppOutboundEffect, OutboxIntent, BusinessCommand (raw SQL) and Message, Conversation.
 beforeEach(async () => { await cleanDb(raw); });
+// The rows this file seeds (conversations, messages, held intents, commands) must not outlive it: the API helpers' cleanDb in other files
+// (src/app/api/__tests__/helpers.ts) does not clear WhatsAppOutboundEffect / OutboxIntent / BusinessCommand and fails on the left-over foreign keys.
+afterAll(async () => { await cleanDb(raw); });
 
 async function chat(id: string, name: string, o: { unread?: number; last: number; held?: string }) {
   await db.conversation.create({ data: { id, channel: "whatsapp", contactName: name, contactPhone: `0661${id.slice(-4)}`, sourceId: `${id}@s.whatsapp.net`, unreadCount: o.unread ?? 0, lastMessageAt: at(o.last) } });
