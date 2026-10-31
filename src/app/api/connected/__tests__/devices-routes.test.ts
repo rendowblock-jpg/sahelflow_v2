@@ -82,6 +82,7 @@ const callRevoke = (id: string) => withId(revokeRoute, id);
 
 const relayRow = (id: string, extra: Record<string, unknown> = {}) => ({
   device_id: id, member_id: "member_owner_1", signing_public_key: base64Encode(new Uint8Array(32).fill(id === A ? 3 : 4)),
+  encryption_public_key: JSON.stringify({ kty: "RSA", n: "A".repeat(512), e: "AQAB" }),
   revocation_epoch: 2, last_seen_at: null, ...extra,
 });
 

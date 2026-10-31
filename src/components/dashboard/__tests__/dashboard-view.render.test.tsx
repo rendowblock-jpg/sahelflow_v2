@@ -141,3 +141,21 @@ describe("dashboard route screens", () => {
     expect(reset).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("money names: the headline card is Orders value, never plain Revenue", () => {
+  const NAME = { en: "Orders value today", fr: "Valeur des commandes aujourd'hui", ar: "قيمة طلبات اليوم" } as const;
+  const OLD = { en: /Revenue today/, fr: /Revenu du jour/, ar: /إيرادات اليوم/ } as const;
+  for (const locale of ["en", "fr", "ar"] as const) {
+    it(`${locale}: the card carries the orders-value name and not the old revenue word`, () => {
+      const text = mount(locale).container.textContent ?? "";
+      expect(text).toContain(NAME[locale]);
+      expect(text).not.toMatch(OLD[locale]);
+    });
+  }
+  it("en: the tooltip names both figures and does not call the booked one Revenue", () => {
+    const tip = makeT("en")("dashboard.revenueDefinition");
+    expect(tip).toContain("Orders value");
+    expect(tip).toContain("Delivered today");
+    expect(tip).not.toMatch(/Revenue today/);
+  });
+});

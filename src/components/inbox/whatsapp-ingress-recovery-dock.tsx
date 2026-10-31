@@ -62,10 +62,16 @@ function contactFromJid(sourceId: string): string {
 export function WhatsAppIngressRecoveryDock({
   canRetry = false,
   embedded = false,
+  onReconnect,
+  linkConnected,
 }: {
   canRetry?: boolean;
+  /** What the Reconnect button of a "stalled" notice does (the seller presses it). */
+  onReconnect?: () => void;
   /** Part of the inbox link surface: takes its own line in the header row. */
   embedded?: boolean;
+  /** The link's own verdict; a stalled notice is only shown while it is true (or unknown). */
+  linkConnected?: boolean;
 }) {
   const { locale } = useI18n();
   const copy = useCallback(
@@ -84,7 +90,7 @@ export function WhatsAppIngressRecoveryDock({
   const [open, setOpen] = useState(false);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [retryingId, setRetryingId] = useState<string | null>(null);
-  const healthNotices = useInboxIngressHealth();
+  const healthNotices = useInboxIngressHealth(linkConnected);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -166,7 +172,12 @@ export function WhatsAppIngressRecoveryDock({
 
   if (!authorized) return null;
   const noticeBlock = (
-    <WhatsAppIngressHealthNotices notices={healthNotices} locale={locale} embedded={embedded} />
+    <WhatsAppIngressHealthNotices
+      notices={healthNotices}
+      locale={locale}
+      embedded={embedded}
+      onReconnect={onReconnect}
+    />
   );
   if (loading && events.length === 0) return noticeBlock;
   if (recoveryEvents.length === 0) return noticeBlock;

@@ -14,7 +14,7 @@ export default {
     integrations: ["Intégrations — SahelFlow", "WhatsApp, Yalidine, ZR Express, EcoTrack, Maystro, Google Sheets, Shopify, YouCan, WooCommerce, Meta et Gemini : les connexions de SahelFlow, chacune marquée Disponible, En test ou Prévu."],
     pricing: ["Tarifs — SahelFlow", "Gratuit pendant 7 jours, puis un seul paiement : une licence permanente avec cinq boutiques, dix membres d'équipe et cinq ans de mises à jour."],
     why: ["Pourquoi SahelFlow — le comparatif", "Un seul paiement au lieu d'un abonnement, aucun plafond de commandes, vos données sur votre PC, et une boîte WhatsApp, un moteur de risque et le rapprochement COD intégrés. Le comparatif."],
-    security: ["Sécurité et données — SahelFlow", "Les données de votre boutique vivent sur votre PC, chiffrées. Exactement ce qui sort de votre ordinateur, et quand."],
+    security: ["Sécurité et données — SahelFlow", "Les données de votre boutique vivent sur votre PC, avec les champs sensibles chiffrés sur le disque. Exactement ce qui sort de votre ordinateur, et quand."],
     download: ["Télécharger pour Windows — SahelFlow", "Un installateur Windows qui se met à jour seul ; chaque mise à jour est vérifiée avant d'être installée. Lancez votre essai gratuit."],
     help: ["Centre d'aide — SahelFlow", "Réponses sur l'installation, WhatsApp, les commandes, les livreurs, la licence, les données et l'équipe."],
     contact: ["Contact — SahelFlow", "Parlez à l'équipe SahelFlow sur WhatsApp ou par e-mail, en arabe, en français ou en anglais."],
@@ -23,7 +23,7 @@ export default {
   },
 
   common: {
-    whatsappNote: "Le lien WhatsApp fonctionne comme WhatsApp Web : c'est une connexion non officielle. WhatsApp peut restreindre les numéros qui envoient des messages automatiques ou en masse ; utilisez donc un numéro professionnel dédié. SahelFlow n'envoie une réponse qu'après votre validation.",
+    whatsappNote: "Le lien WhatsApp fonctionne comme WhatsApp Web : c'est une connexion non officielle. WhatsApp peut restreindre les numéros qui envoient des messages automatiques ou en masse ; utilisez donc un numéro professionnel dédié. Les réponses rédigées par l'IA ne partent qu'après votre validation. Les automatisations que vous activez envoient leurs propres messages.",
     skip: "Aller au contenu",
     learnMore: "En savoir plus",
     explore: "Découvrir",
@@ -84,7 +84,7 @@ export default {
       lead: "Chaque conversation arrive dans une boîte que toute l'équipe partage. Sélectionnez un message ou cinq, et l'IA prépare la commande — nom, téléphone, wilaya, produits — prête à être vérifiée.",
       points: ["Commande préparée à partir de plusieurs messages", "Photos, vidéos, fichiers et vocaux", "Conversations réparties dans l'équipe"],
       sections: [
-        ["Lit la darja, le français et l'arabe tels qu'ils s'écrivent", "Le client envoie son nom dans un message, l'adresse dans le suivant et la taille dans un vocal. L'extraction est pensée pour la façon dont les clients algériens écrivent vraiment — y compris un mélange des trois langues.", ["Un message ou toute une conversation", "Chaque champ visible avant l'enregistrement", "Votre propre clé Gemini"]],
+        ["Conçu pour lire la darja, le français et l'arabe", "Le client envoie son nom dans un message, l'adresse dans le suivant et la taille dans un vocal. L'extraction est pensée pour la façon dont les clients algériens écrivent, dans n'importe quel mélange des trois. Nous n'avons pas encore mesuré sa précision sur de vraies commandes : vérifiez chaque brouillon.", ["Un message ou toute une conversation", "Chaque champ visible avant l'enregistrement", "Votre propre clé Gemini"]],
         ["Un numéro, toute l'équipe", "Reliez votre numéro professionnel une fois en scannant un QR code. Les conversations sont attribuées, les non-lus restent justes, et chaque réponse porte le nom de son auteur.", ["Attribuer et réattribuer", "Recherche instantanée dans tous les chats", "Envoi de photos, vidéos, documents et vocaux"]],
         ["Des messages qui ne disparaissent jamais", "Quand la connexion tombe, les messages sortants attendent dans une file et partent quand WhatsApp revient.", ["Statut d'envoi clair sur chaque message", "Nouvel essai sans doublon", "Fonctionne avec votre téléphone"]],
       ],
@@ -115,10 +115,10 @@ export default {
       name: "Livraison",
       short: "Expédiez et suivez vos colis, livreur par livreur",
       title: "Expédiez avec les livreurs algériens sans quitter la commande.",
-      lead: "Créez le colis et suivez-le depuis SahelFlow. Les connexions Yalidine, ZR Express, EcoTrack et Maystro sont en test. Les tarifs des 69 wilayas, à domicile ou au bureau.",
-      points: ["Le statut se met à jour seul", "69 wilayas · domicile et bureau", "Bordereaux exportés en un clic"],
+      lead: "Créez le colis et suivez-le depuis SahelFlow. Les connexions Yalidine, ZR Express, EcoTrack et Maystro sont en test. Les tarifs par wilaya (les 11 nouvelles wilayas prennent pour l'instant le tarif de leur ancienne wilaya), à domicile ou au bureau.",
+      points: ["Le statut se met à jour seul", "Tarifs par wilaya · domicile et bureau", "Bordereaux exportés en un clic"],
       sections: [
-        ["Le bon prix avant de le promettre", "Tarifs domicile et bureau pour chaque wilaya, par livreur : le total annoncé au client est le total facturé.", ["Tarifs par wilaya et commune", "Domicile ou stop-desk", "Frais de livraison enregistrés sur la commande"]],
+        ["Le bon prix avant de le promettre", "Tarifs domicile et bureau par wilaya, par livreur : le total annoncé au client est le total facturé.", ["Tarifs par wilaya et commune", "Domicile ou stop-desk", "Frais de livraison enregistrés sur la commande"]],
         ["Un suivi qu'on ne court pas après", "Les statuts se mettent à jour seuls et la commande suit. Les colis bloqués trop longtemps ressortent avant de devenir des retours.", ["Statuts automatiques", "Alertes de colis bloqués", "Chronologie complète par commande"]],
         ["Des retours bien gérés", "Un colis retourné remet son stock et enregistre son coût : vous savez exactement ce que chaque retour vous a pris.", ["Motifs de retour enregistrés", "Remise en stock au retour", "Coût des retours en dinars"]],
       ],
@@ -370,11 +370,11 @@ export default {
       ],
     },
     map: {
-      eyebrow: "69 wilayas",
+      eyebrow: "Livraison par wilaya",
       title: "Chaque wilaya. Chaque livreur. Une seule carte.",
-      text: "Un tarif pour chaque wilaya, à domicile ou au bureau, avec quatre connexions livreurs en test — et des analyses de retours qui montrent où vous gagnez et où vous perdez.",
+      text: "Un tarif par wilaya (les 11 nouvelles wilayas prennent pour l'instant le tarif de leur ancienne wilaya), à domicile ou au bureau, avec quatre connexions livreurs en test — et des analyses de retours qui montrent où vous gagnez et où vous perdez.",
       legend: "Illustration : des colis quittent votre entrepôt",
-      stats: [[69, "wilayas couvertes"], [4, "livreurs en test"], [3, "langues complètes"], [7, "jours d'essai gratuit"]],
+      stats: [[69, "wilayas dans la liste d'adresses"], [4, "livreurs en test"], [3, "langues complètes"], [7, "jours d'essai gratuit"]],
     },
     calculator: {
       eyebrow: "Faites le calcul",
@@ -405,10 +405,10 @@ export default {
     why: {
       eyebrow: "Pourquoi ils changent",
       title: "Possédez vos outils. Arrêtez de les louer au mois.",
-      points: [["Un paiement", "pas une facture mensuelle"], ["Zéro plafond", "aucun frais par commande"], ["Sur votre PC", "chiffré, prêt hors ligne"], ["5 ans", "de mises à jour inclus"]],
+      points: [["Un paiement", "pas une facture mensuelle"], ["Zéro plafond", "aucun frais par commande"], ["Sur votre PC", "données sensibles chiffrées, prêt hors ligne"], ["5 ans", "de mises à jour inclus"]],
       cta: "Voir le comparatif complet",
     },
-    faqTitle: "Les questions qu'on nous pose d'abord",
+    faqTitle: "Les questions à poser d'abord",
     final: {
       title: "Installez-le aujourd'hui. Essayez-le sept jours sur vos vraies commandes.",
       text: "Tous les modules débloqués, sans carte. Et si vous voulez un coup de main au début, on est sur WhatsApp.",
@@ -421,9 +421,9 @@ export default {
     lead: "SahelFlow est conçu pour être possédé : vous payez une fois, vos commandes ne sont pas comptées, et la base de données de votre boutique reste sur votre propre PC.",
     reasons: [
       ["Payez une fois, gardez-le", "Un seul paiement pour une licence permanente avec cinq ans de mises à jour. Pas de facture mensuelle, pas de pression au renouvellement."],
-      ["Aucun plafond de commandes", "50 commandes par mois ou 5 000 — le prix est le même. Jamais de frais par commande."],
-      ["Vos données, votre PC", "Votre base de données est un fichier sur votre propre ordinateur. Aucun serveur SahelFlow ne détient vos clients."],
-      ["Continue hors ligne", "Quand la connexion tombe, votre équipe continue de confirmer, préparer et compter l'argent."],
+      ["Aucun plafond de commandes", "50 commandes par mois ou 5 000 — le prix est le même. Aucun frais par commande avec cette licence."],
+      ["Vos données, votre PC", "Votre base de données est un fichier sur votre propre ordinateur. Nous n'en gardons aucune copie."],
+      ["Votre PC fonctionne hors ligne", "Le PC continue de fonctionner hors ligne. WhatsApp, les livreurs et l'activation ont besoin d'internet."],
     ],
     tableTitle: "SahelFlow face à un abonnement mensuel en ligne",
     tableLead: "Deux façons de tenir les commandes d'une boutique, côte à côte : une base de données sur votre propre PC, payée une fois, ou un abonnement mensuel en ligne. Aucun concurrent n'est nommé ni mesuré ici.",
@@ -434,7 +434,7 @@ export default {
       ["Comment vous payez", ["Un seul paiement", "yes"], ["Chaque mois", "no"]],
       ["Limite de commandes", ["Aucune, sans frais par commande", "yes"], ["Selon la formule", "partial"]],
       ["Où vivent vos données", ["Sur votre PC", "yes"], ["Sur les serveurs du fournisseur", "partial"]],
-      ["Fonctionne quand Internet coupe", ["Oui", "yes"], ["Non", "no"]],
+      ["Fonctionne quand Internet coupe", ["Oui, sur votre PC", "yes"], ["Non", "no"]],
     ],
     honestTitle: "Quand une plateforme en ligne peut mieux vous convenir",
     honest: [
@@ -454,10 +454,10 @@ export default {
     modulesTitle: "Neuf modules",
     principlesTitle: "Construit sur quelques promesses que nous tenons",
     principles: [
-      ["Local d'abord", "Votre base vit sur votre PC, chiffrée. Vendre n'attend jamais un serveur."],
+      ["Local d'abord", "Votre base vit sur votre PC ; noms, téléphones, adresses et clés des clients sont chiffrés. Vendre n'attend jamais un serveur."],
       ["Des chiffres honnêtes", "L'historique du stock et de l'argent ne s'écrase jamais. Une correction est une nouvelle écriture."],
       ["Vous gardez la main", "L'IA propose, vous validez. Les actions sensibles demandent toujours d'abord."],
-      ["Fait pour l'Algérie", "Dinars, 69 wilayas, livreurs locaux, BaridiMob et CCP, et la darja dans les messages."],
+      ["Fait pour l'Algérie", "Dinars, adresses des 69 wilayas, livreurs locaux, BaridiMob et CCP, et la darja dans les messages."],
     ],
   },
 
@@ -488,7 +488,7 @@ export default {
   pricingPage: {
     eyebrow: "Tarifs",
     title: "Des tarifs simples. Payez une fois, c'est à vous.",
-    lead: "Essayez tout gratuitement pendant 7 jours. Ensuite, achetez une licence permanente pour votre PC — un seul paiement, avec cinq ans de mises à jour et de support.",
+    lead: "Essayez tout gratuitement pendant 7 jours. Ensuite, achetez une licence permanente pour votre PC — un seul paiement, avec cinq ans de mises à jour et de support, comptés à partir de la sortie stable officielle.",
     trial: {
       name: "Essai gratuit",
       price: "0 DA",
@@ -507,7 +507,7 @@ export default {
       points: (p) => [
         `${p.includedShops} boutiques incluses`,
         `Propriétaire + ${p.teamMembers} membres d'équipe`,
-        `${p.updateYears} ans de mises à jour et de support`,
+        `${p.updateYears} ans de mises à jour et de support, à partir de la sortie stable officielle`,
         "Tous les modules et toutes les intégrations",
         "Paiement BaridiMob ou CCP",
       ],
@@ -534,7 +534,7 @@ export default {
       ["Boutiques", `${p.includedShops} incluses · jusqu'à ${p.maximumShops}`],
       ["Équipe", `Propriétaire + ${p.teamMembers} membres`],
       ["Appareils", `${p.devicesPerMember} appareils personnels par membre`],
-      ["Mises à jour et support", `${p.updateYears} ans`],
+      ["Mises à jour et support", `${p.updateYears} ans à partir de la sortie stable`],
       ["Modules", "Les neuf"],
       ["Intégrations", "Toutes"],
       ["Boutique en ligne", "Une par boutique"],
@@ -543,7 +543,7 @@ export default {
     compareTitle: "Payer une fois vs payer toujours",
     compareLead: (years) => `Ce que coûtent les mêmes ${years} ans.`,
     compareRows: ["Paiements mensuels", "Ce que vous possédez à la fin", "Quand Internet coupe", "Où vivent vos données"],
-    compareSahel: ["Aucun après l'achat", "Une licence permanente", "Ça continue", "Sur votre PC"],
+    compareSahel: ["Aucun après l'achat", "Une licence permanente", "Votre PC continue", "Sur votre PC"],
     compareSaas: ["Chaque mois, chaque année", "Rien", "Ça s'arrête", "Sur leurs serveurs"],
     compareSahelName: "SahelFlow",
     compareSaasName: "Un abonnement en ligne mensuel",
@@ -585,7 +585,7 @@ export default {
       ["Votre boutique", "uniquement ce que vous publiez"],
     ],
     faq: [
-      ["SahelFlow peut-il voir mes commandes ?", "Non. Votre base est sur votre PC ; nous n'en avons ni copie ni accès."],
+      ["SahelFlow peut-il voir mes commandes ?", "Votre base reste sur votre PC ; nous n'en avons ni copie ni accès. Les commandes de votre boutique en ligne transitent chiffrées par nos serveurs Cloudflare."],
       ["Et si mon PC tombe en panne ?", "Écrivez-nous et nous transférons votre licence. Faites d'abord une sauvegarde chiffrée et gardez-en une copie ; la restauration sur un nouveau PC est encore en test."],
       ["Qui peut changer les prix ou annuler des commandes ?", "Seules les personnes dont le rôle le permet — et chaque changement enregistre son auteur."],
     ],
@@ -617,12 +617,12 @@ export default {
       start: ["Bien démarrer", "Installation, essai et premiers pas", [
         ["Quelle version de Windows faut-il ?", "Windows 10 ou Windows 11, 64 bits. 8 Go de mémoire sont recommandés."],
         ["Comment marche l'essai gratuit ?", "Téléchargez l'app et activez l'essai : tous les modules pendant 7 jours. Ensuite, achetez une licence et gardez toutes vos données."],
-        ["Faut-il Internet en permanence ?", "Non. SahelFlow tourne sur votre PC. Internet sert seulement à WhatsApp, aux livreurs, à la boutique et à l'activation."],
+        ["Faut-il Internet en permanence ?", "Non. SahelFlow tourne sur votre PC. Internet sert à WhatsApp, aux livreurs, à la boutique et à l'activation."],
         ["Comment démarrer vite ?", "Reliez WhatsApp, ajoutez votre livreur et vos produits — ou importez-les depuis Excel."],
       ]],
       whatsapp: ["WhatsApp et boîte", "Liaison, envoi et IA", [
         ["Comment relier WhatsApp ?", "Dans la boîte, scannez le QR code avec WhatsApp sur votre téléphone, comme WhatsApp Web."],
-        ["L'IA comprend-elle la darja ?", "Oui. L'extraction est pensée pour les messages des vendeurs algériens : darja, français, arabe, ou un mélange."],
+        ["L'IA comprend-elle la darja ?", "Elle est conçue pour lire la darja, le français, l'arabe ou un mélange. Nous n'avons pas encore mesuré sa précision sur de vraies commandes : vérifiez chaque brouillon."],
         ["Et si un message ne part pas ?", "Il attend dans une file et part quand WhatsApp se reconnecte."],
         ["WhatsApp est-il une intégration officielle ?", "SahelFlow se relie comme WhatsApp Web. Ce n'est pas une API officielle de Meta : gardez votre téléphone connecté et respectez les règles de WhatsApp."],
       ]],
@@ -638,12 +638,12 @@ export default {
       ]],
       licence: ["Licence et paiement", "Achat, activation et changement de PC", [
         ["Comment acheter une licence ?", "Payez par BaridiMob ou CCP, envoyez-nous sur WhatsApp le code de demande de licence depuis l'app, puis collez la licence reçue."],
-        ["Que comprend la licence ?", "Cinq boutiques, le propriétaire plus dix membres, tous les modules et cinq ans de mises à jour et de support."],
+        ["Que comprend la licence ?", "Cinq boutiques, le propriétaire plus dix membres, tous les modules et cinq ans de mises à jour et de support, à partir de la sortie stable officielle."],
         ["Est-ce que je perds mes données à la fin de l'essai ?", "Non. Vos données restent sur votre PC ; activer une licence rouvre tout comme vous l'avez laissé."],
         ["Puis-je déplacer ma licence sur un nouveau PC ?", "Oui. Écrivez-nous et nous la transférons. Faites d'abord une sauvegarde chiffrée et gardez-en une copie ; la restauration sur un nouveau PC est encore en test."],
       ]],
       data: ["Données et sécurité", "Chiffrement, sauvegardes et confidentialité", [
-        ["Où sont stockées mes données ?", "Sur votre PC, dans une base chiffrée. Nous n'en avons pas de copie."],
+        ["Où sont stockées mes données ?", "Sur votre PC. Les noms, téléphones, adresses, conversations et clés des clients y sont chiffrés. Nous n'avons pas de copie de la base."],
         ["Comment marchent les sauvegardes ?", "Créez des sauvegardes chiffrées depuis les Paramètres quand vous voulez. La restauration sur un autre PC est encore en test."],
         ["Puis-je tout exporter ?", "Oui — commandes, clients et produits vers Excel, quand vous voulez."],
       ]],

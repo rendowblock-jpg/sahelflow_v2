@@ -121,8 +121,11 @@ describe("Voice note player (R5-e) source contract", () => {
     // (bdi dir="ltr") and the dir="ltr" metadata paragraphs beside the player.
     expect(player).toContain('dir="ltr"');
     expect(media).toContain('dir="ltr"');
-    // Tiny player copy uses the design-system token, not a raw px class.
-    expect(player).toContain("text-2xs");
+    // Player copy uses a ramp token at the 12 px floor, never the retired
+    // 11 px text-2xs or a raw px class (inbox-text-floor.contract.test.ts
+    // scans every Inbox source for the same rule).
+    expect(player).toContain("text-caption");
+    expect(player).not.toContain("text-2xs");
     expect(player).not.toContain("text-[9px]");
     expect(player).not.toContain("text-[10px]");
     expect(player).not.toContain("text-[11px]");

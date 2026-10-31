@@ -344,8 +344,15 @@ export const analyticsService = {
       .sort((a, b) => b.value - a.value);
   },
 
+  /**
+   * A product's value, units and order count over the period. Cancelled and draft
+   * orders are left out, the same orders "Orders value" adds up, so the top
+   * products and the headline never disagree about what counts. An order list
+   * without a status (older callers) counts everything.
+   */
   buildTopProducts(
     orders: Array<{
+      status?: string;
       items: Array<{
         productId: string | null;
         productName: string;
@@ -357,6 +364,7 @@ export const analyticsService = {
   ): TopProduct[] {
     const map = new Map<string, TopProduct>();
     for (const order of orders) {
+      if (order.status !== undefined && EXCLUDED_FROM_REVENUE.includes(order.status as OrderStatus)) continue;
       for (const item of order.items) {
         const key = item.productId ?? item.productName;
         const existing = map.get(key);

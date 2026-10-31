@@ -17,8 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
-import { relativeTimeParts, type DeviceStatus, type DeviceView } from "@/lib/connected-platform/desktop-devices";
+import { normalizePairingCodeInput, pairingCodeMatches, relativeTimeParts, type DeviceStatus, type DeviceView } from "@/lib/connected-platform/desktop-devices";
 import { pairingCountdown } from "@/lib/connected-platform/pairing-link";
 
 const POLL_MS = 3000;
@@ -182,9 +183,11 @@ export function PhonePairingCard() {
               <li key={device.deviceId} data-testid="phone-row" className="flex flex-wrap items-center justify-between gap-3 p-3">
                 <div className="min-w-0 space-y-1 text-start">
                   <p className="font-medium">{device.name ?? t("phones.row.name", { number: String(index + 1) })}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t("phones.row.fingerprint")}: <Fingerprint value={device.fingerprint} />
-                  </p>
+                  {device.status === "pending" ? null : (
+                    <p className="text-sm text-muted-foreground">
+                      {t("phones.row.fingerprint")}: <Fingerprint value={device.fingerprint} />
+                    </p>
+                  )}
                   <p className="text-sm text-muted-foreground">
                     {device.lastSeenAt ? t("phones.row.lastSeen", { when: relative(device.lastSeenAt) }) : t("phones.row.neverSeen")}
                   </p>
@@ -254,6 +257,41 @@ function PairDialog(props: {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// The pending phone's own code is NOT shown here: the seller reads it on the phone and types it,
+// so a relay that swapped a key cannot be waved through by copying what the PC shows.
+// This is a gate in the interface only; the desktop never learns the typed text.
+function PendingApproval({ device, act }: { device: DeviceView; act: (deviceId: string, action: "approve" | "revoke") => Promise<boolean> }) {
+  const { t } = useI18n();
+  const [typed, setTyped] = React.useState("");
+  const fieldId = React.useId();
+  const matches = pairingCodeMatches(typed, device.fingerprint);
+  const wrong = normalizePairingCodeInput(typed).length >= 16 && !matches;
+  return (
+    <div className="space-y-2 rounded-md border border-border p-3" data-testid="pairing-pending">
+      <label htmlFor={fieldId} className="text-sm font-medium">{t("phones.dialog.codeLabel")}</label>
+      <p id={`${fieldId}-hint`} className="text-sm text-muted-foreground">{t("phones.dialog.codeHint")}</p>
+      <Input
+        id={fieldId}
+        dir="ltr"
+        value={typed}
+        onChange={(event) => setTyped(event.target.value)}
+        maxLength={40}
+        autoComplete="off"
+        autoCapitalize="characters"
+        spellCheck={false}
+        aria-invalid={wrong}
+        aria-describedby={`${fieldId}-hint`}
+        className="font-mono tracking-wider"
+      />
+      {wrong ? <p role="alert" className="text-sm text-destructive">{t("phones.dialog.codeMismatch")}</p> : null}
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" className={TARGET} disabled={!matches} onClick={() => { if (matches) void act(device.deviceId, "approve"); }}>{t("phones.approve")}</Button>
+        <Button type="button" variant="outline" className={TARGET} onClick={() => void act(device.deviceId, "revoke")}>{t("phones.reject")}</Button>
+      </div>
+    </div>
   );
 }
 
@@ -336,14 +374,7 @@ function PairSession(props: {
               </p>
             )}
             {device && device.status === "pending" ? (
-              <div className="space-y-2 rounded-md border border-border p-3" data-testid="pairing-pending">
-                <p className="text-sm font-medium">{t("phones.dialog.fingerprint")}</p>
-                <p><Fingerprint value={device.fingerprint} /></p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" className={TARGET} onClick={() => void props.act(device.deviceId, "approve")}>{t("phones.approve")}</Button>
-                  <Button type="button" variant="outline" className={TARGET} onClick={() => void props.act(device.deviceId, "revoke")}>{t("phones.reject")}</Button>
-                </div>
-              </div>
+              <PendingApproval key={device.deviceId} device={device} act={props.act} />
             ) : null}
             {device && device.status === "approved" ? (
               <p role="status" className="flex items-center gap-2 text-sm"><ShieldCheck className="size-4" aria-hidden="true" />{t("phones.dialog.approved")}</p>

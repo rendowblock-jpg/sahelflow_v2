@@ -46,6 +46,7 @@ export {
 export {
   deviceFingerprint,
   formatPairingHash,
+  pairingCode,
   parsePairingLink,
   type PairingLink,
 } from "./fingerprint";

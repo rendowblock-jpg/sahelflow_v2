@@ -16,6 +16,7 @@ import {
   type World,
 } from "../../../../control-plane/connected/__tests__/harness";
 import { ConnectedPlatformClient } from "../client";
+import { mergeDevices } from "../desktop-devices";
 import { approvedDeviceIds, emptyDeviceApprovalState, withDeviceApproved, withDeviceCreated } from "../device-approvals";
 import { createConnectedEnvelope, openConnectedEnvelope } from "../envelope";
 import { isRemoteCommandType } from "../command-policy";
@@ -35,8 +36,10 @@ import {
 } from "../protocol";
 import {
   buildPairingExchangeBody,
+  deviceFingerprint,
   generateDeviceKeys,
   openEnvelopeWeb,
+  pairingCode,
   sealEnvelopeWeb,
   type DeviceKeys,
   type DevicePublicKeys,
@@ -195,6 +198,48 @@ async function fullPairing(ctx: Ctx, deviceId: string, phone: Phone) {
   expect(paired.verdict.ok).toBe(true);
   return paired;
 }
+
+// What the seller compares: the phone computes its code from the keys it made
+// itself; the desktop computes its code from the rows the relay hands back.
+function phoneCode(phone: Phone): Promise<string | null> {
+  return pairingCode(phone.publicKeys.signingPublicKey, phone.publicKeys.encryptionPublicKey);
+}
+
+async function desktopCode(ctx: Ctx, deviceId: string): Promise<string | null> {
+  const listed = await ctx.client.listDevices(WORKSPACE_ID);
+  const views = await mergeDevices(listed.devices as unknown[], { approved: {}, created: {} });
+  return views.find((view) => view.deviceId === deviceId)?.fingerprint ?? null;
+}
+
+describe("pairing code: the phone and the desktop compare the same code, and a swapped key breaks it", () => {
+  it("after a full pairing the phone's code equals the desktop's code", async () => {
+    const ctx = await newCtx();
+    const { exchanged } = await fullPairing(ctx, "phone_handshake_10", phoneA);
+    const onPhone = await phoneCode(phoneA);
+    expect(onPhone).toMatch(/^[0-9A-F]{4}(-[0-9A-F]{4}){3}$/);
+    expect(await desktopCode(ctx, exchanged.deviceId)).toBe(onPhone);
+  }, 60_000);
+
+  it("ATTACK (W4SEC-01): the relay keeps the real signing key and swaps ONLY the RSA key -> the desktop code differs", async () => {
+    const ctx = await newCtx();
+    const { exchanged } = await fullPairing(ctx, "phone_handshake_11", phoneA);
+    ctx.world.d1.sqlite.prepare("UPDATE connected_device SET encryption_public_key = ? WHERE device_id = ?").run(rsaJwk(), exchanged.deviceId);
+    const listed = (await ctx.client.listDevices(WORKSPACE_ID)).devices as Array<{ device_id: string; signing_public_key: string }>;
+    const row = listed.find((d) => d.device_id === exchanged.deviceId);
+    // the old signing-key-only code could not see this swap
+    expect(await deviceFingerprint(row?.signing_public_key ?? "")).toBe(await deviceFingerprint(phoneA.publicKeys.signingPublicKey));
+    const onDesktop = await desktopCode(ctx, exchanged.deviceId);
+    expect(onDesktop).not.toBeNull();
+    expect(onDesktop).not.toBe(await phoneCode(phoneA));
+  }, 60_000);
+
+  it("ATTACK: the relay swaps the signing key -> the desktop code differs too", async () => {
+    const ctx = await newCtx();
+    const { exchanged } = await fullPairing(ctx, "phone_handshake_12", phoneA);
+    ctx.world.d1.sqlite.prepare("UPDATE connected_device SET signing_public_key = ? WHERE device_id = ?").run(phoneB.publicKeys.signingPublicKey, exchanged.deviceId);
+    expect(await desktopCode(ctx, exchanged.deviceId)).not.toBe(await phoneCode(phoneA));
+  }, 60_000);
+});
 
 describe("pairing handshake: desktop and phone through the real relay", () => {
   it("(a-d) pairs, opens the sealed dashboard, and the desktop opens the phone's command", async () => {

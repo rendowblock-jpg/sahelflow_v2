@@ -20,6 +20,7 @@ import type { Locale } from "@/lib/i18n";
 import type { projectDashboardForTrustedActor, resolveDashboardFieldAccess } from "@/lib/identity/dashboard-projection";
 import type { getFirstRunCounts } from "@/lib/data/first-run-counts";
 import type { getRiskAnalyticsReport } from "@/lib/risk-engine";
+import { moneyNameKey } from "@/lib/analytics/money-names";
 
 
 
@@ -201,7 +202,7 @@ export function DashboardView({
           sparkZeroBaseline
         />
         <StatCard
-          label={t("dashboard.grossRevenue")}
+          label={t("money.ordersValueToday")}
           value={
             stats.revenueToday === null
               ? "—"
@@ -221,7 +222,7 @@ export function DashboardView({
           }
           tooltip={t("dashboard.revenueDefinition")}
           spark={revenueSpark}
-          tableAlt={sparkTable(t("dashboard.grossRevenue"), revenueSpark, true)}
+          tableAlt={sparkTable(t(moneyNameKey("ordersValue")), revenueSpark, true)}
           sparkFormat="currency"
           href="/analytics"
           hrefLabel={t("nav.analytics")}

@@ -33,3 +33,16 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/*
+ * Phone 2 x 2 for a page that opts in with `.card-grid-phone-2x2` (Orders): the four KPI cards become two rows of two
+ * compact tiles so the page's work starts on the first screen. Scoped to the modifier and to the phone range (under
+ * 48rem, the same border as Tailwind's md:); every other grid and every wider screen keeps the rules above. The tile
+ * itself is made smaller by StatCard `compactOnPhone`.
+ */
+@media (width < 48rem) {
+  [data-sahelflow-shell="desktop"] .card-grid-4.card-grid-phone-2x2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+}

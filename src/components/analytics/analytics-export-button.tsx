@@ -17,6 +17,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { buildAnalyticsCsv } from "@/lib/analytics/analytics-csv";
 import type { CourierPerformanceMetrics } from "@/lib/analytics/courier-metrics";
 import { Button } from "@/components/ui/button";
+import { moneyNameKey } from "@/lib/analytics/money-names";
 
 export interface AnalyticsExportSummary {
   totalRevenue: number;
@@ -48,7 +49,7 @@ export function AnalyticsExportButton({
           to: range.toIso,
         }),
       ],
-      [t("analytics.totalRevenue"), summary.totalRevenue],
+      [t(moneyNameKey("ordersValue")), summary.totalRevenue],
       [t("nav.orders"), summary.totalOrders],
       [t("analytics.avgOrderValue"), summary.avgOrderValue],
       [t("analytics.deliveryRate"), summary.deliveryRate],

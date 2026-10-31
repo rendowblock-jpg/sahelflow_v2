@@ -29,6 +29,7 @@ import type { getAnalyticsReportForRange } from "@/lib/analytics/report";
 import type { getReturnRateByWilaya, getSkuPnl, getPeriodComparison } from "@/lib/data/analytics-v2";
 import type { ProjectedSkuPnl } from "@/lib/identity/sku-pnl-projection";
 import type { getCourierPerformance } from "@/lib/analytics/courier-performance";
+import { moneyNameKey } from "@/lib/analytics/money-names";
 
 
 
@@ -119,7 +120,7 @@ export function AnalyticsView({
   }));
   const revenueConfig: ChartConfig = {
     revenue: {
-      label: t("analytics.revenueLabel"),
+      label: t(moneyNameKey("ordersValue")),
       color: "var(--color-chart-2)",
     },
   };
@@ -198,7 +199,7 @@ export function AnalyticsView({
       color: "var(--color-chart-1)",
     },
     revenue: {
-      label: t("analytics.revenueLabel"),
+      label: t(moneyNameKey("ordersValue")),
       color: "var(--color-chart-2)",
     },
   };
@@ -214,7 +215,7 @@ export function AnalyticsView({
     },
     {
       key: "revenue",
-      label: t("analytics.revenueLabel"),
+      label: t(moneyNameKey("revenueDelivered")),
       change: comparison.changes.revenue,
       display: formatDZD(comparison.current.revenue, locale),
     },
@@ -275,7 +276,7 @@ export function AnalyticsView({
         data-analytics-section="scorecard"
       >
         <StatCard
-          label={t("analytics.totalRevenue")}
+          label={t(moneyNameKey("ordersValue"))}
           value={formatDZD(summary.totalRevenue, locale)}
           tooltip={t("analytics.revenueDefinition")}
           icon={<TrendingUp />}
@@ -336,8 +337,8 @@ export function AnalyticsView({
 
       <section data-analytics-section="headline" className="min-w-0">
         <ChartCard
-          title={t("analytics.revenueTrend")}
-          description={t("analytics.revenueTrendDesc")}
+          title={t("money.ordersValueTrend")}
+          description={t("money.ordersValueTrendDesc")}
           summary={
             summary.revenueDelta === null
               ? formatDZD(summary.totalRevenue, locale)
@@ -347,9 +348,9 @@ export function AnalyticsView({
           accent="bg-emerald-500/10 dark:bg-emerald-500/15"
           config={revenueConfig}
           dataTable={{
-            label: `${t("analytics.revenueTrend")}: ${formatDZD(summary.totalRevenue, locale)}`,
-            caption: t("charts.tableOf", { title: t("analytics.revenueTrend") }),
-            columns: [t("charts.colDate"), t("analytics.revenueLabel")],
+            label: `${t("money.ordersValueTrend")}: ${formatDZD(summary.totalRevenue, locale)}`,
+            caption: t("charts.tableOf", { title: t("money.ordersValueTrend") }),
+            columns: [t("charts.colDate"), t(moneyNameKey("ordersValue"))],
             rows: revenueData.map((point) => [point.label, formatDZD(point.revenue, locale)]),
             showLabel: t("charts.showAsTable"),
             hideLabel: t("charts.showAsChart"),
@@ -361,7 +362,7 @@ export function AnalyticsView({
             series={[
               {
                 key: "revenue",
-                label: t("analytics.revenueLabel"),
+                label: t(moneyNameKey("ordersValue")),
                 format: "currency",
               },
             ]}
@@ -528,7 +529,7 @@ export function AnalyticsView({
             t,
             t("analytics.salesByHour"),
             `${integerFormatter.format(hourData.reduce((sum, bucket) => sum + bucket.orders, 0))} ${t("analytics.ordersLabel")}`,
-            [t("charts.colHour"), t("analytics.ordersLabel"), t("analytics.revenueLabel")],
+            [t("charts.colHour"), t("analytics.ordersLabel"), t(moneyNameKey("ordersValue"))],
             hourData.map((bucket) => [bucket.hour, integerFormatter.format(bucket.orders), formatDZD(bucket.revenue, locale)]),
           )}
         >
@@ -545,7 +546,7 @@ export function AnalyticsView({
               {
                 kind: "line",
                 key: "revenue",
-                label: t("analytics.revenueLabel"),
+                label: t(moneyNameKey("ordersValue")),
                 format: "currency",
                 yAxis: "right",
               },
@@ -723,7 +724,7 @@ export function AnalyticsView({
                       {t("analytics.skuColProduct")}
                     </th>
                     <th className="px-4 py-3 text-end">
-                      {t("analytics.revenueLabel")}
+                      {t(moneyNameKey("netRevenue"))}
                     </th>
                     {showSkuCost ? (
                       <th className="px-4 py-3 text-end">
