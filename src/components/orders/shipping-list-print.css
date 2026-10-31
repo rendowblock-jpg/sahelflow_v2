@@ -1,0 +1,94 @@
+/* Shipping list sheet: ink on paper. Carnet look: ledger table, red double rule on the side where the text ends. */
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  /* Only the sheet prints while it is up. */
+  body.sf-shipping-list-printing > *:not(.sf-shipping-list-root) {
+    display: none !important;
+  }
+
+  .sf-shipping-list-root {
+    display: block !important;
+    background: #fff;
+    color: #000;
+    font-family: "IBM Plex Sans", "Noto Naskh Arabic", sans-serif;
+    font-size: 9pt;
+    line-height: 1.35;
+  }
+
+  .sf-sl-head {
+    border-bottom: 1px solid #000;
+    padding-block: 0 2mm;
+    margin-block-end: 3mm;
+  }
+
+  .sf-sl-title {
+    font-size: 14pt;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .sf-sl-meta {
+    margin: 1mm 0 0;
+  }
+
+  .sf-sl-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #fff;
+    border-inline-end: 2px double #b3261e;
+  }
+
+  .sf-sl-table thead {
+    display: table-header-group;
+  }
+
+  .sf-sl-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .sf-sl-table th,
+  .sf-sl-table td {
+    border: 1px solid #000;
+    padding: 1.2mm 1.5mm;
+    text-align: start;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+    background: transparent;
+  }
+
+  .sf-sl-table th {
+    font-weight: 700;
+    border-block-end: 2px solid #000;
+  }
+
+  .sf-sl-table td.sf-sl-notes {
+    height: 12mm;
+  }
+
+  .sf-sl-table tr.sf-sl-total td {
+    font-weight: 700;
+    border-block-start: 2px solid #000;
+  }
+
+  .sf-sl-missing {
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  .sf-sl-num {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .sf-sl-foot {
+    margin-block-start: 4mm;
+    font-size: 8pt;
+    border-radius: 2px;
+  }
+}
