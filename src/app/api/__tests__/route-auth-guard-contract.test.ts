@@ -31,6 +31,9 @@ const AUTH_GUARDS = [
   "assertTrustedAction",
   "ensureDurableIdentityActor",
   "assertTeamMemberActive",
+  // The phone-device routes (/api/connected/devices/**) call this one helper. The test "the owner-session guard ..." below
+  // reads it and proves it authenticates (requireTrustedAction + owner check), so the name cannot become a free pass.
+  "connectedOwnerSession",
 ] as const;
 
 /**
@@ -174,6 +177,15 @@ describe("API route authentication contract", () => {
         "route to PRE_AUTH_ROUTES with the gate that stands in for " +
         `authentication:\n${unguarded.join("\n")}`,
     ).toEqual([]);
+  });
+
+  it("the owner-session guard of the phone-device routes really authenticates", () => {
+    const admin = readFileSync(resolve(root, "src/lib/connected-platform/device-admin.ts"), "utf8");
+    const start = admin.indexOf("export async function connectedOwnerSession");
+    expect(start).toBeGreaterThan(-1);
+    const body = admin.slice(start, admin.indexOf("\n}\n", start));
+    expect(body).toContain('requireTrustedAction("settings.manage")');
+    expect(body).toContain("isOwner(actorContext.actor)");
   });
 
   it("keeps the pre-auth allowlist honest", () => {
