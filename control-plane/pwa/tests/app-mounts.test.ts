@@ -51,7 +51,23 @@ describe("app.ts mounts the inbox", () => {
   it("orders and inbox send through the SAME flush wrapper: an accepted command is flushed at once", () => {
     expect(count(/outbox: flushingOutbox\(s\)/g)).toBe(1);
     expect(count(/const outbox = flushingOutbox\(s\)/g)).toBe(1);
-    expect(count(/void s\.outbox\.flush\(\)/g)).toBe(1);
+    expect(app).not.toContain("void s.outbox.flush()"); // the flush now lives in command-follow.ts, which also tells the screens
+  });
+  it("W196 the phone follows a tap: the flush wrapper, the status poll and the inbox all go through ONE command-follow emitter", () => {
+    expect(app).toMatch(/from "\.\/command-follow"/);
+    expect(count(/createCommandFollow\(/g)).toBe(1);
+    expect(app).toContain("createCommandFollow({ commandSent: () => sync.commandSent() })");
+    // (a) after an accepted tap: flush, tell the screens, arm the status poll
+    expect(app).toContain("const flushingOutbox = (s: CommandStack) => follow.wrap(s.outbox);");
+    // (b) every status poll tells the screens when a record changed
+    expect(count(/follow\.polled\(s\.outbox, async \(\) => \{/g)).toBe(1);
+    expect(app).toContain("await s.outbox.flush(); await s.outbox.refresh();");
+    // (c) the inbox gets the real emitter, the orders host is told through its own notify; the no-op subscribe is gone
+    expect(app).toContain("subscribeAll: follow.subscribe,");
+    expect(app).toContain("follow.subscribe(() => ordersHost?.notify());");
+    expect(app).not.toContain("subscribeAll: () => () => undefined");
+    // nothing in app.ts arms the status poll by hand any more: command-follow does, once per accepted tap
+    expect(count(/sync\.commandSent\(\)/g)).toBe(1);
   });
   it("go() attaches the inbox for inbox and conversation; a wipe forgets the mount; an unlock revisits it only when the phone is not locked", () => {
     // The screen mounter owns the draw now: go(), popstate and startup call attachFor(), which attaches the inbox host for the inbox group.

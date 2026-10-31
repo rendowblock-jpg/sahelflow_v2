@@ -39,6 +39,8 @@ export function createOrdersController(host: OrdersHost) {
     const m = model(); const o = currentOrder();
     return o !== undefined && isPending(o) && canAct(m) && openCommandFor(m, o.id) === undefined && !changedSinceOpened(m, o);
   }
+  // W196: a screen told that a command changed re-reads ONLY the commands (the draft the seller is typing is not touched).
+  async function refreshCommands(): Promise<void> { commands = await host.commands(); }
   async function refresh(): Promise<void> {
     commands = await host.commands();
     draft = openId ? await host.drafts.get(draftKey("order", openId)) : "";
@@ -92,5 +94,5 @@ export function createOrdersController(host: OrdersHost) {
       default: return;
     }
   }
-  return { model, html: (): string => (openId ? renderOrderDetail(model()) : renderOrdersList(model())), act, refresh };
+  return { model, html: (): string => (openId ? renderOrderDetail(model()) : renderOrdersList(model())), act, refresh, refreshCommands };
 }
