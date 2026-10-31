@@ -8,6 +8,7 @@ import {
   type InboxLinkKind,
 } from "@/components/inbox/inbox-link-state";
 import styles from "@/components/inbox/inbox-v3-workspace.module.css";
+import { InboxLinkSilentNote } from "@/components/inbox/inbox-link-silent-note";
 import { WhatsAppIngressRecoveryDock } from "@/components/inbox/whatsapp-ingress-recovery-dock";
 import { WhatsAppPairingDialog } from "@/components/inbox/whatsapp-pairing-dialog";
 import { WhatsAppUnofficialNotice } from "@/components/inbox/whatsapp-unofficial-notice";
@@ -104,6 +105,7 @@ export function InboxLinkSurface({
       >
         ?
       </button>
+      {canViewIngress ? <InboxLinkSilentNote connected={link.kind === "connected"} /> : null}
 
       {link.showBanner && reasonKey ? (
         <div
@@ -151,7 +153,12 @@ export function InboxLinkSurface({
       </div>
 
       {canViewIngress ? (
-        <WhatsAppIngressRecoveryDock canRetry={canRetryIngress} embedded />
+        <WhatsAppIngressRecoveryDock
+          canRetry={canRetryIngress}
+          embedded
+          onReconnect={() => reconnect()}
+          linkConnected={link.kind === "connected"}
+        />
       ) : null}
     </div>
   );

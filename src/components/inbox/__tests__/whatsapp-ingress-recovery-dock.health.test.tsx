@@ -69,7 +69,7 @@ const CASES = [
   },
   {
     state: "waiting",
-    body: () => ingress({ spool: { pending: 2, oldestPendingSec: 300 } }),
+    body: () => ingress({ spool: { pending: 2, oldestPendingSec: 660 } }),
     en: "2 messages are waiting to be received",
     fr: "2 messages attendent d’être reçus",
     ar: "رسائل تنتظر الاستلام: 2",
@@ -101,10 +101,10 @@ describe("recovery dock: reception notices", () => {
   }
 
   it("waiting names the age of the oldest message", async () => {
-    statusBody = ingress({ spool: { pending: 2, oldestPendingSec: 300 } });
+    statusBody = ingress({ spool: { pending: 2, oldestPendingSec: 660 } });
     render(<WhatsAppIngressRecoveryDock />);
     await settleAndShow();
-    expect(screen.getByTestId("ingress-health-notices").textContent).toContain("5 min");
+    expect(screen.getByTestId("ingress-health-notices").textContent).toContain("11 min");
   });
 
   it("one lost message uses the singular", async () => {
