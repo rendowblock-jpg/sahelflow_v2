@@ -20,6 +20,7 @@ import {
 } from "fs";
 import { resolve } from "path";
 import { prepareDesktopBuildContext } from "../scripts/desktop-build-context";
+import { writeBootSetForTree } from "../scripts/boot-set-nft";
 import { writeStandaloneManifest } from "../scripts/standalone-manifest";
 
 const ROOT = process.cwd();
@@ -203,6 +204,17 @@ if (!existsSync(rotationWorker)) {
 }
 ok("Bundled protected installation-root rotation worker");
 
+// boot-set.json lists the files the first page opens, in order, so the shell can warm
+// exactly those. It must exist BEFORE the tree hash below or the installed-tree check
+// would see an unlisted file. Derived from Next's own file traces: no Windows trace needed.
+const bootSet = writeBootSetForTree(standaloneDir, { buildRoot: ROOT });
+if (bootSet.written) {
+  ok(`Boot set: ${bootSet.manifest.fileCount} files; ${bootSet.manifest.totalBytes} bytes`);
+} else {
+  console.warn(
+    `Boot set skipped: ${bootSet.manifest.fileCount} files / ${bootSet.manifest.totalBytes} bytes is over the limit; the shell will use the old walk`,
+  );
+}
 const standaloneManifest = writeStandaloneManifest(standaloneDir, APP_VERSION);
 ok(
   `Standalone manifest: ${standaloneManifest.fileCount} files; ${standaloneManifest.treeSha256}`,

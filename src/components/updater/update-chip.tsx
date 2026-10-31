@@ -53,6 +53,21 @@ export function UpdateChip() {
 
   const { phase, percent } = update;
   const working = phase === "downloading" || phase === "installing";
+  const { backup } = update;
+  // The backup made before the installer starts, in words. It takes the slot of
+  // the installing text, so nothing moves when it changes.
+  const backupText =
+    phase === "installing" && backup
+      ? backup === "running"
+        ? t("updater.backup.running")
+        : backup === "done"
+          ? t("updater.backup.done")
+          : backup === "skipped"
+            ? t("updater.backup.skipped", { minutes: update.backupAgeMinutes ?? 0 })
+            : backup === "failed"
+              ? t("updater.backup.failed")
+              : t("updater.backup.timedOut")
+      : null;
 
   const label =
     phase === "available"
@@ -64,7 +79,9 @@ export function UpdateChip() {
         : phase === "ready"
           ? t("updater.chip.ready")
           : phase === "installing"
-            ? t("updater.chip.installing")
+            ? backup === "running"
+              ? t("updater.backup.chipRunning")
+              : t("updater.chip.installing")
             : t("updater.installFailed");
 
   const title =
@@ -75,7 +92,9 @@ export function UpdateChip() {
         : phase === "ready"
           ? t("updater.readyTitle")
           : phase === "installing"
-            ? t("updater.chip.installing")
+            ? backup === "running"
+              ? t("updater.backup.running")
+              : t("updater.chip.installing")
             : t("updater.installFailed");
 
   const icon =
@@ -107,6 +126,7 @@ export function UpdateChip() {
           size="xs"
           data-slot="update-chip"
           data-phase={phase}
+          data-backup={backup ?? undefined}
           className={`relative overflow-hidden ${phase === "error" ? "text-destructive" : ""}`}
           aria-label={accessibleName}
           disabled={phase === "installing"}
@@ -134,7 +154,7 @@ export function UpdateChip() {
       </PopoverTrigger>
 
       <span className="sr-only" role="status" aria-live="polite">
-        {phase === "installing" ? t("updater.installingDesc") : accessibleName}
+        {backupText ?? (phase === "installing" ? t("updater.installingDesc") : accessibleName)}
       </span>
 
       <PopoverContent align="end" className="w-80 space-y-3 p-4" data-slot="update-popover">
@@ -143,7 +163,7 @@ export function UpdateChip() {
             {icon}
             {title}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className={`text-xs text-muted-foreground ${phase === "installing" ? "min-h-16" : ""}`}>
             {phase === "available"
               ? t("updater.availableDesc")
               : phase === "downloading"
@@ -151,7 +171,7 @@ export function UpdateChip() {
                 : phase === "ready"
                   ? t("updater.readyDesc")
                   : phase === "installing"
-                    ? t("updater.installingDesc")
+                    ? (backupText ?? t("updater.installingDesc"))
                     : t("updater.failedDesc")}
           </p>
         </div>

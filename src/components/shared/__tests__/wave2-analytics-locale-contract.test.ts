@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Class-AAA analytics locale and hierarchy contract", () => {
   it("keeps seller-facing Analytics money under the active locale", () => {
-    const analytics = read("src/app/(dashboard)/analytics/page.tsx");
+    const analytics = (read("src/app/(dashboard)/analytics/page.tsx") + read("src/components/analytics/analytics-view.tsx"));
 
     expect(analytics).toContain("formatDZD(summary.totalRevenue, locale)");
     expect(analytics).toContain("formatDZD(summary.avgOrderValue, locale)");
@@ -21,7 +21,7 @@ describe("Class-AAA analytics locale and hierarchy contract", () => {
   });
 
   it("uses locale-aware percent, integer and hour formatting instead of string suffixes", () => {
-    const analytics = read("src/app/(dashboard)/analytics/page.tsx");
+    const analytics = (read("src/app/(dashboard)/analytics/page.tsx") + read("src/components/analytics/analytics-view.tsx"));
     const statCard = read("src/components/shared/stat-card.tsx");
     const utils = read("src/lib/utils.ts");
 
@@ -40,7 +40,7 @@ describe("Class-AAA analytics locale and hierarchy contract", () => {
   });
 
   it("removes page-level fixed chart canvases and uses governed empty states", () => {
-    const analytics = read("src/app/(dashboard)/analytics/page.tsx");
+    const analytics = (read("src/app/(dashboard)/analytics/page.tsx") + read("src/components/analytics/analytics-view.tsx"));
 
     expect(analytics).not.toContain("height={320}");
     expect(analytics).not.toContain("height={300}");
@@ -50,7 +50,7 @@ describe("Class-AAA analytics locale and hierarchy contract", () => {
   });
 
   it("expresses an explicit decision hierarchy across the Analytics workspace", () => {
-    const analytics = read("src/app/(dashboard)/analytics/page.tsx");
+    const analytics = (read("src/app/(dashboard)/analytics/page.tsx") + read("src/components/analytics/analytics-view.tsx"));
 
     for (const section of [
       "scorecard",

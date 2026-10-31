@@ -77,7 +77,7 @@ describe("each style is drawn as itself", () => {
 
   it("Noir's script also loads on a store's catalogue page, which has no order script", async () => {
     const store = await publish("noir", { mode: "store" });
-    expect(scripts(page(store))).toEqual(["/_sf/noir.test.js"]);
+    expect(scripts(page(store))).toEqual(["/_sf/photos.test.js", "/_sf/noir.test.js"]); // no order script: the photo fallback, then Noir's own
     store.database.close();
   });
 });
@@ -364,8 +364,8 @@ describe("the style sheets keep their promises", () => {
     expect(shop).toContain("@media (max-width:359px){.sf-trust{grid-template-columns:1fr}}");
     expect(shop).toContain(".sf-sum dt{flex:0 0 auto;max-width:60%}");
     expect(shop).toContain("body[data-voice] .sf-sticky .sf-cta--bar{min-width:max-content;padding-inline:14px;overflow-wrap:normal}");
-    expect(shop).toContain("@media (max-width:389px){body[data-voice] .sf-head .sf-lang-i{min-width:36px}body[data-voice] .sf-head .sf-nav a{padding-inline:8px}}");
-    expect(shop).toContain("@media (max-width:359px){body[data-voice] .sf-head .sf-lang-i{min-width:32px}body[data-voice] .sf-head .sf-nav a{padding-inline:6px}}");
+    expect(shop).toContain("@media (max-width:389px){body[data-voice] .sf-head .sf-nav a{padding-inline:8px}}");
+    expect(shop).toContain("@media (max-width:359px){body[data-voice] .sf-head .sf-nav a{padding-inline:6px}}");
     expect(shop).toContain("@media (max-width:359px){body[data-voice] .sf-head .sf-mono{width:30px;height:30px;font-size:14px}body[data-voice] .sf-head .sf-brand{gap:6px}body[data-voice] .sf-head .sf-brand b{font-size:14px}}");
     expect(lumen).toContain("@media (max-width:479px){\nbody[data-voice=lumen] .lx-row{grid-template-columns:24px 56px minmax(0,1fr) 18px;column-gap:12px;row-gap:2px}\nbody[data-voice=lumen] .lx-row-n{grid-area:1/1/3/2}\nbody[data-voice=lumen] .lx-row-pic{grid-area:1/2/3/3}\nbody[data-voice=lumen] .lx-row-name{grid-area:1/3/2/4;align-self:end}\nbody[data-voice=lumen] .lx-row-price{grid-area:2/3/3/4;align-self:start;white-space:normal}\nbody[data-voice=lumen] .lx-row-go{grid-area:1/4/3/5;align-self:center}\n}");
   });

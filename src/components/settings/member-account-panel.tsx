@@ -133,7 +133,7 @@ export function MemberAccountPanel() {
           <Row
             label={c("account.loginId")}
             control={
-              <span dir="ltr" className="font-mono text-body-sm">
+              <span dir="ltr" className="min-w-0 font-mono [overflow-wrap:anywhere] text-body-sm">
                 {profile.loginId}
               </span>
             }

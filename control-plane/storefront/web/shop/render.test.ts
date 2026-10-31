@@ -47,7 +47,8 @@ describe("store home", () => {
     expect(html).toContain('<a class="sf-skip" href="#main">');
     expect(html.indexOf("<header")).toBeLessThan(html.indexOf("<main"));
     expect(html.indexOf("</main>")).toBeLessThan(html.indexOf("<footer"));
-    expect(html).not.toContain("<script src="); // the home needs no script
+    // the home runs exactly ONE script: the tiny photo fallback (no order script)
+    expect(html.match(/<script src="[^"]+"/g)).toEqual(['<script src="/_sf/photos.test.js"']);
     expect(html).toContain('<link rel="stylesheet" href="/_sf/shop.test.css">');
     store.database.close();
   });
@@ -190,11 +191,11 @@ describe("product page", () => {
       expect(form, field).toContain(`id="f-${field}"`);
       expect(form, field).toContain(`id="e-${field}"`);
     }
-    expect(form).toContain('type="tel" inputmode="tel" autocomplete="tel-national"');
+    expect(form).toContain('type="tel" inputmode="tel" enterkeyhint="next" autocomplete="tel-national"');
     expect(form).toContain('autocomplete="name"');
     expect(form).toContain('autocomplete="street-address"');
     expect(form).toContain('<form id="order" class="sf-form" novalidate');
-    expect(form).toMatch(/<button id="sf-submit" class="sf-cta" type="submit">/);
+    expect(form).toMatch(/<button id="sf-submit" class="sf-cta" type="submit" aria-describedby="sf-status">/);
     expect(count(form, /aria-label="[^"]+"/g)).toBeGreaterThanOrEqual(2); // the two quantity buttons
     expect(count(form, /<noscript>/g)).toBe(1);
     expect(form).not.toMatch(/\bonclick=|\bonsubmit=|javascript:/i);
@@ -296,8 +297,8 @@ describe("seller text is data, never markup", () => {
         expect(html).not.toContain("<script>alert");
         expect(html).not.toMatch(/(?:href|src|action)\s*=\s*["']?\s*javascript:/i);
         expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
-        // exactly: json-ld, plus the data block and the script tag on a product page
-        expect(count(html, /<\/script>/g)).toBe(productId ? 3 : 1);
+        // exactly: json-ld, plus the photo script on the home; json-ld, the data block and the order script on a product page
+        expect(count(html, /<\/script>/g)).toBe(productId ? 3 : 2);
         if (productId) expect(JSON.parse(/id="sf-data">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "").name).toBeTypeOf("string");
       }
     }

@@ -736,7 +736,10 @@ test.describe.serial("Orders governed seller journey", () => {
     await page.waitForURL((url) => url.pathname === "/orders/confirmation-queue");
     await waitForHydration(page);
 
-    const row = page.getByRole("row").filter({ hasText: orderNumber });
+    const row = page
+      .getByRole("row")
+      .or(page.getByTestId("data-table-card"))
+      .filter({ hasText: orderNumber });
     await expect(row).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
     const reviewLink = row.locator('a[href^="/orders/"]').last();
     await expect(reviewLink).toBeVisible({
@@ -777,7 +780,10 @@ test.describe.serial("Orders governed seller journey", () => {
       });
       await waitForHydration(page);
 
-      const row = page.getByRole("row").filter({ hasText: orderNumber });
+      const row = page
+        .getByRole("row")
+        .or(page.getByTestId("data-table-card"))
+        .filter({ hasText: orderNumber });
       await expect(row).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
       const reviewLink = row.locator('a[href^="/orders/"]').last();
       await reviewLink.click();

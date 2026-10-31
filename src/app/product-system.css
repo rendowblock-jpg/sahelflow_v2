@@ -186,6 +186,88 @@ html[data-theme-preset="dune"] {
   --chart-5: oklch(0.59 0.15 235);
 }
 
+/* Carnet — the shop's paper ledger (light = paper). Surface steps desk < sunk < paper < sheet are each >= 0.02 OKLab L
+   (asserted in theme/__tests__/contrast-contract.test.ts). Hex is kept in the comment; the contract round-trips it.
+   The primary action is INK, there is no brand hue. Brass #B58A2E is never a text colour (2.7:1); it only appears as
+   the brass plate (--carnet-brass-bg with --carnet-brass-fg text). ink-3 is #605C50 (design table: #625E52, which was
+   4.47:1 on the desk surface, under the 4.5:1 floor). */
+html[data-theme-preset="carnet"] {
+  --carnet-desk: oklch(0.877 0.023 87.2); /* #DDD6C6 */
+  --carnet-sunk: oklch(0.923 0.019 86.1); /* #EBE5D8 */
+  --carnet-paper: oklch(0.95 0.014 84.6); /* #F3EEE4 */
+  --carnet-sheet: oklch(0.977 0.01 87.5); /* #FAF7F0 */
+  --carnet-ink: oklch(0.204 0.009 264.4); /* #15171B */
+  --carnet-ink-2: oklch(0.389 0.01 99.1); /* #46453F */
+  --carnet-ink-3: oklch(0.475 0.019 91.7); /* #605C50 */
+  --carnet-line: oklch(0.794 0.029 86.7); /* #C4BBA7 */
+  --carnet-edge: oklch(0.571 0.028 86.9); /* #7F7765 */
+  --carnet-rule: oklch(0.875 0.023 84.6); /* #DDD5C5 */
+  --carnet-margin: oklch(0.7408 0.0747 31.6); /* #D69A8E */
+  --carnet-red: oklch(0.532 0.166 30.1); /* #B93A2B */
+  --carnet-red-bg: oklch(0.932 0.021 39.4); /* #F6E4DE */
+  --carnet-red-ink: oklch(0.466 0.147 30.6); /* #9B2E20 */
+  --carnet-green: oklch(0.476 0.078 162.2); /* #2D6A4F */
+  --carnet-green-bg: oklch(0.927 0.02 150.1); /* #DEEBE0 */
+  --carnet-green-ink: oklch(0.374 0.063 161.6); /* #1C4B36 */
+  --carnet-brass-bg: oklch(0.894 0.055 89.9); /* #EADBB3 */
+  --carnet-brass-fg: oklch(0.4082 0.0803 82.7); /* #5F4507 */
+  --carnet-blue: oklch(0.427 0.094 257.8); /* #2C4F82 */
+  --carnet-blue-bg: oklch(0.897 0.016 253.9); /* #D6DEE8 */
+  --carnet-blue-ink: oklch(0.351 0.078 260.5); /* #223A63 */
+  --carnet-slip-out: oklch(0.913 0.013 251.6); /* #DCE3EB */
+  --carnet-slip-in: var(--carnet-sheet);
+  --surface-0: var(--carnet-paper);
+  --surface-1: var(--carnet-sheet);
+  --surface-2: var(--carnet-sunk);
+  --surface-3: var(--carnet-desk);
+  --background: var(--carnet-paper);
+  --foreground: var(--carnet-ink);
+  --card: var(--carnet-sheet);
+  --card-foreground: var(--carnet-ink);
+  --popover: var(--carnet-sheet);
+  --popover-foreground: var(--carnet-ink);
+  --primary: var(--carnet-ink);
+  --primary-foreground: var(--carnet-sheet);
+  --secondary: var(--carnet-sunk);
+  --secondary-foreground: var(--carnet-ink);
+  --muted: var(--carnet-sunk);
+  --muted-foreground: var(--carnet-ink-2);
+  --accent: var(--carnet-sunk);
+  --accent-foreground: var(--carnet-ink);
+  --border: var(--carnet-line);
+  --input: var(--carnet-edge);
+  --ring: var(--primary);
+  --destructive: var(--carnet-red);
+  --success: var(--carnet-green);
+  --success-foreground: var(--carnet-sheet);
+  --warning: var(--carnet-brass-fg);
+  --warning-foreground: var(--carnet-sheet);
+  --info: var(--carnet-blue);
+  --info-foreground: var(--carnet-sheet);
+  --chart-1: var(--carnet-blue);
+  --chart-2: oklch(0.5314 0.1016 81.03); /* #8A6516 */
+  --chart-3: var(--carnet-green);
+  --chart-4: var(--carnet-red);
+  --chart-5: var(--carnet-ink-2);
+  --sidebar: var(--carnet-desk);
+  --sidebar-foreground: var(--carnet-ink);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--carnet-paper);
+  --sidebar-accent-foreground: var(--carnet-ink);
+  --sidebar-border: var(--carnet-line);
+  --sidebar-ring: var(--ring);
+  --sf-chart-grid: var(--carnet-rule);
+  --sf-chart-axis: var(--carnet-ink-3);
+  --sf-surface-highlight: oklch(1 0 0 / 0.6);
+  /* Ruled paper: controls 4px, cards 6px (slips stay under 10px). */
+  --radius: 0.375rem;
+  --radius-control: 0.25rem;
+  --radius-surface: 0.375rem;
+  /* Figures are set in Plex Mono; globals.css reads this through --font-mono. */
+  --sf-font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 /* ── Arabic product typography + bidi boundaries ─────────────────────────── */
 html[dir="rtl"] body {
   font-family: var(--font-arabic), "Segoe UI", Tahoma, Arial, sans-serif;

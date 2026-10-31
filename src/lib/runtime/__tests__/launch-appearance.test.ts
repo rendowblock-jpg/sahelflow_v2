@@ -63,7 +63,7 @@ describe("launch appearance cookies", () => {
     for (const theme of ["light", "dark", "system"]) {
       expect(readLaunchAppearance(cookies({ "sahelflow-theme": theme })).theme).toBe(theme);
     }
-    for (const preset of ["sahel", "atlas", "oasis", "dune"]) {
+    for (const preset of ["carnet", "sahel", "atlas", "oasis", "dune"]) {
       expect(readLaunchAppearance(cookies({ "sahelflow-theme-preset": preset })).preset).toBe(
         preset,
       );

@@ -17,7 +17,17 @@ import {
   useMemo,
   useSyncExternalStore,
 } from "react";
+import {
+  DEFAULT_PRESET,
+  LOOK_KEY,
+  LOOK_VERSION,
+  PRESETS,
+  resolveLook,
+  type ThemePreset,
+} from "@/lib/appearance/look";
 import { reportLaunchAppearance } from "@/lib/runtime/report-launch-appearance";
+
+export type { ThemePreset };
 
 export interface ThemeProviderProps {
   children: React.ReactNode;
@@ -29,7 +39,6 @@ export interface ThemeProviderProps {
 }
 
 export type ThemeMode = "light" | "dark" | "system";
-export type ThemePreset = "sahel" | "atlas" | "oasis" | "dune";
 type ResolvedTheme = "light" | "dark";
 
 interface ThemeContextValue {
@@ -49,8 +58,8 @@ const PRESET_COOKIE_KEY = "sahelflow-theme-preset";
 const APPEARANCE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 2;
 const THEME_CHANGE_EVENT = "sahelflow:theme-change";
 const DEFAULT_THEME: ThemeMode = "dark";
-const DEFAULT_PRESET: ThemePreset = "sahel";
-const PRESETS: ThemePreset[] = ["sahel", "atlas", "oasis", "dune"];
+const LOOK_COOKIE_KEY = "sahelflow-look";
+const PRESET_LIST: ThemePreset[] = [...PRESETS];
 
 // Desktop production serves the packaged app from a localhost port selected at
 // runtime. localStorage is port/origin scoped, so it cannot be the only durable
@@ -67,7 +76,7 @@ const ThemeContext = createContext<ThemeContextValue>({
   setTheme: () => {},
   setPreset: () => {},
   themes: ["light", "dark", "system"],
-  presets: PRESETS,
+  presets: PRESET_LIST,
 });
 
 function parseTheme(value: string | null | undefined): ThemeMode | null {
@@ -81,12 +90,7 @@ function normalizeTheme(value: string | null | undefined): ThemeMode {
 }
 
 function parsePreset(value: string | null | undefined): ThemePreset | null {
-  return value === "sahel" ||
-    value === "atlas" ||
-    value === "oasis" ||
-    value === "dune"
-    ? value
-    : null;
+  return PRESET_LIST.find((preset) => preset === value) ?? null;
 }
 
 function normalizePreset(value: string | null | undefined): ThemePreset {
@@ -238,14 +242,7 @@ function getThemeSnapshot(): ThemeMode {
 function getPresetSnapshot(): ThemePreset {
   if (runtimePresetOverride !== null) return runtimePresetOverride;
 
-  const cookiePreset = parsePreset(readCookie(PRESET_COOKIE_KEY));
-  if (cookiePreset) return cookiePreset;
-
-  try {
-    return parsePreset(localStorage.getItem(PRESET_STORAGE_KEY)) ?? DEFAULT_PRESET;
-  } catch {
-    return DEFAULT_PRESET;
-  }
+  return readLookDecision().preset;
 }
 
 function persistTheme(theme: ThemeMode): void {
@@ -259,6 +256,34 @@ function persistTheme(theme: ThemeMode): void {
   }
   if (persisted) runtimeThemeOverride = null;
   reportLaunchAppearance();
+}
+
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/** Which preset to show, and whether the one-time look migration still has to be written (see lib/appearance/look.ts). */
+function readLookDecision() {
+  return resolveLook({
+    presetCookie: readCookie(PRESET_COOKIE_KEY),
+    presetStorage: readStorage(PRESET_STORAGE_KEY),
+    lookCookie: readCookie(LOOK_COOKIE_KEY),
+    lookStorage: readStorage(LOOK_KEY),
+  });
+}
+
+/** The marker travels with the preset: from now on the saved preset is respected. */
+function persistLookMarker(): void {
+  persistCookie(LOOK_COOKIE_KEY, LOOK_VERSION);
+  try {
+    localStorage.setItem(LOOK_KEY, LOOK_VERSION);
+  } catch {
+    // The cookie still carries it across desktop restarts when localStorage fails.
+  }
 }
 
 function persistPreset(preset: ThemePreset): void {
@@ -326,8 +351,10 @@ export function ThemeProvider({
   // Reconcile initial hydration, migrate older localStorage-only preferences to
   // the host-scoped cookie, and respond to preset storage / OS scheme changes.
   useEffect(() => {
+    const migrate = readLookDecision().write;
     persistTheme(theme);
     persistPreset(preset);
+    if (migrate) persistLookMarker();
     applyAppearance(resolvedTheme, preset);
   }, [theme, resolvedTheme, preset]);
 
@@ -354,6 +381,7 @@ export function ThemeProvider({
 
     commitAppearanceTransition(() => {
       persistPreset(normalized);
+      persistLookMarker();
       applyAppearance(resolveTheme(currentTheme, systemPrefersDark), normalized);
       notifyAppearanceChanged();
     });
@@ -369,7 +397,7 @@ export function ThemeProvider({
       themes: enableSystem
         ? ["light", "dark", "system"]
         : ["light", "dark"],
-      presets: PRESETS,
+      presets: PRESET_LIST,
     }),
     [theme, resolvedTheme, preset, setTheme, setPreset, enableSystem],
   );

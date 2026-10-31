@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import manifest from "../asset-manifest.generated.json";
@@ -434,5 +434,24 @@ describe("commune search: the network", () => {
     expect(status?.hidden).toBe(false);
     expect(status?.textContent).toBe("Search is unavailable. Choose the wilaya and commune below.");
     expect(status?.textContent).not.toContain("send your order");
+  });
+});
+
+describe("the picker rows are 44 px touch targets", () => {
+  it("every row has the sf-opt class, and the stylesheet gives that class at least 44 px", async () => {
+    const c = await mount();
+    const rows = await search(c, "al");
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) {
+      expect(row.getAttribute("role")).toBe("option");
+      expect(row.classList.contains("sf-opt")).toBe(true);
+    }
+    // happy-dom has no file: URLs for import.meta.url, so the test file's own folder comes from vitest (this also lets the
+    // mutation copy read ITS css); the fallback is the repo path from the working directory.
+    const here = expect.getState().testPath ? dirname(expect.getState().testPath ?? "") : join(process.cwd(), "control-plane/storefront/web/client");
+    const css = readFileSync(join(here, "..", "styles", "shop.css"), "utf8");
+    const rule = /\.sf-opt\{([^}]*)\}/.exec(css);
+    const min = /min-height:(\d+)px/.exec(rule?.[1] ?? "");
+    expect(Number(min?.[1] ?? 0)).toBeGreaterThanOrEqual(44);
   });
 });

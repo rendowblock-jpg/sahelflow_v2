@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, ShieldCheck, UserPlus } from "lucide-react";
 
 import { useEntryBrand } from "@/components/auth/entry-brand";
+import { FORM_ERROR_ID, describedByFor, isInvalid, useFocusOnFailure, type FormFailure } from "@/components/auth/form-focus";
 import { PinInput } from "@/components/auth/pin-input";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
 import { EntryShell } from "@/components/system";
@@ -23,7 +24,8 @@ export default function LoginPage() {
   const [loginId, setLoginId] = useState("");
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<FormFailure | null>(null);
+  useFocusOnFailure(failure, loading);
   const [needsSetup, setNeedsSetup] = useState(false);
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function LoginPage() {
     event.preventDefault();
     if (pin.length < 8) return;
     setLoading(true);
-    setError("");
+    setFailure(null);
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -54,14 +56,14 @@ export default function LoginPage() {
       if (!response.ok) {
         // The server sends English prose only — map the known auth failures
         // (wrong PIN, lockout, rate limit) into the active locale first.
-        setError(translateServerError(data.error, t, t("error.loginFailed")));
+        setFailure({ field: "pin", message: translateServerError(data.error, t, t("error.loginFailed")) });
         if (data.needsSetup) setNeedsSetup(true);
         return;
       }
       router.replace("/");
       router.refresh();
     } catch {
-      setError(t("error.networkFailure"));
+      setFailure({ field: "pin", message: t("error.networkFailure") });
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export default function LoginPage() {
 
   function selectMode(next: "owner" | "member") {
     setMode(next);
-    setError("");
+    setFailure(null);
   }
 
   return (
@@ -121,7 +123,7 @@ export default function LoginPage() {
         <div className="space-y-2">
           <Label htmlFor="pin">{t("auth.pin")}</Label>
           <PinInput
-            id="pin"
+            id="pin" aria-invalid={isInvalid(failure, "pin")} aria-describedby={describedByFor(failure, "pin")}
             value={pin}
             onChange={(event) => setPin(event.target.value)}
             placeholder="••••••••"
@@ -132,8 +134,8 @@ export default function LoginPage() {
           />
         </div>
 
-        {error ? (
-          <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">{error}</p>
+        {failure ? (
+          <p id={FORM_ERROR_ID} className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">{failure.message}</p>
         ) : null}
 
         <Button type="submit" size="lg" className="w-full" disabled={loading || pin.length < 8 || (mode === "member" && loginId.length < 3)}>

@@ -1,29 +1,44 @@
 import type { Locale } from "@/lib/i18n";
+import { getAppearanceCarnetRuntimeTranslation } from "@/lib/i18n/appearance-carnet-runtime";
+import { getNavigationGroupsRuntimeTranslation } from "@/lib/i18n/navigation-groups-runtime";
 import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
 import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
+import { getPreUpdateBackupRuntimeTranslation } from "@/lib/i18n/pre-update-backup-runtime";
+import { getStorefrontStudioStatesRuntimeTranslation } from "@/lib/i18n/storefront-studio-states-runtime";
+import { getStorefrontPublicStatesRuntimeTranslation } from "@/lib/i18n/storefront-public-states-runtime";
 import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
+import { getDashboardStatesRuntimeTranslation } from "@/lib/i18n/dashboard-states-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
 import { getDataTableRuntimeTranslation } from "@/lib/i18n/data-table-runtime";
+import { getCustomersProductsStatesRuntimeTranslation } from "@/lib/i18n/customers-products-states-runtime";
+import { getCustomersProductsDetailRuntimeTranslation } from "@/lib/i18n/customers-products-detail-runtime";
 import { getDeliveriesRuntimeTranslation } from "@/lib/i18n/deliveries-runtime";
+import { getOrdersDetailRuntimeTranslation } from "@/lib/i18n/orders-detail-runtime";
+import { getOrdersStatesRuntimeTranslation } from "@/lib/i18n/orders-states-runtime";
 import { getDeliveryReconcileRuntimeTranslation } from "@/lib/i18n/delivery-reconcile-runtime";
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
+import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";
 import { getInboxLivenessRuntimeTranslation } from "@/lib/i18n/inbox-liveness-runtime";
+import { getInboxThreadCarnetRuntimeTranslation } from "@/lib/i18n/inbox-thread-carnet-runtime";
 import { getInboxOrderStatusRuntimeTranslation } from "@/lib/i18n/inbox-order-status-runtime";
 import { getInboxVoiceNoteRuntimeTranslation } from "@/lib/i18n/inbox-voice-note-runtime";
 import { getLicenseLockoutRuntimeTranslation } from "@/lib/i18n/license-lockout-runtime";
 import { getNotificationsRuntimeTranslation } from "@/lib/i18n/notifications-runtime";
 import { getOnboardingRuntimeTranslation } from "@/lib/i18n/onboarding-runtime";
+import { getFirstRunStatesRuntimeTranslation } from "@/lib/i18n/first-run-states-runtime";
 import { getOrderActionsRuntimeTranslation } from "@/lib/i18n/order-actions-runtime";
 import { getOrderFormRuntimeTranslation } from "@/lib/i18n/order-form-runtime";
 import { getOrderLifecycleRuntimeTranslation } from "@/lib/i18n/order-lifecycle-runtime";
 import { getOrdersWorkspaceTranslation } from "@/lib/i18n/orders-workspace";
 import { getPhase5RuntimeTranslation } from "@/lib/i18n/phase5-runtime";
+import { getPhonePairingRuntimeTranslation } from "@/lib/i18n/phone-pairing-runtime";
 import { getPluralsRuntimeTranslation } from "@/lib/i18n/plurals-runtime";
 import { getSecurityRuntimeTranslation } from "@/lib/i18n/security-runtime";
+import { getSettingsPanelsStatesRuntimeTranslation } from "@/lib/i18n/settings-panels-states-runtime";
 import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 import { getWorkspacesRuntimeTranslation } from "@/lib/i18n/workspaces-runtime";
@@ -147,19 +162,28 @@ export function getRuntimeTranslation(
 ): string | undefined {
   return (
     (SHARED_RUNTIME_COPY[locale] as Readonly<Record<string, string>>)[key] ??
+    getAppearanceCarnetRuntimeTranslation(locale, key) ??
+    getNavigationGroupsRuntimeTranslation(locale, key) ??
     getAiCanvasRuntimeTranslation(locale, key) ??
     getWhatsAppSendGuardRuntimeTranslation(locale, key) ??
     getHeldSendRuntimeTranslation(locale, key) ??
+    getPreUpdateBackupRuntimeTranslation(locale, key) ??
+    getStorefrontStudioStatesRuntimeTranslation(locale, key) ??
+    getStorefrontPublicStatesRuntimeTranslation(locale, key) ??
     getAnalyticsRuntimeTranslation(locale, key) ??
     getAutomationRuntimeTranslation(locale, key) ??
     getCodRuntimeTranslation(locale, key) ??
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
+    getDashboardStatesRuntimeTranslation(locale, key) ??
     getDataTableRuntimeTranslation(locale, key) ??
+    getCustomersProductsStatesRuntimeTranslation(locale, key) ??
     getDeliveriesRuntimeTranslation(locale, key) ??
     getDeliveryReconcileRuntimeTranslation(locale, key) ??
     getEntityDetailRuntimeTranslation(locale, key) ??
+    getInboxCarnetRuntimeTranslation(locale, key) ??
     getInboxLivenessRuntimeTranslation(locale, key) ??
+    getInboxThreadCarnetRuntimeTranslation(locale, key) ??
     getInboxOrderStatusRuntimeTranslation(locale, key) ??
     getInboxVoiceNoteRuntimeTranslation(locale, key) ??
     getLicenseLockoutRuntimeTranslation(locale, key) ??
@@ -168,9 +192,15 @@ export function getRuntimeTranslation(
     getOrderActionsRuntimeTranslation(locale, key) ??
     getOrderFormRuntimeTranslation(locale, key) ??
     getOrderLifecycleRuntimeTranslation(locale, key) ??
+    getOrdersStatesRuntimeTranslation(locale, key) ??
+    getOrdersDetailRuntimeTranslation(locale, key) ??
+    getCustomersProductsDetailRuntimeTranslation(locale, key) ??
     getOrdersWorkspaceTranslation(locale, key) ??
+    getFirstRunStatesRuntimeTranslation(locale, key) ??
     getPhase5RuntimeTranslation(locale, key) ??
+    getPhonePairingRuntimeTranslation(locale, key) ??
     getSecurityRuntimeTranslation(locale, key) ??
+    getSettingsPanelsStatesRuntimeTranslation(locale, key) ??
     getStorefrontRuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key) ??
     getWorkspacesRuntimeTranslation(locale, key) ??

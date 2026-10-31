@@ -176,20 +176,20 @@ export function renderProduct(ctx: Ctx, product: ShopProduct): ProductPage {
 <p class="sf-cod">${icon("check")}<span${arabicAttrs(ctx, codText)}>${esc(codText)}</span></p>
 <div class="sf-qty"><span id="qty-label">${esc(t("storefront.view.landing.quantity"))}</span><div class="sf-stepper" role="group" aria-labelledby="qty-label"><button type="button" data-sf="qty-minus" aria-label="${esc(t("storefront.view.decreaseQty"))}">${icon("minus")}</button><output data-sf="qty" aria-live="polite">1</output><button type="button" data-sf="qty-plus" aria-label="${esc(t("storefront.view.increaseQty"))}">${icon("plus")}</button></div></div>
 <fieldset class="sf-grp"><legend>${esc(t("storefront.shop.stepContact"))}</legend>
-${field("name", t("storefront.view.fullName"), '<input id="f-name" name="name" type="text" autocomplete="name" maxlength="120" required aria-describedby="e-name">')}
-${field("phone", t("storefront.view.phone"), '<input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" dir="ltr" maxlength="20" placeholder="05 55 12 34 56" required aria-describedby="e-phone">')}
+${field("name", t("storefront.view.fullName"), '<input id="f-name" name="name" type="text" autocomplete="name" enterkeyhint="next" maxlength="120" required aria-describedby="e-name">')}
+${field("phone", t("storefront.view.phone"), '<input id="f-phone" name="phone" type="tel" inputmode="tel" enterkeyhint="next" autocomplete="tel-national" dir="ltr" maxlength="20" placeholder="05 55 12 34 56" required aria-describedby="e-phone">')}
 </fieldset>
 <fieldset class="sf-grp"><legend>${esc(t("storefront.shop.stepDelivery"))}</legend>
 ${communeSearch(ctx)}
 ${field("wilaya", t("storefront.view.wilaya"), `<select id="f-wilaya" name="wilaya" autocomplete="address-level1" required aria-describedby="e-wilaya"><option value="">${esc(t("storefront.shop.choose"))}</option>${list.map(([code, label]) => `<option value="${code}">${esc(label)}</option>`).join("")}</select>`)}
 ${field("commune", t("storefront.view.commune"), `<select id="f-commune" name="commune" autocomplete="address-level2" required disabled aria-describedby="e-commune"><option value="">${esc(t("storefront.shop.choose"))}</option></select>`)}
-${field("address", t("storefront.view.address"), '<textarea id="f-address" name="address" rows="2" autocomplete="street-address" maxlength="300" required aria-describedby="e-address"></textarea>', true)}
+${field("address", t("storefront.view.address"), '<textarea id="f-address" name="address" rows="2" autocomplete="street-address" enterkeyhint="next" maxlength="300" required aria-describedby="e-address"></textarea>', true)}
 <fieldset class="sf-modes"><legend>${esc(t("storefront.view.deliveryMode"))}</legend><div class="sf-modes-grid">${modeCard("home", t("storefront.view.deliveryHome"))}${modeCard("desk", t("storefront.view.deliveryDesk"))}</div><p class="sf-err" id="e-mode" hidden></p></fieldset>
-${theme.checkout.showOrderNotes ? field("notes", t("storefront.view.notes"), '<textarea id="f-notes" name="notes" rows="2" maxlength="400" aria-describedby="e-notes"></textarea>', true) : ""}
+${theme.checkout.showOrderNotes ? field("notes", t("storefront.view.notes"), '<textarea id="f-notes" name="notes" rows="2" enterkeyhint="done" maxlength="400" aria-describedby="e-notes"></textarea>', true) : ""}
 </fieldset>
 <dl class="sf-sum" aria-label="${esc(t("storefront.shop.summary"))}"><div><dt>${esc(t("storefront.shop.subtotal"))}</dt><dd data-sf="subtotal">${esc(price)}</dd></div><div><dt>${esc(t("storefront.view.shipping"))}</dt><dd data-sf="shipping">${esc(t("storefront.shop.pickFirst"))}</dd></div><div class="sf-sum-total"><dt>${esc(t("storefront.view.total"))}</dt><dd data-sf="total">${esc(price)}</dd></div></dl>
 <div id="sf-status" class="sf-status" role="status" aria-live="polite" hidden></div>
-<button id="sf-submit" class="sf-cta" type="submit">${esc(t("storefront.studio.orderNow"))}</button>
+<button id="sf-submit" class="sf-cta" type="submit" aria-describedby="sf-status">${esc(t("storefront.studio.orderNow"))}</button>
 <noscript><p class="sf-err">${esc(t("storefront.shop.needJs"))}</p></noscript>
 </form>
 <section id="sf-thanks" class="sf-thanks" tabindex="-1" hidden aria-labelledby="thanks-title"><div class="sf-thanks-icon">${icon("check")}</div><h2 id="thanks-title" class="sf-h3">${esc(t("storefront.view.orderConfirmed"))}</h2><p>${esc(t("storefront.shop.thanksNext"))}</p><dl class="sf-sum"><div><dt>${esc(t("storefront.view.orderNumber"))}</dt><dd data-sf="ref" dir="ltr"></dd></div><div class="sf-sum-total"><dt>${esc(t("storefront.view.total"))}</dt><dd data-sf="thanks-total"></dd></div></dl>${wa ? `<a id="sf-wa" class="sf-btn sf-btn--wa" href="https://wa.me/${wa}" target="_blank" rel="noopener noreferrer">${icon("chat")}${esc(t("storefront.shop.confirmWhatsapp"))}</a>` : ""}<button type="button" class="sf-link" data-sf="again">${esc(t("storefront.view.anotherOrder"))}</button></section>`;

@@ -83,11 +83,13 @@ describe("Inbox final review invariants", () => {
     const pairing = source("src/components/inbox/whatsapp-pairing-dialog.tsx");
 
     expect(pairing).toContain('fetch("/api/whatsapp/status"');
+    expect(pairing).toContain("parseWhatsAppStatusResponse(response.ok, data)");
     expect(pairing).toContain('phase === "qr-ready" ? (');
     expect(pairing).toContain('key={`${qrKey}:${qrRevision}`}');
     expect(pairing).toContain('phase === "connected" ? (');
     expect(pairing).toContain('pairingCopy("connectedTitle")');
-    expect(header).toContain('copy("transportChecking")');
+    // The checking word moved into the single link surface (wave 1 track I1).
+    expect(source("src/components/inbox/inbox-link-surface.tsx")).toContain('copy("transportChecking")');
     expect(header).toContain(
       "reconnect();\n              refreshQr();\n              void refreshChats();",
     );

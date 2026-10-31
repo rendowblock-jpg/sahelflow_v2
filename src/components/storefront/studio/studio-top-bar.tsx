@@ -31,11 +31,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { saveStatusText } from "@/components/storefront/studio/studio-feedback";
 import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontStudioDraft } from "@/lib/storefront/studio-draft";
 import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 import type { StorefrontStudioDevice } from "./studio-types";
+
+const TOGGLE_HINT_ID = "studio-toggle-hint";
 
 export type StudioSaveState = "saved" | "pending" | "saving" | "error" | "conflict";
 
@@ -60,6 +63,7 @@ export function StudioTopBar({
   onUndo,
   onRedo,
   saveState,
+  saveReason = null,
   dirty,
   savedAt,
   onActiveChange,
@@ -67,6 +71,9 @@ export function StudioTopBar({
   onSave,
   onPublish,
   publishDisabled,
+  publishing,
+  publishLine,
+  activeWaitsForPublish = false,
 }: {
   storefrontId: string;
   draft: StorefrontStudioDraft;
@@ -78,6 +85,7 @@ export function StudioTopBar({
   onUndo: () => void;
   onRedo: () => void;
   saveState: StudioSaveState;
+  saveReason?: string | null;
   dirty: boolean;
   savedAt: Date | null;
   onActiveChange: (active: boolean) => void;
@@ -85,6 +93,10 @@ export function StudioTopBar({
   onSave: () => void;
   onPublish: () => void;
   publishDisabled: boolean;
+  publishing: boolean;
+  publishLine: { text: string; role: "status" | "alert" } | null;
+  /** The active/paused switch differs from what is online (or that is unknown). */
+  activeWaitsForPublish?: boolean;
 }) {
   const { t } = useI18n();
   const storeHref = `/storefront/${encodeURIComponent(liveSlug)}`;
@@ -117,8 +129,13 @@ export function StudioTopBar({
             aria-hidden="true"
           />
           <span className="shrink-0">
-            {draft.isActive ? t("storefront.active") : t("storefront.inactive")}
+            {draft.isActive ? t("storefront.studioStates.toggle.on") : t("storefront.studioStates.toggle.off")}
           </span>
+          {activeWaitsForPublish ? (
+            <span id={TOGGLE_HINT_ID} data-testid="studio-toggle-hint" className="min-w-0 truncate">
+              {t("storefront.studioStates.toggle.appliesOnPublish")}
+            </span>
+          ) : null}
           <span className="truncate max-sm:hidden" dir="ltr">
             /storefront/{draft.slug}
           </span>
@@ -164,13 +181,14 @@ export function StudioTopBar({
           </IconAction>
         </div>
 
-        <SaveStatus state={saveState} dirty={dirty} savedAt={savedAt} onRetry={onSave} />
+        <SaveStatus state={saveState} dirty={dirty} savedAt={savedAt} reason={saveReason} onRetry={onSave} />
 
         <label className="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-control border px-2.5 text-caption font-medium max-lg:hidden">
           <Switch
             checked={draft.isActive}
             onCheckedChange={onActiveChange}
             aria-label={t("storefront.studio.visibleToBuyers")}
+            aria-describedby={activeWaitsForPublish ? TOGGLE_HINT_ID : undefined}
           />
           <span>{t("storefront.studio.visibleToBuyers")}</span>
         </label>
@@ -225,11 +243,24 @@ export function StudioTopBar({
           disabled={publishDisabled}
           onClick={onPublish}
           data-studio-publish="true"
+          aria-busy={publishing}
           className="inline-flex h-9 shrink-0 items-center gap-2 rounded-control bg-primary px-3.5 text-body-sm font-semibold text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45"
         >
           <UploadCloud className="size-4" aria-hidden="true" />
-          {t("storefront.studio.publish")}
+          {publishing ? t("storefront.studioStates.publish.publishing") : t("storefront.studio.publish")}
         </button>
+        <p
+          role={publishLine?.role ?? "status"}
+          aria-live={publishLine?.role === "alert" ? undefined : "polite"}
+          data-testid="publish-status-line"
+          className={cn(
+            "max-w-72 text-xs leading-tight",
+            publishLine?.role === "alert" ? "text-destructive" : "text-muted-foreground",
+            publishLine ? "" : "hidden",
+          )}
+        >
+          {publishLine?.text ?? ""}
+        </p>
       </div>
     </header>
   );
@@ -275,11 +306,13 @@ function SaveStatus({
   state,
   dirty,
   savedAt,
+  reason,
   onRetry,
 }: {
   state: StudioSaveState;
   dirty: boolean;
   savedAt: Date | null;
+  reason: string | null;
   onRetry: () => void;
 }) {
   const { t, locale } = useI18n();
@@ -289,18 +322,7 @@ function SaveStatus({
     ...DZ_CLOCK,
   });
   const failed = state === "error" || state === "conflict";
-  const label =
-    state === "saving"
-      ? t("storefront.studio.saving")
-      : state === "conflict"
-        ? t("storefront.studio.conflict")
-        : state === "error"
-          ? t("storefront.studio.saveFailed")
-          : dirty
-            ? t("storefront.studio.unsaved")
-            : time
-              ? t("storefront.studio.savedAt", { time })
-              : t("storefront.studio.saved");
+  const label = saveStatusText({ state, dirty, time, reason }, t);
   const Icon = state === "saving" || (dirty && !failed) ? Loader2 : failed ? AlertCircle : CheckCircle2;
 
   const content = (
@@ -309,7 +331,7 @@ function SaveStatus({
         className={cn("size-3.5 shrink-0", (state === "saving" || (dirty && !failed)) && "animate-spin")}
         aria-hidden="true"
       />
-      <span className="truncate max-sm:sr-only">{label}</span>
+      <span className="truncate max-sm:max-w-24">{label}</span>
     </>
   );
 

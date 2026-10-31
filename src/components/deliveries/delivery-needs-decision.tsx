@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 import { DeliveryReconcileActions } from "@/components/deliveries/delivery-reconcile-actions";
 import {
@@ -27,6 +27,8 @@ const BADGE =
 export function DeliveryNeedsDecision({ deliveryId, orderId, canManage, stuckCreating = false }: DeliveryNeedsDecisionProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  // The dialog opens from a plain button (no DialogTrigger), so Radix has no trigger to give focus back to.
+  const openerRef = useRef<HTMLButtonElement>(null);
   const label = t("deliveries.reconcile.needsDecision");
 
   if (!canManage) {
@@ -41,6 +43,7 @@ export function DeliveryNeedsDecision({ deliveryId, orderId, canManage, stuckCre
   return (
     <>
       <button
+        ref={openerRef}
         type="button"
         onClick={() => setOpen(true)}
         className={`${BADGE} min-h-8 outline-none hover:bg-warning/15 focus-visible:ring-2 focus-visible:ring-ring`}
@@ -51,7 +54,12 @@ export function DeliveryNeedsDecision({ deliveryId, orderId, canManage, stuckCre
         <span className="sr-only">{t("deliveries.reconcile.decide")}</span>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            openerRef.current?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{t("deliveries.reconcile.title")}</DialogTitle>
             {stuckCreating ? (

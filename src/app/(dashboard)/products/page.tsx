@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AlertTriangle, Boxes, DollarSign, Package } from "lucide-react";
 
 import { ProductsDataTable } from "@/components/products/products-data-table";
+import { OfflineWriteGate } from "@/components/orders/offline-write-gate";
 import { CreateParamDialog } from "@/components/shared/create-param-dialog";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
@@ -68,7 +69,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               />
             ) : null}
             {canCreate ? (
-              <CreateParamDialog kind="product" categories={categories} />
+              <OfflineWriteGate>
+                <CreateParamDialog kind="product" categories={categories} />
+              </OfflineWriteGate>
             ) : null}
           </div>
         ) : undefined}

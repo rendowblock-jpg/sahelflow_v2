@@ -14,6 +14,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useI18n } from "@/hooks/use-i18n";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import {
+  MANAGER_TOUCH,
+  ManagerEmpty,
+  ManagerSaveLine,
+  settleResponse,
+  useManagerAction,
+} from "@/components/storefront/studio/manager-states";
 import type { ModeratableReview } from "@/lib/storefront/review-service";
 import { toast } from "@/lib/toast";
 
@@ -33,12 +41,14 @@ type ApiPayload = { error?: string; code?: string; ok?: boolean };
 export function StorefrontReviewsModeration({ reviews, canModerate }: Props) {
   const { t } = useI18n();
   const router = useRouter();
+  const { state: actionState, busy, run } = useManagerAction(canModerate);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingReject, setPendingReject] = useState<ModeratableReview | null>(null);
 
   async function moderate(reviewId: string, action: "approve" | "reject"): Promise<void> {
-    if (!canModerate || busyId) return;
+    if (!canModerate || busy) return;
     setBusyId(reviewId);
-    try {
+    await run(async () => {
       const response = await fetch(
         `/api/storefront/reviews/${encodeURIComponent(reviewId)}/moderate`,
         {
@@ -47,11 +57,8 @@ export function StorefrontReviewsModeration({ reviews, canModerate }: Props) {
           body: JSON.stringify({ action }),
         },
       );
-      const data = (await response.json().catch(() => ({}))) as ApiPayload;
-      if (!response.ok || !data.ok) {
-        toast.error(t("storefronts.reviews.error"));
-        return;
-      }
+      const result = await settleResponse<ApiPayload>(response, t, (data) => data.ok === true);
+      if (!result.ok) return result;
       toast.success(
         action === "approve"
           ? t("storefronts.reviews.approvedToast")
@@ -59,14 +66,19 @@ export function StorefrontReviewsModeration({ reviews, canModerate }: Props) {
       );
       // The moderation queue is server-ordered; refresh reconciles it.
       router.refresh();
-    } catch {
-      toast.error(t("storefronts.reviews.error"));
-    } finally {
-      setBusyId(null);
-    }
+      return { ok: true };
+    });
+    setBusyId(null);
   }
 
-  if (reviews.length === 0) return null;
+  if (reviews.length === 0) {
+    return (
+      <ManagerEmpty
+        title={t("storefront.studioStates.manager.reviewsEmptyTitle")}
+        body={t("storefront.studioStates.manager.reviewsEmptyBody")}
+      />
+    );
+  }
 
   return (
     <Card>
@@ -119,11 +131,12 @@ export function StorefrontReviewsModeration({ reviews, canModerate }: Props) {
               <p className="mt-1 text-xs text-muted-foreground">
                 {review.productName} · {review.storefrontSlug}
               </p>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={!canModerate || busyId === review.id || review.status === "approved"}
+                  className={MANAGER_TOUCH}
+                  disabled={!canModerate || busy || review.status === "approved"}
                   onClick={() => moderate(review.id, "approve")}
                 >
                   {busyId === review.id ? (
@@ -136,9 +149,9 @@ export function StorefrontReviewsModeration({ reviews, canModerate }: Props) {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-destructive"
-                  disabled={!canModerate || busyId === review.id || review.status === "rejected"}
-                  onClick={() => moderate(review.id, "reject")}
+                  className={`text-destructive ${MANAGER_TOUCH}`}
+                  disabled={!canModerate || busy || review.status === "rejected"}
+                  onClick={() => setPendingReject(review)}
                 >
                   <X className="me-1 h-3.5 w-3.5" />
                   {t("storefronts.reviews.reject")}
@@ -147,6 +160,23 @@ export function StorefrontReviewsModeration({ reviews, canModerate }: Props) {
             </li>
           ))}
         </ul>
+        <ManagerSaveLine state={actionState} verb="change" />
+        {pendingReject ? (
+          <ConfirmDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) setPendingReject(null);
+            }}
+            destructive
+            title={t("storefront.studioStates.manager.reviewRejectTitle")}
+            description={t("storefront.studioStates.manager.reviewRejectBody", {
+              author: pendingReject.authorName,
+              product: pendingReject.productName,
+            })}
+            confirmLabel={t("storefront.studioStates.manager.reviewRejectConfirm")}
+            onConfirm={() => moderate(pendingReject.id, "reject")}
+          />
+        ) : null}
       </CardContent>
     </Card>
   );

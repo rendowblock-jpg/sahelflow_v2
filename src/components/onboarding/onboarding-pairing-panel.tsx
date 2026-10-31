@@ -13,6 +13,7 @@ import {
 
 import {
   deriveWhatsAppPairingPhase,
+  parseWhatsAppStatusResponse,
   type WhatsAppPairingSnapshot,
 } from "@/components/inbox/whatsapp-pairing-state";
 import { WhatsAppUnofficialNotice } from "@/components/inbox/whatsapp-unofficial-notice";
@@ -21,7 +22,6 @@ import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import { getWhatsAppPairingCopy } from "@/lib/i18n/whatsapp-pairing";
 import { toast } from "@/lib/toast";
-import type { WhatsAppStatus } from "@/lib/whatsapp/types";
 import { IconTile } from "@/components/system";
 
 /**
@@ -36,16 +36,9 @@ import { IconTile } from "@/components/system";
  * 2.5k-line inbox hook into onboarding, so this variant reproduces the
  * self-contained pairing lifecycle instead of editing it.
  */
-function isWhatsAppStatus(value: unknown): value is WhatsAppStatus {
-  return (
-    value === "disconnected" ||
-    value === "connecting" ||
-    value === "qr" ||
-    value === "connected"
-  );
-}
-
 const STATUS_POLL_MS = 1_000;
+/** While the helper is off every poll is a failed request; ask rarely and let "Check again" do the rest. */
+const UNREACHABLE_POLL_MS = 15_000;
 const QR_REFRESH_MS = 15_000;
 
 export function OnboardingPairingPanel({
@@ -84,24 +77,8 @@ export function OnboardingPairingPanel({
         cache: "no-store",
         signal,
       });
-      const data = (await response.json().catch(() => ({}))) as {
-        status?: unknown;
-        hasQr?: unknown;
-        sidecarReachable?: unknown;
-      };
-      if (!response.ok) {
-        setSnapshot({
-          status: isWhatsAppStatus(data.status) ? data.status : "disconnected",
-          hasQr: false,
-          sidecarReachable: false,
-        });
-        return;
-      }
-      setSnapshot({
-        status: isWhatsAppStatus(data.status) ? data.status : null,
-        hasQr: data.hasQr === true,
-        sidecarReachable: data.sidecarReachable === false ? false : true,
-      });
+      const data: unknown = await response.json().catch(() => null);
+      setSnapshot(parseWhatsAppStatusResponse(response.ok, data));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setSnapshot({
@@ -114,20 +91,28 @@ export function OnboardingPairingPanel({
 
   // Poll the sidecar status while the pairing step is on screen — identical
   // cadence to the inbox pairing dialog so both surfaces report the same truth.
+  const pollMs = snapshot.sidecarReachable === false ? UNREACHABLE_POLL_MS : STATUS_POLL_MS;
   useEffect(() => {
     const controller = new AbortController();
     const initial = window.setTimeout(() => {
       void requestStatus(controller.signal);
     }, 0);
-    const timer = window.setInterval(() => {
-      void requestStatus(controller.signal);
-    }, STATUS_POLL_MS);
     return () => {
       controller.abort();
       window.clearTimeout(initial);
-      window.clearInterval(timer);
     };
   }, [requestStatus]);
+  // The cadence changes without asking again at once (the first answer just arrived).
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setInterval(() => {
+      void requestStatus(controller.signal);
+    }, pollMs);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [requestStatus, pollMs]);
 
   const phase = useMemo(
     () => deriveWhatsAppPairingPhase(snapshot),
@@ -293,40 +278,42 @@ export function OnboardingPairingPanel({
           </div>
         ) : null}
 
-        {phase === "unavailable" || phase === "disconnected" ? (
+        {phase === "unavailable" ? (
+          <div
+            role="status"
+            data-onboarding-whatsapp-later=""
+            className="flex min-h-64 flex-col items-center justify-center text-center"
+          >
+            <div className="flex size-14 items-center justify-center rounded-surface border bg-muted text-muted-foreground">
+              <WifiOff className="size-6" aria-hidden="true" />
+            </div>
+            <h3 className="mt-5 text-base font-semibold">{t("firstRun.whatsapp.laterTitle")}</h3>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+              {t("firstRun.whatsapp.laterBody")}
+            </p>
+            <Button className="mt-5 min-h-11" variant="outline" onClick={() => void requestStatus()}>
+              <RefreshCw className="size-4" aria-hidden="true" />
+              {t("firstRun.whatsapp.laterCheck")}
+            </Button>
+          </div>
+        ) : null}
+
+        {phase === "disconnected" ? (
           <div className="flex min-h-64 flex-col items-center justify-center text-center">
             <div className="flex size-14 items-center justify-center rounded-surface border bg-destructive-soft text-destructive">
-              {phase === "unavailable" ? (
-                <WifiOff className="size-6" aria-hidden="true" />
-              ) : (
-                <TriangleAlert className="size-6" aria-hidden="true" />
-              )}
+              <TriangleAlert className="size-6" aria-hidden="true" />
             </div>
-            <h3 className="mt-5 text-base font-semibold">
-              {phase === "unavailable"
-                ? pairingCopy("unavailableTitle")
-                : pairingCopy("disconnectedTitle")}
-            </h3>
+            <h3 className="mt-5 text-base font-semibold">{pairingCopy("disconnectedTitle")}</h3>
             <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-              {phase === "unavailable"
-                ? pairingCopy("unavailableBody")
-                : pairingCopy("disconnectedBody")}
+              {pairingCopy("disconnectedBody")}
             </p>
-            <Button
-              className="mt-5"
-              onClick={() => void connect()}
-              disabled={connecting}
-            >
+            <Button className="mt-5 min-h-11" onClick={() => void connect()} disabled={connecting}>
               {connecting ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : phase === "unavailable" ? (
-                <RefreshCw className="size-4" aria-hidden="true" />
               ) : (
                 <Smartphone className="size-4" aria-hidden="true" />
               )}
-              {phase === "unavailable"
-                ? pairingCopy("retry")
-                : inboxCopy("connect")}
+              {inboxCopy("connect")}
             </Button>
           </div>
         ) : null}

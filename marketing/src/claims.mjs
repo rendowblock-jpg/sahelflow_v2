@@ -32,7 +32,7 @@ export const WILAYA_COUNT = 69;
 const NOT_RUN =
   "Code and automated tests exist; it has not been run against a real account yet. Live certification is Wave 5 and needs the Founder's accounts.";
 
-function entry(id, kind, status, evidence, { certifiedOn = null, ownerWave = null, allow = {} } = {}) {
+function entry(id, kind, status, evidence, { certifiedOn = null, ownerWave = null, allow = {}, proof = [] } = {}) {
   return Object.freeze({
     id,
     kind,
@@ -43,6 +43,8 @@ function entry(id, kind, status, evidence, { certifiedOn = null, ownerWave = nul
     ownerWave,
     // Phrases a page may use because this claim is `live`; nothing else may.
     allow: Object.freeze(allow),
+    // Repo paths (files or tests) that hold the proof; a test checks they exist.
+    proof: Object.freeze(proof),
   });
 }
 
@@ -80,6 +82,42 @@ export const CLAIMS = Object.freeze([
   ),
   entry("data-encrypted", "fact", "live", "Sensitive fields are encrypted on disk with AES-256-GCM (src/lib/crypto/field-crypto.ts).", { certifiedOn: "2026-10-30" }),
   entry("price", "fact", "live", "35 000 DZD once; launch offer 17 000 DZD for the first 20 sellers; 7-day trial (marketing/src/config.mjs, pinned to src/lib/license/packages.ts by a test).", { certifiedOn: "2026-10-30" }),
+  entry(
+    "local-first",
+    "fact",
+    "live",
+    "Each shop's orders, customers, stock and money are rows of one SQLite database file on the seller's own PC (prisma/schema.prisma: provider sqlite, url from DATABASE_URL; src/lib/db.ts). src/lib/data/__tests__/data-integrity.test.ts runs the order, stock and count paths against that local database.",
+    { certifiedOn: "2026-10-30", proof: ["prisma/schema.prisma", "src/lib/db.ts", "src/lib/data/__tests__/data-integrity.test.ts"] },
+  ),
+  entry(
+    "pin-roles",
+    "fact",
+    "live",
+    "Sign-in checks a PIN whose hash is sealed at rest and starts a session; changing the PIN revokes every session (src/lib/auth/__tests__/server.test.ts). A team member opens only the shops the owner granted and a revoked member opens none (src/app/api/__tests__/shop-authorization-boundaries.test.ts). Only the shop owner may release a held WhatsApp send (src/lib/whatsapp/__tests__/held-send.test.ts). Every API route sits behind a guard (src/app/api/__tests__/route-guard-matrix.test.ts).",
+    {
+      certifiedOn: "2026-10-30",
+      proof: [
+        "src/lib/auth/__tests__/server.test.ts",
+        "src/app/api/__tests__/shop-authorization-boundaries.test.ts",
+        "src/lib/whatsapp/__tests__/held-send.test.ts",
+        "src/app/api/__tests__/route-guard-matrix.test.ts",
+      ],
+    },
+  ),
+  entry(
+    "ai-asks-first",
+    "fact",
+    "live",
+    "The eight AI tools that change data (create_order, update_order_status, update_product_stock, cancel_order, create_product, update_product_price, create_customer, update_customer_notes) have executionClass \"sensitive\", which needs approval; the others only read (src/lib/ai/actions/contracts.ts, src/lib/ai/chat/tools/__tests__/capability-groups.test.ts). A text sent to a 6th chat inside 15 minutes is held until a person approves (src/lib/whatsapp/__tests__/send-guard.integration.test.ts). This is the code path; it has not been run with a real seller's Gemini key.",
+    {
+      certifiedOn: "2026-10-30",
+      proof: [
+        "src/lib/ai/actions/contracts.ts",
+        "src/lib/ai/chat/tools/__tests__/capability-groups.test.ts",
+        "src/lib/whatsapp/__tests__/send-guard.integration.test.ts",
+      ],
+    },
+  ),
   entry("wilayas-69", "fact", "testing", "Algeria has 69 wilayas since April 2026. The app places the 11 new ones under their mother wilaya; a native 69-wilaya screen is Wave 3.", { ownerWave: "W3" }),
   entry("backup-restore-new-pc", "fact", "testing", "Encrypted backups can be created; restoring on a new PC has not been proven on a clean Windows machine (Wave 4 restore drill).", { ownerWave: "W4" }),
   entry("installer-publisher-signature", "fact", "planned", "The Windows installer carries no publisher (Authenticode) signature, so SmartScreen warns. Say so; never call the installer signed.", { ownerWave: "W5" }),
@@ -130,4 +168,9 @@ export function statusesOf(keys) {
 /** Phrases a page may use, only from claims that are live. */
 export function allowedPhrases(locale) {
   return CLAIMS.filter((claim) => claim.status === "live").flatMap((claim) => claim.allow[locale] ?? []);
+}
+
+/** True once the Windows installer carries a publisher (Authenticode) signature. The download page shows the SmartScreen note only while this is false. */
+export function installerIsSigned() {
+  return claimById("installer-publisher-signature").status === "live";
 }

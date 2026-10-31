@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Ban, Eye } from "lucide-react";
+import { Ban, Eye } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table/data-table";
@@ -13,7 +13,9 @@ import {
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { ListSearchInput } from "@/components/shared/list-search-input";
 import { CustomersEmptyState } from "@/components/shared/empty-states";
-import { StateSurface } from "@/components/shared/state-surface";
+import { RecordsListStatusBanner } from "@/components/customers/records-status-banner";
+import { resolveState } from "@/components/shared/resolve-state";
+import { StateView } from "@/components/shared/state-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +27,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { useListSearchScope } from "@/hooks/use-list-search-scope";
 import type { Locale } from "@/lib/i18n";
 import { formatDZD, formatDate } from "@/lib/utils";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { displayWilaya } from "@/lib/wilaya-display";
 
 interface CustomersDataTableProps {
@@ -36,7 +39,9 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
   const { t } = useI18n();
   const router = useRouter();
   const { hasActiveFilters, clearFilters } = useListSearchScope();
-  const { data, error, isLoading, pagination } = useCustomers({ fallback });
+  const { data, error, isLoading, mutate, pagination } = useCustomers({ fallback });
+  // Rows we hold are kept when a refresh fails (partial); a retry in flight shows the skeleton, not the old error.
+  const state = resolveState({ loading: isLoading, error, data });
 
   const columns: ColumnDef<CustomerListItem, unknown>[] = [
     {
@@ -59,6 +64,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
           ) : null}
         </div>
       ),
+      meta: { mobile: { slot: "title" } },
     },
     {
       accessorKey: "phone",
@@ -68,6 +74,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
           {row.original.phone ?? "—"}
         </TechnicalValue>
       ),
+      meta: { mobile: { slot: "subtitle" } },
     },
     {
       accessorKey: "wilaya",
@@ -75,7 +82,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
       cell: ({ row }) => (
         <span className="text-sm">{displayWilaya(row.original.wilaya, locale) || "—"}</span>
       ),
-      meta: { hideOn: "sm" },
+      meta: { hideOn: "sm", mobile: { slot: "field" } },
     },
     {
       accessorKey: "orderCount",
@@ -83,7 +90,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
       cell: ({ row }) => (
         <span className="tabular-nums">{row.original.orderCount}</span>
       ),
-      meta: { align: "end" },
+      meta: { align: "end", mobile: { slot: "field" } },
     },
     {
       accessorKey: "totalSpent",
@@ -95,7 +102,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
             : formatDZD(row.original.totalSpent, locale)}
         </span>
       ),
-      meta: { align: "end" },
+      meta: { align: "end", mobile: { slot: "amount" } },
     },
     {
       accessorKey: "createdAt",
@@ -105,7 +112,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
           {formatDate(row.original.createdAt, locale)}
         </span>
       ),
-      meta: { hideOn: "lg" },
+      meta: { hideOn: "lg", mobile: { slot: "time" } },
     },
     {
       id: "context",
@@ -157,23 +164,10 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
           </EntityInspector>
         );
       },
-      meta: { align: "end", width: "w-12" },
+      meta: { align: "end", width: "w-12", mobile: { slot: "actions" } },
       enableSorting: false,
     },
   ];
-
-  if (error && !data) {
-    return (
-      <StateSurface
-        icon={AlertTriangle}
-        title={t("error.requestFailed")}
-        description={error.message}
-        tone="danger"
-        size="inline"
-        role="alert"
-      />
-    );
-  }
 
   return (
     <div className="space-y-3">
@@ -181,21 +175,34 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
         className="max-w-sm"
         placeholder={t("customers.searchPlaceholder")}
       />
-      <DataTable
-        columns={columns}
-        data={data?.customers ?? []}
-        isLoading={isLoading}
-        pagination={pagination}
-        onRowClick={(row) => router.push(`/customers/${row.id}`)}
-        getRowId={(row) => row.id}
-        emptyState={
-          hasActiveFilters ? (
-            <CustomersEmptyState filtered onClearFilters={clearFilters} />
-          ) : (
-            <CustomersEmptyState />
-          )
-        }
-      />
+      <RecordsListStatusBanner error={isLoading ? null : error} rows={data?.customers} onRefresh={() => void mutate()} />
+      {state === "error" ? (
+        <StateView
+          kind="error"
+          size="inline"
+          title={t("error.requestFailed")}
+          description={translateServerError(error?.message ?? "", t, t("error.requestFailed"))}
+          onRetry={() => void mutate()}
+        />
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            data={data?.customers ?? []}
+            isLoading={isLoading}
+            pagination={pagination}
+            onRowClick={(row) => router.push(`/customers/${row.id}`)}
+            getRowId={(row) => row.id}
+            emptyState={
+              hasActiveFilters ? (
+                <CustomersEmptyState filtered onClearFilters={clearFilters} />
+              ) : (
+                <CustomersEmptyState />
+              )
+            }
+          />
+        </>
+      )}
     </div>
   );
 }

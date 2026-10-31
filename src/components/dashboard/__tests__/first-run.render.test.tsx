@@ -238,7 +238,9 @@ describe("first-run copy exists in all three locales", () => {
 });
 
 describe("dashboard page wiring", () => {
-  const page = readFileSync(resolve(process.cwd(), "src/app/(dashboard)/dashboard/page.tsx"), "utf8");
+  const page =
+    readFileSync(resolve(process.cwd(), "src/app/(dashboard)/dashboard/page.tsx"), "utf8") +
+    readFileSync(resolve(process.cwd(), "src/components/dashboard/dashboard-view.tsx"), "utf8");
 
   it("reads the three counts, decides first-run, and returns the panel before the charts", () => {
     expect(page).toContain("getFirstRunCounts(");

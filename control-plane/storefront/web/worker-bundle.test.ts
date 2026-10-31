@@ -145,7 +145,7 @@ describe("GET /<slug> and /<slug>/p/<product> through the real Worker", () => {
     const store = await publishTestStore();
     const unknown = await get(store.env, "/sahel-store/p/product_99999999?lang=en");
     expect(unknown.response.status).toBe(404);
-    expect(unknown.text).toContain("Store not found");
+    expect(unknown.text).toContain("This product is not available");
     const bad = await get(store.env, "/sahel-store/p/a");
     expect(bad.response.status).toBe(404);
     expect(JSON.parse(bad.text)).toEqual({ error: "not_found" });

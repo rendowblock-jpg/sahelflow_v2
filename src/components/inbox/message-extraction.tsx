@@ -47,9 +47,13 @@ interface MessageExtractionProps {
    * seller can adjust, instead of a single message.
    */
   sourceMessages?: OrderSourceMessage[];
+  /** Called when a reading finishes, so the thread can show the draft slip. */
+  onRead?: (payload: { response: ExtractionResponse; anchorId: string }) => void;
+  /** Called once the create route answered with the order. */
+  onCreated?: (created: { id: string; status: string | null }) => void;
 }
 
-interface ExtractionResponse {
+export interface ExtractionResponse {
   result: ExtractionResult;
   catalog: CatalogOption[];
   ai: { consent: boolean; available: boolean };
@@ -131,6 +135,48 @@ export function ExtractionAiLine({
   }
   return <p className="text-caption text-muted-foreground" role="status">{copy("aiNotNeeded")}</p>;
 }
+/**
+ * The one place that asks the server to create an order from a reviewed reading. The review dialog and the
+ * thread's draft slip both call it, so approving does the same thing from either.
+ */
+export async function submitReviewedOrder(input: {
+  conversationId: string;
+  messageId: string;
+  method: ExtractionResult["method"];
+  confidence: number;
+  reviewed: ReviewedOrder;
+  customerFallbackName: string;
+  failedText: string;
+}): Promise<{ id: string; status: string | null }> {
+  const { reviewed } = input;
+  const res = await fetch("/api/orders/source/whatsapp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      conversationId: input.conversationId,
+      messageId: input.messageId,
+      // A hand-built order is still anchored to this message; its method
+      // records how the draft was produced.
+      extractionMethod: isAiMethod(input.method) ? input.method : "regex",
+      extractionConfidence: input.confidence,
+      customer: {
+        ...reviewed.customer,
+        name: reviewed.customer.name || input.customerFallbackName,
+      },
+      items: reviewed.items,
+      deliveryCost: reviewed.deliveryCost,
+      notes: reviewed.notes,
+    }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message = body.error?.message ?? body.error;
+    throw new Error(typeof message === "string" ? message : input.failedText);
+  }
+  const order = body.order as { id: string | number; status?: unknown };
+  return { id: String(order.id), status: typeof order.status === "string" ? order.status : null };
+}
+
 export function MessageExtraction({
   conversationId,
   messageId,
@@ -139,6 +185,8 @@ export function MessageExtraction({
   layout = "inline",
   contactName,
   sourceMessages,
+  onRead,
+  onCreated,
 }: MessageExtractionProps) {
   const { locale } = useI18n();
   const router = useRouter();
@@ -192,8 +240,10 @@ export function MessageExtraction({
         }),
       });
       if (!res.ok) throw new Error(copy("failed"));
-      setResponse((await res.json()) as ExtractionResponse);
+      const json = (await res.json()) as ExtractionResponse;
+      setResponse(json);
       setReadSource({ key, anchorId });
+      onRead?.({ response: json, anchorId });
       setRevision((value) => value + 1);
     } catch (caught) {
       setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy("failed"));
@@ -208,32 +258,18 @@ export function MessageExtraction({
     setCreating(true);
     setError(null);
     try {
-      const res = await fetch("/api/orders/source/whatsapp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationId: conversationId ?? algerianPhoneToWhatsAppJid(reviewed.customer.phone),
-          // Anchored to the latest message the reading came from.
-          messageId: readSource?.anchorId ?? messageId,
-          // A hand-built order is still anchored to this message; its method
-          // records how the draft was produced.
-          extractionMethod: isAiMethod(result.method) ? result.method : "regex",
-          extractionConfidence: result.confidence,
-          customer: {
-            ...reviewed.customer,
-            name: reviewed.customer.name || copy("customerTitle"),
-          },
-          items: reviewed.items,
-          deliveryCost: reviewed.deliveryCost,
-          notes: reviewed.notes,
-        }),
+      const created = await submitReviewedOrder({
+        conversationId: conversationId ?? algerianPhoneToWhatsAppJid(reviewed.customer.phone),
+        // Anchored to the latest message the reading came from.
+        messageId: readSource?.anchorId ?? messageId,
+        method: result.method,
+        confidence: result.confidence,
+        reviewed,
+        customerFallbackName: copy("customerTitle"),
+        failedText: copy("failed"),
       });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const message = body.error?.message ?? body.error;
-        throw new Error(typeof message === "string" ? message : copy("failed"));
-      }
-      router.push(`/orders/${body.order.id}`);
+      onCreated?.(created);
+      router.push(`/orders/${created.id}`);
     } catch (caught) {
       setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy("failed"));
     } finally {

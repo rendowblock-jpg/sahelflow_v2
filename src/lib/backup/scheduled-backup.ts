@@ -18,6 +18,10 @@ export const RETENTION_DAILY = 7;
 export const RETENTION_WEEKLY = 4;
 export const RETENTION_PROTECT_NEWEST = 2;
 export const RETENTION_MIN_AGE_MS = DAY;
+/** The newest pre-update backups kept on top of the normal plan. */
+export const RETENTION_KEEP_PRE_UPDATE = 2;
+/** A backup younger than this is enough before an update installs. */
+export const PRE_UPDATE_FRESH_MS = HOUR;
 
 export type BackupDecisionReason =
   | "busy"
@@ -112,12 +116,15 @@ export interface RetentionPlan {
 /**
  * Which automatic backups to delete. Kept: the newest backup of each of the 7
  * newest days, the newest of each of the next 4 ISO weeks, the newest two
- * overall, and anything younger than 24 hours. A manual backup is not part of
- * the plan at all. A date that cannot be read is kept.
+ * overall, and anything younger than 24 hours. On top of that the newest two
+ * of `preUpdateIds` are kept, so the copy taken before the last updates is
+ * still there if an update goes wrong. A manual backup is not part of the plan
+ * at all. A date that cannot be read is kept.
  */
 export function planRetention(
   entries: readonly RetentionEntry[],
   now: number,
+  preUpdateIds: readonly string[] = [],
 ): RetentionPlan {
   const automatic = entries.filter((entry) => entry.automatic);
   const unreadable = automatic.filter((entry) => !Number.isFinite(entry.createdAtMs));
@@ -133,6 +140,11 @@ export function planRetention(
   for (const entry of dated.slice(0, RETENTION_PROTECT_NEWEST)) keep.add(entry.backupId);
   for (const entry of dated) {
     if (now - entry.createdAtMs < RETENTION_MIN_AGE_MS) keep.add(entry.backupId);
+  }
+
+  const preUpdate = new Set(preUpdateIds);
+  for (const entry of dated.filter((item) => preUpdate.has(item.backupId)).slice(0, RETENTION_KEEP_PRE_UPDATE)) {
+    keep.add(entry.backupId);
   }
 
   const dailyDays = new Set<string>();
@@ -157,4 +169,24 @@ export function planRetention(
     keep: ordered.filter((entry) => keep.has(entry.backupId)).map((entry) => entry.backupId),
     remove: ordered.filter((entry) => !keep.has(entry.backupId)).map((entry) => entry.backupId),
   };
+}
+
+export type PreUpdateDecision = { run: true } | { run: false; ageMinutes: number };
+
+/**
+ * Is a backup needed right before an update installs? Not when the newest one,
+ * of any kind, is younger than 60 minutes. A time in the future is a clock
+ * problem, not a backup, so it never counts.
+ */
+export function decidePreUpdateBackup(input: {
+  now: number;
+  newestBackupAtMs: number | null;
+}): PreUpdateDecision {
+  const newest = input.newestBackupAtMs;
+  if (typeof newest !== "number" || !Number.isFinite(newest) || newest > input.now) {
+    return { run: true };
+  }
+  const age = input.now - newest;
+  if (age >= PRE_UPDATE_FRESH_MS) return { run: true };
+  return { run: false, ageMinutes: Math.floor(age / MINUTE) };
 }

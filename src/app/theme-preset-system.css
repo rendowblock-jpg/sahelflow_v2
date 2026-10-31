@@ -108,3 +108,77 @@ html.dark[data-theme-preset="dune"] {
   --chart-4: oklch(0.70 0.13 178);
   --chart-5: oklch(0.69 0.13 235);
 }
+
+/* Carnet — night ledger (dark). Same hierarchy as the paper: surfaces get lighter as they come forward
+   (desk < sunk < paper < sheet). It redefines every colour token because the neutral stack above has the same
+   specificity and this block comes after it. Hex is kept in the comment; the contract round-trips it. */
+html.dark[data-theme-preset="carnet"] {
+  --carnet-desk: oklch(0.155 0.007 271); /* #0B0C0F */
+  --carnet-sunk: oklch(0.178 0.006 271); /* #101114 */
+  --carnet-paper: oklch(0.2 0.009 264.4); /* #14161A */
+  --carnet-sheet: oklch(0.23 0.011 260.7); /* #1A1D22 */
+  --carnet-ink: oklch(0.929 0.019 86.1); /* #EDE7DA */
+  --carnet-ink-2: oklch(0.802 0.02 87.5); /* #C4BEB0 */
+  --carnet-ink-3: oklch(0.69 0.021 90.6); /* #A09B8D */
+  --carnet-line: oklch(0.316 0.012 258.4); /* #2E3238 */
+  --carnet-edge: oklch(0.563 0.018 257.2); /* #6F7680 */
+  --carnet-rule: oklch(0.316 0.012 258.4); /* #2E3238 */
+  --carnet-margin: oklch(0.4333 0.0911 29.5); /* #7B3B32 */
+  --carnet-red: oklch(0.707 0.128 31.2); /* #E5806E */
+  --carnet-red-bg: oklch(0.287 0.035 30.7); /* #3A2420 */
+  --carnet-red-ink: oklch(0.789 0.097 31.2); /* #F2A394 */
+  --carnet-green: oklch(0.748 0.083 160.7); /* #7DBE9C */
+  --carnet-green-bg: oklch(0.297 0.031 160.8); /* #1F3228 */
+  --carnet-green-ink: oklch(0.84 0.064 161); /* #A6D8BD */
+  --carnet-brass-bg: oklch(0.287 0.043 86.5); /* #34290F */
+  --carnet-brass-fg: oklch(0.857 0.093 87.6); /* #EACD88 */
+  --carnet-blue: oklch(0.744 0.074 257.6); /* #8FAEDB */
+  --carnet-blue-bg: oklch(0.278 0.03 256.8); /* #1F2937 */
+  --carnet-blue-ink: oklch(0.84 0.049 258); /* #B7CCEB */
+  --carnet-slip-out: oklch(0.309 0.036 255.4); /* #243142 */
+  --carnet-slip-in: var(--carnet-sheet);
+  --surface-0: var(--carnet-paper);
+  --surface-1: var(--carnet-sheet);
+  --surface-2: var(--carnet-sunk);
+  --surface-3: var(--carnet-desk);
+  --background: var(--carnet-paper);
+  --foreground: var(--carnet-ink);
+  --card: var(--carnet-sheet);
+  --card-foreground: var(--carnet-ink);
+  --popover: var(--carnet-sheet);
+  --popover-foreground: var(--carnet-ink);
+  --primary: var(--carnet-ink);
+  --primary-foreground: var(--carnet-paper);
+  --secondary: var(--carnet-sunk);
+  --secondary-foreground: var(--carnet-ink);
+  --muted: var(--carnet-sunk);
+  --muted-foreground: var(--carnet-ink-2);
+  --accent: color-mix(in oklch, var(--carnet-ink) 7%, var(--carnet-sheet));
+  --accent-foreground: var(--carnet-ink);
+  --border: var(--carnet-line);
+  --input: var(--carnet-edge);
+  --ring: var(--primary);
+  --destructive: var(--carnet-red);
+  --success: var(--carnet-green);
+  --success-foreground: var(--carnet-green-bg);
+  --warning: var(--carnet-brass-fg);
+  --warning-foreground: var(--carnet-brass-bg);
+  --info: var(--carnet-blue);
+  --info-foreground: var(--carnet-blue-bg);
+  --chart-1: var(--carnet-blue);
+  --chart-2: oklch(0.7535 0.1185 85.4); /* #D1A94E */
+  --chart-3: var(--carnet-green);
+  --chart-4: var(--carnet-red);
+  --chart-5: var(--carnet-ink-2);
+  --sidebar: var(--carnet-desk);
+  --sidebar-foreground: var(--carnet-ink);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--carnet-paper);
+  --sidebar-accent-foreground: var(--carnet-ink);
+  --sidebar-border: var(--carnet-line);
+  --sidebar-ring: var(--ring);
+  --sf-chart-grid: var(--carnet-rule);
+  --sf-chart-axis: var(--carnet-ink-3);
+  --sf-surface-highlight: oklch(1 0 0 / 0.03);
+}

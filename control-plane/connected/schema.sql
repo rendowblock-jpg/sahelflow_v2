@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS connected_pairing (
   token_hash TEXT UNIQUE NOT NULL,
   expires_at TEXT NOT NULL,
   consumed_at TEXT,
+  desktop_key_proof TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(workspace_id) REFERENCES connected_workspace(workspace_id) ON DELETE CASCADE
 );
@@ -114,3 +115,17 @@ CREATE INDEX IF NOT EXISTS connected_command_poll_idx
 
 CREATE INDEX IF NOT EXISTS connected_command_device_idx
   ON connected_command(workspace_id, device_id, submitted_at);
+
+-- Fixed-window counters for the phone-facing routes (see rate-limit.ts).
+-- subject is a hash for IP addresses and pairing ids, the workspace:device pair
+-- for devices. Rows older than 10 minutes are deleted by the worker itself.
+CREATE TABLE IF NOT EXISTS connected_rate_limit (
+  bucket TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  window_start INTEGER NOT NULL,
+  count INTEGER NOT NULL CHECK(count > 0),
+  PRIMARY KEY(bucket, subject, window_start)
+);
+
+CREATE INDEX IF NOT EXISTS connected_rate_limit_window_idx
+  ON connected_rate_limit(window_start);

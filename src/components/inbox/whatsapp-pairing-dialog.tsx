@@ -14,6 +14,7 @@ import {
 
 import {
   deriveWhatsAppPairingPhase,
+  parseWhatsAppStatusResponse,
   type WhatsAppPairingSnapshot,
 } from "@/components/inbox/whatsapp-pairing-state";
 import { Button } from "@/components/ui/button";
@@ -27,17 +28,7 @@ import {
 import { WhatsAppUnofficialNotice } from "@/components/inbox/whatsapp-unofficial-notice";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { getWhatsAppPairingCopy } from "@/lib/i18n/whatsapp-pairing";
-import type { WhatsAppStatus } from "@/lib/whatsapp/types";
 import { IconTile } from "@/components/system";
-
-function isWhatsAppStatus(value: unknown): value is WhatsAppStatus {
-  return (
-    value === "disconnected" ||
-    value === "connecting" ||
-    value === "qr" ||
-    value === "connected"
-  );
-}
 
 export function WhatsAppPairingDialog({
   workspace,
@@ -73,24 +64,8 @@ export function WhatsAppPairingDialog({
         cache: "no-store",
         signal,
       });
-      const data = (await response.json().catch(() => ({}))) as {
-        status?: unknown;
-        hasQr?: unknown;
-        sidecarReachable?: unknown;
-      };
-      if (!response.ok) {
-        setSnapshot({
-          status: isWhatsAppStatus(data.status) ? data.status : "disconnected",
-          hasQr: false,
-          sidecarReachable: false,
-        });
-        return;
-      }
-      setSnapshot({
-        status: isWhatsAppStatus(data.status) ? data.status : null,
-        hasQr: data.hasQr === true,
-        sidecarReachable: data.sidecarReachable === false ? false : true,
-      });
+      const data: unknown = await response.json().catch(() => null);
+      setSnapshot(parseWhatsAppStatusResponse(response.ok, data));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setSnapshot({

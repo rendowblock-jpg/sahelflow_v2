@@ -127,6 +127,27 @@ function extractErrorMessage(rawError: unknown): string {
 }
 
 /**
+ * The seller-language text for a message that matches a known rule (or the bare "Request failed (NNN)" shape), or null
+ * when nothing matches. This is the one place the rules are applied. Two callers decide differently what "no match" means:
+ * translateServerError (a payload that came from a server: developer text must not reach the seller) and
+ * localizeServerMessage (the text of a toast: usually already translated, so it must pass through).
+ */
+export function matchKnownServerError(raw: string, t: TFunc): string | null {
+  const lower = raw.toLowerCase();
+  for (const rule of RULES) {
+    if (lower.includes(rule.match)) {
+      const params = rule.params?.(raw);
+      return params ? t(rule.key, params) : t(rule.key);
+    }
+  }
+  // A generic "Request failed (NNN)" has its own translation.
+  if (/^request failed \(\d+\)$/i.test(raw)) {
+    return t("error.requestFailed");
+  }
+  return null;
+}
+
+/**
  * Translate an untrusted server-provided error payload to the active locale.
  *
  * @param rawError - the raw `error` value from API JSON. Network responses are
@@ -142,18 +163,7 @@ export function translateServerError(
 ): string {
   const raw = extractErrorMessage(rawError);
   if (!raw) return fallback;
-  const lower = raw.toLowerCase();
-  for (const rule of RULES) {
-    if (lower.includes(rule.match)) {
-      const params = rule.params?.(raw);
-      return params ? t(rule.key, params) : t(rule.key);
-    }
-  }
-  // No rule matched — if it's a generic "Request failed (NNN)" fallback, prefer
-  // the translated generic. Otherwise return the raw string (a one-off server
-  // message the user can still act on is better than a vague generic).
-  if (/^request failed \(\d+\)$/i.test(raw)) {
-    return t("error.requestFailed");
-  }
-  return raw;
+  // No rule matched: this is developer text (database, framework, English) that a seller must not read as it came.
+  // Show one calm sentence in his language instead.
+  return matchKnownServerError(raw, t) ?? t("firstRun.error.unmapped");
 }

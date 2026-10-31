@@ -14,6 +14,7 @@ import { ConnectedPlatformClient } from "./client";
 import { remoteCommandTypesForPermissions } from "./command-policy";
 import { createConnectedEnvelope } from "./envelope";
 import type { ConnectedKeyPair } from "./payload-crypto";
+import { readPhoneTodayCounts } from "./phone-today-counts";
 import {
   CONNECTED_CIPHER_ALGORITHM,
   CONNECTED_PROTOCOL_VERSION,
@@ -89,13 +90,21 @@ export async function publishRemoteDashboardProjection(input: Readonly<{
   }
 
   const fieldAccess = resolveDashboardFieldAccess(input.actorContext);
-  const [stats, recentOrders, analytics] = await Promise.all([
+  const [stats, recentOrders, analytics, todayCounts] = await Promise.all([
     getDashboardStats(fieldAccess),
     fieldAccess.orders ? getRecentOrders(8, fieldAccess) : Promise.resolve([]),
     getDashboardAnalytics(fieldAccess),
+    // A number this member may not see is never queried (same gates as the projection).
+    readPhoneTodayCounts({
+      want: {
+        ordersWaiting: fieldAccess.orders,
+        whatsappHeld: fieldAccess.conversations,
+        codToCollectDzd: fieldAccess.orderFinancials,
+      },
+    }),
   ]);
   const projection = projectDashboardForTrustedActor(
-    { stats, recentOrders, analytics },
+    { stats, recentOrders, analytics, todayCounts },
     fieldAccess,
   );
   const sequence = await nextProjectionSequence(device.deviceId);

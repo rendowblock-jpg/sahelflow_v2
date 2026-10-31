@@ -276,7 +276,10 @@ export default async function AutomationsPage({
 
         <TabsContent value="activity" className="space-y-4">
           {canManage ? (
-            <AutomationRunRecoveryPanel initialRuns={recentRuns} />
+            <AutomationRunRecoveryPanel
+              initialRuns={recentRuns}
+              activeAutomationIds={automations.filter((automation) => automation.isActive).map((automation) => automation.id)}
+            />
           ) : recentLogs.length > 0 ? (
             <Card>
               <CardContent className="divide-y p-0">

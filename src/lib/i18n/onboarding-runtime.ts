@@ -27,7 +27,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "onboarding.status.todo": "To do",
     "onboarding.summary.partialTitle": "Your workspace is open",
     "onboarding.summary.partialBody": "{{left}} of {{total}} connections left. You can sell right now and finish them whenever you like — each one takes more work off your hands.",
-    "onboarding.summary.allDoneBody": "Shop, WhatsApp, couriers and AI are connected. Your next WhatsApp message can become a confirmed, shipped order in under a minute.",
+    "onboarding.summary.allDoneBody": "Shop, WhatsApp, couriers and AI are set up. For each order message, you read it and you confirm the order yourself; the app prepares the shipment details for your courier.",
     "onboarding.preview.title": "How it prints on your delivery slips",
     "onboarding.preview.sender": "Sender",
     "onboarding.preview.namePlaceholder": "Your shop name",
@@ -56,7 +56,7 @@ const translations: Record<Locale, Record<string, string>> = {
       "Customer name, phone, wilaya and items are pulled out of the chat, ready for your review.",
     "onboarding.loop.beat3.title": "Confirm & ship",
     "onboarding.loop.beat3.body":
-      "One click confirms the COD order and sends the shipment to your courier.",
+      "You confirm the COD order with one click, and the app prepares the shipment details for your courier.",
     "onboarding.phone.invalid":
       "Enter a valid Algerian mobile number (05, 06 or 07).",
     "onboarding.skipHint":
@@ -70,7 +70,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "onboarding.status.todo": "À faire",
     "onboarding.summary.partialTitle": "Votre espace est ouvert",
     "onboarding.summary.partialBody": "Il reste {{left}} connexion(s) sur {{total}}. Vous pouvez vendre dès maintenant et les terminer quand vous voulez — chacune vous retire du travail.",
-    "onboarding.summary.allDoneBody": "Boutique, WhatsApp, transporteurs et IA sont connectés. Votre prochain message WhatsApp peut devenir une commande confirmée et expédiée en moins d'une minute.",
+    "onboarding.summary.allDoneBody": "Boutique, WhatsApp, transporteurs et IA sont configurés. Pour chaque message de commande, vous lisez puis vous confirmez la commande vous-même ; l'application prépare les informations d'expédition pour votre transporteur.",
     "onboarding.preview.title": "Aperçu sur vos bordereaux",
     "onboarding.preview.sender": "Expéditeur",
     "onboarding.preview.namePlaceholder": "Nom de votre boutique",
@@ -99,7 +99,7 @@ const translations: Record<Locale, Record<string, string>> = {
       "Nom du client, téléphone, wilaya et articles sont extraits de la conversation, prêts à être vérifiés.",
     "onboarding.loop.beat3.title": "Confirmez et expédiez",
     "onboarding.loop.beat3.body":
-      "Un clic confirme la commande COD et envoie l'expédition à votre transporteur.",
+      "Vous confirmez la commande COD en un clic, et l'application prépare les informations d'expédition pour votre transporteur.",
     "onboarding.phone.invalid":
       "Saisissez un numéro de mobile algérien valide (05, 06 ou 07).",
     "onboarding.skipHint":
@@ -113,7 +113,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "onboarding.status.todo": "متبقٍ",
     "onboarding.summary.partialTitle": "مساحة عملك مفتوحة",
     "onboarding.summary.partialBody": "تبقّى {{left}} من {{total}} ربط. يمكنك البيع الآن وإكمالها متى شئت — كل ربط يرفع عنك جزءاً من العمل.",
-    "onboarding.summary.allDoneBody": "المتجر وواتساب وشركات التوصيل والذكاء الاصطناعي كلها مربوطة. رسالة واتساب التالية يمكن أن تصبح طلبية مؤكدة ومشحونة في أقل من دقيقة.",
+    "onboarding.summary.allDoneBody": "المتجر وواتساب وشركات التوصيل والذكاء الاصطناعي جاهزة للعمل. تقرأ رسالة كل طلبية وتؤكدها بنفسك، ويجهّز التطبيق بيانات الشحنة لشركة التوصيل.",
     "onboarding.preview.title": "هكذا تظهر على بون التوصيل",
     "onboarding.preview.sender": "المرسل",
     "onboarding.preview.namePlaceholder": "اسم متجرك",
@@ -142,7 +142,7 @@ const translations: Record<Locale, Record<string, string>> = {
       "يستخرج اسم العميل وهاتفه وولايته والمنتجات من المحادثة، جاهزة للمراجعة.",
     "onboarding.loop.beat3.title": "أكِّد واشحن",
     "onboarding.loop.beat3.body":
-      "نقرة واحدة تؤكد طلبية الدفع عند الاستلام وترسل الشحنة إلى شركة التوصيل.",
+      "تؤكد طلبية الدفع عند الاستلام بنقرة واحدة، ويجهّز التطبيق بيانات الشحنة لشركة التوصيل.",
     "onboarding.phone.invalid": "أدخل رقم هاتف جزائري صالح (05 أو 06 أو 07).",
     "onboarding.skipHint":
       "قابلة للتخطي — تتذكر القائمة ما تبقى؛ أكملها في أي وقت.",

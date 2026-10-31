@@ -12,6 +12,7 @@
 import { encryptStorefrontCustomer } from "@/lib/storefront/hosted-checkout-crypto";
 
 import { setupCommuneSearch } from "./commune-search";
+import { watchPhotos } from "./photos";
 import {
   availableModes,
   clampQuantity,
@@ -162,13 +163,21 @@ function boot(): void {
   }
 
   // ---- messages
-  function setStatus(kind: "info" | "error", text: string): void {
+  // A failed order is announced as an alert and takes focus, so a keyboard or screen-reader buyer lands on the one sentence (the button points at it with aria-describedby).
+  function setStatus(kind: "info" | "error", text: string, focus = false): void {
     els.status.hidden = false;
     els.status.dataset.kind = kind;
+    els.status.setAttribute("role", kind === "error" && focus ? "alert" : "status");
     els.status.textContent = text;
+    if (focus) {
+      els.status.tabIndex = -1;
+      els.status.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+      els.status.focus({ preventScroll: true });
+    }
   }
   function clearStatus(): void {
     els.status.hidden = true;
+    els.status.setAttribute("role", "status");
     els.status.textContent = "";
   }
   const fieldFor: Record<string, HTMLElement | null> = { name: els.name, phone: els.phone, wilaya: els.wilaya, commune: els.commune, address: els.address, mode: modeInputs[0] ?? null };
@@ -445,7 +454,7 @@ function boot(): void {
         // the seller published again while this page was open: take the new release and try once more
         clearPending();
         if (!(await refreshRelease())) {
-          setStatus("error", d.i.soldNow ?? "");
+          setStatus("error", d.i.soldNow ?? "", true);
           return;
         }
         signature = signatureOf(values);
@@ -457,10 +466,10 @@ function boot(): void {
         showThanks(sent);
       } else {
         if (sent.code === "conflict" || sent.code === "sold" || sent.code === "nodelivery") clearPending();
-        setStatus("error", failure(sent.code));
+        setStatus("error", failure(sent.code), true);
       }
     } catch {
-      setStatus("error", d.i.retry ?? "");
+      setStatus("error", d.i.retry ?? "", true);
     } finally {
       setBusy(false);
     }
@@ -478,6 +487,9 @@ function boot(): void {
     refresh();
     form.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   });
+
+  // A photo that fails to load becomes a placeholder element (client/photos.ts, shared with the home page).
+  watchPhotos();
 
   refresh();
   requestAnimationFrame(() => { animate = true; });

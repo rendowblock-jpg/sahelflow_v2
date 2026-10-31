@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
+
 /**
  * Pins how the pieces of the update experience fit together, in the web code
  * and in the desktop shell, so none can be quietly undone.
@@ -252,6 +254,14 @@ describe("the update copy exists in Arabic, French and English", () => {
       ),
     ),
   ].sort();
+
+  // Some update copy lives in a runtime catalog (src/lib/i18n/*-runtime.ts), not in the JSON.
+  for (const locale of locales) {
+    for (const key of used) {
+      const runtime = getRuntimeTranslation(locale, key);
+      if (catalog[locale][key] === undefined && runtime !== undefined) catalog[locale][key] = runtime;
+    }
+  }
 
   it("finds the keys the components use", () => {
     expect(used.length).toBeGreaterThanOrEqual(20);

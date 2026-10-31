@@ -51,7 +51,14 @@ export function licencePricing(locale) {
   };
 }
 
-export const shotUrl = (key, locale) => `/img/screens/${key}-${locale}.webp`;
+export const shotUrl = (key, locale, width = 800) => `/img/screens/${key}-${locale}-${width}.webp`;
+export const SHOT_SIZES = "(min-width: 1180px) 560px, (min-width: 760px) 50vw, 92vw";
+
+/** A product screenshot with its 480 / 800 / 1200 px copies (marketing/scripts/make-screens.mjs). Width and height fix the box before it loads. */
+export function screenImg(key, locale, { alt, lazy = true, high = false, sizes = SHOT_SIZES } = {}) {
+  const set = [480, 800, 1200].map((w) => `${shotUrl(key, locale, w)} ${w}w`).join(", ");
+  return `<img src="${shotUrl(key, locale)}" srcset="${set}" sizes="${esc(sizes)}" width="800" height="500" alt="${esc(alt)}"${high ? ' fetchpriority="high"' : ""}${lazy ? ' loading="lazy"' : ""} decoding="async">`;
+}
 
 /** A real screenshot of the app, framed as a desktop window. */
 export function appWindow(key, locale, { eager = false, cls = "", label } = {}) {
@@ -59,7 +66,7 @@ export function appWindow(key, locale, { eager = false, cls = "", label } = {}) 
   const alt = label ?? t.common.realScreenshot;
   return `<figure class="app-window ${cls}">
   <div class="app-window-bar" aria-hidden="true"><i></i><i></i><i></i><span>SahelFlow</span></div>
-  <img src="${shotUrl(key, locale)}" width="1600" height="1000" alt="${esc(alt)}"${eager ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async">
+  ${screenImg(key, locale, { alt, lazy: !eager, high: eager })}
 </figure>`;
 }
 
@@ -108,7 +115,7 @@ export function faqJsonLd(items) {
 }
 
 /** The honest status of an integration or promise: Available, In testing or Planned (see claims.mjs). */
-const STATUS_BADGE_CLASS = { live: "badge badge-new", testing: "badge badge-offer", planned: "badge" };
+const STATUS_BADGE_CLASS = { live: "stamp st-live", testing: "stamp st-testing", planned: "stamp st-planned" };
 export function statusBadge(status, locale) {
   return `<span class="${STATUS_BADGE_CLASS[status]}">${esc(statusLabel(status, locale))}</span>`;
 }

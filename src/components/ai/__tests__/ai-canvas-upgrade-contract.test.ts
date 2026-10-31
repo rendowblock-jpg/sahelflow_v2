@@ -233,10 +233,12 @@ describe("R4-e AI canvas upgrade — contextual Ask AI deep links", () => {
 
   it("exposes the Ask AI entry from the customer detail header, name-gated", () => {
     const page = read("src/app/(dashboard)/customers/[id]/page.tsx");
+    // Wave 2: the header markup lives in CustomerDetailHeader; the page still builds the href and the name gate.
+    const header = read("src/components/customers/customer-detail-header.tsx");
     expect(page).toContain("askAiHref(");
     expect(page).toContain('t("ai.ask.customerPrompt"');
-    expect(page).toContain('data-testid="customer-header-ask-ai"');
-    expect(page).toContain("canAskAi && customer.name ?");
+    expect(header).toContain('data-testid="customer-header-ask-ai"');
+    expect(page).toMatch(/canAskAi && customer\.name\s*\?/);
   });
 
   it("carries record identifiers only — no PII in the deep-link hrefs", () => {

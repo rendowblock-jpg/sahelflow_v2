@@ -15,7 +15,10 @@ import { ProductRowActions } from "@/components/products/product-row-actions";
 import { ProductThumbnail } from "@/components/products/product-thumbnail";
 import { ListSearchInput } from "@/components/shared/list-search-input";
 import { ProductsEmptyState } from "@/components/shared/empty-states";
-import { StateSurface } from "@/components/shared/state-surface";
+import { RecordsListStatusBanner } from "@/components/customers/records-status-banner";
+import { OfflineWriteGate } from "@/components/orders/offline-write-gate";
+import { resolveState } from "@/components/shared/resolve-state";
+import { StateView } from "@/components/shared/state-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +44,9 @@ export function ProductsDataTable({
   const { t, locale } = useI18n();
   const router = useRouter();
   const { hasActiveFilters, clearFilters } = useListSearchScope();
-  const { data, error, isLoading, pagination } = useProducts({ fallback });
+  const { data, error, isLoading, mutate, pagination } = useProducts({ fallback });
+  // Rows we hold are kept when a refresh fails (partial); a retry in flight shows the skeleton, not the old error.
+  const state = resolveState({ loading: isLoading, error, data });
   const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
   const categoryNames = new Map(
     categories.map((category) => [category.id, category.name]),
@@ -57,9 +62,6 @@ export function ProductsDataTable({
       header: () => t("products.productName"),
       cell: ({ row }) => {
         const product = row.original;
-        const category = product.categoryId
-          ? categoryNames.get(product.categoryId)
-          : undefined;
         return (
           <div
             data-product-identity="true"
@@ -78,21 +80,31 @@ export function ProductsDataTable({
                     {product.sku}
                   </TechnicalValue>
                 ) : null}
-                {product.sku && category ? (
-                  <span aria-hidden="true">·</span>
-                ) : null}
-                {category ? (
-                  <span className="max-w-44 truncate" dir="auto">
-                    {category}
-                  </span>
-                ) : product.sku ? null : (
-                  <span aria-hidden="true">—</span>
-                )}
+                {product.sku ? null : <span aria-hidden="true">—</span>}
               </div>
             </div>
           </div>
         );
       },
+      meta: { mobile: { slot: "title" } },
+    },
+    {
+      id: "category",
+      header: () => t("products.category"),
+      cell: ({ row }) => {
+        const categoryId = row.original.categoryId;
+        const category = categoryId ? categoryNames.get(categoryId) : undefined;
+        return category ? (
+          <span className="block max-w-44 truncate text-sm" dir="auto">
+            {category}
+          </span>
+        ) : (
+          <span className="text-muted-foreground" aria-hidden="true">
+            —
+          </span>
+        );
+      },
+      meta: { mobile: { slot: "subtitle" } },
     },
     {
       accessorKey: "price",
@@ -102,7 +114,7 @@ export function ProductsDataTable({
           {formatDZD(row.original.price, locale)}
         </span>
       ),
-      meta: { align: "end" },
+      meta: { align: "end", mobile: { slot: "amount" } },
     },
     {
       accessorKey: "stock",
@@ -129,7 +141,7 @@ export function ProductsDataTable({
           </span>
         );
       },
-      meta: { align: "center", width: "w-28" },
+      meta: { align: "center", width: "w-28", mobile: { slot: "field" } },
     },
     {
       accessorKey: "isActive",
@@ -139,7 +151,7 @@ export function ProductsDataTable({
           {row.original.isActive ? t("common.active") : t("common.inactive")}
         </Badge>
       ),
-      meta: { align: "center", hideOn: "sm" },
+      meta: { align: "center", hideOn: "sm", mobile: { slot: "status" } },
     },
     {
       id: "actions",
@@ -251,10 +263,12 @@ export function ProductsDataTable({
               </EntityPreview>
             </EntityInspector>
             {fieldAccess.manage ? (
-              <ProductRowActions
-                product={product}
-                categories={categories}
-              />
+              <OfflineWriteGate>
+                <ProductRowActions
+                  product={product}
+                  categories={categories}
+                />
+              </OfflineWriteGate>
             ) : null}
           </div>
         );
@@ -264,40 +278,40 @@ export function ProductsDataTable({
     },
   ];
 
-  if (error && !data) {
-    return (
-      <StateSurface
-        icon={AlertTriangle}
-        title={t("error.requestFailed")}
-        description={translateServerError(error.message, t, t("error.requestFailed"))}
-        tone="danger"
-        size="inline"
-        role="alert"
-      />
-    );
-  }
-
   return (
     <div className="space-y-3">
       <ListSearchInput
         className="max-w-sm"
         placeholder={t("products.searchPlaceholder")}
       />
-      <DataTable
-        columns={columns}
-        data={data?.products ?? []}
-        isLoading={isLoading}
-        pagination={pagination}
-        onRowClick={(row) => router.push(`/products/${row.id}`)}
-        getRowId={(row) => row.id}
-        emptyState={
-          hasActiveFilters ? (
-            <ProductsEmptyState filtered onClearFilters={clearFilters} />
-          ) : (
-            <ProductsEmptyState />
-          )
-        }
-      />
+      <RecordsListStatusBanner error={isLoading ? null : error} rows={data?.products} onRefresh={() => void mutate()} />
+      {state === "error" ? (
+        <StateView
+          kind="error"
+          size="inline"
+          title={t("error.requestFailed")}
+          description={translateServerError(error?.message ?? "", t, t("error.requestFailed"))}
+          onRetry={() => void mutate()}
+        />
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            data={data?.products ?? []}
+            isLoading={isLoading}
+            pagination={pagination}
+            onRowClick={(row) => router.push(`/products/${row.id}`)}
+            getRowId={(row) => row.id}
+            emptyState={
+              hasActiveFilters ? (
+                <ProductsEmptyState filtered onClearFilters={clearFilters} />
+              ) : (
+                <ProductsEmptyState />
+              )
+            }
+          />
+        </>
+      )}
     </div>
   );
 }

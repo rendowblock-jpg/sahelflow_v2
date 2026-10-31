@@ -1,5 +1,6 @@
 "use client";
 
+import { useOfflineWrites } from "@/components/orders/offline-write-gate";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -50,10 +51,15 @@ export function DeliveryStatusBadge({
   deliveryId,
   status,
   size = "default",
-  disabled = false,
+  disabled: disabledProp = false,
 }: DeliveryStatusBadgeProps) {
   const router = useRouter();
   const { t } = useI18n();
+  const { offline, reason } = useOfflineWrites();
+  // Only a badge that saves is a write; the create-form picker (no orderId) makes no request of its own.
+  const writesOff = true && offline;
+  const disabled = disabledProp || writesOff;
+  const offlineTitle = writesOff ? reason : undefined;
   const [isPending, startTransition] = useTransition();
   const style = STATUS_STYLES[status] ?? STATUS_STYLES.pending!;
 
@@ -86,6 +92,7 @@ export function DeliveryStatusBadge({
         <button
           type="button"
           disabled={disabled || isPending}
+          title={offlineTitle}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             style.bg,

@@ -21,6 +21,18 @@ export type ConnectedPlatformEndpoints = Readonly<{
   backup: string;
 }>;
 
+/** One live phone as the relay lists it (the relay's own snake_case names). */
+export type ConnectedRelayDevice = Readonly<{
+  device_id: string;
+  member_id: string;
+  signing_public_key: string;
+  encryption_public_key: string;
+  revocation_epoch: number;
+  last_seen_at: string | null;
+  created_at: string;
+  revoked_at: string | null;
+}>;
+
 export type ConnectedPlatformClientOptions = Readonly<{
   endpoints: ConnectedPlatformEndpoints;
   controlToken: ConnectedTokenProvider;
@@ -178,7 +190,8 @@ export class ConnectedPlatformClient {
     }
   }
 
-  createPairing(input: { workspaceId: string; memberId: string; deviceId: string }) {
+  /** desktopKeyProof: "<signature>.<context>", the desktop's signature over its RSA key (the relay stores and returns it). */
+  createPairing(input: { workspaceId: string; memberId: string; deviceId: string; desktopKeyProof?: string }) {
     return this.requestJson<{ pairingId: string; pairingToken: string; expiresAt: string }>(
       "control",
       "/v1/desktop/pairings",
@@ -187,9 +200,24 @@ export class ConnectedPlatformClient {
   }
 
   listDevices(workspaceId: string) {
-    return this.requestJson<{ devices: unknown[] }>("control", "/v1/desktop/devices", {
+    return this.requestJson<{ devices: ConnectedRelayDevice[] }>("control", "/v1/desktop/devices", {
       query: { workspaceId },
     });
+  }
+
+  /** Revokes one paired phone. The relay needs the new (higher) revocation epoch. */
+  async revokeDevice(deviceId: string, input: { workspaceId: string; revocationEpoch: number }) {
+    if (!Number.isSafeInteger(input.revocationEpoch) || input.revocationEpoch < 1) {
+      throw new RangeError("Connected device revocation epoch is invalid");
+    }
+    return this.requestJson<{ deviceId: string; status: "revoked"; revocationEpoch: number }>(
+      "control",
+      `/v1/desktop/devices/${encodeURIComponent(deviceId)}/revoke`,
+      {
+        method: "POST",
+        body: { workspaceId: input.workspaceId, revocationEpoch: input.revocationEpoch },
+      },
+    );
   }
 
   putProjection(envelope: ConnectedEnvelope) {

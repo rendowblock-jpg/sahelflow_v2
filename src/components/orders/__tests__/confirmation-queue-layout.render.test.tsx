@@ -2,10 +2,11 @@
  * @vitest-environment happy-dom
  */
 /**
- * The confirmation queue is where a seller accepts or rejects every new order. Wave 1 turned the shared table into one
- * card per row below 768 px, but this table's action column (id "action") is not one of the card slots, so on a phone the
- * Confirm / Reject / Review controls would fall off the card. Until the queue has its own slot map (wave 2), it keeps the
- * table at every width, exactly as before wave 1: a real <table> with a row per order and a review link.
+ * The confirmation queue is where a seller accepts or rejects every new order. DataTable v2 shows one card per row on a
+ * phone, so the decision controls must be IN the card: wave 1 kept this table as a table (layout="table") because its
+ * action column was not a card slot; wave 2 maps that column to the card's "actions" slot. This pins the result: on a
+ * phone-width screen every order is a card whose actions slot holds the decision buttons, and the order number links to
+ * the review page.
  */
 import { screen, within } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
@@ -69,7 +70,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("confirmation queue on a phone-width screen", () => {
-  it("stays a table with a row per order and a review link (no card layout)", () => {
+  it("is a card per order with its decision buttons inside the card and a link to the review page", () => {
     render(
       <NuqsTestingAdapter>
         <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
@@ -77,10 +78,14 @@ describe("confirmation queue on a phone-width screen", () => {
         </SWRConfig>
       </NuqsTestingAdapter>,
     );
-    expect(screen.queryByTestId("data-table-card")).toBeNull();
-    const row = screen.getAllByRole("row").find((candidate) => candidate.textContent?.includes("ORD-0057"));
-    expect(row, "a table row for ORD-0057").toBeDefined();
-    const links = within(row as HTMLElement).getAllByRole("link");
+    expect(screen.queryByRole("table")).toBeNull();
+    const cardsOnScreen = screen.getAllByTestId("data-table-card");
+    expect(cardsOnScreen).toHaveLength(1);
+    const card = cardsOnScreen[0] as HTMLElement;
+    const actions = card.querySelector('[data-slot="actions"]');
+    expect(actions, "the card has an actions slot").not.toBeNull();
+    expect(within(actions as HTMLElement).getAllByRole("button").length).toBeGreaterThanOrEqual(2);
+    const links = within(card).getAllByRole("link");
     expect(links.some((link) => link.getAttribute("href") === "/orders/ord-57")).toBe(true);
   });
 });

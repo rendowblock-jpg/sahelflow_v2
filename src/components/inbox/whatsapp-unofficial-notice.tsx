@@ -14,10 +14,27 @@ import { cn } from "@/lib/utils";
  */
 export function WhatsAppUnofficialNotice({
   className,
+  variant = "alert",
 }: {
   className?: string;
+  /** "detail" is the compact inline sentence the inbox link surface uses. */
+  variant?: "alert" | "detail";
 }) {
   const { t } = useI18n();
+  if (variant === "detail") {
+    return (
+      <p
+        role="note"
+        data-whatsapp-unofficial-notice=""
+        className={cn("text-xs leading-5", className)}
+      >
+        <strong className="font-semibold text-foreground">
+          {t("inbox.unofficialNoticeTitle")}
+        </strong>{" "}
+        {t("inbox.unofficialNoticeBody")}
+      </p>
+    );
+  }
   return (
     <Alert
       // `role="alert"` would interrupt a screen reader each time the dialog opens.

@@ -19,7 +19,7 @@ describe("Wave 2 visible locale and layout closure", () => {
   });
 
   it("localizes Risk KPIs, tables and empty analytical states", () => {
-    const risk = read("src/app/(dashboard)/risk/page.tsx");
+    const risk = (read("src/app/(dashboard)/risk/page.tsx") + read("src/components/risk/risk-view.tsx"));
 
     expect(risk).toContain('style: "percent"');
     expect(risk).toContain("formatDZD(outcomes.lostToReturnsDzd, locale)");
@@ -32,7 +32,7 @@ describe("Wave 2 visible locale and layout closure", () => {
   });
 
   it("prevents Dashboard sibling panels from stretching into dead space", () => {
-    const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
+    const dashboard = (read("src/app/(dashboard)/dashboard/page.tsx") + read("src/components/dashboard/dashboard-view.tsx"));
 
     expect(dashboard).toContain('data-dashboard-operational-grid="true"');
     expect(dashboard).toContain("grid min-w-0 items-start gap-3");
@@ -40,7 +40,7 @@ describe("Wave 2 visible locale and layout closure", () => {
   });
 
   it("localizes Dashboard counts and rates without changing query authority", () => {
-    const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
+    const dashboard = (read("src/app/(dashboard)/dashboard/page.tsx") + read("src/components/dashboard/dashboard-view.tsx"));
 
     expect(dashboard).toContain('style: "percent"');
     expect(dashboard).toContain("integerFormatter.format(stats.ordersToday)");

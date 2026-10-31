@@ -6,6 +6,7 @@ import { ArrowLeft, Mail, PanelRight, Search, Sparkles } from "lucide-react";
 import { StatusControl } from "@/components/inbox/conversation-controls";
 import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
+import { registerOrderDraft, updateOrderDraft } from "@/components/inbox/inbox-order-draft-store";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -149,6 +150,7 @@ export function InboxThreadHeader({
             size="icon-sm"
             onClick={onBackToQueue}
             aria-label={t("common.backToConversations")}
+            className="size-11 md:size-8"
           >
             <ArrowLeft
               className="size-4 icon-rtl-flip"
@@ -290,6 +292,26 @@ export function InboxThreadHeader({
                 messageBody={selectedCandidate.body}
                 knownPhone={activeChat.phone}
                 sourceMessages={threadMessages}
+                onRead={({ response, anchorId }) => {
+                  const order = response.result.order ?? response.result.partial ?? null;
+                  if (!order) return;
+                  registerOrderDraft({
+                    conversationId: activeChat.conversationId,
+                    transportId: activeChat.transportId ?? undefined,
+                    anchorMessageId: anchorId,
+                    order,
+                    catalog: response.catalog,
+                    knownPhone: activeChat.phone ?? undefined,
+                    method: response.result.method,
+                    confidence: response.result.confidence,
+                    status: "pending",
+                    created: null,
+                    readAt: Date.now(),
+                  });
+                }}
+                onCreated={(created) =>
+                  updateOrderDraft(activeChat.conversationId, { status: "approved", created })
+                }
               />
             ) : null}
           </DialogContent>

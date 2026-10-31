@@ -27,3 +27,244 @@
   min-width: 0;
   width: 100%;
 }
+
+/* ---- Inbox list pane (wave 1 track I1). Logical properties only; no motion. ---- */
+.list {
+  background: var(--muted);
+}
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  inline-size: 100%;
+  block-size: 72px;
+  padding-inline: 12px;
+  padding-block: 0;
+  overflow: hidden;
+  background: transparent;
+  text-align: start;
+  border-block-end: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-inline-start: 1px solid transparent;
+}
+
+.row:hover {
+  background: color-mix(in oklab, var(--background) 55%, transparent);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* Selected: bar + weight + aria-current + a 1px edge + one surface step up. */
+.row[aria-current="true"] {
+  background: var(--background);
+  border-inline-start: 1px solid color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+.row[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 5px;
+  background: var(--primary);
+}
+
+.rowName {
+  min-inline-size: 0;
+}
+
+.row[aria-current="true"] .rowName {
+  font-weight: 600;
+}
+
+.rowAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.unreadBadge {
+  display: inline-block;
+  min-inline-size: 20px;
+  padding-inline: 6px;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--foreground);
+}
+
+.tab {
+  min-block-size: 28px;
+}
+
+.skeletonRow {
+  block-size: 72px;
+  border-block-end: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  background: color-mix(in oklab, var(--muted-foreground) 7%, transparent);
+}
+
+.footer {
+  padding-inline: 12px;
+  padding-block: 6px;
+  border-block-start: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.emptyPage {
+  padding: 24px 20px;
+  min-block-size: 14rem;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 31px,
+    color-mix(in oklab, var(--border) 60%, transparent) 31px,
+    color-mix(in oklab, var(--border) 60%, transparent) 32px
+  );
+}
+
+.linkTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 28px;
+  padding-inline: 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+button.linkTag:focus-visible,
+.helpButton:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.helpButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted-foreground);
+}
+
+.banner {
+  order: 99;
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-block-end: 8px;
+  padding-block: 8px;
+  padding-inline: 12px;
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--destructive);
+  background: color-mix(in oklab, var(--destructive) 7%, var(--background));
+  font-size: 13px;
+}
+
+.banner[data-inbox-link-kind="unofficial-only"] {
+  border-inline-start-color: var(--primary);
+  background: var(--background);
+}
+
+.action {
+  min-block-size: 32px;
+}
+
+@media (pointer: coarse) {
+  .tab,
+  .action,
+  .helpButton,
+  .linkTag {
+    min-block-size: 44px;
+  }
+
+  .helpButton {
+    inline-size: 44px;
+  }
+}
+
+/* Carnet only: written index letter, ruled hairline, mono figures. */
+:global(html[data-theme-preset="carnet"]) .rowAvatar {
+  font-family: Amiri, var(--font-display, serif);
+  font-weight: 700;
+}
+
+:global(html[data-theme-preset="carnet"]) .row {
+  border-block-end: 1px solid var(--carnet-rule);
+}
+
+:global(html[data-theme-preset="carnet"]) .unreadBadge {
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+:global(html[data-theme-preset="carnet"]) .banner {
+  border-inline-start: 5px double var(--carnet-red);
+}
+
+:global(html[data-theme-preset="carnet"]) .banner[data-inbox-link-kind="unofficial-only"] {
+  border-inline-start: 4px solid var(--primary);
+}
+
+/* Thread (wave 1 track I2): the order draft slip, the stamp and the seller slip wash. */
+.draftSlip {
+  scroll-margin-block-start: 4rem;
+}
+
+.stampOnly {
+  display: none;
+}
+
+.plainBadge {
+  display: inline-flex;
+}
+
+:global(html[data-theme-preset="carnet"]) .stampOnly {
+  display: inline-block;
+}
+
+:global(html[data-theme-preset="carnet"]) .plainBadge {
+  display: none;
+}
+
+:global(html[data-theme-preset="carnet"]) .slipOut {
+  background: var(--carnet-slip-out, var(--primary-soft));
+}

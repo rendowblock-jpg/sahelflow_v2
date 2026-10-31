@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { StateView } from "@/components/shared/state-view";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   DEFAULT_GEMINI_MODEL,
@@ -23,6 +24,9 @@ import {
 } from "@/lib/ai/gemini/catalog";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+
+import { PanelSkeleton } from "./panel-skeleton";
+import { SaveStatus, type SaveState } from "./save-status";
 
 const MODEL_SETTING = "gemini_model";
 const THINKING_SETTING = "gemini_thinking_level";
@@ -90,10 +94,13 @@ export function GeminiRuntimePanel({ canManage }: { canManage: boolean }) {
     DEFAULT_GEMINI_THINKING_LEVEL,
   );
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saving, setSaving] = useState<"model" | "thinking" | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadFailed(false);
     try {
       const response = await fetch("/api/settings", {
         method: "GET",
@@ -106,8 +113,8 @@ export function GeminiRuntimePanel({ canManage }: { canManage: boolean }) {
       setModel(parseGeminiModel(data.settings?.[MODEL_SETTING]));
       setThinking(parseGeminiThinkingLevel(data.settings?.[THINKING_SETTING]));
     } catch {
-      setModel(DEFAULT_GEMINI_MODEL);
-      setThinking(DEFAULT_GEMINI_THINKING_LEVEL);
+      // Do not show the defaults as if they were the saved choice.
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -131,6 +138,7 @@ export function GeminiRuntimePanel({ canManage }: { canManage: boolean }) {
     setModel(nextModel);
     setThinking(nextThinking);
     setSaving(kind);
+    setSaveState("saving");
     try {
       const response = await fetch("/api/settings", {
         method: "PUT",
@@ -143,10 +151,12 @@ export function GeminiRuntimePanel({ canManage }: { canManage: boolean }) {
         }),
       });
       if (!response.ok) throw new Error("save failed");
+      setSaveState("saved");
       toast.success(t("aiKey.runtime.saved"));
     } catch {
       setModel(previousModel);
       setThinking(previousThinking);
+      setSaveState("failed");
       toast.error(t("aiKey.runtime.saveFailed"));
     } finally {
       setSaving(null);
@@ -165,6 +175,19 @@ export function GeminiRuntimePanel({ canManage }: { canManage: boolean }) {
         <CardDescription>{t("aiKey.runtime.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {loading ? (
+          <PanelSkeleton rows={4} label={t("settings.panelState.loading")} testId="gemini-skeleton" />
+        ) : loadFailed ? (
+          <StateView
+            kind="error"
+            size="inline"
+            description={t("settings.panelState.loadFailed")}
+            onRetry={() => void load()}
+            testId="gemini-error"
+            retryTestId="gemini-retry"
+          />
+        ) : (
+          <>
         <fieldset className="space-y-2" disabled={busy}>
           <legend className="flex items-center gap-2 text-sm font-medium">
             <Cpu className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -235,6 +258,14 @@ export function GeminiRuntimePanel({ canManage }: { canManage: boolean }) {
             ))}
           </div>
         </fieldset>
+        <SaveStatus
+          state={saveState}
+          saving={t("settings.panelState.saving")}
+          saved={t("aiKey.runtime.saved")}
+          failed={t("aiKey.runtime.saveFailed")}
+        />
+          </>
+        )}
       </CardContent>
     </Card>
   );

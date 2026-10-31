@@ -1,20 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  AlertTriangle,
-  Boxes,
-  DollarSign,
-  History,
-  Package,
-  ShoppingBag,
-  TrendingUp,
-} from "lucide-react";
+import { Boxes, DollarSign, History, Package, ShoppingBag, TrendingUp } from "lucide-react";
 
+import { RecordsOfflineBanner } from "@/components/customers/records-status-banner";
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
+import { ProductDetailHeader } from "@/components/products/product-detail-header";
+import { ProductOrderMovementCards } from "@/components/products/product-order-movement-cards";
+import { ProductStockEventCards } from "@/components/products/product-stock-event-cards";
 import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
-import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -134,28 +129,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
         ]}
       />
 
-      <PageHeader
-        title={product.name}
+      <RecordsOfflineBanner kind="product" />
+
+      <ProductDetailHeader
+        name={product.name}
         description={[
           product.sku && `${t("products.sku")}: ${product.sku}`,
           product.category?.name,
           formatDate(product.createdAt, locale),
         ].filter(Boolean).join(" · ")}
-        actions={
-          isLowStock || canManage ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {isLowStock ? (
-                <Badge variant="destructive">
-                  <AlertTriangle className="size-3.5" aria-hidden="true" />
-                  {t("products.lowStock")}
-                </Badge>
-              ) : null}
-              {canManage ? (
-                <ProductDetailActions product={product} categories={categories} />
-              ) : null}
-            </div>
-          ) : undefined
-        }
+        lowStockLabel={isLowStock ? t("products.lowStock") : null}
+        actions={canManage ? <ProductDetailActions product={product} categories={categories} /> : null}
       />
 
       <div className="card-grid-4">
@@ -241,7 +225,24 @@ export default async function ProductDetailPage({ params }: PageProps) {
               {t("productStock.noHistory")}
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              <ProductStockEventCards
+                rows={stockHistory.map((event) => ({
+                  id: event.id,
+                  date: formatDate(event.createdAt, locale),
+                  delta: event.delta,
+                  toStock: event.toStock,
+                  sourceLabel: t(`productStock.source.${STOCK_SOURCE_KEY[event.source]}`),
+                  reason: event.reason,
+                  actorLabel: t(stockActorKey(event.actor)),
+                }))}
+                labels={{
+                  list: t("productStock.historyTitle"),
+                  newStock: t("productStock.newStock"),
+                  by: t("productStock.by"),
+                }}
+              />
+              <div className="hidden overflow-x-auto md:block">
               <Table scrollLabel={t("productStock.historyTitle")}>
                 <TableHeader>
                   <TableRow>
@@ -286,14 +287,30 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+              </div>
+            </>
           )}
           {orderMovements.length > 0 ? (
             <div className="mt-6 space-y-2" data-product-stock-history="order-movements">
               <h3 className="text-sm font-medium">
                 {t("productStock.orderMovementsTitle")}
               </h3>
-              <div className="overflow-x-auto">
+              <ProductOrderMovementCards
+                rows={orderMovements.map((movement) => ({
+                  id: movement.id,
+                  date: formatDate(movement.occurredAt, locale),
+                  kindLabel: t(`productStock.kind.${movement.kind}`),
+                  quantity: movement.quantity,
+                  orderId: movement.orderId ?? null,
+                  orderNumber: movement.orderNumber ?? null,
+                }))}
+                labels={{
+                  list: t("productStock.orderMovementsTitle"),
+                  quantity: t("productStock.quantity"),
+                  order: t("productStock.order"),
+                }}
+              />
+              <div className="hidden overflow-x-auto md:block">
                 <Table scrollLabel={t("productStock.orderMovementsTitle")}>
                   <TableHeader>
                     <TableRow>

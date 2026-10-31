@@ -299,6 +299,67 @@ export function navigationItemAllowed(
   return entry.requiredActions.some((action) => permissions.includes(action));
 }
 
+/**
+ * The sidebar groups the flat seller list by the shop's day (Today / Sales / Delivery / Money / Automation), with
+ * Imports and Settings as an unheaded footer. This is only the visible grouping: the domain registry above stays
+ * the authority for permissions, search and route context. Items keep their existing order inside a group.
+ */
+export type SidebarGroupId = "today" | "sales" | "delivery" | "money" | "automation" | "footer";
+
+export interface SidebarNavigationGroup {
+  id: SidebarGroupId;
+  /** Runtime-catalog key of the header; null for the footer, which has no header. */
+  labelKey: string | null;
+  /** Today and the footer are always open. */
+  collapsible: boolean;
+  items: readonly NavigationItem[];
+}
+
+const SIDEBAR_GROUP_PLAN: readonly {
+  id: SidebarGroupId;
+  labelKey: string | null;
+  collapsible: boolean;
+  itemIds: readonly string[];
+}[] = [
+  { id: "today", labelKey: "nav.groupToday", collapsible: false, itemIds: ["home", "confirmation-queue", "inbox"] },
+  { id: "sales", labelKey: "nav.groupSales", collapsible: true, itemIds: ["sell", "products", "customers", "risk", "storefront"] },
+  { id: "delivery", labelKey: "nav.groupDelivery", collapsible: true, itemIds: ["fulfill", "returns"] },
+  { id: "money", labelKey: "nav.groupMoney", collapsible: true, itemIds: ["grow", "money", "cod-reconciliation"] },
+  { id: "automation", labelKey: "nav.groupAutomation", collapsible: true, itemIds: ["automations", "agents"] },
+  { id: "footer", labelKey: null, collapsible: false, itemIds: ["imports", "settings"] },
+];
+
+export const sidebarNavigationGroups: readonly SidebarNavigationGroup[] = SIDEBAR_GROUP_PLAN.map((plan) => ({
+  id: plan.id,
+  labelKey: plan.labelKey,
+  collapsible: plan.collapsible,
+  items: [...sellerSidebarNavigationItems, ...utilityNavigationItems].filter((entry) => plan.itemIds.includes(entry.id)),
+}));
+
+/** Groups and items this member can open; a group with nothing left is dropped, header included. */
+export function visibleSidebarNavigationGroups(
+  permissions: readonly Phase2Action[] | null,
+  groups: readonly SidebarNavigationGroup[] = sidebarNavigationGroups,
+): SidebarNavigationGroup[] {
+  return groups
+    .map((group) => ({ ...group, items: group.items.filter((entry) => navigationItemAllowed(entry, permissions)) }))
+    .filter((group) => group.items.length > 0);
+}
+
+/** The destinations in the order the sidebar shows them. */
+export function sidebarVisibleOrder(permissions: readonly Phase2Action[] | null = null): NavigationItem[] {
+  return visibleSidebarNavigationGroups(permissions).flatMap((group) => [...group.items]);
+}
+
+/** Every registry destination, the sidebar's ones first in sidebar order, so palette and keyboard follow the screen. */
+export function flattenNavigationItemsInVisibleOrder(): NavigationItem[] {
+  const rank = new Map(sidebarVisibleOrder(null).map((entry, index) => [entry.href, index] as const));
+  return flattenNavigationItems()
+    .map((entry, index) => ({ entry, key: rank.get(entry.href) ?? rank.size + index }))
+    .sort((left, right) => left.key - right.key)
+    .map(({ entry }) => entry);
+}
+
 export function pathMatchesNavigation(pathname: string, href: string): boolean {
   if (href === "/settings" && pathname === "/profile") return true;
   return pathname === href || pathname.startsWith(`${href}/`);

@@ -76,6 +76,7 @@ describe("Onboarding checklist-driven wizard contract (R4-b)", () => {
     expect(pairing).toContain("deriveWhatsAppPairingPhase");
     expect(pairing).toContain("getWhatsAppPairingCopy");
     expect(pairing).toContain('"/api/whatsapp/status"');
+    expect(pairing).toContain("parseWhatsAppStatusResponse(response.ok, data)");
     expect(pairing).toContain('"/api/whatsapp/connect"');
     expect(pairing).toContain("/api/whatsapp/qr-image?refresh=");
     // The inbox dialog itself stays untouched (no workspace prop adapter):
@@ -118,7 +119,8 @@ describe("Onboarding checklist-driven wizard contract (R4-b)", () => {
     expect(wizard).toContain('"/api/delivery/credentials"');
     expect(wizard).toContain('"/api/secrets/gemini-key"');
     expect(wizard).toContain("Promise.allSettled");
-    expect(wizard).toContain("data.status === \"connected\"");
+    // 200 + sidecarReachable:false (helper off) must never count as connected.
+    expect(wizard).toContain("isWhatsAppReportedConnected(data)");
     expect(wizard).toContain("data.configured === true");
     expect(wizard).toContain("refreshStatus()");
   });

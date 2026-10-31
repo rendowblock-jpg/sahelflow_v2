@@ -29,6 +29,7 @@ import {
   type WhatsAppIngressRecoveryKey,
 } from "@/lib/i18n/whatsapp-ingress-recovery";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 
 interface IngressAttempt {
   id: string;
@@ -58,8 +59,11 @@ function contactFromJid(sourceId: string): string {
 
 export function WhatsAppIngressRecoveryDock({
   canRetry = false,
+  embedded = false,
 }: {
   canRetry?: boolean;
+  /** Part of the inbox link surface: takes its own line in the header row. */
+  embedded?: boolean;
 }) {
   const { locale } = useI18n();
   const copy = useCallback(
@@ -164,7 +168,10 @@ export function WhatsAppIngressRecoveryDock({
     <Sheet open={open} onOpenChange={setOpen}>
       <div
         role="status"
-        className="flex min-h-10 items-center justify-between gap-3 rounded-surface border border-warning/25 bg-warning-soft px-3 py-2"
+        className={cn(
+          "flex min-h-10 items-center justify-between gap-3 rounded-surface border border-warning/25 bg-warning-soft px-3 py-2",
+          embedded && "order-last mb-2 basis-full",
+        )}
       >
         <div className="flex min-w-0 items-center gap-2 text-xs">
           <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />

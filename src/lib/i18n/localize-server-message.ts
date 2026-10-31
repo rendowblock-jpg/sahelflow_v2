@@ -15,7 +15,7 @@ import {
   type Locale,
 } from "@/lib/i18n";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
-import { translateServerError } from "@/lib/i18n/translate-server-error";
+import { matchKnownServerError } from "@/lib/i18n/translate-server-error";
 
 export function localizeServerMessage(message: string): string {
   if (typeof document === "undefined" || !message) return message;
@@ -29,5 +29,7 @@ export function localizeServerMessage(message: string): string {
       catalog[key] ?? getRuntimeTranslation(locale, key) ?? key,
       params,
     );
-  return translateServerError(message, t, message);
+  // Pass-through is the contract: toast text is mostly already translated. (translateServerError would replace it by the calm
+  // "something went wrong" sentence, which is right for a server payload and wrong here.)
+  return matchKnownServerError(message, t) ?? message;
 }

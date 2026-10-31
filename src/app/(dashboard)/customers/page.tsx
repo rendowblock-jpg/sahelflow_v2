@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AlertTriangle, TrendingUp, UserCheck, Users } from "lucide-react";
 
 import { CustomersDataTable } from "@/components/customers/customers-data-table";
+import { OfflineWriteGate } from "@/components/orders/offline-write-gate";
 import { CreateParamDialog } from "@/components/shared/create-param-dialog";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
@@ -71,7 +72,11 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
                 importRoute={access.import ? "/api/import/customers" : undefined}
               />
             ) : null}
-            {canCreate ? <CreateParamDialog kind="customer" /> : null}
+            {canCreate ? (
+              <OfflineWriteGate>
+                <CreateParamDialog kind="customer" />
+              </OfflineWriteGate>
+            ) : null}
           </div>
         ) : undefined}
       />

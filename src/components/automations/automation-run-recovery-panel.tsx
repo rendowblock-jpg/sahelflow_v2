@@ -29,6 +29,8 @@ import { toast } from "@/lib/toast";
 import { IconTile } from "@/components/system";
 import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 
+import { findRunFailure } from "./run-failure";
+
 interface AttemptHistory {
   id: string;
   attemptNumber: number;
@@ -55,6 +57,8 @@ interface StepHistory {
 
 export interface AutomationRunHistoryView {
   id: string;
+  /** Present on rows from the run history; lets the panel offer Pause. */
+  automationId?: string;
   automationName: string;
   triggerType: string;
   status: string;
@@ -73,6 +77,8 @@ export interface AutomationRunHistoryView {
 
 interface Props {
   initialRuns: AutomationRunHistoryView[];
+  /** Ids of the automations that are switched on right now (Pause is offered only for these). */
+  activeAutomationIds?: readonly string[];
 }
 
 function statusVariant(
@@ -102,12 +108,14 @@ function statusIcon(status: string) {
   return <Clock3 className="size-4 text-muted-foreground" />;
 }
 
-export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
+export function AutomationRunRecoveryPanel({ initialRuns, activeAutomationIds }: Props) {
   const { t, locale } = useI18n();
   const router = useRouter();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [retryingRun, setRetryingRun] = useState<string | null>(null);
+  const [holding, setHolding] = useState<string | null>(null);
+  const [held, setHeld] = useState<string[]>([]);
   const c = (key: AutomationWorkspaceCopyKey) =>
     getAutomationWorkspaceCopy(locale, key);
   const formatter = useMemo(
@@ -119,6 +127,26 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
       }),
     [locale],
   );
+
+  // Same request the switch on the automation card sends: nothing new on the server.
+  const holdAutomation = async (automationId: string) => {
+    setHolding(automationId);
+    try {
+      const response = await fetch(`/api/automations/${encodeURIComponent(automationId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
+      });
+      if (!response.ok) throw new Error("AUTOMATION_HOLD_FAILED");
+      toast.success(t("automations.deactivated"));
+      setHeld((current) => [...current, automationId]);
+      router.refresh();
+    } catch {
+      toast.error(t("automations.holdFailed"));
+    } finally {
+      setHolding(null);
+    }
+  };
 
   const retryRun = async (runId: string) => {
     const reason = reasons[runId]?.trim() ?? "";
@@ -181,6 +209,16 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
           "ambiguous",
           "partially_completed",
         ].includes(run.status);
+        const failure = needsAttention ? findRunFailure(run) : null;
+        const failureSpec = failure?.action ? getSellerActionSpec(failure.action) : null;
+        const failureAction = failureSpec
+          ? c(failureSpec.copyKey as AutomationWorkspaceCopyKey)
+          : (failure?.action ?? "");
+        const failureReason = failure ? t(`automations.failure.${failure.kind}`) : "";
+        const holdId =
+          run.automationId && activeAutomationIds?.includes(run.automationId) && !held.includes(run.automationId)
+            ? run.automationId
+            : null;
 
         return (
           <Card key={run.id} className="overflow-hidden border-border/70">
@@ -217,6 +255,17 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                         </span>
                       ) : null}
                     </div>
+                    {failure ? (
+                      <p data-testid="run-failure" className="text-xs leading-5 text-destructive">
+                        {failure.step === null
+                          ? t("automations.failure.lineNoStep", { reason: failureReason })
+                          : t("automations.failure.line", {
+                              step: failure.step,
+                              action: failureAction,
+                              reason: failureReason,
+                            })}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -307,6 +356,18 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                           <RotateCcw className="me-1.5 size-4" />
                           {c("workspace.retry")}
                         </Button>
+                        {holdId ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            data-testid="run-hold"
+                            title={t("automations.holdHint")}
+                            disabled={holding === holdId}
+                            onClick={() => void holdAutomation(holdId)}
+                          >
+                            {t("automations.hold")}
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   ) : run.recoveryBlockCode && needsAttention ? (

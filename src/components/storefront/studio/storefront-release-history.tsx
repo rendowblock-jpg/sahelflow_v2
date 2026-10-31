@@ -1,15 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3, History, Loader2, RotateCcw } from "lucide-react";
+import { CheckCircle2, Clock3, History, Loader2, RefreshCw, RotateCcw } from "lucide-react";
+
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { CardGridSkeletonBody, SkeletonShell } from "@/components/shared/state-skeletons";
+import { StateView } from "@/components/shared/state-view";
+import { resolveHistoryView } from "@/components/storefront/studio/release-history-view";
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
+import type { StorefrontTemplateId } from "@/lib/storefront/presentation-types";
 import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 type Release = Readonly<{
   releaseId: string;
   parentReleaseId: string | null;
-  templateId: import("@/lib/storefront/presentation-types").StorefrontTemplateId;
+  templateId: StorefrontTemplateId;
   locale: "ar" | "fr" | "en";
   artifactDigest: string;
   createdAt: string;
@@ -26,171 +33,294 @@ type HistoryResponse = Readonly<{
   error?: string;
 }>;
 
+type LoadedHistory = Readonly<{
+  releases: readonly Release[];
+  connected: boolean;
+}>;
+
+const STATE_PREFIX = "storefront.studioStates.history.";
+/** How many versions the page lists; older ones stay on the service. */
+const VISIBLE_RELEASES = 12;
+
+function formatReleaseDate(createdAt: string, locale: string): string {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return createdAt;
+  return date.toLocaleString(intlLocale(locale), {
+    dateStyle: "medium",
+    timeStyle: "short",
+    ...DZ_CLOCK,
+  });
+}
+
+/** The one name a seller can recognise a version by: template, date, digest. */
+function releaseLabel(release: Release, dateLabel: string): string {
+  return `${release.templateId} · ${dateLabel} · ${release.artifactDigest.slice(0, 12)}`;
+}
 
 export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: string }) {
-  const { t, locale, dir } = useI18n();
-  const [releases, setReleases] = useState<readonly Release[]>([]);
+  const { t, locale } = useI18n();
+  const [data, setData] = useState<LoadedHistory | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [rollingBack, setRollingBack] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [rollbackTarget, setRollbackTarget] = useState<Release | null>(null);
-  const [notConnected, setNotConnected] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [rollbackError, setRollbackError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const reload = useCallback(() => {
     setLoading(true);
-    try {
-      const response = await fetch(
-        `/api/storefront/config/${encodeURIComponent(storefrontId)}/releases`,
-        { cache: "no-store" },
-      );
-      const body = await response.json() as HistoryResponse;
-      if (!response.ok || !body.history) throw new Error(body.error ?? "release_history_unavailable");
-      setNotConnected(body.connected === false);
-      setReleases(body.history.releases);
-      setMessage(null);
-    } catch {
-      setMessage(t("storefront.releaseHistory.loadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [t, storefrontId]);
+    setReloadKey((key) => key + 1);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(
-      `/api/storefront/config/${encodeURIComponent(storefrontId)}/releases`,
-      { cache: "no-store", signal: controller.signal },
-    )
-      .then(async (response) => {
-        const body = await response.json() as HistoryResponse;
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/storefront/config/${encodeURIComponent(storefrontId)}/releases`,
+          { cache: "no-store", signal: controller.signal },
+        );
+        const body = (await response.json()) as HistoryResponse;
         if (!response.ok || !body.history) {
           throw new Error(body.error ?? "release_history_unavailable");
         }
-        return { releases: body.history.releases, connected: body.connected !== false };
-      })
-      .then(({ releases: nextReleases, connected }) => {
         if (controller.signal.aborted) return;
-        setNotConnected(!connected);
-        setReleases(nextReleases);
-        setMessage(null);
-      })
-      .catch(() => {
+        setData({ releases: body.history.releases, connected: body.connected !== false });
+        setLoadFailed(false);
+      } catch {
         if (controller.signal.aborted) return;
-        setMessage(t("storefront.releaseHistory.loadFailed"));
-      })
-      .finally(() => {
+        setLoadFailed(true);
+      } finally {
         if (!controller.signal.aborted) setLoading(false);
-      });
+      }
+    })();
     return () => controller.abort();
-  }, [t, storefrontId]);
+  }, [storefrontId, reloadKey]);
 
+  const releases = useMemo(() => data?.releases ?? [], [data]);
   const active = useMemo(() => releases.find((release) => release.isActive) ?? null, [releases]);
+  const view = resolveHistoryView({
+    loading,
+    hasData: data !== null,
+    loadFailed,
+    connected: data?.connected ?? true,
+    count: releases.length,
+  });
 
-  const performRollback = useCallback(async (source: Release) => {
-    if (!active || source.isActive || rollingBack) return;
-    setRollingBack(source.releaseId);
-    setMessage(null);
-    try {
-      const response = await fetch(
-        `/api/storefront/config/${encodeURIComponent(storefrontId)}/releases`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sourceReleaseId: source.releaseId,
-            expectedActiveReleaseId: active.releaseId,
-          }),
-        },
-      );
-      const body = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(body.error ?? "rollback_failed");
-      await load();
-      setMessage(t("storefront.releaseHistory.rolledBack"));
-    } catch {
-      setMessage(t("storefront.releaseHistory.rollbackFailed"));
-    } finally {
-      setRollingBack(null);
-    }
-  }, [active, load, rollingBack, storefrontId, t]);
+  const performRollback = useCallback(
+    async (source: Release) => {
+      if (!active || source.isActive || rollingBack) return;
+      setRollingBack(source.releaseId);
+      setNotice(null);
+      setRollbackError(null);
+      // 0 = no answer at all: the outcome is unknown, so say that.
+      let status = 0;
+      try {
+        const response = await fetch(
+          `/api/storefront/config/${encodeURIComponent(storefrontId)}/releases`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sourceReleaseId: source.releaseId,
+              expectedActiveReleaseId: active.releaseId,
+            }),
+          },
+        );
+        status = response.status;
+        if (!response.ok) throw new Error("rollback_failed");
+        setNotice(t("storefront.releaseHistory.rolledBack"));
+        reload();
+      } catch {
+        if (status === 0) {
+          setRollbackError(t(`${STATE_PREFIX}rollbackUnknown`));
+          reload();
+        } else if (status === 409) {
+          setRollbackError(t(`${STATE_PREFIX}rollbackConflict`));
+          reload();
+        } else {
+          setRollbackError(t(`${STATE_PREFIX}rollbackFailed`));
+        }
+      } finally {
+        setRollingBack(null);
+      }
+    },
+    [active, reload, rollingBack, storefrontId, t],
+  );
+
+  const targetLabel = rollbackTarget
+    ? releaseLabel(rollbackTarget, formatReleaseDate(rollbackTarget.createdAt, locale))
+    : "";
 
   return (
-    <section className="rounded-surface border bg-background p-4" dir={dir} aria-label={t("storefront.releaseHistory.title")}>
+    <section className="rounded-surface border bg-background p-4" aria-busy={loading}>
       <div className="flex flex-wrap items-start gap-3">
         <div className="rounded-surface border bg-muted/40 p-2.5 text-primary">
-          <History className="h-4 w-4" />
+          <History className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold">{t("storefront.releaseHistory.title")}</h2>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{t("storefront.releaseHistory.description")}</p>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
+            {t("storefront.releaseHistory.description")}
+          </p>
         </div>
-        <button
+        <Button
           type="button"
-          onClick={() => void load()}
+          variant="outline"
+          size="sm"
+          onClick={reload}
           disabled={loading || rollingBack !== null}
-          className="rounded-surface border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50"
+          aria-label={t(`${STATE_PREFIX}refresh`)}
+          data-testid="release-history-refresh"
         >
-          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <History className="h-3.5 w-3.5" aria-hidden="true" />}
-          <span className="sr-only">{t("storefront.releaseHistory.title")}</span>
-        </button>
+          {loading ? (
+            <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          ) : (
+            <RefreshCw className="size-4" aria-hidden="true" />
+          )}
+        </Button>
       </div>
 
-      {message ? <p className="mt-3 rounded-surface border bg-muted/30 px-3 py-2 text-xs" role="status">{message}</p> : null}
-      {loading ? (
-        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          {t("storefront.releaseHistory.loading")}
-        </div>
-      ) : releases.length === 0 ? (
-        <p className="mt-3 text-xs text-muted-foreground">
-          {t(notConnected ? "storefront.releaseHistory.notConnected" : "storefront.releaseHistory.empty")}
+      {notice ? (
+        <p className="mt-3 rounded-surface border bg-muted/30 px-3 py-2 text-xs" role="status">
+          {notice}
         </p>
-      ) : (
+      ) : null}
+      {rollbackError ? (
+        <p
+          className="mt-3 rounded-surface border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs"
+          role="alert"
+        >
+          {rollbackError}
+        </p>
+      ) : null}
+      {view.stale ? (
+        <StateView
+          kind="partial"
+          size="banner"
+          title={t(`${STATE_PREFIX}staleTitle`)}
+          onRefresh={reload}
+          className="mt-3"
+          testId="release-history-stale"
+        />
+      ) : null}
+
+      {view.body === "loading" ? (
+        <SkeletonShell className="mt-3" testId="release-history-loading">
+          <CardGridSkeletonBody cards={3} columns={3} />
+        </SkeletonShell>
+      ) : null}
+
+      {view.body === "error" ? (
+        <StateView
+          kind="error"
+          size="panel"
+          title={t(`${STATE_PREFIX}loadFailedTitle`)}
+          description={t(`${STATE_PREFIX}loadFailedBody`)}
+          onRetry={reload}
+          className="mt-3"
+          testId="release-history-error"
+        />
+      ) : null}
+
+      {view.body === "empty" ? (
+        <StateView
+          kind="empty"
+          size="panel"
+          icon={History}
+          title={t(`${STATE_PREFIX}emptyTitle`)}
+          description={t(`${STATE_PREFIX}emptyBody`)}
+          action={
+            <Button asChild size="sm">
+              <Link href={`/storefronts/${encodeURIComponent(storefrontId)}/studio`}>
+                {t(`${STATE_PREFIX}openStudio`)}
+              </Link>
+            </Button>
+          }
+          className="mt-3"
+          testId="release-history-empty"
+        />
+      ) : null}
+
+      {view.body === "notConnected" ? (
+        <StateView
+          kind="empty"
+          size="panel"
+          icon={History}
+          title={t(`${STATE_PREFIX}notConnectedTitle`)}
+          description={t(`${STATE_PREFIX}notConnectedBody`)}
+          className="mt-3"
+          testId="release-history-not-connected"
+        />
+      ) : null}
+
+      {view.body === "list" ? (
         <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
-          {releases.slice(0, 12).map((release) => {
-            const date = new Date(release.createdAt);
-            const dateLabel = Number.isNaN(date.getTime())
-              ? release.createdAt
-              : date.toLocaleString(intlLocale(locale), {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                  ...DZ_CLOCK,
-                });
+          {releases.slice(0, VISIBLE_RELEASES).map((release) => {
+            const dateLabel = formatReleaseDate(release.createdAt, locale);
             const busy = rollingBack === release.releaseId;
             return (
-              <article key={release.releaseId} className={`rounded-surface border p-3 ${release.isActive ? "border-primary/50 bg-primary-subtle" : "bg-muted/20"}`}>
+              <article
+                key={release.releaseId}
+                data-testid={`release-card-${release.releaseId}`}
+                className={`rounded-surface border p-3 ${release.isActive ? "border-primary/50 bg-primary-subtle" : "bg-muted/20"}`}
+              >
                 <div className="flex items-center gap-2">
-                  {release.isActive ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />}
+                  {release.isActive ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                  ) : (
+                    <Clock3 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  )}
                   <span className="text-xs font-semibold capitalize">{release.templateId}</span>
                   <span className="text-caption uppercase text-muted-foreground">{release.locale}</span>
-                  {release.isActive ? <span className="ms-auto rounded-full bg-primary-soft px-2 py-0.5 text-caption font-semibold text-primary">{t("storefront.releaseHistory.current")}</span> : null}
+                  {release.isActive ? (
+                    <span className="ms-auto rounded-full bg-primary-soft px-2 py-0.5 text-caption font-semibold text-primary">
+                      {t("storefront.releaseHistory.current")}
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-2 text-caption text-muted-foreground">{dateLabel}</p>
-                <p className="mt-1 font-mono text-caption text-muted-foreground">{release.artifactDigest.slice(0, 12)}… · {release.catalog.length} {t("storefront.releaseHistory.products")}</p>
+                <p className="mt-1 font-mono text-caption text-muted-foreground">
+                  {release.artifactDigest.slice(0, 12)}… · {release.catalog.length}{" "}
+                  {t("storefront.releaseHistory.products")}
+                </p>
                 {!release.isActive && active ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
                     disabled={rollingBack !== null}
                     onClick={() => setRollbackTarget(release)}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-surface border px-2.5 py-1.5 text-caption font-semibold hover:bg-background disabled:opacity-50"
+                    aria-label={t(`${STATE_PREFIX}rollbackAria`, {
+                      release: releaseLabel(release, dateLabel),
+                    })}
+                    data-testid={`release-rollback-${release.releaseId}`}
                   >
-                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                    {busy ? (
+                      <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                    ) : (
+                      <RotateCcw className="size-4" aria-hidden="true" />
+                    )}
                     {busy ? t("storefront.releaseHistory.rollingBack") : t("storefront.releaseHistory.rollback")}
-                  </button>
+                  </Button>
                 ) : null}
               </article>
             );
           })}
         </div>
-      )}
+      ) : null}
 
       <ConfirmDialog
         open={rollbackTarget !== null}
         onOpenChange={(open) => {
           if (!open) setRollbackTarget(null);
         }}
-        title={t("storefront.releaseHistory.rollback")}
-        description={t("storefront.releaseHistory.confirm")}
-        confirmLabel={t("storefront.releaseHistory.rollback")}
+        title={t(`${STATE_PREFIX}rollbackTitle`)}
+        description={t(`${STATE_PREFIX}rollbackBody`, { release: targetLabel })}
+        confirmLabel={t(`${STATE_PREFIX}rollbackConfirm`)}
+        cancelLabel={t(`${STATE_PREFIX}rollbackCancel`)}
         destructive
         onConfirm={() => {
           const target = rollbackTarget;

@@ -117,12 +117,23 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     await expect(page.locator("body")).not.toContainText("(démo)");
 
     if (!authority.sidecarReachable) {
-      await expect(workspace).toContainText("Service WhatsApp indisponible");
+      // The carnet inbox says it once, in the link line ("Le service WhatsApp ne répond pas : l'envoi est en pause."),
+      // and the open thread keeps its composer with a calm paused hint instead of the old "replies are available when
+      // WhatsApp is connected" sentence. Either wording is the honest degraded state.
+      await expect(workspace).toContainText(
+        /Service WhatsApp indisponible|Le service WhatsApp ne répond pas/,
+      );
       await rows.first().click();
       const thread = page.locator('[data-inbox-thread="active"]');
-      await expect(thread).toContainText(
-        "Les réponses sont disponibles lorsque WhatsApp est connecté",
-      );
+      await expect(
+        thread
+          .locator("[data-thread-paused-hint]")
+          .or(
+            thread.getByText(
+              "Les réponses sont disponibles lorsque WhatsApp est connecté",
+            ),
+          ),
+      ).toBeVisible();
       await expect(thread.locator("textarea")).toBeVisible();
     }
   });
@@ -254,8 +265,15 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     });
     if (transport.sidecarReachable === false) {
       await expect(thread.locator("textarea")).toBeVisible();
+      // The carnet inbox keeps the way back in the ONE link banner (retry, or connect when WhatsApp is not linked),
+      // not inside every thread.
       await expect(
-        thread.getByRole("button", { name: /ربط واتساب|Connecter WhatsApp|Connect WhatsApp/ }).first(),
+        page
+          .locator("[data-inbox-link-banner]")
+          .getByRole("button", {
+            name: /ربط واتساب|Connecter WhatsApp|Connect WhatsApp|أعد المحاولة|Réessayer|Try again/,
+          })
+          .first(),
       ).toBeVisible();
     }
 

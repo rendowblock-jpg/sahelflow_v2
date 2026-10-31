@@ -15,15 +15,14 @@ export const GET = withErrorHandler(async () => {
     return NextResponse.json(await sidecar.status());
   } catch (error) {
     if (error instanceof SidecarUnavailableError) {
-      return NextResponse.json(
-        {
-          status: "disconnected",
-          user: null,
-          hasQr: false,
-          sidecarReachable: false,
-        },
-        { status: 503 },
-      );
+      // The helper being off is an expected state, not a server fault: 200, so the browser does not print a failed
+      // request on every poll. Consumers read sidecarReachable (see parseWhatsAppStatusResponse).
+      return NextResponse.json({
+        status: "disconnected",
+        user: null,
+        hasQr: false,
+        sidecarReachable: false,
+      });
     }
     throw error;
   }
