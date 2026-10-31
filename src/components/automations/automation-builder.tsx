@@ -422,7 +422,7 @@ export function AutomationBuilder({
             {selectedIssues.length > 0 ? (
               <ul className="space-y-1.5 rounded-control border border-destructive/30 bg-destructive-subtle p-3">
                 {selectedIssues.map((issue) => (
-                  <li key={`${issue.target}-${issue.code}`} className="flex items-start gap-2 text-caption text-destructive">
+                  <li key={`${issue.target}-${issue.code}`} className="flex items-start gap-2 text-caption text-destructive-ink">
                     <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden="true" />
                     {c(`flow.issue.${issue.code}`)}
                   </li>

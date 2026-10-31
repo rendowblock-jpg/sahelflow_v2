@@ -1104,6 +1104,44 @@ function shippedTsxFiles(dir: string): string[] {
   return found;
 }
 
+const QUOTED_LITERAL = /"([^"\n]*)"|'([^'\n]*)'/g;
+const BACKTICK_LITERAL = /`([^`]*)`/g;
+
+/** The class tokens of one literal; the quotes, backticks, ${ } ( ) and ? of a nested expression are separators. */
+function classTokens(literal: string): Set<string> {
+  return new Set(literal.replace(/["'`${}()?]/g, " ").split(/\s+/).filter((token) => token.length > 0));
+}
+
+/** The kinds for which `tokens` hold a tint background (bg-<kind>-subtle|soft|strong or bg-<kind>/N) AND the bare text-<kind>. */
+function feedbackPairsIn(tokens: Set<string>): FeedbackKind[] {
+  return FEEDBACK_KINDS.filter((kind) => {
+    const tint = new RegExp(`^bg-${kind}(-(subtle|soft|strong)|/(\\d+|\\[[\\d.]+\\]))$`);
+    return [...tokens].some((token) => tint.test(token)) && tokens.has(`text-${kind}`);
+  });
+}
+
+/**
+ * "<line> <kind>" for every place a source file puts the bare colour on its own tint: inside one string, inside one
+ * template literal (nested strings included), or in two strings on the same line (a style object { bg: "...", text: "..." }).
+ */
+function bareFeedbackPairs(text: string): string[] {
+  const found = new Set<string>();
+  text.split("\n").forEach((line, index) => {
+    const union = new Set<string>();
+    for (const match of line.matchAll(QUOTED_LITERAL)) {
+      const tokens = classTokens(match[1] ?? match[2] ?? "");
+      for (const kind of feedbackPairsIn(tokens)) found.add(`${index + 1} ${kind}`);
+      tokens.forEach((token) => union.add(token));
+    }
+    for (const kind of feedbackPairsIn(union)) found.add(`${index + 1} ${kind}`);
+  });
+  for (const match of text.matchAll(BACKTICK_LITERAL)) {
+    const first = text.slice(0, match.index ?? 0).split("\n").length;
+    for (const kind of feedbackPairsIn(classTokens(match[1] ?? ""))) found.add(`${first} ${kind}`);
+  }
+  return [...found];
+}
+
 describe("feedback ink: a feedback colour on its own tint (light, five looks)", () => {
   it("keeps the ink colour at >= 4.55:1 on every tint step over every surface a chip sits on, in every look", () => {
     const failing: string[] = [];
@@ -1131,22 +1169,40 @@ describe("feedback ink: a feedback colour on its own tint (light, five looks)", 
     }
   });
 
+  it("source scan, the scanner itself: finds plain, nested, template-only and style-object pairs; ignores ink, hover tints and bare text", () => {
+    const nested = ["x = `flex ${", "  ok", '    ? "bg-success-soft text-success dark:bg-success-strong"', '    : "bg-destructive-soft text-destructive"', "}`;"].join("\n");
+    expect(bareFeedbackPairs('c = "bg-success-soft text-success";')).toEqual(["1 success"]);
+    expect(bareFeedbackPairs(nested).sort()).toEqual(["1 destructive", "1 success", "3 success", "4 destructive"]);
+    expect(bareFeedbackPairs("c = `rounded bg-info-subtle ${gap} text-info`;")).toEqual(["1 info"]);
+    expect(bareFeedbackPairs('s = { dot: "bg-warning", bg: "bg-warning-soft", text: "text-warning" };')).toEqual(["1 warning"]);
+    expect(bareFeedbackPairs('s = { bg: "bg-destructive/15", text: "text-destructive" };')).toEqual(["1 destructive"]);
+    expect(bareFeedbackPairs('c = "bg-success-soft text-success-ink dark:bg-success-strong";')).toEqual([]);
+    expect(bareFeedbackPairs('c = "hover:bg-destructive-soft text-destructive";')).toEqual([]);
+    expect(bareFeedbackPairs('c = "bg-success-soft dark:text-success";')).toEqual([]);
+    expect(bareFeedbackPairs('s = { bg: "bg-success-soft", text: "text-warning-ink" };')).toEqual([]);
+    expect(bareFeedbackPairs('c = "text-destructive";')).toEqual([]);
+  });
+
+  it("panels whose text sits in a tint panel, one JSX level up from the scan's reach, use the ink (pinned by class string)", () => {
+    const srcDir = fileURLToPath(new URL("../../../", import.meta.url));
+    const pinned: ReadonlyArray<readonly [string, string]> = [
+      ["components/settings/danger-zone-panel.tsx", 'className="text-sm font-medium text-destructive-ink"'],
+      ["components/settings/backup-restore-panel.tsx", 'className="font-medium text-destructive-ink"'],
+      ["app/(dashboard)/customers/[id]/page.tsx", 'className="text-sm font-semibold text-destructive-ink"'],
+      ["components/automations/automation-builder.tsx", 'className="flex items-start gap-2 text-caption text-destructive-ink"'],
+    ];
+    for (const [file, literal] of pinned) {
+      const found = readFileSync(join(srcDir, file), "utf8").split(literal).length - 1;
+      expect(found, `${file} has exactly one ${literal}`).toBe(1);
+    }
+  });
+
   it("source scan: no class string pairs a feedback tint (bg-<kind>-subtle|soft|strong or bg-<kind>/N) with the bare text-<kind>", () => {
-    const literal = /"([^"\n]*)"|'([^'\n]*)'|`([^`]*)`/g;
     const offenders: string[] = [];
     const srcDir = fileURLToPath(new URL("../../../", import.meta.url));
     for (const file of shippedTsxFiles(srcDir)) {
-      const text = readFileSync(file, "utf8");
-      for (const match of text.matchAll(literal)) {
-        const tokens = (match[1] ?? match[2] ?? match[3] ?? "").split(/\s+/);
-        for (const kind of FEEDBACK_KINDS) {
-          const tint = new RegExp(`^bg-${kind}(-(subtle|soft|strong)|/\\d+)$`);
-          if (tokens.some((token) => tint.test(token)) && tokens.includes(`text-${kind}`)) {
-            offenders.push(`${file.slice(srcDir.length)}:${text.slice(0, match.index ?? 0).split("\n").length} (${kind})`);
-          }
-        }
-      }
+      for (const hit of bareFeedbackPairs(readFileSync(file, "utf8"))) offenders.push(`${file.slice(srcDir.length)}:${hit}`);
     }
-    expect(offenders, `${offenders.length} class strings use the bare colour on its tint, use text-<kind>-ink: ${offenders.slice(0, 5).join(", ")}`).toEqual([]);
+    expect(offenders, `${offenders.length} places use the bare colour on its tint, use text-<kind>-ink: ${offenders.slice(0, 8).join(", ")}`).toEqual([]);
   });
 });
