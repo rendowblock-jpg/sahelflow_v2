@@ -76,6 +76,13 @@ describe("app.ts mounts the inbox", () => {
     expect(app).toContain("stack = null; ordersHost = null; inboxMount = null;");
     expect(app).toMatch(/lockState\.phase !== "locked" && GROUP_OF\[view\.screen === "lock" \? returnTo : view\.screen\] === "inbox"\) void inboxMount\?\.visit\("inbox"\)/);
   });
+  it("LAB (31 Oct 2026, real Chromium): the first visit to Chats goes through open() (sealed copy, then ONE poll when nothing is sealed), and a click is decided by clickTarget INSIDE the page root", () => {
+    expect(app).toContain("await inboxMount.open(screen);");
+    expect(app).not.toContain("await inboxMount.visit(screen);");
+    expect(app).toContain('import { clickTarget } from "./click-target";');
+    expect(app).toContain("const el = clickTarget(event.target, root);");
+    expect(app).not.toContain('.closest<HTMLElement>("[data-act],[data-nav],[data-lang],[data-theme]")');
+  });
   it("the inbox rules ship in the css, after the orders rules (one line, like orders.css)", () => {
     const o = build.indexOf("src/styles/orders.css"); const i = build.indexOf("src/styles/inbox.css");
     expect(o).toBeGreaterThan(0); expect(i).toBeGreaterThan(o);
