@@ -27,7 +27,7 @@ import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { BrandLogo } from "@/components/brand/brand-icons";
-import { TestingBadge } from "@/components/integrations/testing-badge";
+import { ProviderHeading } from "@/components/integrations/provider-heading";
 import {
   DELIVERY_PROVIDER_TO_INTEGRATION,
   integrationStatus,
@@ -332,11 +332,11 @@ export function DeliveryCredentialsPanel() {
             return (
               <section key={provider.id} className="space-y-3 rounded-surface border p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-3">
-                    <BrandLogo id={provider.id} size="md" />
-                    <span className="truncate font-medium">{provider.name}</span>
-                    <TestingBadge integration={DELIVERY_PROVIDER_TO_INTEGRATION[provider.id]} />
-                  </span>
+                  <ProviderHeading
+                    logo={<BrandLogo id={provider.id} size="md" />}
+                    name={provider.name}
+                    integration={DELIVERY_PROVIDER_TO_INTEGRATION[provider.id]}
+                  />
                   <div className="flex gap-2">
                     {certificationBadge === "certified" ? <Badge><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.certified")}</Badge> : null}
                     {certificationBadge === "connection_checked" ? <Badge variant="outline"><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.connectionChecked")}</Badge> : null}

@@ -308,12 +308,6 @@ export function CommerceIntegrationsPanel({
                           {t("integrations.connected")}
                         </Badge>
                       ) : null}
-                      {notLiveTested ? (
-                        <Badge variant="outline" className="text-warning">
-                          <span className="sr-only">{definition.name}: </span>
-                          {t("integrations.notLiveTested")}
-                        </Badge>
-                      ) : null}
                     </div>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       {definition.description}
