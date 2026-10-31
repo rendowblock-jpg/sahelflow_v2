@@ -259,3 +259,62 @@ describe("shop discovery against the real relay (no hand-added shopId)", () => {
     expect(await answer({ error: "shop_required", shops: [OTHER_SHOP] }).poll()).toEqual({ kind: "network" });
   });
 });
+
+// ---- edges the mutation run found unpinned (w125 run: s5 s6 s9 s11) ----
+// A correctly signed projection envelope that is NOT stored in the relay: used to play a lying or replaying relay.
+async function sealed(client: ConnectedPlatformClient, deviceId: string, sequence: number, payload: unknown, over: { memberId?: string } = {}): Promise<unknown> {
+  const listed = await client.listDevices(WORKSPACE_ID);
+  const row = (listed.devices as Array<{ device_id: string; member_id: string; encryption_public_key: string }>).find((d) => d.device_id === deviceId);
+  if (!row) throw new Error("device not listed");
+  const envelopeId = `projection_${randomUUID().replaceAll("-", "")}`;
+  return createConnectedEnvelope({
+    protocolVersion: CONNECTED_PROTOCOL_VERSION, envelopeId, idempotencyKey: envelopeId, workspaceId: WORKSPACE_ID, shopId: SHOP_ID, memberId: over.memberId ?? row.member_id, deviceId,
+    installationId: INSTALLATION_ID, senderKind: "desktop", senderId: INSTALLATION_ID, recipientKind: "device", recipientId: deviceId, messageType: "projection.dashboard", sequence,
+    issuedAt: new Date(Date.now() - 1_000).toISOString(), expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(), revocationEpoch: 0, cipherAlgorithm: CONNECTED_CIPHER_ALGORITHM,
+    encryptionKeyId: "enckey_00000001", signatureAlgorithm: CONNECTED_SIGNATURE_ALGORITHM, signingKeyId: "sigkey_00000001",
+  }, payload, row.encryption_public_key, desktop.signingPrivateKeyPkcs8);
+}
+const serving = (body: unknown): typeof fetch => (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
+const FUTURE = "2099-01-01T00:00:00.000Z"; const PAST = "2020-01-01T00:00:00.000Z";
+
+describe("projection source edges", () => {
+  it("refuses a correctly signed envelope that names another member, and stores nothing", async () => {
+    const p = await pairedPhone("phone_pwa_0020");
+    const foreign = await sealed(p.client, "phone_pwa_0020", 1, dashboard(4), { memberId: "member_somebody_else" });
+    const liar = createRelayClient({ baseUrl: RELAY, getDb: async () => p.mem.db, fetchImpl: serving(foreign) });
+    expect(await liar.poll()).toEqual({ kind: "refused", reason: "wrong_scope" });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: null });
+    expect(await p.mem.db.get("projections", "last")).toBeUndefined();
+  });
+
+  it("a forgotten shop that is found again: an OLDER sequence is refused, the SAME sequence is unchanged", async () => {
+    const p = await pairedPhone("phone_pwa_0021");
+    const old = await publish(p.client, "phone_pwa_0021", 1, dashboard(1));
+    await publish(p.client, "phone_pwa_0021", 9, dashboard(8));
+    expect(await p.relay.poll()).toMatchObject({ kind: "updated", snapshot: { sequence: 9 } });
+    p.world.d1.sqlite.exec(`UPDATE connected_projection SET expires_at = '${PAST}'`);
+    for (let i = 0; i < 3; i += 1) expect(await p.relay.poll()).toEqual({ kind: "pending" });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: null });
+    // the relay replays the old envelope to a phone that no longer has a stored shop
+    const replay = createRelayClient({ baseUrl: RELAY, getDb: async () => p.mem.db, fetchImpl: serving(old) });
+    expect(await replay.poll()).toEqual({ kind: "refused", reason: "stale_sequence" });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: null });
+    expect(await p.mem.db.get("projections", "last")).toMatchObject({ sequence: 9 });
+    // the genuine projection comes back with the same sequence: nothing new, but the shop is learned again
+    p.world.d1.sqlite.exec(`UPDATE connected_projection SET expires_at = '${FUTURE}'`);
+    expect(await p.relay.poll()).toEqual({ kind: "unchanged" });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: SHOP_ID });
+    expect(await p.mem.db.get("projections", "last")).toMatchObject({ sequence: 9 });
+  });
+
+  it("a 409 while a shop is stored is answered once: the phone never retries with a listed shop", async () => {
+    const p = await pairedPhone("phone_pwa_0022");
+    const creds = await p.mem.db.get<Record<string, unknown>>("keys", "credentials");
+    await p.mem.db.put("keys", "credentials", { ...creds, shopId: SHOP_ID });
+    let calls = 0;
+    const conflict = (async () => { calls += 1; return new Response(JSON.stringify({ error: "shop_required", shops: [OTHER_SHOP] }), { status: 409 }); }) as unknown as typeof fetch;
+    const client409 = createRelayClient({ baseUrl: RELAY, getDb: async () => p.mem.db, fetchImpl: conflict });
+    expect(await client409.poll()).toEqual({ kind: "network" });
+    expect(calls).toBe(1);
+  });
+});

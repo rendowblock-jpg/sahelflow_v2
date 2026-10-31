@@ -73,3 +73,33 @@ describe("approval wait: a hidden tab does not poll", () => {
     expect(r.ends).toEqual(["timeout"]); expect(r.polls.length).toBe(n);
   });
 });
+
+describe("approval wait: edges the mutation run found unpinned", () => {
+  it("the limit is inclusive: a tick exactly at the limit ends with the timeout and does not poll once more", async () => {
+    const r = rig(["pending"]); watchApproval({ ...r.deps, timeoutMs: 3000 }); await tick(3000);
+    expect(r.polls).toEqual([0, 1000]); expect(r.ends).toEqual(["timeout"]);
+  });
+
+  // A poll that has not answered yet (a slow phone connection) must never be doubled by the tab coming back.
+  function slow() {
+    let hidden = false; let calls = 0; let release: (value: ApprovalPoll) => void = () => undefined;
+    const listeners: Array<() => void> = []; const ends: ApprovalEnd[] = [];
+    const deps: ApprovalDeps = {
+      poll() { calls += 1; return new Promise<ApprovalPoll>((resolve) => { release = resolve; }); },
+      now: () => Date.now(), setTimer: (run, ms) => setTimeout(run, ms), clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+      isHidden: () => hidden, onVisibilityChange(run) { listeners.push(run); return () => undefined; }, onEnd: (e) => ends.push(e),
+    };
+    return { deps, calls: () => calls, ends, release: (v: ApprovalPoll) => release(v), fire: () => { for (const l of [...listeners]) l(); }, setHidden: (v: boolean) => { hidden = v; } };
+  }
+  it("a tab shown again while a poll is still in flight does not start a second poll", async () => {
+    const s = slow(); watchApproval(s.deps); await tick(0); expect(s.calls()).toBe(1);
+    s.fire(); await tick(0); expect(s.calls()).toBe(1);
+    s.release("approved"); await tick(0); expect(s.ends).toEqual(["approved"]);
+  });
+  it("a tab hidden while a poll is in flight leaves no timer behind, and polls again when shown", async () => {
+    const s = slow(); watchApproval(s.deps); await tick(0); expect(s.calls()).toBe(1);
+    s.setHidden(true); s.fire(); s.release("pending"); await tick(0);
+    expect(vi.getTimerCount()).toBe(0);
+    s.setHidden(false); s.fire(); await tick(0); expect(s.calls()).toBe(2);
+  });
+});
