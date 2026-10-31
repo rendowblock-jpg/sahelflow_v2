@@ -6,7 +6,6 @@ vi.mock("@/lib/meta/capi-triggers", async (o) => ({ ...(await o<typeof import("@
 
 vi.mock("@/lib/whatsapp/durable-send", async (o) => ({ ...(await o<typeof import("@/lib/whatsapp/durable-send")>()), queueWhatsAppText: hoisted.queue, processWhatsAppEffect: hoisted.process }));
 import type { PrismaClient } from "@prisma/client";
-import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanDb } from "@/lib/data/__tests__/helpers";
 import { db } from "@/lib/db";
