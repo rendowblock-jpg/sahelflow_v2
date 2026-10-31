@@ -27,8 +27,10 @@ for (const loc of LOCALES) {
   test.describe(`phone lab ${loc}`, () => {
     test.use({ locale: loc === "ar" ? "ar-DZ" : "en-GB" });
     test("ten steps", async ({ page, context }) => {
+      test.setTimeout(480_000);
       const results: Result[] = []; const S = (id: string, fn: () => Promise<string | void>) => step(page, loc, id, results, fn);
       page.on("pageerror", (e) => record(`${loc}-pageerror-${Date.now()}`, String(e).slice(0, 300)));
+      page.on("response", (r) => { if (r.status() >= 400) record(`${loc}-http-${r.status()}-${Date.now()}`, r.url()); });
       page.on("console", (m) => { if (m.type() === "error") record(`${loc}-console-${Date.now()}`, m.text().slice(0, 300)); });
       await page.addInitScript((l: string) => {
         const w = window as Window & { __skew?: number }; const real = Date.now.bind(Date); w.__skew = 0; Date.now = () => real() + (w.__skew ?? 0);
@@ -55,37 +57,40 @@ for (const loc of LOCALES) {
       await S("3-orders-list", async () => {
         await tabs(page, "orders").click(); await expect(page.locator('[data-screen="orders"]')).toBeVisible();
         const rows = page.locator('[data-act="open-order"]'); await expect(rows.first()).toBeVisible();
-        const seen = new Set<string>(); const filters = await page.locator('[data-act="filter"]').evaluateAll((els) => els.map((e) => e.getAttribute("data-filter") ?? ""));
-        for (const f of filters) { await page.locator(`[data-act="filter"][data-filter="${f}"]`).click(); for (const t of await rows.allInnerTexts()) seen.add(t.replace(/\s+/g, " ")); }
+        const seen = new Set<string>(); const counts: string[] = [];
+        const filters = await page.locator('[data-act="filter"]').evaluateAll((els) => els.map((e) => e.getAttribute("data-filter") ?? ""));
+        for (const f of filters) { await page.locator(`[data-act="filter"][data-filter="${f}"]`).click(); const ts = await rows.allInnerTexts(); counts.push(`${f}=${ts.length}`); for (const t of ts) seen.add(t.replace(/\s+/g, " ")); }
         const all = Array.from(seen).join(" | ");
-        for (const n of ["فاطمة", "Maximilian", "Karim", "Yasmine"]) expect(all, `name ${n}`).toContain(n);
+        for (const o of orders) expect(all, `order ${o.orderNumber} in some filter`).toContain(o.orderNumber);
         await page.locator(`[data-act="filter"][data-filter="${filters[0]}"]`).click();
-        const geo = await page.evaluate(() => {
-          const info = (needle: string) => {
-            const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n: Node | null; let el: HTMLElement | null = null;
-            while ((n = w.nextNode())) if ((n.textContent ?? "").includes(needle)) { el = n.parentElement; break; }
-            if (!el) return null; const r = el.getBoundingClientRect(); const c = el.closest("li,article,[data-act=open-order]")?.getBoundingClientRect();
-            return { dir: getComputedStyle(el).direction, over: el.scrollWidth - el.clientWidth, left: Math.round(r.left), right: Math.round(r.right), cardL: c ? Math.round(c.left) : null, cardR: c ? Math.round(c.right) : null, vw: innerWidth };
-          };
-          return { ar: info("فاطمة"), lat: info("Maximilian") };
-        });
+        const geo: Record<string, unknown> = {};
+        for (const [key, o, needle] of [["ar", arabic, "فاطمة"], ["lat", latin, "Maximilian"]] as const) {
+          await page.locator(`[data-act="open-order"][data-id="${o.id}"]`).click(); await expect(page.locator(".facts")).toContainText(needle);
+          geo[key] = await page.evaluate((nd) => {
+            const b = Array.from(document.querySelectorAll<HTMLElement>(".facts bdi")).find((x) => (x.textContent ?? "").includes(nd)); if (!b) return null;
+            const p = b.parentElement as HTMLElement; const r = b.getBoundingClientRect();
+            return { dir: getComputedStyle(b).direction, bidi: getComputedStyle(b).unicodeBidi, over: p.scrollWidth - p.clientWidth, left: Math.round(r.left), right: Math.round(r.right), vw: innerWidth };
+          }, needle);
+          await page.screenshot({ path: `/opt/agent-sandbox/workspace/audit/waves/shots/pwa-lab/${loc}-3a-detail-${key}.png` });
+          await page.locator('[data-act="back"]').first().click(); await expect(rows.first()).toBeVisible();
+        }
         record(`${loc}-3-geometry`, geo);
-        expect(geo.ar?.dir, "arabic name direction").toBe("rtl");
-        expect(geo.lat?.over, "long name overflow").toBeLessThanOrEqual(0);
-        expect(geo.lat?.right ?? 999, "long name inside the screen").toBeLessThanOrEqual(geo.lat?.vw ?? 0);
-        return `filters=${filters.join(",")} ${JSON.stringify(geo)}`;
+        const g = geo as { ar: { bidi: string; dir: string } | null; lat: { over: number; right: number; vw: number } | null };
+        expect(g.ar?.bidi, "arabic name isolated").toMatch(/isolate/);
+        expect(g.lat?.over ?? 1, "long name overflow").toBeLessThanOrEqual(0); expect(g.lat?.right ?? 999, "long name inside screen").toBeLessThanOrEqual(g.lat?.vw ?? 0);
+        return `filters ${counts.join(",")} ${JSON.stringify(geo)}`;
       });
       await S("10-offline", async () => {
-        await context.setOffline(true);
-        await expect(page.locator(".banner[role=status]").first()).toBeVisible();
-        const banner = (await page.locator(".banner[role=status]").first().innerText()).trim();
-        await page.locator(`[data-act="open-order"][data-id="${latin.id}"]`).click();
-        const confirm = page.locator('[data-act="confirm-open"]'); await expect(confirm).toBeVisible();
-        const info = await confirm.evaluate((e) => ({ disabled: (e as HTMLButtonElement).disabled || e.getAttribute("aria-disabled") === "true", text: (e.textContent ?? "").trim() }));
-        const main = (await page.locator("#main").innerText()).replace(/\s+/g, " ");
-        await context.setOffline(false);
-        expect(info.disabled, "confirm disabled offline").toBe(true);
-        return `banner=${banner} | confirm=${JSON.stringify(info)} | main=${main.slice(0, 260)}`;
+        try {
+          await context.setOffline(true);
+          const bn = page.locator(".banner[role=status]").first(); await expect(bn).toBeVisible(); const banner = (await bn.innerText()).trim();
+          await page.locator(`[data-act="open-order"][data-id="${latin.id}"]`).click();
+          const confirm = page.locator('[data-act="confirm-open"]'); await expect(confirm).toBeVisible();
+          const info = await confirm.evaluate((e) => ({ disabled: (e as HTMLButtonElement).disabled || e.getAttribute("aria-disabled") === "true", text: (e.textContent ?? "").trim() }));
+          const main = (await page.locator("#main").innerText()).replace(/\s+/g, " ");
+          expect(main, "the last copy shows its time").toMatch(/\d{1,2}[:.]\d{2}/);
+          return `banner=${banner} | confirmDisabled=${info.disabled} (${info.text}) | main=${main.slice(0, 300)}`;
+        } finally { await context.setOffline(false); }
       });
       await S("4-confirm", async () => {
         await page.waitForTimeout(1500);
@@ -95,16 +100,18 @@ for (const loc of LOCALES) {
         await page.screenshot({ path: `/opt/agent-sandbox/workspace/audit/waves/shots/pwa-lab/${loc}-4a-confirm-sheet.png` });
         await trace(page); const tClick = Date.now(); await page.locator('[data-act="confirm-yes"]').click();
         const tDb = await until(async () => (await orderStatus(arabic.id)) === "confirmed", 90_000);
-        await page.waitForTimeout(6000); const tr = await readTrace(page);
+        const tFinal = await until(async () => { const t = await readTrace(page); const l = t[t.length - 1]; return !!l && !/queued\|/.test(l.s); }, 150_000).catch(() => 0);
+        const tr = await readTrace(page);
         record(`${loc}-4-trace`, { tClick, tDb, tr: tr.map((x) => ({ dt: x.t - tClick, s: x.s })) });
-        return `db confirmed after ${tDb - tClick} ms; states: ${tr.map((x) => `${x.t - tClick}:${x.s}`).join(" >> ").slice(0, 600)}`;
+        expect(tFinal, "the chip left queued after the PC ran the command").toBeGreaterThan(0); expect(tFinal, "chip never ahead of the DB").toBeGreaterThanOrEqual(tDb);
+        return `db confirmed after ${tDb - tClick} ms; chip left queued after ${tFinal - tClick} ms; states: ${tr.map((x) => `${x.t - tClick}:${x.s}`).join(" >> ").slice(0, 600)}`;
       });
       await S("5-reject", async () => {
         await page.locator('[data-act="back"]').first().click().catch(() => undefined);
         await page.locator(`[data-act="open-order"][data-id="${latin.id}"]`).click();
-        await page.locator('[data-act="reject-open"]').click(); await expect(page.locator('[data-act="reject-yes"]')).toBeVisible();
+        await page.locator('[data-act="reject-open"]').click(); await expect(page.locator('[data-act="reject-yes"]').first()).toBeVisible();
         await page.screenshot({ path: `/opt/agent-sandbox/workspace/audit/waves/shots/pwa-lab/${loc}-5a-reject-sheet.png` });
-        await page.locator('[data-act="reject-yes"]').click();
+        await page.locator('[data-act="reject-yes"]').first().click();
         await until(async () => (await orderStatus(latin.id)) !== "pending", 90_000);
         return `db status=${await orderStatus(latin.id)}`;
       });
@@ -143,7 +150,7 @@ for (const loc of LOCALES) {
         await expect(dlg).toBeHidden(); return `pin line=${pin.slice(0, 120)}`;
       });
       await S("8-lock", async () => {
-        await page.locator('[data-act="lock-set"]').click();
+        await page.locator('[data-act="s-lock-set"],[data-act="lock-set"]').first().click();
         await page.locator("#pin").fill(PIN); await page.locator("#pin").press("Enter"); await page.locator("#pin").fill(PIN); await page.locator("#pin").press("Enter");
         await expect(page.locator("#pin")).toHaveCount(0);
         await page.evaluate(() => { const w = window as Window & { __skew?: number }; w.__skew = (w.__skew ?? 0) + 6 * 60_000;

@@ -51,6 +51,7 @@ export async function step(page: Page, loc: string, id: string, results: Result[
   await page.screenshot({ path: join(SHOTS, shot) }).catch(() => undefined);
   try { m = await measure(page); } catch { /* page gone */ }
   try { ax = await axe(page); } catch { /* page gone */ }
-  record(`${loc}-${id}`, { status, note, ms: Date.now() - t0, shot, ...(m as object | null), axe: ax });
+  const mainText = status === "fail" ? await page.locator("#main").innerText().then((x) => x.replace(/\s+/g, " ").slice(0, 300)).catch(() => "") : undefined;
+  record(`${loc}-${id}`, { status, note, ...(mainText === undefined ? {} : { mainText }), ms: Date.now() - t0, shot, ...(m as object | null), axe: ax });
   results.push({ id, status, note });
 }
