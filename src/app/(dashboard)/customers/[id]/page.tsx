@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Ban, ShoppingBag, TrendingUp, Truck } from "lucide-react";
 import { askAiHref } from "@/lib/ai/ask-ai-link";
