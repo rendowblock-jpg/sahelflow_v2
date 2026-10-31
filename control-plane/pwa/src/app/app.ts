@@ -8,7 +8,11 @@ import { createKeygen } from "../pair/keygen";
 import { readResume, savePairingRecord } from "../pair/resume";
 import { createFetchTransport } from "../pair/transport";
 import { openDb, saveDeviceKeys, type Db } from "../storage/idb";
+import { purgeOld } from "../storage/sealed";
 import { wipeAll } from "../storage/wipe";
+import { createSync } from "../sync/engine";
+import { reactToPoll, type PollReaction } from "../sync/revoke";
+import type { Budget } from "../sync/schedule";
 import type { UpdateController } from "../sw/update";
 import { createRelayClient } from "../today/relay-source";
 import { freshness, type Projection, type ProjectionSource } from "../today/projection";
@@ -60,7 +64,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     if (v.state === "error" || v.state === "loading") return v;
     if (!p) return { ...v, state: "empty" };
     const f = freshness(p.generatedAt, v.now);
-    return { ...v, state: f === "expired" ? "expired" : !v.online ? "offline" : f === "fresh" ? "ready" : "stale" };
+    return { ...v, state: f === "expired" ? "expired" : !v.online ? "offline" : v.pcoff ? "pcoff" : f === "fresh" ? "ready" : "stale" };
   };
   const paint = (): void => {
     const v = previewOn ? applyPreview(view, location.search) : derive(view);
@@ -77,10 +81,21 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     previewOn = false;
     history.pushState(null, "", `/?screen=${screen}`);
     set({ screen, state: screen === "today" ? "empty" : "empty", confirmRemove: false, removed: false, removeError: null, ...patch }, true);
-    if (screen === "today") void loadToday();
+    if (screen === "today") void loadToday(); else sync.onScreen();
   };
+  function showRevoked(reaction: Extract<PollReaction, { kind: "revoked" }>): void {
+    sync.stop();
+    set({ screen: "settings", state: "empty", revoked: true, removed: false, hasLock: false, projection: null, pcoff: false, removeError: reaction.wiped ? null : reaction.failed.join(", ") });
+  }
   async function loadToday(): Promise<void> {
-    if (!options.source) await relay.poll().catch(() => null);
+    if (!options.source) {
+      // ALARM 1: the poll answer is acted on. A phone the PC removed wipes itself before anything is read or drawn.
+      const poll = await relay.poll().catch(() => null);
+      const reaction = poll ? await reactToPoll(poll, wipe) : null;
+      if (reaction?.kind === "revoked") return showRevoked(reaction);
+      set({ pcoff: reaction?.kind === "pcoff" });
+      if (poll && poll.kind !== "not_paired") sync.start(false);
+    }
     const r = await source.load().catch(() => null);
     if (!r) return set({ projection: null, state: "error" });
     set(r.ok ? { projection: r.projection as Projection, state: "ready" } : { projection: null, state: r.reason === "unreadable" ? "error" : "empty" });
@@ -167,6 +182,16 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set(result.ok ? { removed: true, confirmRemove: false, hasLock: false, projection: null } : { removeError: result.failed.join(", "), confirmRemove: false });
   }
 
+  // Polling budget: fetch on open/visible/online/Refresh, 30 s on Orders and Inbox, 60 s elsewhere, nothing while hidden, 600 a day.
+  const sync = createSync({
+    now: Date.now, visible: () => !document.hidden, online: () => navigator.onLine, screen: () => view.screen,
+    fetchKind: (kind) => relay.poll(kind),
+    pollCommands: async () => false, // the outbox status poll is connected by the order and chat screens
+    loadBudget: async () => (await (await getDb()).get<Budget>("settings", "pollBudget")) ?? null,
+    saveBudget: async (b) => { await (await getDb()).put("settings", "pollBudget", b); },
+    onPoll: (poll) => { if (poll.kind === "revoked") void reactToPoll(poll, wipe).then((r) => { if (r.kind === "revoked") showRevoked(r); }); },
+    timers: { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) },
+  });
   root.addEventListener("click", (event) => {
     const el = (event.target as Element).closest<HTMLElement>("[data-act],[data-nav],[data-lang],[data-theme]");
     if (!el) return;
@@ -193,14 +218,16 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   });
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e as InstallEvent; set({ canInstall: true }); });
   window.addEventListener("appinstalled", () => set({ installed: true, canInstall: false }));
-  window.addEventListener("online", () => set({ online: true }));
+  window.addEventListener("online", () => { set({ online: true }); sync.onOnline(); });
   window.addEventListener("offline", () => set({ online: false }));
   window.addEventListener("popstate", () => { const s = SCREENS.find((x) => x === new URLSearchParams(location.search).get("screen")); set({ screen: s ?? "welcome" }); });
   document.addEventListener("visibilitychange", () => {
     lockState = document.hidden ? onHidden(lockState, Date.now()) : onVisible(lockState, Date.now());
+    if (document.hidden) sync.onHidden(); else sync.onVisible();
     if (!document.hidden && lockState.phase === "locked" && view.screen !== "lock") { returnTo = view.screen; set({ screen: "lock", lockMode: "enter", lockNotice: null }); }
   });
 
+  void getDb().then((db) => purgeOld(db, Date.now())).catch(() => undefined);
   link = takePairingLink(location.hash, location.pathname + location.search, (u) => history.replaceState(null, "", u));
   paint();
   void getDb().then((db) => db.get<LockRow>("settings", "lock")).then((row) => {
