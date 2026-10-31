@@ -32,6 +32,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.destructive.disconnectGoogleSheets.notAffected": "Orders already imported stay in SahelFlow. Your Google sheet is not deleted.",
     "settings.destructive.disconnectGoogleSheets.confirm": "Disconnect the sheet",
     "settings.aiApproval.note": "The AI only prepares drafts and suggestions. Nothing is sent to a customer until you approve it.",
+    "settings.panelState.saving": "Saving…",
+    "settings.panelState.loading": "Loading…",
+    "settings.panelState.orderLoadFailed": "We could not read which AI is tried first. Nothing was changed.",
   },
   fr: {
     "settings.destructive.cancel": "Annuler",
@@ -60,6 +63,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.destructive.disconnectGoogleSheets.notAffected": "Les commandes déjà importées restent dans SahelFlow. Votre feuille Google n'est pas supprimée.",
     "settings.destructive.disconnectGoogleSheets.confirm": "Déconnecter la feuille",
     "settings.aiApproval.note": "L'IA prépare seulement des brouillons et des suggestions. Rien n'est envoyé à un client sans votre accord.",
+    "settings.panelState.saving": "Enregistrement…",
+    "settings.panelState.loading": "Chargement…",
+    "settings.panelState.orderLoadFailed": "Impossible de lire quelle IA est essayée en premier. Rien n'a été modifié.",
   },
   ar: {
     "settings.destructive.cancel": "إلغاء",
@@ -88,6 +94,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.destructive.disconnectGoogleSheets.notAffected": "الطلبات المستوردة تبقى في SahelFlow، وجدول Google لا يُحذف.",
     "settings.destructive.disconnectGoogleSheets.confirm": "فصل الجدول",
     "settings.aiApproval.note": "الذكاء الاصطناعي يجهّز مسودات واقتراحات فقط. لا يُرسل شيء إلى زبون قبل موافقتك.",
+    "settings.panelState.saving": "جارٍ الحفظ…",
+    "settings.panelState.loading": "جارٍ التحميل…",
+    "settings.panelState.orderLoadFailed": "تعذّرت قراءة أي ذكاء اصطناعي يُجرَّب أولًا. لم يتغيّر شيء.",
   },
 };
 
