@@ -13,10 +13,12 @@ import {
   HelpCircle,
   LogOut,
   Menu,
+  Moon,
   Plus,
   Search,
   Settings,
   Store,
+  Sun,
   User,
   X,
 } from "lucide-react";
@@ -38,9 +40,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useTheme } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UpdateChip } from "@/components/updater/update-chip";
 import { useI18n } from "@/hooks/use-i18n";
+import { useMobile } from "@/hooks/use-mobile";
 import {
   dismissNotification,
   dismissNotifications,
@@ -61,6 +65,33 @@ const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
   { value: "ar", label: "العربية", flag: "🇩🇿" },
   { value: "en", label: "English", flag: "🇬🇧" },
 ];
+
+/** Light / dark choice for the phone avatar menu (the bar has no theme button there). */
+function ThemeMenuItems() {
+  const { t } = useI18n();
+  const { resolvedTheme, setTheme } = useTheme();
+  const options = [
+    { value: "light", label: t("theme.light"), Icon: Sun },
+    { value: "dark", label: t("theme.dark"), Icon: Moon },
+  ] as const;
+  return (
+    <DropdownMenuGroup aria-label={t("settings.appearance.theme")}>
+      {options.map(({ value, label, Icon }) => (
+        <DropdownMenuItem
+          key={value}
+          onClick={() => setTheme(value)}
+          className="gap-2"
+        >
+          <Icon className="size-4" aria-hidden="true" />
+          <span className="flex-1">{label}</span>
+          {resolvedTheme === value ? (
+            <Check className="size-4 text-primary" aria-hidden="true" />
+          ) : null}
+        </DropdownMenuItem>
+      ))}
+    </DropdownMenuGroup>
+  );
+}
 
 interface TopbarProps {
   /** The in-place universal search field (owned by the shell). */
@@ -94,6 +125,9 @@ export function Topbar({
   serverDir,
 }: TopbarProps) {
   const { t, locale, setLocale, isLocalePending } = useI18n();
+  // Under 768 px the bar keeps five controls; the CSS classes below hide the
+  // moved ones before hydration, this switch removes them afterwards.
+  const isMobile = useMobile();
   const pathname = usePathname();
   const currentNavigation = navigationItemForPathname(pathname);
 
@@ -212,9 +246,95 @@ export function Topbar({
           ? (displayShopName(activeShop) || t("topbar.selectShop"))
           : t("topbar.loading");
 
+  // Shared by the desktop shop switcher and the phone avatar menu, so both run
+  // the same handlers and show the same checked state.
+  const shopMenuItems = (
+    <>
+      <DropdownMenuLabel>{t("nav.groupWorkspace")}</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      {shops.map((shop) => (
+        <DropdownMenuItem
+          key={shop.id}
+          onClick={() => void handleShopSwitch(shop.id)}
+          disabled={
+            switchStatus === "pending" || shop.id === activeShopId
+          }
+          className="gap-2"
+        >
+          <span className="text-base" aria-hidden="true">
+            {shop.icon ?? "🏪"}
+          </span>
+          <span className="min-w-0 flex-1 truncate">
+            {displayShopName(shop)}
+          </span>
+          {shop.id === activeShopId ? (
+            <Check className="size-4 text-primary" aria-hidden="true" />
+          ) : null}
+        </DropdownMenuItem>
+      ))}
+      <DropdownMenuSeparator />
+      {/*
+        The seller's only route to shop creation. `onSelect` is prevented
+        so the menu closing does not unmount the dialog with it; the
+        dialog itself renders outside this menu.
+      */}
+      <DropdownMenuItem
+        className="gap-2"
+        disabled={switchStatus === "pending"}
+        onSelect={(event) => {
+          event.preventDefault();
+          setCreateShopOpen(true);
+        }}
+      >
+        <Plus className="size-4" aria-hidden="true" />
+        <span className="min-w-0 flex-1 truncate">
+          {t("shops.newShop")}
+        </span>
+      </DropdownMenuItem>
+      {/*
+        `/onboarding` is the new-seller setup wizard — shop basics,
+        WhatsApp pairing, couriers and the AI key, with a resumable
+        checklist. It had NO link, redirect or nav entry anywhere, so a
+        seller could only reach their own onboarding by typing the URL.
+        It is offered here rather than as a 17th sidebar item, because
+        the flat 16-item sidebar is a recorded product decision
+        (SF16-NAV-017).
+      */}
+      <DropdownMenuItem asChild className="gap-2">
+        <Link href="/onboarding">
+          <Compass className="size-4" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate">
+            {t("onboarding.title")}
+          </span>
+        </Link>
+      </DropdownMenuItem>
+    </>
+  );
+
+  const localeMenuItems = (
+    <>
+      {LOCALE_OPTIONS.map((option) => (
+        <DropdownMenuItem
+          key={option.value}
+          onClick={() => setLocale(option.value)}
+          disabled={isLocalePending}
+          className="gap-2"
+        >
+          <span className="text-base" aria-hidden="true">
+            {option.flag}
+          </span>
+          <span className="flex-1">{option.label}</span>
+          {option.value === locale ? (
+            <Check className="size-4 text-primary" aria-hidden="true" />
+          ) : null}
+        </DropdownMenuItem>
+      ))}
+    </>
+  );
+
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-2.5 sm:px-3 lg:h-12 lg:px-3">
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2 max-md:flex-1">
         <div className="lg:hidden">
           <Sheet>
             <SheetTrigger asChild>
@@ -245,12 +365,23 @@ export function Topbar({
           <div className="hidden h-5 w-px bg-border lg:block" aria-hidden="true" />
         ) : null}
 
+        {/* Phone: the shop is a plain name here; switching is in the avatar menu. */}
+        <span
+          data-slot="topbar-name"
+          aria-live="polite"
+          title={shopLabel}
+          className="min-w-0 flex-1 truncate text-sm font-medium text-foreground md:hidden"
+        >
+          {shopLabel}
+        </span>
+
+        {!isMobile ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 max-w-56 justify-center gap-2 px-0 font-medium sm:w-auto sm:justify-start sm:px-2"
+              className="h-8 w-8 max-w-56 max-md:hidden justify-center gap-2 px-0 font-medium sm:w-auto sm:justify-start sm:px-2"
               aria-label={shopLabel}
               aria-live="polite"
               title={
@@ -275,66 +406,10 @@ export function Topbar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64 shadow-dropdown">
-            <DropdownMenuLabel>{t("nav.groupWorkspace")}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {shops.map((shop) => (
-              <DropdownMenuItem
-                key={shop.id}
-                onClick={() => void handleShopSwitch(shop.id)}
-                disabled={
-                  switchStatus === "pending" || shop.id === activeShopId
-                }
-                className="gap-2"
-              >
-                <span className="text-base" aria-hidden="true">
-                  {shop.icon ?? "🏪"}
-                </span>
-                <span className="min-w-0 flex-1 truncate">
-                  {displayShopName(shop)}
-                </span>
-                {shop.id === activeShopId ? (
-                  <Check className="size-4 text-primary" aria-hidden="true" />
-                ) : null}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            {/*
-              The seller's only route to shop creation. `onSelect` is prevented
-              so the menu closing does not unmount the dialog with it; the
-              dialog itself renders outside this menu.
-            */}
-            <DropdownMenuItem
-              className="gap-2"
-              disabled={switchStatus === "pending"}
-              onSelect={(event) => {
-                event.preventDefault();
-                setCreateShopOpen(true);
-              }}
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              <span className="min-w-0 flex-1 truncate">
-                {t("shops.newShop")}
-              </span>
-            </DropdownMenuItem>
-            {/*
-              `/onboarding` is the new-seller setup wizard — shop basics,
-              WhatsApp pairing, couriers and the AI key, with a resumable
-              checklist. It had NO link, redirect or nav entry anywhere, so a
-              seller could only reach their own onboarding by typing the URL.
-              It is offered here rather than as a 17th sidebar item, because
-              the flat 16-item sidebar is a recorded product decision
-              (SF16-NAV-017).
-            */}
-            <DropdownMenuItem asChild className="gap-2">
-              <Link href="/onboarding">
-                <Compass className="size-4" aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate">
-                  {t("onboarding.title")}
-                </span>
-              </Link>
-            </DropdownMenuItem>
+            {shopMenuItems}
           </DropdownMenuContent>
         </DropdownMenu>
+        ) : null}
 
         <CreateShopDialog
           open={createShopOpen}
@@ -357,12 +432,13 @@ export function Topbar({
           <Search className="size-4" aria-hidden="true" />
         </Button>
 
+        {!isMobile ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 gap-1.5 px-0 sm:w-auto sm:px-2"
+              className="h-8 w-8 gap-1.5 px-0 max-md:hidden sm:w-auto sm:px-2"
               aria-label={activeLocaleLabel}
               aria-busy={isLocalePending}
               disabled={isLocalePending}
@@ -374,28 +450,18 @@ export function Topbar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="shadow-dropdown">
-            {LOCALE_OPTIONS.map((option) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => setLocale(option.value)}
-                disabled={isLocalePending}
-                className="gap-2"
-              >
-                <span className="text-base" aria-hidden="true">
-                  {option.flag}
-                </span>
-                <span className="flex-1">{option.label}</span>
-                {option.value === locale ? (
-                  <Check className="size-4 text-primary" aria-hidden="true" />
-                ) : null}
-              </DropdownMenuItem>
-            ))}
+            {localeMenuItems}
           </DropdownMenuContent>
         </DropdownMenu>
+        ) : null}
 
         <UpdateChip />
 
-        <ThemeToggle />
+        {!isMobile ? (
+          <span className="hidden md:contents">
+            <ThemeToggle />
+          </span>
+        ) : null}
 
         <NotificationAnnouncer notifications={notifications} />
 
@@ -416,7 +482,7 @@ export function Topbar({
                 <span
                   data-slot="notification-count"
                   dir="ltr"
-                  className="pointer-events-none absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-caption font-semibold leading-none tabular-nums text-primary-foreground ring-2 ring-background"
+                  className="pointer-events-none absolute end-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-caption font-semibold leading-none tabular-nums text-primary-foreground ring-2 ring-background"
                 >
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
@@ -629,6 +695,19 @@ export function Topbar({
                 {t("topbar.helpSupport")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            {/* Phone: what the bar no longer shows lives here (two taps). */}
+            {isMobile ? (
+              <>
+                <DropdownMenuSeparator />
+                {shopMenuItems}
+                <DropdownMenuSeparator />
+                <ThemeMenuItems />
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup aria-label={t("common.changeLanguage")}>
+                  {localeMenuItems}
+                </DropdownMenuGroup>
+              </>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
