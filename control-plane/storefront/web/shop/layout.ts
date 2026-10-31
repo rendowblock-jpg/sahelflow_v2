@@ -54,12 +54,14 @@ function footerBrand(ctx: Ctx): string {
   return esc(ctx.t("storefront.studio.footerBrand", { name: marker })).split(marker).join(`<span${attrs}>${esc(ctx.model.name)}</span>`);
 }
 
-export function renderFooter(ctx: Ctx, tagline: string): string {
+export function renderFooter(ctx: Ctx, tagline: string, legalNav = ""): string {
   const { t, model } = ctx;
-  return `<footer class="sf-foot"><div class="sf-wrap"><strong${autoDir(ctx, model.name)}>${esc(model.name)}</strong>${tagline ? `<span${autoDir(ctx, tagline)}>${esc(tagline)}</span>` : ""}<small>${footerBrand(ctx)} · ${esc(t("storefront.view.poweredBy"))}</small></div></footer>`;
+  return `<footer class="sf-foot"><div class="sf-wrap"><strong${autoDir(ctx, model.name)}>${esc(model.name)}</strong>${tagline ? `<span${autoDir(ctx, tagline)}>${esc(tagline)}</span>` : ""}${legalNav}<small>${footerBrand(ctx)} · ${esc(t("storefront.view.poweredBy"))}</small></div></footer>`;
 }
 
 export type PageParts = {
+  /** The three legal links for the footer; empty when the release carries no legal block. */
+  legalNav?: string;
   title: string;
   description: string;
   /** Path plus query of the canonical address. */
@@ -196,7 +198,7 @@ ${renderHeader(ctx, page.headExtra ?? "")}
 ${page.main}
 ${page.bar ?? ""}
 </main>
-${renderFooter(ctx, page.tagline)}
+${renderFooter(ctx, page.tagline, page.legalNav ?? "")}
 ${page.tabs ?? ""}
 ${page.script ? `<script src="${esc(assets.js)}" defer></script>` : assets.photos ? `<script src="${esc(assets.photos)}" defer></script>` : ""}${(page.script || page.fx) && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}
 </body>

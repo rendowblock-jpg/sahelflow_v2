@@ -3,6 +3,7 @@ import { withMotherFeeFallback } from "../wilaya-fallback";
 import type { StorefrontWorkerEnvironment } from "../types";
 import { parsePublicLocale, type PublicLocale } from "./locale";
 import { noticeExit, renderNoticePage, type NoticeKind } from "./notice-page";
+import { isLegalKind } from "./shop/legal";
 import type { ShippingRow } from "./shop/ui";
 import type { RenderStorePage, StockRow } from "./types";
 import type { Assets } from "./shop/ui";
@@ -116,6 +117,7 @@ async function build(
   productId: string | null,
   requested: PublicLocale | null,
   deps: PageDeps,
+  legalKind: string | null = null,
 ): Promise<Built> {
   let row: PageRow | null;
   let allocations: Array<{ item_key: string; unit_price_dzd: number; remaining_quantity: number }> = [];
@@ -151,7 +153,7 @@ async function build(
     }
   } catch (error) {
     logFailure("database", slug, error);
-    return notice("error", 503, requested ?? "ar", deps, 0, { "Retry-After": "30" }, noticeExit("error", slug, productId, requested));
+    return notice("error", 503, requested ?? "ar", deps, 0, { "Retry-After": "30" }, noticeExit("error", slug, productId, requested, legalKind));
   }
 
   const fallbackLocale = requested ?? row?.locale ?? "ar";
@@ -169,7 +171,7 @@ async function build(
     artifact = parsed;
   } catch (error) {
     logFailure("artifact", slug, error);
-    return notice("error", 503, fallbackLocale, deps, 0, { "Retry-After": "300" }, noticeExit("error", slug, productId, requested));
+    return notice("error", 503, fallbackLocale, deps, 0, { "Retry-After": "300" }, noticeExit("error", slug, productId, requested, legalKind));
   }
 
   const stock = new Map<string, StockRow>(
@@ -187,6 +189,10 @@ async function build(
     })),
   );
   const locale = requested ?? row.locale;
+  // A legal page exists only for a known kind and a release that carries the seller's legal block (every release before them does not).
+  if (legalKind !== null && (!isLegalKind(legalKind) || !artifact.legal)) {
+    return notice("legalNotFound", 404, locale, deps, NOTICE_TTL_SECONDS, {}, noticeExit("legalNotFound", slug, null, requested));
+  }
   try {
     const html = deps.render({
       origin: url.origin,
@@ -201,12 +207,13 @@ async function build(
       receiptKey: row.receipt_encryption_public_key,
       shipping: rules,
       productId,
+      legalKind: legalKind !== null && isLegalKind(legalKind) ? legalKind : null,
     });
     if (html === null) return notice("productNotFound", 404, locale, deps, NOTICE_TTL_SECONDS, {}, noticeExit("productNotFound", slug, productId, requested));
     return { response: htmlResponse(html, 200, locale, deps.assets.css, PAGE_TTL_SECONDS), cacheable: true };
   } catch (error) {
     logFailure("render", slug, error);
-    return notice("error", 500, locale, deps, 0, { "Retry-After": "300" }, noticeExit("error", slug, productId, requested));
+    return notice("error", 500, locale, deps, 0, { "Retry-After": "300" }, noticeExit("error", slug, productId, requested, legalKind));
   }
 }
 
@@ -234,6 +241,7 @@ export async function servePublicStorePage(
   context: PageContext | undefined,
   deps: PageDeps,
   productId: string | null = null,
+  legalKind: string | null = null,
 ): Promise<Response> {
   const url = new URL(request.url);
   // Language: only an explicit ?lang= (the visitor tapped AR, FR or EN) overrides the language the seller published in.
@@ -241,13 +249,18 @@ export async function servePublicStorePage(
   // must not turn an Arabic store into an English one. French and English stay one tap away as options.
   const requested = parsePublicLocale(url.searchParams.get("lang"));
   // The key names the page, never the visitor: only the address and the language choice vary the HTML.
-  const cacheKey = new Request(`${url.origin}/__sf/page/${slug}/${productId ?? "home"}/${requested ?? "auto"}`);
+  // A legal page has a key family of its own, so neither a product whose id is "legal" nor a store whose slug is "legal" can meet it.
+  const cacheKey = new Request(
+    legalKind !== null
+      ? `${url.origin}/__sf/legal/${slug}/${legalKind}/${requested ?? "auto"}`
+      : `${url.origin}/__sf/page/${slug}/${productId ?? "home"}/${requested ?? "auto"}`,
+  );
 
   if (deps.cache) {
     const hit = await deps.cache.match(cacheKey).catch(() => undefined);
     if (hit) return withCacheState(hit, "hit");
   }
-  const built = await build(url, environment, slug, productId, requested, deps);
+  const built = await build(url, environment, slug, productId, requested, deps, legalKind);
   if (deps.cache && built.cacheable) {
     const stored = deps.cache.put(cacheKey, built.response.clone()).catch(() => undefined);
     if (context) context.waitUntil(stored);

@@ -14,6 +14,8 @@ import wilayasData from "../../../../data/wilayas.json";
 
 import { PanelHeader, TextAreaField, TextField, ToggleRow } from "./studio-controls";
 
+export { LegalPanel } from "./studio-legal-panel";
+
 type Commit = (draft: StorefrontStudioDraft) => void;
 
 const WILAYAS = wilayasData as Array<{ code: number; name: string; nameAr: string }>;

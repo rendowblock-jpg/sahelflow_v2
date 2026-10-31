@@ -1,4 +1,5 @@
 import type { StorefrontPageComposition } from "./studio-sections";
+import type { StorefrontLegal } from "./studio-schema";
 
 export const STOREFRONT_THEME_SCHEMA_VERSION = 2 as const;
 export const STOREFRONT_BUILDER_SCHEMA_VERSION = 1 as const;
@@ -87,6 +88,8 @@ export interface StorefrontBuilderState {
   contact: StorefrontContactInfo;
   domain: StorefrontDomainProjection;
   shippingRules: StorefrontShippingRule[];
+  /** WIRE/DB shape of the legal block (no column): the Studio lifts it into StorefrontStudioDraft.legal and the public artifact never carries it. */
+  legal?: StorefrontLegal;
 }
 
 export interface StorefrontTheme {

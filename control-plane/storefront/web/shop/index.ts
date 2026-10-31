@@ -4,6 +4,7 @@ import type { RenderStorePage } from "../types";
 import { documentShell, renderTabBar } from "./layout";
 import { buildShopModel } from "./model";
 import { renderHome } from "./home";
+import { isLegalKind, legalNav, legalOrderLine, renderLegalPage } from "./legal";
 import { renderProduct } from "./product";
 import { headExtra, isStoreMode, styleOf } from "./styles";
 import { productHref, type Ctx } from "./ui";
@@ -30,7 +31,7 @@ export const renderStorePage: RenderStorePage = (input) => {
     : featured;
   if (input.productId && !product) return null;
 
-  const path = input.productId && product ? productHref(input.slug, product.id) : `/${input.slug}`;
+  const path = input.legalKind ? `/${input.slug}/legal/${input.legalKind}` : input.productId && product ? productHref(input.slug, product.id) : `/${input.slug}`;
   // A one-product store has one address for that page: its home.
   const canonicalPath = featured && product && product.id === featured.id ? `/${input.slug}` : path;
   const ctx: Ctx = {
@@ -54,8 +55,28 @@ export const renderStorePage: RenderStorePage = (input) => {
   const query = input.locale === input.defaultLocale ? "" : `?lang=${input.locale}`;
   const strip = (value: string) => value.replace(/[\u2066-\u2069]/g, "");
 
+  const legal = input.artifact.legal;
+  const legalLinks = legal ? legalNav(ctx, query) : "";
+  if (input.legalKind && isLegalKind(input.legalKind)) {
+    if (!legal) return null;
+    const page = renderLegalPage(ctx, input.legalKind, legal);
+    return documentShell(ctx, {
+      title: `${page.title} — ${model.name}`,
+      description: page.title,
+      canonical: `${path}${query}`,
+      robots,
+      image: null,
+      preload: null,
+      jsonLd: { "@type": "WebPage", name: page.title },
+      script: false,
+      bodyAttrs: 'data-page="legal"',
+      main: page.main,
+      tagline: "",
+      legalNav: legalLinks,
+    });
+  }
   if (product) {
-    const page = renderProduct(ctx, product);
+    const page = renderProduct(ctx, product, legal ? legalOrderLine(ctx, query) : "");
     const title = featured && !input.productId
       ? seo.title.trim() || `${product.name} — ${model.name}`
       : `${product.name} — ${model.name}`;
@@ -77,6 +98,7 @@ export const renderStorePage: RenderStorePage = (input) => {
       headExtra: headExtra(ctx, product),
       fx: Boolean(style),
       tagline: "",
+      legalNav: legalLinks,
     });
   }
 
@@ -109,5 +131,6 @@ export const renderStorePage: RenderStorePage = (input) => {
     fx: Boolean(style),
     tabs: model.theme.template === "souk" ? renderTabBar(ctx) : "",
     tagline: home.tagline,
+    legalNav: legalLinks,
   });
 };

@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 import { createDefaultStorefrontTheme } from "@/lib/storefront/theme-default";
 import { createStorefrontReleaseInput } from "@/lib/storefront/release-artifact";
+import { markLegalReviewed } from "@/lib/storefront/studio-legal";
 import type { ServiceContext } from "@/lib/data/service-base";
 
 import type { ConnectedPlatformClient } from "./client";
@@ -29,6 +30,8 @@ function prepared(stock: number): PreparedStorefrontPublish {
     draft: {
       name: "Sahel store", slug: "sahel-store", description: "", theme,
       selectedProductIds: ["product_12345678"], isActive: true,
+      // An active store only goes live with legal texts the seller has read.
+      legal: markLegalReviewed({ sellerName: "Sahel store", registerNumber: "", returnsDays: 7, returnShipping: "seller", extraReturns: "", extraTerms: "" }),
     },
     products: [{
       id: "product_12345678", name: "Product", sku: "SKU-1", images: null,
