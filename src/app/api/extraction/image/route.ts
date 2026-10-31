@@ -1,3 +1,4 @@
+import { metricConfidence } from "@/lib/ai/extraction/draft-feedback";
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -208,7 +209,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   void recordExtractionMetric({ prisma: db, shop: shopContext }, {
     method: result.method,
-    confidence: result.confidence,
+    confidence: metricConfidence(result).value,
     isComplete: result.isComplete,
     missingFields: result.missingFields,
     latencyMs: Date.now() - start,
