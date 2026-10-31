@@ -1,5 +1,10 @@
+import { existsSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { PIN, ctl, phrase, record, step, type Result } from "./phone-lab-kit";
+
+// The lab writes /tmp/phone-lab.json while it lives. Without it this whole file skips itself (like phone-app.spec.ts without PWA_BASE_URL),
+// so the normal e2e run (playwright.config.ts, testDir ./e2e) never fails here.
+test.skip(!existsSync("/tmp/phone-lab.json"), "NOT RUN: the phone lab is not up (PHONE_LAB=1, control-plane/pwa/tests/phone-lab.test.ts)");
 
 /**
  * W3b PWA lab: ten steps of the phone app in Chromium against the lab (control-plane/pwa/tests/phone-lab.test.ts, PHONE_LAB=1).
