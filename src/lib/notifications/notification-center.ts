@@ -433,7 +433,16 @@ export async function claimNativeDelivery(
   context: TrustedActorContext,
   id: string,
 ) {
-  const notification = await ownedNotification(context, id);
+  let notification: Awaited<ReturnType<typeof ownedNotification>>;
+  try {
+    notification = await ownedNotification(context, id);
+  } catch (error) {
+    // A row that is gone (retention, or never this person's) is no error for a poll.
+    if (error instanceof SahelFlowError && error.code === "NOT_FOUND") {
+      return { deliver: false, reasonCode: "not-found" };
+    }
+    throw error;
+  }
   const recipientMemberId = notificationRecipientId(context);
   const preference = await db.notificationPreference.findUnique({
     where: { recipientMemberId },
