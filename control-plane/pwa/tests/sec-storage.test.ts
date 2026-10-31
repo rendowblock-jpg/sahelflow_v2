@@ -13,8 +13,9 @@ async function dump(db: Db): Promise<string> {
   const out: unknown[] = []; for (const s of STORES) for (const k of await db.keys(s)) out.push([s, k, await db.get(s, k)]);
   return JSON.stringify(out);
 }
+// memDb() has no close() (it is a Db cast); the real Db has one and wipeAll calls it, so the rig adds a no-op.
 function rig() {
-  const db = memDb(); let n = 0;
+  const db: Db = { ...memDb(), close: () => undefined }; let n = 0;
   const outbox = createOutbox({
     db, now: () => NOW, deviceId: "phone_pwa_0001", newId: () => `id_${String(++n).padStart(8, "0")}`, policyVersion: () => 7,
     seal: async (i) => JSON.stringify({ c: i.commandId }), post: async () => { throw new Error("network"); },
@@ -62,8 +63,18 @@ describe("a wipe leaves nothing readable", () => {
       caches: { keys: async () => [...caches], delete: async (k: string) => caches.delete(k) } as never, unregister: async () => undefined,
       storage: { keys: () => [...ls.keys()], remove: (k: string) => { ls.delete(k); } } as never,
     });
-    expect(res.ok).toBe(true);
+    expect(res.ok ? [] : res.failed).toEqual([]); // names the step that failed
+    expect(res.ok && res.steps).toEqual(["stores", "database", "caches", "worker", "local"]);
     expect(await dump(r.db)).toBe("[]"); expect([...ls.keys()]).toEqual([]); expect([...caches]).toEqual([]);
+  });
+});
+
+describe("a wipe that cannot finish says which step failed", () => {
+  it("a Db whose close() throws makes the database step fail, and every other step still runs", async () => {
+    const db = { ...memDb(), close: () => { throw new Error("closed"); } } as Db; await db.put("outbox", "c1", { x: 1 });
+    const res = await wipeAll({ db, factory: { deleteDatabase: () => ({}) } as never, caches: null, unregister: async () => undefined, storage: { keys: () => [], remove: () => undefined } });
+    expect(res).toEqual({ ok: false, steps: ["stores", "caches", "worker", "local"], failed: ["database"] });
+    expect(await dump(db)).toBe("[]");
   });
 });
 
