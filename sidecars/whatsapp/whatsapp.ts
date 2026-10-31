@@ -42,6 +42,7 @@ import { postToApp, STATUS_CALLBACK_POLICY } from "./app-callback";
 import { authIoStats } from "./auth-io-stats";
 import { LivenessTracker, LoopLagProbe, runLivenessProbe } from "./liveness";
 import { createDiagnosticTeeLogger, describeError, diagnostics } from "./diagnostics-log";
+import { attachJidEvidence, jidEvidence } from "./jid-evidence";
 import {
   conformMessageTimestamp,
   conformParticipant,
@@ -570,6 +571,8 @@ export class WhatsAppManager {
 
     this.store.bind(this.sock.ev);
     this.observeOfflineBacklog(this.sock);
+    // Counts how customers arrive (hidden id or phone); numbers only, nothing is stored about who.
+    attachJidEvidence(this.sock, jidEvidence);
     this.sock.ev.on("creds.update", saveCreds);
 
     this.sock.ev.on("connection.update", (update) => {

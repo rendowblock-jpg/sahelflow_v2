@@ -54,7 +54,8 @@ export interface InboxMessage {
     | "succeeded"
     | "ambiguous"
     | "dead_letter"
-    | "held";
+    | "held"
+    | "discarded";
   /** Coded outbox rejection (OutboxIntent.lastErrorCode), for truthful retry affordances. */
   outboxErrorCode?: string | null;
   attachment?: IncomingMessage["attachment"];
