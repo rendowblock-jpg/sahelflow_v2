@@ -300,6 +300,9 @@ export async function collectPageFacts(page: Page, mode: Mode): Promise<PageFact
         if (parent.closest("script,style,noscript,[hidden],[inert],[aria-hidden='true']")) continue;
         const style = getComputedStyle(parent);
         if (style.display === "none" || style.display === "contents" || style.visibility === "hidden") continue;
+        // An element under a display:none ancestor (a column or panel hidden at this width) has no boxes at all; only text
+        // that is drawn, with a box of no width, is squeezed.
+        if (parent.getClientRects().length === 0) continue;
         const rect = parent.getBoundingClientRect();
         if (rect.width >= 1 || collapsedText.length >= 8) continue;
         seen.add(parent);
