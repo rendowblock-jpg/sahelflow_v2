@@ -289,52 +289,31 @@ ${finalCta(locale)}`;
 /* ───────────────────────────── why ───────────────────────────── */
 
 export function whyPage(locale) {
-  const t = COPY[locale];
-  const w = t.why;
+  const w = COPY[locale].why;
   const [title, description] = meta(locale, "why");
-  const reasonIcons = ["key", "chart", "lock", "wifiOff", "whatsapp", "coins"];
-  const cell = ([text, kind], us) => `<span role="cell"${us ? ' class="vs-us"' : ""}>${statusIcon(kind)}<span>${esc(text)}</span></span>`;
-  const sahel = PACKAGE.priceDzd;
-  const monthly = 9500;
-  const years = PACKAGE.updateYears;
-  const body = `${pageHero({ locale, eyebrow: w.eyebrow, eyebrowIcon: "scale", title: w.title, lead: w.lead, actions: ctas(locale, { primary: w.cta }), cls: "is-center" })}
-<section class="section tight">
-  <div class="container">
-    <div class="reasons reveal-stagger">${w.reasons.map(([k, v], i) => `<article class="reason reveal" data-spotlight><span class="reason-icon">${icon(reasonIcons[i])}</span><h2>${esc(k)}</h2><p>${esc(v)}</p></article>`).join("")}</div>
+  const reasonIcons = ["key", "chart", "lock", "wifiOff"];
+  const row = ([label, a, b]) => `<div class="cmp-r"><h3>${esc(label)}</h3><p>${statusIcon(a[1])}<span>${esc(a[0])}</span></p><p>${statusIcon(b[1])}<span>${esc(b[0])}</span></p></div>`;
+  const body = `${pageHero({ locale, eyebrow: w.eyebrow, eyebrowIcon: "scale", title: w.title, lead: w.lead, actions: ctas(locale, { primary: w.cta }) })}
+<section class="sheet-sec">
+  <div class="container narrow">
+    <h2>${esc(w.reasonsTitle)}</h2>
+    <ul class="ruled nn-list">${w.reasons.map(([k, v], i) => `<li><span class="nn" aria-hidden="true">${icon(reasonIcons[i] ?? "key")}</span><div><h3>${esc(k)}</h3><p>${esc(v)}</p></div></li>`).join("")}</ul>
   </div>
 </section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: w.tableTitle, lead: w.tableLead, center: true })}
-    <div class="vs-scroll reveal">
-      <div class="vs-table is-three" role="table">
-        <div class="vs-row vs-head" role="row"><span role="columnheader"></span>${w.columns.map((col, i) => `<span role="columnheader"${i === 0 ? ' class="vs-us"' : ""}>${i === 0 ? `<img src="/img/mark.svg" alt="" width="20" height="20">` : ""}${esc(col)}</span>`).join("")}</div>
-        ${w.rows.map(([label, a, b, c]) => `<div class="vs-row" role="row"><span role="rowheader">${esc(label)}</span>${cell(a, true)}${cell(b)}${cell(c)}</div>`).join("")}
-      </div>
+<section class="sheet-sec">
+  <div class="container narrow">
+    <h2>${esc(w.tableTitle)}</h2>
+    <p class="lead">${esc(w.tableLead)}</p>
+    <div class="cmp">
+      <div class="cmp-h"><span>${esc(w.columns[0] ?? "")}</span><span>${esc(w.columns[1] ?? "")}</span></div>
+      ${w.rows.map(row).join("")}
     </div>
   </div>
 </section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: w.costTitle, lead: w.costLead, center: true })}
-    <form class="calc-card cost-calc reveal" data-calc="cost" data-sahel="${sahel}" data-currency="${locale === "ar" ? "دج" : "DA"}">
-      <label class="calc-field"><span class="calc-label">${esc(w.costMonthly)}</span>
-        <span class="calc-control"><input type="range" name="monthly" min="1900" max="24500" step="100" value="${monthly}" data-calc-input><output data-calc-out="monthly">${money(monthly, locale)}</output></span></label>
-      <label class="calc-field"><span class="calc-label">${esc(w.costYears)}</span>
-        <span class="calc-control"><input type="range" name="years" min="1" max="${years}" step="1" value="${years}" data-calc-input><output data-calc-out="years">${years}</output></span></label>
-      <div class="cost-bars">
-        <div class="cost-bar is-them"><span>${esc(w.costSubscription)}</span><i style="--w:100%" data-cost-bar="them"></i><b data-calc-result="them">${money(monthly * years * 12, locale)}</b></div>
-        <div class="cost-bar is-us"><span>${esc(w.costSahel)}</span><i style="--w:${((sahel / (monthly * years * 12)) * 100).toFixed(1)}%" data-cost-bar="us"></i><b>${money(sahel, locale)}</b></div>
-      </div>
-      <p class="cost-saved"><span>${esc(w.costSaved)}</span><b data-calc-result="saved">${money(monthly * years * 12 - sahel, locale)}</b></p>
-      <p class="calc-note">${icon("calculator")}<span>${esc(w.costNote)}</span></p>
-    </form>
-  </div>
-</section>
-<section class="section">
+<section class="sheet-sec">
   <div class="container narrow">
-    ${sectionHead({ title: w.honestTitle, center: true })}
-    <div class="honest reveal-stagger">${w.honest.map(([k, v]) => `<article class="reveal"><h3>${esc(k)}</h3><p>${esc(v)}</p></article>`).join("")}</div>
+    <h2>${esc(w.honestTitle)}</h2>
+    <div class="callbook">${w.honest.map(([k, v]) => `<div class="mrow is-risk"><span class="mg">${esc(w.honestMark)}</span><span class="tx"><b>${esc(k)}</b><span>${esc(v)}</span></span></div>`).join("")}</div>
   </div>
 </section>
 ${finalCta(locale, { title: w.cta })}`;
