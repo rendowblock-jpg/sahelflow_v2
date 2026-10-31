@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Locale } from "@/lib/i18n";
 import type { getI18n } from "@/lib/i18n-server";
 import { formatDate, formatDZD } from "@/lib/utils";
+import { moneyNameKey } from "@/lib/analytics/money-names";
 
 export interface AccountingFinancials {
   /** R3: delivered orders minus refunds and returns. */
@@ -194,7 +195,7 @@ export function AccountingView({
               dataTable={{
                 label: chartSummary,
                 caption: t("charts.tableOf", { title: t("accounting.revenueVsExpenses") }),
-                columns: [t("charts.colMonth"), t("accounting.revenue"), t("accounting.expenses")],
+                columns: [t("charts.colMonth"), t(moneyNameKey("netRevenue")), t("accounting.expenses")],
                 rows: monthly.map((entry) => [
                   entry.month,
                   formatDZD(entry.revenue, locale),
@@ -206,7 +207,7 @@ export function AccountingView({
             >
               <DualBarChart
                 data={[...monthly]}
-                revenueLabel={t("accounting.revenue")}
+                revenueLabel={t(moneyNameKey("netRevenue"))}
                 expensesLabel={t("accounting.expenses")}
               />
             </ChartCard>

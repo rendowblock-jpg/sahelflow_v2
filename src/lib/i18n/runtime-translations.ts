@@ -7,6 +7,7 @@ import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
 import { getOrdersPhoneHintRuntimeTranslation } from "@/lib/i18n/orders-phone-hint-runtime";
 import { getShippingListRuntimeTranslation } from "@/lib/i18n/shipping-list-runtime";
 import { getInboxHealthRuntimeTranslation } from "@/lib/i18n/inbox-health-runtime";
+import { getInboxHealthViewRuntimeTranslation } from "@/lib/i18n/inbox-health-view-runtime";
 import { getAiApprovalArgsRuntimeTranslation } from "@/lib/i18n/ai-approval-args-runtime";
 import { getHeldSendDiscardRuntimeTranslation } from "@/lib/i18n/held-send-discard-runtime";
 import { getPhoneAppTestingRuntimeTranslation } from "@/lib/i18n/phone-app-testing-runtime";
@@ -18,6 +19,7 @@ import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
 import { getDashboardStatesRuntimeTranslation } from "@/lib/i18n/dashboard-states-runtime";
+import { getMoneyNamesRuntimeTranslation } from "@/lib/i18n/money-names-runtime";
 import { getAiQuotaRuntimeTranslation } from "@/lib/i18n/ai-quota-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
@@ -184,6 +186,7 @@ export function getRuntimeTranslation(
     getHeldSendDiscardRuntimeTranslation(locale, key) ??
     getPhoneAppTestingRuntimeTranslation(locale, key) ??
     getInboxHealthRuntimeTranslation(locale, key) ??
+    getInboxHealthViewRuntimeTranslation(locale, key) ??
     getExtractionTruthRuntimeTranslation(locale, key) ??
     getPreUpdateBackupRuntimeTranslation(locale, key) ??
     getStorefrontStudioStatesRuntimeTranslation(locale, key) ??
@@ -194,6 +197,7 @@ export function getRuntimeTranslation(
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
     getDashboardStatesRuntimeTranslation(locale, key) ??
+    getMoneyNamesRuntimeTranslation(locale, key) ??
     getAiQuotaRuntimeTranslation(locale, key) ??
     getDataTableRuntimeTranslation(locale, key) ??
     getCustomersProductsStatesRuntimeTranslation(locale, key) ??

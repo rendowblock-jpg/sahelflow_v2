@@ -116,6 +116,11 @@ interface StatCardProps {
   href?: string;
   /** Accessible name for `href` (what opening the card shows). */
   hrefLabel?: string;
+  /**
+   * Opt in to a smaller tile on a phone (under md: / 768 px): tighter padding, a one-line label, a smaller icon tile
+   * and figure, about 68 px tall. It only adds `max-md:` classes, so from 768 px up the card is exactly the default.
+   */
+  compactOnPhone?: boolean;
 }
 
 const toneClasses: Record<
@@ -170,6 +175,7 @@ export function StatCard({
   href,
   hrefLabel,
   sparkFormat = "count",
+  compactOnPhone = false,
 }: StatCardProps) {
   const { locale } = useI18n();
   const [activeSpark, setActiveSpark] = React.useState<number | null>(null);
@@ -232,6 +238,7 @@ export function StatCard({
           "group/stat transition-[background-color,border-color,box-shadow] duration-150 hover:border-primary/35 hover:bg-primary-subtle focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-ring/25 motion-reduce:transition-none",
         selected &&
           "border-primary/45 bg-primary-subtle ring-1 ring-primary/15",
+        compactOnPhone && "max-md:px-2.5 max-md:py-2",
         className,
       )}
       style={style}
@@ -240,11 +247,17 @@ export function StatCard({
       data-stat-tone={tone}
       data-stat-interaction={actionable ? "actionable" : "passive"}
       data-selected={selected ? "true" : undefined}
+      data-stat-compact={compactOnPhone ? "phone" : undefined}
     >
-      <div className="flex min-w-0 items-start justify-between gap-4">
+      <div className={cn("flex min-w-0 items-start justify-between gap-4", compactOnPhone && "max-md:gap-1.5")}>
         <div className="min-w-0 flex-1">
-          <div className="flex min-h-9 min-w-0 items-center gap-1.5 text-sm font-medium leading-5 text-muted-foreground">
-            <span className="line-clamp-2 min-w-0 break-words">{label}</span>
+          <div
+            className={cn(
+              "flex min-h-9 min-w-0 items-center gap-1.5 text-sm font-medium leading-5 text-muted-foreground",
+              compactOnPhone && "max-md:min-h-6",
+            )}
+          >
+            <span className={cn("line-clamp-2 min-w-0 break-words", compactOnPhone && "max-md:line-clamp-1")}>{label}</span>
             {tooltip ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -279,6 +292,7 @@ export function StatCard({
             className={cn(
               "flex shrink-0 items-center justify-center rounded-surface border [&_svg]:size-[18px]",
               emphasis === "primary" ? "size-10" : "size-9",
+              compactOnPhone && "max-md:size-6 max-md:[&_svg]:size-3.5",
               toneStyle.icon,
               actionable &&
                 "transition-colors group-hover/stat:border-primary/30 group-hover/stat:bg-primary-soft group-hover/stat:text-primary",
@@ -300,6 +314,7 @@ export function StatCard({
               : emphasis === "supporting"
                 ? "text-2xl leading-8"
                 : "text-[1.75rem] leading-9",
+            compactOnPhone && "max-md:mt-0.5 max-md:text-lg max-md:leading-6",
           )}
         >
           {explored ? formatSparkValue(explored.value) : value}

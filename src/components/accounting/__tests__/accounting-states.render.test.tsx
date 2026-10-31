@@ -234,3 +234,15 @@ describe("AccountingView money and definitions", () => {
     expect(container.textContent).not.toContain(makeT("en")("accounting.def.netRevenue"));
   });
 });
+
+describe("money names on the accounting page", () => {
+  const HEAD = { en: "net revenue", fr: "revenu net", ar: "صافي الإيرادات" } as const;
+  const ORDERS = { en: "Orders value", fr: "Valeur des commandes", ar: "قيمة الطلبات" } as const;
+  for (const locale of ["en", "fr", "ar"] as const) {
+    it(`${locale}: the headline card is net revenue; its tooltip names the dashboard figure Orders value`, () => {
+      const { container } = view(locale);
+      expect((cards(container)?.textContent ?? "").toLowerCase()).toContain(HEAD[locale]);
+      expect(makeT(locale)("accounting.netRevenueDefinition")).toContain(ORDERS[locale]);
+    });
+  }
+});

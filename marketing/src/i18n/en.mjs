@@ -13,7 +13,7 @@ export default {
     product: ["The platform — SahelFlow", "Nine modules that share one order, one customer and one stock: inbox, orders, delivery, risk, accounting, automations, storefront, assistant and team."],
     integrations: ["Integrations — SahelFlow", "WhatsApp, Yalidine, ZR Express, EcoTrack, Maystro, Google Sheets, Shopify, YouCan, WooCommerce, Meta and Gemini: the connections SahelFlow offers, each marked Available, In testing or Planned."],
     pricing: ["Pricing — SahelFlow", "Free for 7 days, then one payment: a permanent licence with five shops, ten team members and five years of updates."],
-    security: ["Security & data — SahelFlow", "Your shop's data lives on your PC, encrypted on disk. Exactly what leaves your computer, and when."],
+    security: ["Security & data — SahelFlow", "Your shop's data lives on your PC, with sensitive fields encrypted on disk. Exactly what leaves your computer, and when."],
     download: ["Download for Windows — SahelFlow", "A Windows installer that updates itself; every update is verified before it installs. Start your free trial."],
     help: ["Help centre — SahelFlow", "Answers about installation, WhatsApp, orders, couriers, licences, data and teams."],
     why: ["Why SahelFlow — compared", "Pay once instead of every month, no order caps, your data on your PC, and a WhatsApp inbox, risk engine and COD reconciliation built in. How SahelFlow compares."],
@@ -23,7 +23,7 @@ export default {
   },
 
   common: {
-    whatsappNote: "The WhatsApp link works like WhatsApp Web: it is an unofficial connection. WhatsApp can restrict numbers that send automatic or bulk messages, so use a dedicated business number. SahelFlow sends a reply only after you approve it.",
+    whatsappNote: "The WhatsApp link works like WhatsApp Web: it is an unofficial connection. WhatsApp can restrict numbers that send automatic or bulk messages, so use a dedicated business number. Replies the AI drafts go out only after you approve them. Automations you switch on send their own messages.",
     skip: "Skip to content",
     learnMore: "Learn more",
     explore: "Explore",
@@ -84,7 +84,7 @@ export default {
       lead: "Every conversation lands in one inbox your whole team works from. Pick one message or five, and the AI drafts the order — name, phone, wilaya, products — ready for you to review.",
       points: ["Orders drafted from several messages", "Photos, video, files and voice notes", "Conversations assigned across the team"],
       sections: [
-        ["Read Darja, French and Arabic as they are written", "Customers send their name in one message, the address in the next and the size in a voice note. Extraction is built for the way Algerian customers actually write — including a mix of all three languages.", ["Select one message or a whole thread", "Every field shown before anything is saved", "Your own Gemini key"]],
+        ["Built to read Darja, French and Arabic", "Customers send their name in one message, the address in the next and the size in a voice note. Extraction is built for the way Algerian customers write, in any mix of the three. We have not measured its accuracy on real orders yet, so check each draft.", ["Select one message or a whole thread", "Every field shown before anything is saved", "Your own Gemini key"]],
         ["One number, the whole team", "Link your business number once by scanning a QR code. Conversations are assigned, unread counts stay honest, and each reply carries the name of the person who sent it.", ["Assign and reassign conversations", "Search every chat instantly", "Send photos, video, documents and voice"]],
         ["Messages that never vanish", "When the connection drops, outgoing messages wait in a queue and are sent when WhatsApp is back.", ["Clear sending status on every message", "Retry without duplicates", "Works alongside your phone"]],
       ],
@@ -115,10 +115,10 @@ export default {
       name: "Delivery",
       short: "Ship and track your parcels, courier by courier",
       title: "Ship with Algeria's couriers without leaving the order.",
-      lead: "Create the parcel and follow it from inside SahelFlow. The Yalidine, ZR Express, EcoTrack and Maystro connections are in testing. Rates for all 69 wilayas, to the door or to the desk.",
-      points: ["Status follows itself", "69 wilayas · home and desk", "Shipping lists exported in one click"],
+      lead: "Create the parcel and follow it from inside SahelFlow. The Yalidine, ZR Express, EcoTrack and Maystro connections are in testing. Rates by wilaya (the 11 new wilayas use their old wilaya's rate for now), to the door or to the desk.",
+      points: ["Status follows itself", "Rates by wilaya · home and desk", "Shipping lists exported in one click"],
       sections: [
-        ["The right price before you promise it", "Home and desk rates for every wilaya, per courier, so the total you quote the customer is the total you charge.", ["Rates per wilaya and commune", "Home or stop-desk", "Delivery fees saved on the order"]],
+        ["The right price before you promise it", "Home and desk rates by wilaya, per courier, so the total you quote the customer is the total you charge.", ["Rates per wilaya and commune", "Home or stop-desk", "Delivery fees saved on the order"]],
         ["Tracking you don't have to chase", "Statuses update themselves and the order moves with them. Parcels stuck too long are surfaced before they turn into returns.", ["Automatic status updates", "Stuck-parcel alerts", "Full timeline on every order"]],
         ["Returns handled properly", "A returned parcel puts its stock back and records its cost, so you know exactly what each return took from you.", ["Return reasons recorded", "Stock restocked on return", "Return cost in dinars"]],
       ],
@@ -370,11 +370,11 @@ export default {
       ],
     },
     map: {
-      eyebrow: "69 wilayas",
+      eyebrow: "Delivery by wilaya",
       title: "Every wilaya. Every courier. One map.",
-      text: "A delivery rate for every wilaya, to the door or the desk, with four courier connections in testing — and return analytics that show you where you win and where you lose.",
+      text: "A delivery rate by wilaya (the 11 new wilayas use their old wilaya's rate for now), to the door or the desk, with four courier connections in testing — and return analytics that show you where you win and where you lose.",
       legend: "Illustration: parcels leaving your warehouse",
-      stats: [[69, "wilayas covered"], [4, "couriers in testing"], [3, "full languages"], [7, "day free trial"]],
+      stats: [[69, "wilayas in the address list"], [4, "couriers in testing"], [3, "full languages"], [7, "day free trial"]],
     },
     calculator: {
       eyebrow: "Do the maths",
@@ -405,10 +405,10 @@ export default {
     why: {
       eyebrow: "Why sellers switch",
       title: "Own your tools. Stop renting them by the month.",
-      points: [["One payment", "not a monthly bill"], ["No order caps", "no per-order fees"], ["On your PC", "encrypted, offline-ready"], ["5 years", "of updates included"]],
+      points: [["One payment", "not a monthly bill"], ["No order caps", "no per-order fees"], ["On your PC", "sensitive data encrypted, offline-ready"], ["5 years", "of updates included"]],
       cta: "See the full comparison",
     },
-    faqTitle: "Questions sellers ask first",
+    faqTitle: "Questions to ask first",
     final: {
       title: "Install it today. Try it for seven days on your real orders.",
       text: "Every module unlocked, no card. If you'd like a hand at the start, we're on WhatsApp.",
@@ -421,9 +421,9 @@ export default {
     lead: "SahelFlow is built to be owned: you pay once, your orders are not counted, and your shop's database lives on your own PC.",
     reasons: [
       ["Pay once, keep it", "One payment for a permanent licence with five years of updates. No monthly bill, no renewal pressure."],
-      ["No order caps", "Ship 50 orders a month or 5,000 — the price is the same. No per-order fees, ever."],
-      ["Your data, your PC", "Your database is a file on your own computer. No SahelFlow server holds your customers."],
-      ["Keeps working offline", "When the connection drops, your team keeps confirming, preparing and counting money."],
+      ["No order caps", "Ship 50 orders a month or 5,000 — the price is the same. No per-order fee with this licence."],
+      ["Your data, your PC", "Your database is a file on your own computer. We keep no copy of it."],
+      ["Your PC works offline", "The PC keeps working offline. WhatsApp, couriers and activation need the internet."],
     ],
     tableTitle: "SahelFlow against a monthly online subscription",
     tableLead: "Two ways to run a shop's orders, side by side: a database on your own PC that you pay for once, or a monthly online subscription. No competitor is named or measured here.",
@@ -434,7 +434,7 @@ export default {
       ["How you pay", ["One payment", "yes"], ["Every month", "no"]],
       ["Order limits", ["None, no per-order fee", "yes"], ["Depends on the plan", "partial"]],
       ["Where your data lives", ["On your PC", "yes"], ["On the provider's servers", "partial"]],
-      ["Works when the internet drops", ["Yes", "yes"], ["No", "no"]],
+      ["Works when the internet drops", ["Yes, on your PC", "yes"], ["No", "no"]],
     ],
     honestTitle: "Where an online platform may suit you better",
     honest: [
@@ -454,10 +454,10 @@ export default {
     modulesTitle: "Nine modules",
     principlesTitle: "Built on a few promises we keep",
     principles: [
-      ["Local first", "Your database lives on your PC, encrypted. Selling never waits for a server."],
+      ["Local first", "Your database lives on your PC; customer names, phones, addresses and keys are encrypted. Selling never waits for a server."],
       ["Honest numbers", "Stock and money history is append-only. Corrections are new entries, never silent edits."],
       ["You stay in control", "The AI proposes, you approve. Sensitive actions always ask first."],
-      ["Built for Algeria", "Dinars, 69 wilayas, local couriers, BaridiMob and CCP, and Darja in the messages."],
+      ["Built for Algeria", "Dinars, addresses for 69 wilayas, local couriers, BaridiMob and CCP, and Darja in the messages."],
     ],
   },
 
@@ -488,7 +488,7 @@ export default {
   pricingPage: {
     eyebrow: "Pricing",
     title: "Simple pricing. Pay once, it's yours.",
-    lead: "Try everything free for 7 days. Then buy a permanent licence for your PC — one payment, with five years of updates and support.",
+    lead: "Try everything free for 7 days. Then buy a permanent licence for your PC — one payment, with five years of updates and support, counted from the official stable launch.",
     trial: {
       name: "Free trial",
       price: "0 DA",
@@ -507,7 +507,7 @@ export default {
       points: (p) => [
         `${p.includedShops} shops included`,
         `Owner + ${p.teamMembers} team members`,
-        `${p.updateYears} years of updates and support`,
+        `${p.updateYears} years of updates and support, from the official stable launch`,
         "Every module and every integration",
         "Pay by BaridiMob or CCP",
       ],
@@ -534,7 +534,7 @@ export default {
       ["Shops", `${p.includedShops} included · up to ${p.maximumShops}`],
       ["Team", `Owner + ${p.teamMembers} members`],
       ["Devices", `${p.devicesPerMember} personal devices per member`],
-      ["Updates & support", `${p.updateYears} years`],
+      ["Updates & support", `${p.updateYears} years from the stable launch`],
       ["Modules", "All nine"],
       ["Integrations", "All of them"],
       ["Storefront", "One per shop"],
@@ -543,7 +543,7 @@ export default {
     compareTitle: "Pay once vs. pay forever",
     compareLead: (years) => `What the same ${years} years cost you.`,
     compareRows: ["Monthly payments", "What you own at the end", "When the internet drops", "Where your data lives"],
-    compareSahel: ["None after purchase", "A permanent licence", "Keeps working", "On your PC"],
+    compareSahel: ["None after purchase", "A permanent licence", "Your PC keeps working", "On your PC"],
     compareSaas: ["Every month, every year", "Nothing", "Stops", "On their servers"],
     compareSahelName: "SahelFlow",
     compareSaasName: "A monthly online subscription",
@@ -585,7 +585,7 @@ export default {
       ["Your storefront", "only what you publish"],
     ],
     faq: [
-      ["Can SahelFlow see my orders?", "No. Your database is on your PC; we have no copy and no access to it."],
+      ["Can SahelFlow see my orders?", "Your database stays on your PC; we have no copy and no access to it. Orders from your online store pass through our Cloudflare servers, encrypted."],
       ["What if my PC breaks?", "Write to us and we move your licence. Make an encrypted backup first and keep a copy; restoring it on a new PC is still being tested."],
       ["Who can change prices or cancel orders?", "Only the people whose role allows it — and every change records who made it."],
     ],
@@ -617,12 +617,12 @@ export default {
       start: ["Getting started", "Install, trial and first steps", [
         ["Which Windows version do I need?", "Windows 10 or Windows 11, 64-bit. 8 GB of memory is recommended."],
         ["How does the free trial work?", "Download the app and activate the trial: every module for 7 days. Then buy a licence and keep all your data."],
-        ["Do I need the internet all the time?", "No. SahelFlow runs on your PC. The internet is only used for WhatsApp, couriers, the storefront and activation."],
+        ["Do I need the internet all the time?", "No. SahelFlow runs on your PC. The internet is used for WhatsApp, couriers, the storefront and activation."],
         ["How do I start quickly?", "Link WhatsApp, add your courier and your products — or import them from Excel."],
       ]],
       whatsapp: ["WhatsApp & inbox", "Linking, sending and AI", [
         ["How do I link WhatsApp?", "In the inbox, scan the QR code with WhatsApp on your phone, like WhatsApp Web."],
-        ["Does the AI understand Darja?", "Yes. Order extraction is built for Algerian sellers' messages: Darja, French, Arabic, or a mix."],
+        ["Does the AI understand Darja?", "It is built to read Darja, French, Arabic or a mix. We have not measured its accuracy on real orders yet, so check each draft."],
         ["What if a message fails to send?", "It waits in a queue and is sent when WhatsApp reconnects."],
         ["Is WhatsApp an official integration?", "SahelFlow links like WhatsApp Web does. It is not an official Meta API, so keep your phone connected and follow WhatsApp's rules."],
       ]],
@@ -638,12 +638,12 @@ export default {
       ]],
       licence: ["Licence & payment", "Buying, activating and moving", [
         ["How do I buy a licence?", "Pay by BaridiMob or CCP, send us the licence request code from the app on WhatsApp, then paste the licence you receive."],
-        ["What does the licence include?", "Five shops, the owner plus ten team members, every module and five years of updates and support."],
+        ["What does the licence include?", "Five shops, the owner plus ten team members, every module and five years of updates and support, counted from the official stable launch."],
         ["Do I lose my data when the trial ends?", "No. Your data stays on your PC; activating a licence reopens everything as you left it."],
         ["Can I move my licence to a new PC?", "Yes. Write to us and we transfer it. Make an encrypted backup first and keep a copy; restoring it on a new PC is still being tested."],
       ]],
       data: ["Data & security", "Encryption, backups and privacy", [
-        ["Where is my data stored?", "On your PC, in an encrypted database. We have no copy."],
+        ["Where is my data stored?", "On your PC. Customer names, phones, addresses, chats and keys are encrypted there. We keep no copy of the database."],
         ["How do backups work?", "Create encrypted backups from Settings whenever you want. Restoring on another PC is still being tested."],
         ["Can I export everything?", "Yes — orders, customers and products to Excel whenever you want."],
       ]],

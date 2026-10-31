@@ -7,7 +7,7 @@ export const HOME = {
     day: { h2: "يوم البائع في خمس ختمات", steps: [
       { stamp: "جديدة", title: "يصل الطلب", text: "من واتساب أو من المتجر أو تكتبه بيدك، فيقع في القائمة نفسها." },
       { stamp: "اتصل أولاً", title: "ينبّهك الهامش", text: "إن كان في الطلب ما يستدعي مكالمة، كُتب سببه بالأحمر قبل الشحن." },
-      { stamp: "مؤكَّدة", title: "تعتمد أنت", text: "الذكاء الاصطناعي يقترح مسودة الرد والطلب فقط. لا يُرسَل ولا يُكتب شيء إلا بموافقتك." },
+      { stamp: "مؤكَّدة", title: "تعتمد أنت", text: "الذكاء الاصطناعي يُعدّ مسودة الرد والطلب، وأنت تعتمد كل مسودة." },
       { stamp: "شُحنت", title: "يُسجَّل الطرد", text: "باسم شركة التوصيل التي اخترتها، وتبقى حالته أمامك." },
       { stamp: "سُلِّمت", title: "يُقفل أسبوع الكاش", text: "ما سُلِّم وما رُفض وكم ما يزال ينتظر التحصيل، مجموعاً كما في دفتر الحساب." },
     ] },
@@ -21,7 +21,7 @@ export const HOME = {
     day: { h2: "La journée du vendeur en cinq tampons", steps: [
       { stamp: "Nouvelle", title: "La commande arrive", text: "De WhatsApp, de la boutique ou saisie à la main, elle tombe dans la même liste." },
       { stamp: "Appeler d'abord", title: "La marge vous prévient", text: "Si quelque chose cloche, la raison est écrite en rouge avant l'expédition." },
-      { stamp: "Confirmée", title: "Vous validez", text: "L'IA propose seulement un brouillon de réponse et de commande. Rien n'est envoyé ni écrit sans votre accord." },
+      { stamp: "Confirmée", title: "Vous validez", text: "L'IA prépare la réponse et la commande ; vous validez chaque brouillon." },
       { stamp: "Expédiée", title: "Le colis est enregistré", text: "Au nom du transporteur que vous avez choisi, et son état reste sous vos yeux." },
       { stamp: "Livrée", title: "La semaine de cash se clôt", text: "Livré, refusé, reste à encaisser : le cahier de caisse additionne comme un livre de comptes." },
     ] },
@@ -35,7 +35,7 @@ export const HOME = {
     day: { h2: "A seller's day in five stamps", steps: [
       { stamp: "New", title: "The order arrives", text: "From WhatsApp, from your shop or typed by hand, it lands in the same list." },
       { stamp: "Call first", title: "The margin warns you", text: "If something is off, the reason is written in red before you ship." },
-      { stamp: "Confirmed", title: "You approve", text: "The AI only drafts the reply and the order. Nothing is sent or written without your approval." },
+      { stamp: "Confirmed", title: "You approve", text: "The AI drafts the reply and the order; you approve each draft." },
       { stamp: "Shipped", title: "The parcel is recorded", text: "Under the courier you chose, and its status stays in front of you." },
       { stamp: "Delivered", title: "The cash week closes", text: "Delivered, refused, still to collect: the cash book adds it up like an account ledger." },
     ] },

@@ -26,7 +26,7 @@ describe("chart text alternatives (buildChartTable) are wired", () => {
   it("dashboard: the three sparkline cards pass tableAlt built from their own series", () => {
     for (const [series, money] of [["ordersSpark", "false"], ["revenueSpark", "true"], ["customersSpark", "false"]]) {
       expect(dashboard).toContain(`spark={${series}}`);
-      expect(dashboard).toMatch(new RegExp(`tableAlt=\\{sparkTable\\(t\\("dashboard\\.[A-Za-z]+"\\), ${series}, ${money}\\)\\}`));
+      expect(dashboard).toMatch(new RegExp(`tableAlt=\\{sparkTable\\(t\\((?:"dashboard\\.[A-Za-z]+"|moneyNameKey\\("[A-Za-z]+"\\))\\), ${series}, ${money}\\)\\}`));
     }
   });
 });

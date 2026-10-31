@@ -26,11 +26,11 @@ const translations: Record<Locale, Record<string, string>> = {
     "codReconciliation.state.loadFailed": "تعذّر تحميل أرقام الدفع عند الاستلام.",
     "dashboard.deliveredToday": "المُسلَّم اليوم",
     "dashboard.revenueDefinition":
-      "إيرادات اليوم = قيمة الطلبيات المسجلة اليوم، دون الملغاة والمسودات، أما الطلبيات المرتجعة أو المرفوضة فتبقى محسوبة. المُسلَّم اليوم = قيمة الطلبيات المسلَّمة اليوم، وتُحتسب عند التسليم. هذه قيم طلبيات وليست نقداً في اليد: النقد القادم من شركات التوصيل تجده في المحاسبة.",
+      "قيمة طلبات اليوم = قيمة الطلبيات المسجلة اليوم، دون الملغاة والمسودات، أما الطلبيات المرتجعة أو المرفوضة فتبقى محسوبة. المُسلَّم اليوم = قيمة الطلبيات المسلَّمة اليوم، وتُحتسب عند التسليم. هذه قيم طلبيات وليست نقداً في اليد: النقد القادم من شركات التوصيل تجده في المحاسبة.",
     "analytics.revenueDefinition":
-      "الإيرادات = قيمة الطلبيات المسجلة في الفترة المحددة، دون الملغاة والمسودات، أما المرتجعة أو المرفوضة فتبقى محسوبة. ليست نقداً في اليد ولا صافية من المرتجعات. جدول المقارنة يستخدم الإيراد المحتسب عند التسليم.",
+      "قيمة الطلبات = قيمة الطلبيات المسجلة في الفترة المحددة، دون الملغاة والمسودات، أما المرتجعة أو المرفوضة فتبقى محسوبة. ليست نقداً في اليد ولا صافية من المرتجعات. جدول المقارنة يعرض الإيراد المسلَّم: الإيراد المحتسب عند التسليم.",
     "accounting.netRevenueDefinition":
-      "صافي الإيرادات = قيمة الطلبيات المسلَّمة خلال آخر 30 يوماً مطروحاً منها المبالغ المستردة والمرتجعات. يختلف عن الإيرادات في لوحة التحكم التي تحتسب الطلبيات المسجلة.",
+      "صافي الإيرادات = قيمة الطلبيات المسلَّمة خلال آخر 30 يوماً مطروحاً منها المبالغ المستردة والمرتجعات. يختلف عن قيمة الطلبات في لوحة التحكم التي تحتسب الطلبيات المسجلة.",
     "charts.showAsTable": "عرض كجدول",
     "charts.showAsChart": "عرض كمخطط",
     "charts.tableOf": "جدول: {{title}}",
@@ -81,11 +81,11 @@ const translations: Record<Locale, Record<string, string>> = {
     "codReconciliation.state.loadFailed": "Les chiffres du paiement à la livraison n'ont pas pu être chargés.",
     "dashboard.deliveredToday": "Livré aujourd'hui",
     "dashboard.revenueDefinition":
-      "Revenu du jour = valeur des commandes passées aujourd'hui. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Livré aujourd'hui = valeur des commandes livrées aujourd'hui, comptée à la livraison. Ce sont des valeurs de commandes, pas de l'argent en main : l'argent des transporteurs se voit dans Comptabilité.",
+      "Valeur des commandes aujourd'hui = valeur des commandes passées aujourd'hui. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Livré aujourd'hui = valeur des commandes livrées aujourd'hui, comptée à la livraison. Ce sont des valeurs de commandes, pas de l'argent en main : l'argent des transporteurs se voit dans Comptabilité.",
     "analytics.revenueDefinition":
-      "Chiffre d'affaires = valeur des commandes passées sur la période choisie. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Ce n'est ni de l'argent en main ni un montant net des retours. Le tableau de comparaison utilise le revenu compté à la livraison.",
+      "Valeur des commandes = valeur des commandes passées sur la période choisie. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Ce n'est ni de l'argent en main ni un montant net des retours. Le tableau de comparaison affiche le Revenu livré : le revenu compté à la livraison.",
     "accounting.netRevenueDefinition":
-      "Revenu net = valeur des commandes livrées au cours des 30 derniers jours, moins les remboursements et retours clients. Il diffère du Revenu du tableau de bord, qui compte les commandes passées.",
+      "Revenu net = valeur des commandes livrées au cours des 30 derniers jours, moins les remboursements et retours clients. Il diffère de la Valeur des commandes du tableau de bord, qui compte les commandes passées.",
     "charts.showAsTable": "Afficher en tableau",
     "charts.showAsChart": "Afficher en graphique",
     "charts.tableOf": "Tableau : {{title}}",
@@ -136,11 +136,11 @@ const translations: Record<Locale, Record<string, string>> = {
     "codReconciliation.state.loadFailed": "The cash-on-delivery figures could not be loaded.",
     "dashboard.deliveredToday": "Delivered today",
     "dashboard.revenueDefinition":
-      "Revenue today = value of orders placed today. Cancelled orders and drafts are not counted; returned or refused orders still are. Delivered today = value of orders delivered today, counted when delivered. These are order values, not cash in hand: the cash from couriers is in Accounting.",
+      "Orders value today = value of orders placed today. Cancelled orders and drafts are not counted; returned or refused orders still are. Delivered today = value of orders delivered today, counted when delivered. These are order values, not cash in hand: the cash from couriers is in Accounting.",
     "analytics.revenueDefinition":
-      "Revenue = value of orders placed in the selected period. Cancelled orders and drafts are not counted; returned or refused orders still are. It is not cash in hand and not net of returns. The comparison table uses revenue counted at delivery.",
+      "Orders value = value of orders placed in the selected period. Cancelled orders and drafts are not counted; returned or refused orders still are. It is not cash in hand and not net of returns. The comparison table shows Revenue delivered: revenue counted when the order is delivered.",
     "accounting.netRevenueDefinition":
-      "Net revenue = value of orders delivered in the last 30 days, minus customer refunds and returns. It differs from Revenue on the dashboard, which counts orders placed.",
+      "Net revenue = value of orders delivered in the last 30 days, minus customer refunds and returns. It differs from Orders value on the dashboard, which counts orders placed.",
     "charts.showAsTable": "Show as table",
     "charts.showAsChart": "Show as chart",
     "charts.tableOf": "Table: {{title}}",

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { base64Encode, base64UrlEncode } from "../bytes";
-import { deviceFingerprint, formatPairingHash, parsePairingLink } from "../fingerprint";
+import { deviceFingerprint, formatPairingHash, pairingCode, parsePairingLink } from "../fingerprint";
 
 function key(fill: (index: number) => number, length = 32): Uint8Array {
   return Uint8Array.from({ length }, (_, index) => fill(index));
@@ -88,5 +88,80 @@ describe("parsePairingLink", () => {
     expect(source).toContain("const HEX_ID = /^[0-9a-f]{32}$/i;");
     expect(source).toContain("function randomToken(): string {\n  const bytes = new Uint8Array(32);");
     expect(source).toContain("const pairingId = `pair_${crypto.randomUUID().replace(/-/g, \"\")}`;");
+  });
+});
+
+describe("pairingCode (covers the signing key AND the RSA encryption key)", () => {
+  const SIGNING = key((index) => index + 1);
+  const N = base64UrlEncode(key((index) => (index * 7 + 3) & 255, 384));
+  const E = "AQAB";
+  const jwk = (extra: Record<string, unknown> = {}) => JSON.stringify({ kty: "RSA", n: N, e: E, ...extra });
+  const FORMAT = /^[0-9A-F]{4}(-[0-9A-F]{4}){3}$/;
+
+  // The documented layout, written out again with Node's own SHA-256: every
+  // field has a 2-byte big-endian length in front.
+  function expected(signing: Uint8Array, n: string, e: string): string {
+    const field = (bytes: Uint8Array) => Buffer.concat([Buffer.from([bytes.length >> 8, bytes.length & 255]), bytes]);
+    const text = (value: string) => field(Buffer.from(value, "utf8"));
+    const hash = createHash("sha256")
+      .update(Buffer.concat([text("sahelflow.pairing-code.v1"), field(signing), text("RSA"), text(n), text(e)]))
+      .digest("hex").slice(0, 16).toUpperCase();
+    return (hash.match(/.{4}/g) ?? []).join("-");
+  }
+
+  it("is deterministic, in the display format, and equals the documented SHA-256 layout", async () => {
+    const code = await pairingCode(SIGNING, jwk());
+    expect(code).toMatch(FORMAT);
+    expect(await pairingCode(SIGNING, jwk())).toBe(code);
+    expect(code).toBe(expected(SIGNING, N, E));
+  });
+
+  it("known answer (pinned so a later change is noticed)", async () => {
+    const n = base64UrlEncode(Uint8Array.from({ length: 128 }, (_, index) => (index * 5 + 11) & 255));
+    expect(await pairingCode(new Uint8Array(32), JSON.stringify({ kty: "RSA", n, e: "AQAB" }))).toBe("81E7-069D-4C73-C53E");
+  });
+
+  it("changes when the RSA modulus or exponent changes, or the signing key changes", async () => {
+    const base = await pairingCode(SIGNING, jwk());
+    const otherN = base64UrlEncode(key((index) => (index * 7 + 4) & 255, 384));
+    expect(await pairingCode(SIGNING, jwk({ n: otherN }))).not.toBe(base);
+    expect(await pairingCode(SIGNING, jwk({ e: "Aw" }))).not.toBe(base);
+    const flipped = SIGNING.slice();
+    flipped[0] = (flipped[0] ?? 0) ^ 1;
+    expect(await pairingCode(flipped, jwk())).not.toBe(base);
+  });
+
+  it("does not change for extra members, another member order, key_ops, whitespace, or an object instead of text", async () => {
+    const base = await pairingCode(SIGNING, jwk());
+    expect(await pairingCode(SIGNING, jwk({ key_ops: ["encrypt"], ext: true, alg: "RSA-OAEP-256", kid: "x" }))).toBe(base);
+    expect(await pairingCode(SIGNING, JSON.stringify({ e: E, n: N, kty: "RSA" }))).toBe(base);
+    expect(await pairingCode(SIGNING, `  { "kty" : "RSA",\n "n":"${N}", "e": "${E}" }\n`)).toBe(base);
+    expect(await pairingCode(SIGNING, { e: E, kty: "RSA", n: N, key_ops: ["encrypt"] } as never)).toBe(base);
+  });
+
+  it("takes the signing key as raw bytes or as base64", async () => {
+    expect(await pairingCode(base64Encode(SIGNING), jwk())).toBe(await pairingCode(SIGNING, jwk()));
+  });
+
+  it("gives null, never an exception, for a malformed key of either kind", async () => {
+    const badJwks: unknown[] = [
+      JSON.stringify({ kty: "RSA", e: E }), // no n
+      JSON.stringify({ kty: "RSA", n: N }), // no e
+      JSON.stringify({ kty: "RSA", n: N, e: 65537 }), // e not a string
+      JSON.stringify({ kty: "RSA", n: "not base64url!", e: E }),
+      JSON.stringify({ kty: "RSA", n: "", e: E }),
+      JSON.stringify({ kty: "EC", n: N, e: E }),
+      JSON.stringify({ n: N, e: E }),
+      JSON.stringify({ kty: "RSA", n: "A".repeat(5_000), e: E }), // too big
+      { kty: "RSA", n: "A".repeat(5_000), e: E },
+      { kty: "RSA", n: N },
+      "x".repeat(5_000), "garbage".repeat(800), "", "{", "null", "[]", "5", '"RSA"',
+      [], null, undefined, 42, true,
+    ];
+    for (const bad of badJwks) expect(await pairingCode(SIGNING, bad as never), JSON.stringify(bad)?.slice(0, 40)).toBeNull();
+    for (const length of [0, 1, 31, 33, 64]) expect(await pairingCode(new Uint8Array(length), jwk())).toBeNull();
+    for (const bad of [null, undefined, 5, {}, "", "not base64!", base64Encode(new Uint8Array(31)), base64Encode(new Uint8Array(33))]) {
+      expect(await pairingCode(bad as never, jwk())).toBeNull();
+    }
   });
 });

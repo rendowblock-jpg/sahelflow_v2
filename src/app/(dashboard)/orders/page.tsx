@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { OrdersDataTable } from "@/components/orders/orders-data-table";
+import { OrdersHeaderActions } from "@/components/orders/orders-header-actions";
 import { CreateParamDialog } from "@/components/shared/create-param-dialog";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
@@ -289,38 +290,44 @@ export default async function OrdersPage({
         description={t("orders.subtitle")}
         actions={
           pendingCount > 0 || canExport || canImport || canCreateOrder ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {pendingCount > 0 ? (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/orders/confirmation-queue">
-                    <CheckCircle2 className="me-1.5 size-4" aria-hidden="true" />
-                    {t("confirmationQueue.title")}
-                    <Badge variant="secondary" className="ms-1 px-1.5 py-0 text-xs">
-                      {pendingCount}
-                    </Badge>
-                  </Link>
-                </Button>
-              ) : null}
-              {canExport || canImport ? (
-                <ImportExportButtons
-                  exportRoute={canExport ? "/api/export/orders" : undefined}
-                  importRoute={canImport ? "/api/import/orders" : undefined}
-                  filterParams={["q", "wilaya", "from", "to", "status", "sort"]}
-                />
-              ) : null}
-              {canCreateOrder ? (
-                <CreateParamDialog
-                  kind="order"
-                  customers={customers}
-                  products={products}
-                />
-              ) : null}
-            </div>
+            <OrdersHeaderActions
+              queue={
+                pendingCount > 0 ? (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/orders/confirmation-queue">
+                      <CheckCircle2 className="me-1.5 size-4" aria-hidden="true" />
+                      {t("confirmationQueue.title")}
+                      <Badge variant="secondary" className="ms-1 px-1.5 py-0 text-xs">
+                        {pendingCount}
+                      </Badge>
+                    </Link>
+                  </Button>
+                ) : null
+              }
+              importExport={
+                canExport || canImport ? (
+                  <ImportExportButtons
+                    exportRoute={canExport ? "/api/export/orders" : undefined}
+                    importRoute={canImport ? "/api/import/orders" : undefined}
+                    filterParams={["q", "wilaya", "from", "to", "status", "sort"]}
+                  />
+                ) : null
+              }
+              primary={
+                canCreateOrder ? (
+                  <CreateParamDialog
+                    kind="order"
+                    customers={customers}
+                    products={products}
+                  />
+                ) : null
+              }
+            />
           ) : null
         }
       />
 
-      <div className="card-grid-4">
+      <div className="card-grid-4 card-grid-phone-2x2">
         <StatCard
           label={t("orders.activeOrders")}
           value={activeOrders}
@@ -328,6 +335,7 @@ export default async function OrdersPage({
           href={statusTabHref("all")}
           hrefLabel={t("orders.activeOrders")}
           selected={!statusFilter}
+          compactOnPhone
         />
         <StatCard
           label={t("orders.pendingLabel")}
@@ -336,6 +344,7 @@ export default async function OrdersPage({
           href={statusTabHref("pending")}
           hrefLabel={t("orders.pendingLabel")}
           selected={statusFilter === "pending"}
+          compactOnPhone
         />
         <StatCard
           label={t("orders.deliveredToday")}
@@ -344,6 +353,7 @@ export default async function OrdersPage({
           href={statusTabHref("delivered")}
           hrefLabel={t("orders.deliveredToday")}
           selected={statusFilter === "delivered"}
+          compactOnPhone
         />
         <StatCard
           label={t("orders.todayRevenue")}
@@ -351,6 +361,7 @@ export default async function OrdersPage({
           icon={<TrendingUp />}
           href="/analytics"
           hrefLabel={t("nav.analytics")}
+          compactOnPhone
         />
       </div>
 

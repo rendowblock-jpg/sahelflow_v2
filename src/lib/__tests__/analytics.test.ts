@@ -184,6 +184,48 @@ describe("analyticsService.buildTopProducts", () => {
     expect(a.orders).toBe(2);
   });
 
+  it("leaves cancelled and draft orders out of a product's value, units and order count (the same orders as Orders value)", () => {
+    const orders = [
+      makeOrder({
+        status: "delivered",
+        items: [{ productId: "p1", productName: "A", quantity: 2, total: 2000 }],
+      }),
+      makeOrder({
+        status: "cancelled",
+        items: [{ productId: "p1", productName: "A", quantity: 5, total: 5000 }],
+      }),
+      makeOrder({
+        status: "draft",
+        items: [{ productId: "p1", productName: "A", quantity: 1, total: 1000 }],
+      }),
+      makeOrder({
+        status: "cancelled",
+        items: [{ productId: "p9", productName: "Only cancelled", quantity: 9, total: 9000 }],
+      }),
+    ];
+    const top = analyticsService.buildTopProducts(orders, 5);
+    expect(top.map((product) => product.key)).toEqual(["p1"]);
+    expect(top[0]).toMatchObject({ revenue: 2000, units: 2, orders: 1 });
+  });
+
+  it("still counts returned, refused and pending orders (only cancelled and draft are left out, like Orders value)", () => {
+    const orders = ["pending", "confirmed", "shipped", "delivered", "returned", "refused"].map((status) =>
+      makeOrder({
+        status,
+        items: [{ productId: "p1", productName: "A", quantity: 1, total: 100 }],
+      }),
+    );
+    expect(analyticsService.buildTopProducts(orders, 5)[0]).toMatchObject({ revenue: 600, units: 6, orders: 6 });
+  });
+
+  it("an order list without a status keeps working (older callers)", () => {
+    const top = analyticsService.buildTopProducts(
+      [{ items: [{ productId: "p1", productName: "A", quantity: 1, total: 300 }] }],
+      5,
+    );
+    expect(top[0]).toMatchObject({ revenue: 300, units: 1, orders: 1 });
+  });
+
   it("limits to the requested count", () => {
     const orders = [
       makeOrder({

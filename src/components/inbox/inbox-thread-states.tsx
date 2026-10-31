@@ -10,9 +10,9 @@ export function InboxThreadLoading() {
   return (
     <div role="status" data-thread-state="loading" className="space-y-3 py-4">
       <span className="sr-only">{t("inbox.thread.state.loading")}</span>
-      <div aria-hidden="true" className="h-11 w-3/5 rounded-[10px] bg-muted" />
-      <div aria-hidden="true" className="ms-auto h-11 w-1/2 rounded-[10px] bg-muted" />
-      <div aria-hidden="true" className="h-11 w-2/5 rounded-[10px] bg-muted" />
+      <div aria-hidden="true" className="h-11 w-3/5 rounded-surface bg-muted" />
+      <div aria-hidden="true" className="ms-auto h-11 w-1/2 rounded-surface bg-muted" />
+      <div aria-hidden="true" className="h-11 w-2/5 rounded-surface bg-muted" />
     </div>
   );
 }
