@@ -5,7 +5,7 @@ import { renderEmpty } from "../../kit/empty-block";
 import { renderError } from "../../kit/error-block";
 import { renderSkeleton } from "../../kit/skeleton";
 import { renderStateStrip } from "../../kit/state-strip";
-import { esc } from "../view";
+import { esc, numText } from "../view";
 import { FILTERS, ageLabel, filterOrders, freshnessOf, isPending, listChip, statusLabel, type OrdersModel } from "./model";
 import { renderOrderCommand } from "./outcome";
 
@@ -22,8 +22,8 @@ export function renderFreshness(m: OrdersModel): string {
 
 function renderRow(o: OrderProjectionRow, m: OrdersModel): string {
   const L = m.locale; const id = esc(o.id); const first = o.items[0];
-  const extra = Math.max(0, o.items.length - 1) + o.moreCount;
-  const what = first ? `<span class="what"><bdi>${esc(first.name)}</bdi> <span class="num" dir="ltr">×${first.qty}</span>${extra > 0 ? ` <span class="more num" dir="ltr">+${extra}</span>` : ""}</span>` : "";
+  const extra = Math.max(0, o.items.length - 1) + (typeof o.moreCount === "number" && Number.isFinite(o.moreCount) ? o.moreCount : 0);
+  const what = first ? `<span class="what"><bdi>${esc(first.name)}</bdi> <span class="num" dir="ltr">×${numText(first.qty)}</span>${extra > 0 ? ` <span class="more num" dir="ltr">+${extra}</span>` : ""}</span>` : "";
   // A total the role may not see is absent from the row: nothing is drawn (the detail says "Hidden for your role").
   const total = o.totalPrice === undefined ? "" : `<span class="total num" dir="auto">${esc(formatDzd(o.totalPrice, L))}</span>`;
   const rec = listChip(m, o);

@@ -4,7 +4,7 @@ import { t } from "../../i18n";
 import { renderChip } from "../../kit/command-chip";
 import type { OutboxRecord } from "../../outbox/state";
 import { esc } from "../view";
-import { REPLY_MAX, canReply, openReplyFor, replyChipFor, type InboxModel } from "./model";
+import { REPLY_MAX, canReply, isHeld, openReplyFor, replyChipFor, type InboxModel } from "./model";
 
 const btn = (act: string, label: string, id: string, cls = "btn-ghost"): string => `<button type="button" class="btn ${cls}" data-act="${act}" data-id="${esc(id)}" data-key="act:${act}">${esc(label)}</button>`;
 
@@ -34,6 +34,8 @@ export function renderReplyArea(m: InboxModel, c: ConversationRow): string {
   const chip = rec ? renderReplyCommand(rec, c, m) : "";
   const notice = m.notice ? `<p class="note alert" role="alert">${esc(t(L, m.notice === "busy" ? "inbox.reply.busy" : "inbox.reply.failed"))}</p>` : "";
   const hint = readOnly ? `<p class="hint" role="status">${esc(t(L, "inbox.reply.readonly"))}</p>` : !m.online ? `<p class="hint" role="status">${esc(t(L, "inbox.reply.offline"))}</p>` : "";
+  // A message of this chat waits for the owner's OK on the PC: the composer stays usable, a new reply is queued behind it (the held one is display-only).
+  const heldHint = isHeld(c) ? `<p class="hint" role="status" data-held-reply>${esc(t(L, "inbox.reply.behindheld"))}</p>` : "";
   const form = `<form class="composer" data-form="composer" data-mode="reply" data-id="${id}"><label for="cmp-${id}">${esc(t(L, "cmd.composer.reply"))}</label><textarea id="cmp-${id}" name="text" rows="3" maxlength="${REPLY_MAX}" dir="auto" data-key="cmp:${id}"${dis}>${esc(m.draft)}</textarea><button type="submit" class="btn btn-primary" data-key="act:send"${dis}>${esc(t(L, "cmd.send"))}</button></form>`;
-  return `<div class="reply" data-reply>${chip}${notice}${hint}${form}</div>`;
+  return `<div class="reply" data-reply>${chip}${notice}${hint}${heldHint}${form}</div>`;
 }

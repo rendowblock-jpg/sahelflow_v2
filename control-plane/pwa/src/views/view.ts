@@ -18,11 +18,17 @@ export type View = Readonly<{
   pcoff?: boolean;
   // The PC removed this phone: everything local was deleted.
   revoked?: boolean;
+  // Paired and the command stack exists: Orders and Inbox are reachable and Settings is the devices screen.
+  paired?: boolean;
 }>;
 type Params = Readonly<Record<string, string | number>>;
 type Tr = (key: string, params?: Params) => string;
 
-export const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+// The one HTML escaper of the phone. It also removes the explicit directional formatting characters (U+202A..U+202E, U+2066..U+2069):
+// a customer name with U+202E would reorder the text drawn after it. U+200E, U+200F and U+061C (marks that real Arabic text uses) stay.
+export const esc = (s: string): string => s.replace(/[\u202A-\u202E\u2066-\u2069]/g, "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+// A number that is drawn into markup. A value of any other type (a string that arrived where a count belongs) becomes "", never markup.
+export const numText = (n: unknown): string => (typeof n === "number" && Number.isFinite(n) ? String(n) : "");
 const STEPS: readonly PairStep[] = ["signing", "encryption", "send"];
 const FAILURE_KEY: Readonly<Record<PairFailure, string>> = {
   invalid_link: "pair.error.invalid", unsupported: "pair.error.unsupported", keygen_failed: "pair.error.keygen", storage_failed: "pair.error.storage",
@@ -119,12 +125,28 @@ function lock(v: View, tr: Tr): string {
   return `<h1>${title}</h1><form class="sheet" data-form="lock" novalidate><label for="pin">${label}</label><input id="pin" name="pin" class="pin num" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" dir="ltr" required${msg ? ' aria-describedby="pin-msg"' : ""}>${msg ? `<p id="pin-msg" class="${n?.kind === "checking" ? "hint" : "err"}" role="alert">${msg}</p>` : ""}<button type="submit" class="btn btn-primary"${wait ? " disabled" : ""}>${v.lockMode === "enter" ? tr("lock.unlock") : tr("lock.save")}</button></form>`;
 }
 
+// The screens the mount (app/screen-mount.ts) draws into <main>: renderApp leaves their body empty.
+const LAZY: readonly ScreenId[] = ["orders", "order", "inbox", "conversation", "devices", "install"];
+const NEEDS_PAIRING: readonly ScreenId[] = ["orders", "order", "inbox", "conversation"];
+const TAB_OF: Partial<Record<ScreenId, TabId>> = { order: "orders", conversation: "inbox", devices: "settings", install: "settings" };
+type TabId = "today" | "pair" | "orders" | "inbox" | "settings";
+export const isLazyScreen = (id: ScreenId): boolean => LAZY.includes(id);
+// What is really drawn: a paired phone's Settings is the devices screen (the revoked state keeps the plain notice); an unpaired phone cannot open Orders or Inbox.
+export function effectiveScreen(v: View): ScreenId {
+  if (v.screen === "settings" && v.paired === true && v.revoked !== true) return "devices";
+  if (NEEDS_PAIRING.includes(v.screen) && v.paired !== true) return "today";
+  return v.screen;
+}
+
 export function renderApp(v: View): string {
   const tr: Tr = (key, params) => esc(t(v.locale, key, params));
   if (v.screen === "lock") return `<main id="main" class="lock" tabindex="-1">${lock(v, tr)}</main>`;
-  const body = v.screen === "pair" ? pair(v, tr) : v.screen === "today" ? today(v.state === "keygen" || v.state === "waiting" ? { ...v, state: "loading" } : v, tr) : v.screen === "settings" ? settings(v, tr) : welcome(v, tr);
+  const id = effectiveScreen(v);
+  const body = isLazyScreen(id) ? "" : id === "pair" ? pair(v, tr) : id === "today" ? today(v.state === "keygen" || v.state === "waiting" ? { ...v, state: "loading" } : v, tr) : id === "settings" ? settings(v, tr) : welcome(v, tr);
   const banners = `${v.online ? "" : `<p class="banner" role="status">${tr("common.offline")}</p>`}${v.updateReady ? `<div class="banner" role="status"><span>${tr("common.update.ready")}</span>${button("update", tr("common.update.apply"), "small")}</div>` : ""}`;
-  const tab = (id: "today" | "pair" | "settings"): string => `<a class="tab" href="/?screen=${id}" data-nav="${id}"${v.screen === id ? ' aria-current="page"' : ""}>${tr(`nav.${id}`)}</a>`;
-  return `<header class="top"><a class="brand" href="/?screen=welcome" data-nav="welcome">${tr("app.name")}</a></header>${banners}<main id="main" tabindex="-1">${body}</main><nav class="tabs" aria-label="${tr("nav.label")}">${tab("today")}${tab("pair")}${tab("settings")}</nav>`;
+  const on: TabId | ScreenId = TAB_OF[id] ?? id;
+  const tab = (tid: TabId): string => `<a class="tab" href="/?screen=${tid}" data-nav="${tid}"${on === tid ? ' aria-current="page"' : ""}>${tr(`nav.${tid}`)}</a>`;
+  const tabs: readonly TabId[] = v.paired === true ? ["today", "orders", "inbox", "settings"] : ["today", "pair", "settings"];
+  return `<header class="top"><a class="brand" href="/?screen=welcome" data-nav="welcome">${tr("app.name")}</a></header>${banners}<main id="main" tabindex="-1">${body}</main><nav class="tabs" aria-label="${tr("nav.label")}">${tabs.map(tab).join("")}</nav>`;
 }
 export { dirOf };

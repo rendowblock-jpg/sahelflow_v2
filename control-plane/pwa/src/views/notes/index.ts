@@ -5,7 +5,7 @@ import { renderChip } from "../../kit/command-chip";
 import type { EnqueueInput, EnqueueResult } from "../../outbox/outbox";
 import type { OutboxRecord } from "../../outbox/state";
 import type { Db } from "../../storage/idb";
-import { esc } from "../view";
+import { esc, numText } from "../view";
 
 export const NOTE_MAX = 4000;
 export type NoteEntity = "order" | "conversation";
@@ -25,7 +25,7 @@ export function renderNotes(c: Readonly<NotesCtx>): string {
   const saved = !c.online && mine.some((r) => r.state === "queued") ? `<p class="hint" role="status">${esc(t(L, "notes.offline"))}</p>` : "";
   const err = c.error ? `<p class="note alert" role="alert">${esc(t(L, `notes.error.${c.error}`, { max: NOTE_MAX }))}</p>` : "";
   const form = c.readOnly ? "" : `<form class="composer" data-form="composer" data-mode="note" data-id="${id}"><label for="note-${id}">${esc(t(L, "cmd.composer.note"))}</label><textarea id="note-${id}" name="text" rows="3" maxlength="${NOTE_MAX}" aria-describedby="note-c-${id}">${esc(c.draft)}</textarea><p class="count num" id="note-c-${id}" data-count dir="ltr">${esc(t(L, "notes.count", { n: c.draft.length, max: NOTE_MAX }))}</p>${err}<button type="submit" class="btn btn-primary">${esc(t(L, "cmd.send"))}</button></form>`;
-  return `<section class="notes" data-entity="${c.entityType}" data-id="${id}" data-version="${c.noteVersion}" aria-labelledby="notes-h-${id}"><h2 id="notes-h-${id}">${esc(t(L, "notes.title"))}</h2>${list}${saved}${form}</section>`;
+  return `<section class="notes" data-entity="${esc(c.entityType)}" data-id="${id}" data-version="${numText(c.noteVersion)}" aria-labelledby="notes-h-${id}"><h2 id="notes-h-${id}">${esc(t(L, "notes.title"))}</h2>${list}${saved}${form}</section>`;
 }
 
 // ---- drafts: a typed note survives a reload until it is sent (24 h at most) ----------------------------

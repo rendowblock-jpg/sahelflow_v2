@@ -1,7 +1,7 @@
 // W3-F3 step 3: the polling budget. Fake clock and fake timers; nothing waits for real time.
 import { describe, expect, it } from "vitest";
 import { createSync, type SyncDeps } from "../src/sync/engine";
-import { DAILY_CAP, dayKey, intervalFor, kindsFor, nextDelay, spend, statusDelay, type Budget } from "../src/sync/schedule";
+import { DAILY_CAP, dayKey, intervalFor, kindsFor, nextDelay, RECHECK_MS, spend, statusDelay, type Budget } from "../src/sync/schedule";
 import type { RelayPoll } from "../src/today/relay-source";
 import type { ScreenId } from "../src/views/view";
 
@@ -32,11 +32,14 @@ const times = (w: { calls: { at: number }[] }): number[] => w.calls.map((c) => c
 describe("schedule", () => {
   it("intervals: Orders and Inbox 30 s, Settings 60 s, nothing for the pairing screens", () => {
     expect(["orders", "order", "inbox", "conversation"].map((s) => intervalFor(s as ScreenId))).toEqual([30_000, 30_000, 30_000, 30_000]);
-    expect(intervalFor("settings")).toBe(60_000); expect(intervalFor("welcome")).toBeNull(); expect(intervalFor("pair")).toBeNull(); expect(intervalFor("lock")).toBeNull();
+    expect(intervalFor("settings")).toBe(60_000); expect(intervalFor("welcome")).toBeNull(); expect(intervalFor("pair")).toBeNull();
+    expect(intervalFor("lock")).toBe(60_000); // W198: a locked phone still checks, once a minute, whether the PC removed it
+    expect(RECHECK_MS).toBe(60_000);
   });
   it("kinds: only what the visible screen shows", () => {
     expect(kindsFor("orders")).toEqual(["orders"]); expect(kindsFor("order")).toEqual(["orders"]); expect(kindsFor("inbox")).toEqual(["conversations"]);
     expect(kindsFor("today")).toEqual(["dashboard"]); expect(kindsFor("welcome")).toEqual([]);
+    expect(kindsFor("lock")).toEqual(["dashboard"]); expect(kindsFor("pair")).toEqual([]); // the lock screen asks the same question Settings asks, nothing else
   });
   it("delay doubles with each miss up to 5 minutes; Retry-After can only lengthen it", () => {
     expect([0, 1, 2, 3, 4, 9].map((f) => nextDelay(30_000, f))).toEqual([30_000, 60_000, 120_000, 240_000, 300_000, 300_000]);
@@ -100,5 +103,59 @@ describe("sync engine", () => {
     const w = world({}, [{ kind: "revoked" }]);
     w.sync.start(); await settle(); await w.advance(600_000);
     expect(w.calls).toHaveLength(1); expect(w.seen).toEqual(["revoked"]);
+  });
+  it("W198 A the chain survives a tick on a screen with no interval: it re-checks every 60 s, fetches nothing, and polls again once the screen is back", async () => {
+    const w = world({ screen: "settings" }, [stored(1), stored(2)]);
+    w.sync.start(false); w.st.screen = "welcome";
+    await w.advance(60_000); expect(w.calls).toHaveLength(0); // the tick on a screen with no interval fetched nothing ...
+    w.st.screen = "settings"; await w.advance(59_000); expect(w.calls).toHaveLength(0);
+    await w.advance(1_000); expect(times(w)).toEqual([120]); expect(w.calls[0]?.kind).toBe("dashboard"); // ... and the re-check exactly 60 s later polled
+  });
+  it("W198 A a screen change by set() is picked up by onScreen() at once, and stop() ends the re-check too", async () => {
+    const w = world({ screen: "pair" }, [stored(1)]);
+    w.sync.start(false); w.st.screen = "orders"; w.sync.onScreen(); await settle();
+    expect(w.calls.map((c) => c.kind)).toEqual(["orders"]);
+    const s = world({ screen: "settings" }, [stored(1)]);
+    s.sync.start(false); s.st.screen = "pair"; await s.advance(60_000); s.sync.stop(); s.st.screen = "settings"; await s.advance(600_000);
+    expect(s.calls).toHaveLength(0);
+  });
+  it("W198 A a manual Refresh on a screen with no interval does not move the running timer", async () => {
+    const w = world({ screen: "settings" }, [stored(1)]);
+    w.sync.start(false); await w.advance(30_000); w.st.screen = "welcome"; await w.sync.refresh(); w.st.screen = "settings";
+    await w.advance(29_000); expect(w.calls).toHaveLength(0);
+    await w.advance(1_000); expect(times(w)).toEqual([60]); // the timer armed at 0 still fires at 60, not 30 s after the Refresh
+  });
+  it("W198b start(false) on a screen with no interval arms the 60 s re-check (a phone that starts on welcome / pair / lock polls once the screen is a polling one); on Orders it still arms 30 s", async () => {
+    const w = world({ screen: "welcome" }, [stored(1), stored(2)]);
+    w.sync.start(false); await w.advance(60_000); expect(w.calls).toHaveLength(0); // the first tick sees welcome: no request, chain alive
+    w.st.screen = "settings"; await w.advance(59_000); expect(w.calls).toHaveLength(0);
+    await w.advance(1_000); expect(times(w)).toEqual([120]); expect(w.calls[0]?.kind).toBe("dashboard");
+    const o = world({ screen: "orders" }, [stored(1)]);
+    o.sync.start(false); await o.advance(29_000); expect(o.calls).toHaveLength(0);
+    await o.advance(1_000); expect(times(o)).toEqual([30]); // the interval of the screen, not the plain re-check
+  });
+  it("W198b start(false) after stop() or before start(): nothing is armed on a stopped engine", async () => {
+    const w = world({ screen: "welcome" }, [stored(1)]);
+    await w.advance(300_000); expect(w.calls).toHaveLength(0); // never started: no timer at all
+    w.sync.start(false); w.sync.stop(); w.st.screen = "settings"; await w.advance(300_000); expect(w.calls).toHaveLength(0);
+  });
+  it("W198 B a locked phone checks too: one 'dashboard' fetch per cycle every 60 s, counted against the daily cap, nothing while hidden", async () => {
+    const w = world({ screen: "lock" }, [stored(1), stored(2), stored(3), stored(4)]);
+    w.sync.start(); await settle(); await w.advance(125_000);
+    expect(times(w)).toEqual([0, 60, 120]); expect(w.calls.every((c) => c.kind === "dashboard")).toBe(true);
+    expect(w.st.budget).toEqual({ day: dayKey(T0), count: 3 });
+    const c = world({ screen: "lock", budget: { day: dayKey(T0), count: DAILY_CAP } }); c.sync.start(); await settle(); await c.advance(300_000);
+    expect(c.calls).toHaveLength(0);
+    const h = world({ screen: "lock", visible: false }); h.sync.start(); await settle(); await h.advance(300_000);
+    expect(h.calls).toHaveLength(0);
+  });
+  it("W198 B a revoked answer on the lock screen stops the engine and reaches onPoll; an updated answer leaves the screen and the chain alone", async () => {
+    const w = world({ screen: "lock" }, [{ kind: "revoked" }]);
+    w.sync.start(); await settle(); await w.advance(600_000);
+    expect(w.calls).toHaveLength(1); expect(w.seen).toEqual(["revoked"]);
+    const updated = { kind: "updated", snapshot: {} } as unknown as RelayPoll;
+    const u = world({ screen: "lock" }, [updated, updated]);
+    u.sync.start(); await settle(); await u.advance(65_000);
+    expect(u.seen).toEqual(["updated", "updated"]); expect(u.st.screen).toBe("lock"); expect(times(u)).toEqual([0, 60]);
   });
 });
