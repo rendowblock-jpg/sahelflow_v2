@@ -14,6 +14,8 @@ import { createVault, purgeOld } from "../storage/sealed";
 import { wipeAll } from "../storage/wipe";
 import { createSync } from "../sync/engine";
 import { reactToPoll, type PollReaction } from "../sync/revoke";
+import type { ScreenModule } from "../kit/screen-contract";
+import { createDirectPoll } from "./direct-poll";
 import type { Budget } from "../sync/schedule";
 import type { UpdateController } from "../sw/update";
 import { createRelayClient } from "../today/relay-source";
@@ -34,7 +36,7 @@ type InstallEvent = Event & { prompt(): Promise<void> };
 type LockRow = Readonly<{ pin: PinRecord; failures: number; waitUntil: number }>;
 export type AppOptions = Readonly<{ source?: ProjectionSource; transport?: PairingTransport }>;
 
-const SCREENS: readonly ScreenId[] = ["welcome", "pair", "today", "settings", "lock"];
+const SCREENS: readonly ScreenId[] = ["welcome", "pair", "today", "settings", "lock", "install"];
 const store = {
   get: (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k: string, v: string): void => { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
@@ -70,6 +72,10 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   let stack: Awaited<ReturnType<typeof createCommandStack>> = null; let ordersHost: OrdersHostHandle | null = null;
   let inboxMount: ReturnType<typeof createInboxMount> | null = null; // the chats: loaded on the first visit, fed ONLY from the vault
   const vault = createVault();
+  // W3b F6a: every direct poll (inbox, orders) acts on a revoked answer at once (one tested function, direct-poll.ts).
+  const directPoll = createDirectPoll({ poll: (k) => relay.poll(k), wipe, onRevoked: showRevoked });
+  // The install screen: its chunk loads the first time the screen is shown (own file, own tests).
+  let installScreen: ScreenModule | null = null; let unbindInstall: (() => void) | null = null; let installLoading: Promise<void> | null = null;
   // Lock / hidden >= 5 min / unlock / wipe on the vault: one tested module. `wake`: the orders screen redraws from what is left and reloads if it was emptied.
   const vaultWiring = createVaultWiring({
     vault, key: ORDERS_VAULT_KEY,
@@ -93,6 +99,12 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     document.documentElement.dataset.theme = v.theme === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : v.theme;
     // "Your PC is off" on every screen that shows shop data (Today and Orders draw their own strip; this one is added once, only when none is there).
     root.innerHTML = withShellStrip(renderApp(v), { screen: v.screen, pcoff: v.pcoff === true, asOf: v.projection?.generatedAt ?? null, locale: v.locale });
+    unbindInstall?.(); unbindInstall = null;
+    if (v.screen === "install") {
+      const main = root.querySelector<HTMLElement>("#main"); const mod = installScreen;
+      if (main && mod) { const ctx = { view: v, go: (x: ScreenId) => go(x) }; main.innerHTML = mod.render(ctx); unbindInstall = mod.bind(main, ctx); }
+      else if (main) { main.innerHTML = ""; installLoading ??= import("../views/install/screen").then((m) => { installScreen = m.screen; paint(); }, () => { installLoading = null; }); }
+    }
     if (v.screen === "lock") root.querySelector<HTMLInputElement>("#pin")?.focus();
   };
   const set = (patch: Partial<View>, focusMain = false): void => {
@@ -221,7 +233,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     const outbox = flushingOutbox(s);
     const h = createOrdersHost({
       now: Date.now, locale: () => view.locale, online: () => navigator.onLine, pcOff: () => view.pcoff === true,
-      fetchOrders: async () => { await relay.poll("orders"); await s.refresh(); }, openOrders: s.openOrders,
+      fetchOrders: async () => { await directPoll("orders"); await s.refresh(); }, openOrders: s.openOrders,
       vault, outbox, drafts: s.drafts, authorityExpiresAt: s.authorityExpiresAt, go: (x) => go(x),
     });
     ordersHost = h; mod.attachOrdersHost(h); await h.reload();
@@ -237,7 +249,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
         outbox: flushingOutbox(s), drafts: s.drafts, authorityExpiresAt: s.authorityExpiresAt, go: (x) => go(x),
       }),
       openConversations: s.openConversations,
-      poll: async () => { await relay.poll("conversations"); await s.refresh(); },
+      poll: async () => { await directPoll("conversations"); await s.refresh(); },
       subscribeAll: () => () => undefined,
     });
     await inboxMount.visit(screen);

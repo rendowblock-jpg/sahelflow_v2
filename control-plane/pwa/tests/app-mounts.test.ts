@@ -42,7 +42,9 @@ describe("app.ts mounts the inbox", () => {
     expect(count(/createInboxHost\(/g)).toBe(1);
     expect(count(/import\("\.\.\/views\/inbox\/screen"\)/g)).toBe(1);
     expect(app).toContain("openConversations: s.openConversations");
-    expect(app).toContain('poll: async () => { await relay.poll("conversations"); await s.refresh(); }');
+    // Every direct poll goes through directPoll (a revoked answer wipes at once), so the inbox poll is no longer a bare relay.poll.
+    expect(app).toContain('poll: async () => { await directPoll("conversations"); await s.refresh(); }');
+    expect(app).not.toContain('await relay.poll("conversations")');
     expect(count(/authorityExpiresAt: s\.authorityExpiresAt/g)).toBe(2);
     expect(app).toContain("readConversations: p.read, reload: p.reload, subscribeAll: p.subscribe");
   });

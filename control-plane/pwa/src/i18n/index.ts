@@ -13,6 +13,9 @@ import { settingsEn } from "./settings.en";
 import { pushAr } from "./push.ar";
 import { pushFr } from "./push.fr";
 import { pushEn } from "./push.en";
+import { installAr } from "./install.ar";
+import { installFr } from "./install.fr";
+import { installEn } from "./install.en";
 import { ar } from "./ar";
 import { en } from "./en";
 import { fr } from "./fr";
@@ -25,9 +28,9 @@ export const DEFAULT_LOCALE: Locale = "ar";
 const merge = (...parts: readonly Catalog[]): Catalog => parts.reduce<Catalog>((all, part) => ({ ...all, ...part }), {});
 // The base catalogs plus the shell keys and the per-screen catalogs (empty until their tracks fill them). The parity test runs over the merge.
 export const catalogs: Readonly<Record<Locale, Catalog>> = {
-  ar: merge(ar, shellAr, ordersAr, inboxAr, settingsAr, pushAr),
-  fr: merge(fr, shellFr, ordersFr, inboxFr, settingsFr, pushFr),
-  en: merge(en, shellEn, ordersEn, inboxEn, settingsEn, pushEn),
+  ar: merge(ar, shellAr, ordersAr, inboxAr, settingsAr, pushAr, installAr),
+  fr: merge(fr, shellFr, ordersFr, inboxFr, settingsFr, pushFr, installFr),
+  en: merge(en, shellEn, ordersEn, inboxEn, settingsEn, pushEn, installEn),
 };
 
 const NBSP = "\u00A0";
