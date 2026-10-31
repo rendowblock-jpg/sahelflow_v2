@@ -35,9 +35,9 @@ export type PublishPhase =
   | Readonly<{ phase: "saving" }>
   | Readonly<{ phase: "publishing" }>
   | Readonly<{ phase: "published"; text: string }>
-  | Readonly<{ phase: "failed"; text: string }>;
+  | Readonly<{ phase: "failed"; text: string; retry?: boolean }>;
 
-export type PublishLine = Readonly<{ text: string; role: "status" | "alert" }> | null;
+export type PublishLine = Readonly<{ text: string; role: "status" | "alert"; retry?: boolean }> | null;
 
 /** The line beside the Publish button: polite while working and on success, an alert on failure. */
 export function publishStatusView(
@@ -54,8 +54,18 @@ export function publishStatusView(
     case "published":
       return { text: state.text, role: "status" };
     case "failed":
-      return { text: state.text, role: "alert" };
+      return state.retry ? { text: state.text, role: "alert", retry: true } : { text: state.text, role: "alert" };
   }
+}
+
+/** The success line, with the photo note after it when some photos stayed on this PC. */
+export function withPhotoNote(text: string, note: string | null): string {
+  return note ? `${text} ${note}` : text;
+}
+
+/** Only a busy photo service is worth an immediate retry; every other photo failure asks the seller to change something first. */
+export function photoFailureRetryable(code: string): boolean {
+  return code === "HOSTING_BUSY";
 }
 
 /**
