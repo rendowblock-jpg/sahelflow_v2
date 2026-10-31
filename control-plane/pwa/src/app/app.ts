@@ -125,15 +125,18 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     sync.stop();
     set({ screen: "settings", state: "empty", revoked: true, paired: false, removed: false, hasLock: false, projection: null, pcoff: false, removeError: reaction.wiped ? null : reaction.failed.join(", ") });
   }
+  // The watch ALARM 1, for EVERY screen: the poll answer is acted on (a phone the PC removed wipes itself before anything is read or drawn),
+  // and any answer but "not_paired" starts the background polling chain. True = the phone was wiped. Called by loadToday (Today) and by the startup (every other screen).
+  async function watchRelay(): Promise<boolean> {
+    const poll = await relay.poll().catch(() => null);
+    const reaction = poll ? await reactToPoll(poll, wipe) : null;
+    if (reaction?.kind === "revoked") { showRevoked(reaction); return true; }
+    const pcoff = reaction?.kind === "pcoff"; if ((view.pcoff === true) !== pcoff) set({ pcoff }); // no repaint when nothing changed (a PIN being typed stays)
+    if (poll && poll.kind !== "not_paired") sync.start(false);
+    return false;
+  }
   async function loadToday(): Promise<void> {
-    if (!options.source) {
-      // ALARM 1: the poll answer is acted on. A phone the PC removed wipes itself before anything is read or drawn.
-      const poll = await relay.poll().catch(() => null);
-      const reaction = poll ? await reactToPoll(poll, wipe) : null;
-      if (reaction?.kind === "revoked") return showRevoked(reaction);
-      set({ pcoff: reaction?.kind === "pcoff" });
-      if (poll && poll.kind !== "not_paired") sync.start(false);
-    }
+    if (!options.source && (await watchRelay())) return;
     const r = await source.load().catch(() => null);
     if (!r) return set({ projection: null, state: "error" });
     set(r.ok ? { projection: r.projection as Projection, state: "ready" } : { projection: null, state: r.reason === "unreadable" ? "error" : "empty" });
@@ -352,5 +355,6 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   if (link.kind === "invalid") set({ screen: "pair", state: "error", failure: "invalid_link" });
   else if (link.kind === "link") void pair();
   else if (view.screen === "today") void loadToday();
+  else if (link.kind === "none" && !options.source) void watchRelay();
   return { attachUpdates(c) { updates = c; c.subscribe((s) => set({ updateReady: s === "waiting" })); if (c.state() === "waiting") set({ updateReady: true }); } };
 }

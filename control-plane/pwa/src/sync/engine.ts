@@ -62,7 +62,7 @@ export function createSync(d: SyncDeps) {
     start(immediate = true): void {
       stopped = false; failures = 0;
       if (immediate) { clearTimer(); void cycle(false); return; }
-      const base = intervalFor(d.screen()); if (base !== null) arm(base);
+      arm(intervalFor(d.screen()) ?? RECHECK_MS); // a screen with no interval still gets the plain re-check, so the chain is alive when the screen changes
     },
     stop, onVisible: now, onOnline: now, onScreen: now,
     onHidden(): void { clearTimer(); },
