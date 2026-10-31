@@ -262,4 +262,36 @@ describe("desktop key proof as one string (what travels through the relay)", () 
       reason: "malformed",
     });
   });
+  it("keeps the exact limits the relay enforces (512 total, 500-char signature, 80-char context)", () => {
+    const ctx80 = `c${"x".repeat(79)}`;
+    // 431 + "." + 80 = 512 passes, one more character does not
+    expect(parseDesktopKeyProof(`${"A".repeat(431)}.${ctx80}`)).not.toBeNull();
+    expect(parseDesktopKeyProof(`${"A".repeat(432)}.${ctx80}`)).toBeNull();
+    // the signature part alone: 500 passes, 501 does not (total stays far below 512)
+    expect(parseDesktopKeyProof(`${"A".repeat(500)}.ctx`)).not.toBeNull();
+    expect(parseDesktopKeyProof(`${"A".repeat(501)}.ctx`)).toBeNull();
+    // the context part alone: 80 passes, 81 does not
+    expect(parseDesktopKeyProof(`${"A".repeat(20)}.${ctx80}`)).not.toBeNull();
+    expect(parseDesktopKeyProof(`${"A".repeat(20)}.${ctx80}x`)).toBeNull();
+  });
+
+  it("encode refuses a value that is not a string even when its text would pass the format", () => {
+    expect(encodeDesktopKeyProof(1234567890123456 as unknown, "sahelflow.pairing.rsa-key.v1")).toBeNull();
+    expect(encodeDesktopKeyProof("A".repeat(20), 7 as unknown)).toBeNull();
+  });
+
+  it("a hostile object that throws while it is read ends as unavailable, never as an exception", async () => {
+    const hostile = {
+      get desktopKeyProof(): string {
+        throw new Error("boom");
+      },
+      rsaPublicJwk: "x",
+      desktopSigningPublicKey: "x",
+      pinnedFingerprint: "x",
+    };
+    expect(await verifyDesktopKeyProof(hostile as unknown as Parameters<typeof verifyDesktopKeyProof>[0])).toEqual({
+      ok: false,
+      reason: "unavailable",
+    });
+  });
 });

@@ -991,7 +991,9 @@ async function getProjection(request: Request, environment: ConnectedWorkerEnvir
   const deviceId = url.searchParams.get("deviceId");
   const shopId = url.searchParams.get("shopId");
   const type = url.searchParams.get("type");
-  if (!validIdentity(workspaceId) || !validIdentity(deviceId) || !validIdentity(shopId) || !type || !/^[a-z0-9._-]{2,95}$/.test(type)) {
+  // shopId is OPTIONAL: a freshly paired phone does not know it (the exchange reply carries none). Absent = "the
+  // device's own live projection"; present but malformed is still a 400.
+  if (!validIdentity(workspaceId) || !validIdentity(deviceId) || (shopId !== null && !validIdentity(shopId)) || !type || !/^[a-z0-9._-]{2,95}$/.test(type)) {
     return json({ error: "invalid_request" }, 400);
   }
   const sinceRaw = url.searchParams.get("sinceSequence");
@@ -1001,11 +1003,27 @@ async function getProjection(request: Request, environment: ConnectedWorkerEnvir
   if (!device) return json({ error: "unauthorized" }, 401);
   const limited = await hitRate(environment, "projection_get", `${workspaceId}:${deviceId}`);
   if (limited) return limited;
-  const row = await environment.DB.prepare(
-    `SELECT envelope_json, expires_at, sequence FROM connected_projection
-      WHERE workspace_id = ?1 AND shop_id = ?2 AND device_id = ?3 AND member_id = ?4 AND projection_type = ?5`,
-  ).bind(workspaceId, shopId, deviceId, device.member_id, type).first<{ envelope_json: string; expires_at: string; sequence: number }>();
-  if (!row || Date.parse(row.expires_at) <= Date.now()) return json({ error: "projection_unavailable" }, 404);
+  type ProjectionRow = { shop_id: string; envelope_json: string; expires_at: string; sequence: number };
+  let row: ProjectionRow | null;
+  if (shopId !== null) {
+    row = await environment.DB.prepare(
+      `SELECT shop_id, envelope_json, expires_at, sequence FROM connected_projection
+        WHERE workspace_id = ?1 AND shop_id = ?2 AND device_id = ?3 AND member_id = ?4 AND projection_type = ?5`,
+    ).bind(workspaceId, shopId, deviceId, device.member_id, type).first<ProjectionRow>();
+    if (row && Date.parse(row.expires_at) <= Date.now()) row = null;
+  } else {
+    // Scoped to THIS device and member, like the query above. Zero live shops = not approved yet (404); one = serve it;
+    // more = the phone must choose (409 with the ids, which are the device's own).
+    const found = await environment.DB.prepare(
+      `SELECT shop_id, envelope_json, expires_at, sequence FROM connected_projection
+        WHERE workspace_id = ?1 AND device_id = ?2 AND member_id = ?3 AND projection_type = ?4
+        ORDER BY shop_id ASC LIMIT 20`,
+    ).bind(workspaceId, deviceId, device.member_id, type).all<ProjectionRow>();
+    const live = (found.results ?? []).filter((candidate) => Date.parse(candidate.expires_at) > Date.now());
+    if (live.length > 1) return json({ error: "shop_required", shops: live.map((candidate) => candidate.shop_id) }, 409);
+    row = live[0] ?? null;
+  }
+  if (!row) return json({ error: "projection_unavailable" }, 404);
   // Weak ETag from (device, kind, sequence): a newer sequence is the only way the body changes.
   const etag = `W/"${deviceId}.${type}.${row.sequence}"`;
   const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", ETag: etag };
