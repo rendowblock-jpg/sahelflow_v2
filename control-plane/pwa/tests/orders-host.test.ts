@@ -6,19 +6,23 @@ import { createDraftStore } from "../src/views/notes";
 import { createOrdersController } from "../src/views/orders/controller";
 import { NOW, fakeOutbox, memDb, proj, row } from "./orders-fixtures";
 
-function setup(o: { opened?: OpenedOrders | null; online?: boolean; fetchThrows?: boolean } = {}) {
+function setup(o: { opened?: OpenedOrders | null; online?: boolean; fetchThrows?: boolean; at?: number } = {}) {
   const log: string[] = []; const vault = createVault(); const outbox = fakeOutbox();
   const state = { opened: o.opened === undefined ? { data: proj([row()]), asOf: NOW - 60_000 } : o.opened, online: o.online ?? true };
   const deps: OrdersHostDeps = {
     now: () => NOW, locale: () => "en", online: () => state.online, pcOff: () => false,
     fetchOrders: async () => { log.push("fetch"); if (o.fetchThrows) throw new Error("net"); },
     openOrders: async () => { log.push("open"); return state.opened; },
-    vault, outbox, drafts: createDraftStore(memDb(), () => NOW), authorityExpiresAt: () => undefined, go: (s) => { log.push(`go:${s}`); },
+    vault, outbox, drafts: createDraftStore(memDb(), () => NOW), authorityExpiresAt: () => o.at, go: (s) => { log.push(`go:${s}`); },
   };
   return { host: createOrdersHost(deps), log, vault, outbox, state };
 }
 
 describe("orders host: reading", () => {
+  it("the PC time of the command authority reaches the screen as it is (a chip shows it); unknown stays unknown", () => {
+    expect(setup({ at: 1_234_567 }).host.authorityExpiresAt()).toBe(1_234_567);
+    expect(setup().host.authorityExpiresAt()).toBeUndefined();
+  });
   it("before the first load it says loading with NO data (never an invented empty list)", () => {
     expect(setup().host.read()).toEqual({ status: "loading", data: null, asOf: null });
   });

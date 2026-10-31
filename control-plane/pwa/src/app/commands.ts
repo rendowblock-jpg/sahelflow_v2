@@ -33,6 +33,7 @@ export async function createCommandStack(d: CommandStackDeps) {
     const data = await openSealed<OrdersProjection>(row, { signingPublicKey, encryptionPrivateKey, deviceId, now: d.now() });
     return data && Array.isArray(data.orders) ? { data, asOf: row.receivedAt } : null;
   }
-  return { outbox, refresh, openOrders, drafts: createDraftStore(d.db, d.now), shopId: (): string | null => shop };
+  // authorityExpiresAt: when the PC's command authority ends (verified projection), so a command chip can show the PC time.
+  return { outbox, refresh, openOrders, drafts: createDraftStore(d.db, d.now), shopId: (): string | null => shop, authorityExpiresAt: authority.expiresAt };
 }
 export type CommandStack = NonNullable<Awaited<ReturnType<typeof createCommandStack>>>;

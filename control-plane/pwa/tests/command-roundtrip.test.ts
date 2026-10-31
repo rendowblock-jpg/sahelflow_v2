@@ -1,11 +1,11 @@
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-const hoisted = vi.hoisted(() => { process.env.SF_ACTIVE_SHOP_ID = "testshop0001"; return { actor: null as unknown, trusted: vi.fn(), dispatch: vi.fn(async () => undefined), capi: vi.fn(async () => undefined)  }; });
+const hoisted = await vi.hoisted(async () => { const rt = (await import("./roundtrip-env")).roundtripEnv(); return { rt, actor: null as unknown, trusted: vi.fn(), dispatch: vi.fn(async () => undefined), capi: vi.fn(async () => undefined)  }; });
 vi.mock("@/lib/identity/trusted-actor", async (o) => ({ ...(await o<typeof import("@/lib/identity/trusted-actor")>()), isTrustedActorContext: vi.fn(() => true), trustedActorForRemoteCommand: (...a: unknown[]) => hoisted.trusted(...a) }));
 vi.mock("@/lib/automations/engine", async (o) => ({ ...(await o<typeof import("@/lib/automations/engine")>()), dispatchTrigger: hoisted.dispatch }));
 vi.mock("@/lib/meta/capi-triggers", async (o) => ({ ...(await o<typeof import("@/lib/meta/capi-triggers")>()), fireCapiStageForOrder: hoisted.capi }));
 
 import type { PrismaClient } from "@prisma/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanDb, seedCustomer, seedOrder, seedProduct } from "@/lib/data/__tests__/helpers";
 import { db } from "@/lib/db";
 import { trustedManualOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
@@ -30,6 +30,7 @@ async function start() {
   return { rig, phone };
 }
 const status = async (id: string) => (await raw.order.findUnique({ where: { id } }))?.status;
+afterAll(() => hoisted.rt.dispose());
 beforeEach(async () => {
   await cleanDb(raw); vi.clearAllMocks(); hoisted.trusted.mockImplementation(async () => hoisted.actor);
 });

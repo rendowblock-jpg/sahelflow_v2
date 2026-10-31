@@ -29,6 +29,16 @@ describe("createCommandStack", () => {
     const s = await createCommandStack({ db: await pairedDb("testshop0001"), relayBase: "https://r.test", fetch: noFetch, now: () => NOW });
     expect(await s?.outbox.enqueue(input)).toEqual({ ok: false, reason: "no_authority" });
   });
+  it("authorityExpiresAt is the PC time from the verified projection: unknown first, known after refresh(), gone again when the PC sends none", async () => {
+    const AT = Date.UTC(2026, 9, 31, 12, 0); const db = await pairedDb("testshop0001");
+    const snap = (expiresAt: unknown) => ({ sequence: 1, receivedAt: 1, projection: { authority: { policyVersion: 5, memberRevocationEpoch: 2, installationId: "installation_01", expiresAt } } });
+    const s = await createCommandStack({ db, relayBase: "https://r.test", fetch: noFetch, now: () => NOW });
+    expect(s?.authorityExpiresAt()).toBeUndefined();
+    await db.put("projections", "last", snap(AT)); await s?.refresh();
+    expect(s?.authorityExpiresAt()).toBe(AT);
+    await db.put("projections", "last", snap(undefined)); await s?.refresh();
+    expect(s?.authorityExpiresAt()).toBeUndefined();
+  });
   it("no sealed orders stored: openOrders is null (the host shows an error, not an empty list)", async () => {
     const s = await createCommandStack({ db: await pairedDb("testshop0001"), relayBase: "https://r.test", fetch: noFetch, now: () => NOW });
     expect(await s?.openOrders()).toBeNull();
