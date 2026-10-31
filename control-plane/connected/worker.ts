@@ -404,12 +404,15 @@ async function bumpCounter(
 /**
  * Counts one event and answers 429 when the window is over its limit. It fails
  * OPEN: if the counter cannot be written (migration 0002 not applied yet) the
- * request goes through, and /healthz reports the missing table.
+ * request goes through, and /healthz reports the missing table. The pairing
+ * exchange passes failClosed: it is the route that guesses a secret, so with no
+ * working counter it answers 503 instead of letting the guesses through.
  */
 async function hitRate(
   environment: ConnectedWorkerEnvironment,
   bucket: RateBucket,
   subject: string,
+  failClosed = false,
 ): Promise<Response | null> {
   const rule = RATE_RULES[bucket];
   const nowMs = Date.now();
@@ -425,11 +428,15 @@ async function hitRate(
     const decision = decideRate({ count, limit: rule.limit, nowMs, windowMs: rule.windowMs });
     return decision.allowed ? null : rateLimited(bucket, decision.retryAfterSeconds);
   } catch {
-    return null;
+    return failClosed ? pairingUnavailable() : null;
   }
 }
 
-/** A pairing that already failed its limit this minute is locked, even for the right token. */
+function pairingUnavailable(): Response {
+  return json({ error: "pairing_unavailable" }, 503);
+}
+
+/** A pairing that already failed its limit this minute is locked, even for the right token. Only the exchange calls it: it fails closed. */
 async function pairingLocked(environment: ConnectedWorkerEnvironment, pairingId: string): Promise<Response | null> {
   const rule = RATE_RULES.exchange_pairing_failure;
   const nowMs = Date.now();
@@ -441,15 +448,17 @@ async function pairingLocked(environment: ConnectedWorkerEnvironment, pairingId:
     const decision = decideRate({ count: Number(row?.count ?? 0) + 1, limit: rule.limit, nowMs, windowMs: rule.windowMs });
     return decision.allowed ? null : rateLimited("exchange_pairing_failure", decision.retryAfterSeconds);
   } catch {
-    return null;
+    return pairingUnavailable();
   }
 }
 
-async function recordPairingFailure(environment: ConnectedWorkerEnvironment, pairingId: string): Promise<void> {
+/** False when the miss could not be counted: the exchange then answers 503 (fail closed, see hitRate). */
+async function recordPairingFailure(environment: ConnectedWorkerEnvironment, pairingId: string): Promise<boolean> {
   try {
     await bumpCounter(environment, "exchange_pairing_failure", await subjectHash(pairingId), Date.now());
+    return true;
   } catch {
-    // fail open, see hitRate
+    return false;
   }
 }
 
@@ -788,7 +797,7 @@ async function createPairing(request: Request, environment: ConnectedWorkerEnvir
 
 async function exchangePairing(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
   const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
-  const ipLimited = await hitRate(environment, "exchange_ip", await subjectHash(ip));
+  const ipLimited = await hitRate(environment, "exchange_ip", await subjectHash(ip), true);
   if (ipLimited) return ipLimited;
   const parsed = await readBoundedJson(request, MAX_PAIRING_BODY_BYTES);
   if (!parsed.ok) return parsed.response;
@@ -818,7 +827,7 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
       WHERE pairing_id = ?1 AND token_hash = ?2`,
   ).bind(input.pairingId, tokenHash).first<PairingRow>();
   if (!pairing || pairing.consumed_at || Date.parse(pairing.expires_at) <= Date.now()) {
-    await recordPairingFailure(environment, input.pairingId);
+    if (!(await recordPairingFailure(environment, input.pairingId))) return pairingUnavailable();
     return json({ error: "pairing_rejected" }, 403);
   }
   const workspace = await environment.DB.prepare(
@@ -867,7 +876,7 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
       workspace.device_limit,
       workspace.member_limit,
     ).run();
-    if (!inserted.success) return json({ error: "pairing_unavailable" }, 503);
+    if (!inserted.success) return pairingUnavailable();
     if (inserted.meta?.changes !== 1) return json({ error: "entitlement_limit_reached" }, 403);
 
     const consumed = await environment.DB.prepare(
