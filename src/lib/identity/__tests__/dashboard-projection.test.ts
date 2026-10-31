@@ -146,3 +146,100 @@ describe("server dashboard projection", () => {
     ).toThrow(/shops\.read/);
   });
 });
+
+describe("phone today counts in the projection", () => {
+  const COUNTS = { ordersWaiting: 7, whatsappHeld: 2, codToCollectDzd: 45_000 };
+  const TODAY_KEYS = ["ordersWaiting", "whatsappHeld", "codToCollectDzd"];
+  const todayKeys = (stats: object) =>
+    Object.keys(stats).filter((key) => TODAY_KEYS.includes(key));
+
+  it("gives the owner all three exact numbers", () => {
+    const access = resolveDashboardFieldAccess(context("owner"));
+    const { stats } = projectDashboardForTrustedActor(
+      { ...SOURCE, todayCounts: COUNTS },
+      access,
+    );
+    expect(stats).toMatchObject(COUNTS);
+  });
+
+  it("leaves the keys out when the desktop sent no counts", () => {
+    const access = resolveDashboardFieldAccess(context("owner"));
+    const { stats } = projectDashboardForTrustedActor(SOURCE, access);
+    expect(todayKeys(stats)).toEqual([]);
+  });
+
+  it("keeps the money amount from a member without order financials", () => {
+    const access = resolveDashboardFieldAccess(
+      context("operator", ["shops.read", "orders.read", "conversations.read"]),
+    );
+    const { stats } = projectDashboardForTrustedActor(
+      { ...SOURCE, todayCounts: COUNTS },
+      access,
+    );
+    expect(stats).toMatchObject({ ordersWaiting: 7, whatsappHeld: 2 });
+    expect(todayKeys(stats)).toEqual(["ordersWaiting", "whatsappHeld"]);
+  });
+
+  it("keeps the WhatsApp number from a member without conversations", () => {
+    const access = resolveDashboardFieldAccess(
+      context("operator", ["shops.read", "orders.read", "orders.financials.read"]),
+    );
+    const { stats } = projectDashboardForTrustedActor(
+      { ...SOURCE, todayCounts: COUNTS },
+      access,
+    );
+    expect(stats).toMatchObject({ ordersWaiting: 7, codToCollectDzd: 45_000 });
+    expect(todayKeys(stats)).toEqual(["ordersWaiting", "codToCollectDzd"]);
+  });
+
+  it("shows no order number to a member who cannot read orders, even with financials", () => {
+    const access = resolveDashboardFieldAccess(
+      context("operator", ["shops.read", "orders.financials.read", "conversations.read"]),
+    );
+    const { stats } = projectDashboardForTrustedActor(
+      { ...SOURCE, todayCounts: COUNTS },
+      access,
+    );
+    expect(todayKeys(stats)).toEqual(["whatsappHeld"]);
+  });
+
+  it("shows none of the three to a shops-only member", () => {
+    const access = resolveDashboardFieldAccess(context("operator", ["shops.read"]));
+    const { stats } = projectDashboardForTrustedActor(
+      { ...SOURCE, todayCounts: COUNTS },
+      access,
+    );
+    expect(todayKeys(stats)).toEqual([]);
+  });
+
+  it("omits only the key whose query failed (absent, never null)", () => {
+    const access = resolveDashboardFieldAccess(context("owner"));
+    const { stats } = projectDashboardForTrustedActor(
+      { ...SOURCE, todayCounts: { ordersWaiting: 7, whatsappHeld: null, codToCollectDzd: 45_000 } },
+      access,
+    );
+    expect(stats).toMatchObject({ ordersWaiting: 7, codToCollectDzd: 45_000 });
+    expect(stats).not.toHaveProperty("whatsappHeld");
+    expect(todayKeys(stats)).toEqual(["ordersWaiting", "codToCollectDzd"]);
+  });
+
+  it("publishes an empty shop as explicit zeros (0 is an answer, absent is unknown)", () => {
+    const access = resolveDashboardFieldAccess(context("owner"));
+    const { stats } = projectDashboardForTrustedActor(
+      { ...SOURCE, todayCounts: { ordersWaiting: 0, whatsappHeld: 0, codToCollectDzd: 0 } },
+      access,
+    );
+    expect(stats.ordersWaiting).toBe(0);
+    expect(stats.whatsappHeld).toBe(0);
+    expect(stats.codToCollectDzd).toBe(0);
+  });
+
+  it("never publishes a value the phone could not read as a whole count", () => {
+    const access = resolveDashboardFieldAccess(context("owner"));
+    const { stats } = projectDashboardForTrustedActor(
+      { ...SOURCE, todayCounts: { ordersWaiting: -1, whatsappHeld: 2.5, codToCollectDzd: Number.NaN } },
+      access,
+    );
+    expect(todayKeys(stats)).toEqual([]);
+  });
+});
