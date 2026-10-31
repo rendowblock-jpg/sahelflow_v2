@@ -69,6 +69,8 @@ export function StudioTopBar({
   onSave,
   onPublish,
   publishDisabled,
+  publishing,
+  publishLine,
 }: {
   storefrontId: string;
   draft: StorefrontStudioDraft;
@@ -88,6 +90,8 @@ export function StudioTopBar({
   onSave: () => void;
   onPublish: () => void;
   publishDisabled: boolean;
+  publishing: boolean;
+  publishLine: { text: string; role: "status" | "alert" } | null;
 }) {
   const { t } = useI18n();
   const storeHref = `/storefront/${encodeURIComponent(liveSlug)}`;
@@ -228,11 +232,24 @@ export function StudioTopBar({
           disabled={publishDisabled}
           onClick={onPublish}
           data-studio-publish="true"
+          aria-busy={publishing}
           className="inline-flex h-9 shrink-0 items-center gap-2 rounded-control bg-primary px-3.5 text-body-sm font-semibold text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45"
         >
           <UploadCloud className="size-4" aria-hidden="true" />
-          {t("storefront.studio.publish")}
+          {publishing ? t("storefront.studioStates.publish.publishing") : t("storefront.studio.publish")}
         </button>
+        <p
+          role={publishLine?.role ?? "status"}
+          aria-live={publishLine?.role === "alert" ? undefined : "polite"}
+          data-testid="publish-status-line"
+          className={cn(
+            "max-w-72 text-xs leading-tight",
+            publishLine?.role === "alert" ? "text-destructive" : "text-muted-foreground",
+            publishLine ? "" : "hidden",
+          )}
+        >
+          {publishLine?.text ?? ""}
+        </p>
       </div>
     </header>
   );

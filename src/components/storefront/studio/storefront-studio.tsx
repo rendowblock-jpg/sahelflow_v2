@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  publishStatusView,
+  saveThenPublish,
+  type PublishPhase,
+  type SaveOutcome,
+} from "@/components/storefront/studio/publish-flow";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -114,14 +121,14 @@ export function StorefrontStudio({
   }, []);
 
   const persist = useCallback(
-    async (candidate: StorefrontStudioDraft, manual = false) => {
+    async (candidate: StorefrontStudioDraft, manual = false): Promise<SaveOutcome> => {
       const parsed = storefrontStudioDraftSchema.safeParse(candidate);
       if (!parsed.success) {
         const invalid = parsed.error.issues[0]?.message ?? t("storefront.studio.validationFailed");
         setSaveState("error");
         setSaveReason(invalid);
         setMessage(invalid, "warning");
-        return;
+        return { ok: false, reason: invalid };
       }
 
       const sequence = ++requestSequence.current;
@@ -144,12 +151,14 @@ export function StorefrontStudio({
         });
         const body = (await response.json()) as { error?: string; config?: SerializedConfig };
 
-        if (sequence !== requestSequence.current) return;
+        if (sequence !== requestSequence.current) {
+          return { ok: false, reason: t("storefront.studioStates.publish.saveSuperseded") };
+        }
         if (response.status === 409 && body.config) {
           setConflict(body.config);
           setSaveState("conflict");
           setMessage(t("storefront.studio.newerDraft"), "warning");
-          return;
+          return { ok: false, reason: t("storefront.studio.newerDraft") };
         }
         if (!response.ok || !body.config) {
           throw new StudioRequestError(response.status, body.error ?? null);
@@ -161,86 +170,117 @@ export function StorefrontStudio({
         setSaveState("saved");
         setSaveReason(null);
         if (manual) setMessage(t("storefront.studio.draftSaved"), "success");
+        const savedVersion = body.config.draftUpdatedAt;
+        return savedVersion
+          ? { ok: true, version: savedVersion }
+          : { ok: false, reason: t("storefront.studioStates.failure.serverRefused") };
       } catch (error) {
-        if (sequence !== requestSequence.current) return;
+        const reason = studioFailureReason(error, t).reason;
+        if (sequence !== requestSequence.current) {
+          return { ok: false, reason: t("storefront.studioStates.publish.saveSuperseded") };
+        }
         setSaveState("error");
-        setSaveReason(studioFailureReason(error, t).reason);
+        setSaveReason(reason);
         setMessage(t("storefront.studio.localDraftRetained"), "warning");
+        return { ok: false, reason };
       }
     },
     [config.id, setMessage, t, version],
   );
 
+  const [publishPhase, setPublishPhase] = useState<PublishPhase>({ phase: "idle" });
+  const publishBusy = publishPhase.phase === "saving" || publishPhase.phase === "publishing";
+  const publishingRef = useRef(false);
+
+  // One click: unsaved edits are saved first, then the saved version is released.
   const publish = useCallback(async () => {
+    if (publishingRef.current) return;
     if (draft.isActive && draft.theme.builder.shippingRules.length === 0) {
       setPanel("checkout");
       setPanelCollapsed(false);
       setMessage(t("storefront.studio.shippingEmpty"), "warning");
       return;
     }
-    if (!version || dirty || saveState === "saving" || saveState === "conflict") {
+    if (saveState === "saving" || saveState === "conflict") {
       setMessage(t("storefront.studio.saveBeforePublishing"), "warning");
       return;
     }
 
-    const sequence = ++requestSequence.current;
-    setSaveState("saving");
-    setMessage(t("storefront.studio.publishing"));
-
+    publishingRef.current = true;
+    setMessage(null);
+    setPublishPhase({ phase: dirty ? "saving" : "publishing" });
     try {
-      const response = await fetch(`/api/storefront/config/${encodeURIComponent(config.id)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          expectedDraftUpdatedAt: version,
-          locale: locale.startsWith("fr") ? "fr" : locale.startsWith("en") ? "en" : "ar",
-        }),
+      const plan = await saveThenPublish({
+        dirty,
+        version,
+        save: () => persist(draft),
+        release: async (releaseVersion) => {
+          setPublishPhase({ phase: "publishing" });
+          const response = await fetch(`/api/storefront/config/${encodeURIComponent(config.id)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              expectedDraftUpdatedAt: releaseVersion,
+              locale: locale.startsWith("fr") ? "fr" : locale.startsWith("en") ? "en" : "ar",
+            }),
+          });
+          const body = (await response.json()) as {
+            error?: string;
+            config?: SerializedConfig;
+            hostedRelease?: { status?: string; releaseId?: string };
+          };
+          if (response.status === 409 && body.config) return { kind: "conflict" as const, config: body.config };
+          if (!response.ok) throw new StudioRequestError(response.status, body.error ?? null);
+          return { kind: "ok" as const, hostedRelease: body.hostedRelease };
+        },
       });
-      const body = (await response.json()) as {
-        error?: string;
-        config?: SerializedConfig;
-        hostedRelease?: { status?: string; releaseId?: string };
-      };
 
-      if (sequence !== requestSequence.current) return;
-      if (response.status === 409 && body.config) {
-        setConflict(body.config);
-        setVersion(body.config.draftUpdatedAt);
-        setSaveState("conflict");
-        setMessage(t("storefront.studio.newerDraft"), "warning");
+      if (plan.kind === "blocked") {
+        setPublishPhase({
+          phase: "failed",
+          text: t("storefront.studioStates.publish.blockedBySave", { reason: plan.reason }),
+        });
         return;
       }
-      if (!response.ok) {
-        throw new StudioRequestError(response.status, body.error ?? null);
+      if (plan.kind === "no-draft") {
+        setPublishPhase({ phase: "failed", text: t("storefront.studio.saveBeforePublishing") });
+        return;
+      }
+      if (plan.value.kind === "conflict") {
+        setConflict(plan.value.config);
+        setVersion(plan.value.config.draftUpdatedAt);
+        setSaveState("conflict");
+        setMessage(t("storefront.studio.newerDraft"), "warning");
+        setPublishPhase({ phase: "failed", text: t("storefront.studio.newerDraft") });
+        return;
       }
 
-      setSaveState("saved");
       setSaveReason(null);
       // "Published" only when the hosted service answered with a published release.
-      const hostedStatus = body.hostedRelease?.status;
+      const hostedStatus = plan.value.hostedRelease?.status;
       const published = hostedStatus ? hostedStatus === "published" : draft.isActive;
-      setMessage(
-        published
+      setPublishPhase({
+        phase: "published",
+        text: published
           ? t("storefront.studioStates.publish.published", {
-              version: (body.hostedRelease?.releaseId ?? "—").slice(0, 8),
+              version: (plan.value.hostedRelease?.releaseId ?? "—").slice(0, 8),
             })
           : t("storefront.inactive"),
-        published ? "success" : "info",
-      );
+      });
     } catch (error) {
-      if (sequence !== requestSequence.current) return;
-      // The draft was saved before publishing started and is untouched: keep it "saved".
-      setSaveState("saved");
-      setMessage(publishFailureMessage(studioFailureReason(error, t), t), "warning");
+      // The draft is saved (by this click or earlier) and untouched: say so.
+      setPublishPhase({ phase: "failed", text: publishFailureMessage(studioFailureReason(error, t), t) });
+    } finally {
+      publishingRef.current = false;
     }
-  }, [config.id, dirty, draft.isActive, draft.theme.builder.shippingRules.length, locale, saveState, setMessage, t, version]);
+  }, [config.id, dirty, draft, locale, persist, saveState, setMessage, t, version]);
 
   // Autosave: a quiet pause after the last edit writes the private draft.
   useEffect(() => {
-    if (!dirty || conflict || saveState === "saving" || saveState === "error") return;
+    if (!dirty || conflict || publishBusy || saveState === "saving" || saveState === "error") return;
     const timer = window.setTimeout(() => void persist(draft), 900);
     return () => window.clearTimeout(timer);
-  }, [conflict, dirty, draft, fingerprint, persist, saveState]);
+  }, [conflict, dirty, draft, fingerprint, persist, publishBusy, saveState]);
 
   // Escape closes the top sheet (inspector first, then the phone panel sheet).
   useEffect(() => {
@@ -356,7 +396,9 @@ export function StorefrontStudio({
         }}
         onSave={() => void persist(draft, true)}
         onPublish={() => void publish()}
-        publishDisabled={dirty || !version || saveState === "saving" || saveState === "conflict"}
+        publishDisabled={publishBusy || (!dirty && !version) || saveState === "saving" || saveState === "conflict"}
+        publishing={publishBusy}
+        publishLine={publishStatusView(publishPhase, t)}
       />
 
       {conflict ? (
