@@ -16,6 +16,7 @@ import type { AiWorkspaceError } from "@/components/ai/ai-workspace-types";
 import type { useAiWorkspace } from "@/hooks/use-ai-workspace";
 import { getAiDecisionCopy } from "@/lib/i18n/ai-decision-workspace";
 import { getAiQuotaRuntimeTranslation } from "@/lib/i18n/ai-quota-runtime";
+import { intlLocale } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n";
 import type { QuotaStateWire } from "@/lib/ai/providers/quota-state";
 
@@ -76,7 +77,7 @@ export function quotaOf(setup: unknown): QuotaStateWire | undefined {
 function formatResetTime(at: string, locale: Locale, now: Date): string {
   const date = new Date(at);
   if (!Number.isFinite(date.getTime())) return "";
-  const tag = locale === "ar" ? "ar-DZ-u-nu-latn" : locale === "fr" ? "fr-FR" : "en-GB";
+  const tag = intlLocale(locale);
   const sameDay = date.toDateString() === now.toDateString();
   return new Intl.DateTimeFormat(tag, {
     ...(sameDay ? {} : { day: "numeric", month: "short" }),
