@@ -61,14 +61,14 @@ async function desktopPairing(client: ConnectedPlatformClient, deviceId: string,
   const taken = takePairingLink(built.hash, "/", () => undefined); if (taken.kind !== "link") throw new Error("setup: take");
   return taken.link;
 }
-// The reply goes through the real worker; an attack rewrites it on the way back. The real relay does not send
-// shopId yet (its exchange reply lacks it): the test adds it, as the relay must before a deploy.
+// The reply goes through the real worker; an attack rewrites it on the way back. Nothing is added by hand:
+// the real exchange reply has no shopId, the phone finds its shop from the verified projection.
 function phoneFetch(world: World, attack?: Attack): typeof fetch {
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const res = await worker.fetch(new Request(input, init), world.env);
     if (!String(input).endsWith("/v1/pairings/exchange") || res.status !== 201) return res;
     const json = (await res.json()) as Record<string, unknown>;
-    const out = attack ? attack({ ...json }) : { ...json, shopId: SHOP_ID };
+    const out = attack ? attack({ ...json }) : json;
     return new Response(JSON.stringify(out), { status: 201, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
 }
@@ -88,7 +88,7 @@ describe("the PWA pairing flow against the real relay", () => {
     expect(out).toMatchObject({ ok: true, approval: "pending" });
     expect(await mem.db.keys("keys")).toEqual(["device", "desktop", "credentials"]);
     expect(await mem.db.get("keys", "desktop")).toMatchObject({ signingPublicKey: desktop.signingPublicKey });
-    expect(await mem.db.get("keys", "credentials")).toMatchObject({ deviceId: "phone_pwa_0001", workspaceId: WORKSPACE_ID, shopId: SHOP_ID });
+    expect(await mem.db.get("keys", "credentials")).toMatchObject({ deviceId: "phone_pwa_0001", workspaceId: WORKSPACE_ID, shopId: null });
   });
   const attacks: ReadonlyArray<readonly [string, boolean, Attack | undefined, TrustRefusal]> = [
     ["an old desktop that sent no proof", false, undefined, "proof_missing"],
@@ -102,21 +102,21 @@ describe("the PWA pairing flow against the real relay", () => {
   it.each(attacks)("%s: refused with %s... the phone stores nothing", async (_name, withProof, attack, reason) => {
     const { world, client } = await newWorld(); const mem = memoryDb();
     const link = await desktopPairing(client, "phone_pwa_0002", withProof ? goodProof : null);
-    const out = await pairPhone(world, link, mem, attack ? (r) => attack({ ...r, shopId: SHOP_ID }) : undefined);
+    const out = await pairPhone(world, link, mem, attack);
     expect(out).toMatchObject({ ok: false, reason });
     expect(mem.puts()).toBe(0); expect(mem.size()).toBe(0);
   });
 });
 
-async function publish(client: ConnectedPlatformClient, deviceId: string, sequence: number, payload: unknown): Promise<unknown> {
+async function publish(client: ConnectedPlatformClient, deviceId: string, sequence: number, payload: unknown, shopId: string = SHOP_ID): Promise<unknown> {
   const listed = await client.listDevices(WORKSPACE_ID);
   const row = (listed.devices as Array<{ device_id: string; member_id: string; encryption_public_key: string }>).find((d) => d.device_id === deviceId);
   if (!row) throw new Error("device not listed");
   const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
-  await client.putCommandPolicy({ workspaceId: WORKSPACE_ID, shopId: SHOP_ID, memberId: row.member_id, deviceId, policyVersion: 1, memberRevocationEpoch: 0, deviceRevocationEpoch: 0, allowedCommands: ["command.comments.write"], expiresAt }).catch(() => undefined);
+  await client.putCommandPolicy({ workspaceId: WORKSPACE_ID, shopId, memberId: row.member_id, deviceId, policyVersion: 1, memberRevocationEpoch: 0, deviceRevocationEpoch: 0, allowedCommands: ["command.comments.write"], expiresAt }).catch(() => undefined);
   const envelopeId = `projection_${randomUUID().replaceAll("-", "")}`;
   const envelope = createConnectedEnvelope({
-    protocolVersion: CONNECTED_PROTOCOL_VERSION, envelopeId, idempotencyKey: envelopeId, workspaceId: WORKSPACE_ID, shopId: SHOP_ID, memberId: row.member_id, deviceId,
+    protocolVersion: CONNECTED_PROTOCOL_VERSION, envelopeId, idempotencyKey: envelopeId, workspaceId: WORKSPACE_ID, shopId, memberId: row.member_id, deviceId,
     installationId: INSTALLATION_ID, senderKind: "desktop", senderId: INSTALLATION_ID, recipientKind: "device", recipientId: deviceId, messageType: "projection.dashboard", sequence,
     issuedAt: new Date(Date.now() - 1_000).toISOString(), expiresAt, revocationEpoch: 0, cipherAlgorithm: CONNECTED_CIPHER_ALGORITHM, encryptionKeyId: "enckey_00000001",
     signatureAlgorithm: CONNECTED_SIGNATURE_ALGORITHM, signingKeyId: "sigkey_00000001",
@@ -163,5 +163,99 @@ describe("the real projection source (sealed envelopes opened with the pinned ke
     expect(await mem.db.get("projections", "last")).toBeUndefined();
     const gone = createRelayClient({ baseUrl: RELAY, getDb: async () => mem.db, fetchImpl: (async () => new Response("{}", { status: 401 })) as unknown as typeof fetch });
     expect(await gone.poll()).toEqual({ kind: "revoked" });
+  });
+});
+
+// Shop discovery: the exchange reply has no shop. The phone asks WITHOUT shopId and learns the shop from the
+// VERIFIED envelope; two live shops -> 409 shop_required and one retry with the first listed id.
+const OTHER_SHOP = "shop_0002";
+const spied = (world: World, calls: string[]): typeof fetch => (async (input: RequestInfo | URL, init?: RequestInit) => { calls.push(String(input)); return worker.fetch(new Request(input, init), world.env); }) as typeof fetch;
+const queryOf = (url: string): URLSearchParams => new URL(url).searchParams;
+async function pairedPhone(deviceId: string) {
+  const { world, client } = await newWorld(); const mem = memoryDb();
+  expect((await pairPhone(world, await desktopPairing(client, deviceId, goodProof), mem)).ok).toBe(true);
+  const calls: string[] = [];
+  const relay = createRelayClient({ baseUrl: RELAY, fetchImpl: spied(world, calls), getDb: async () => mem.db });
+  const projectionCalls = (): string[] => calls.filter((u) => u.includes("/v1/projections"));
+  return { world, client, mem, relay, calls, projectionCalls };
+}
+
+describe("shop discovery against the real relay (no hand-added shopId)", () => {
+  it("none: pending, no shopId sent, nothing stored", async () => {
+    const p = await pairedPhone("phone_pwa_0010");
+    expect(await p.relay.poll()).toEqual({ kind: "pending" });
+    expect(queryOf(p.projectionCalls()[0] ?? "http://x/?").has("shopId")).toBe(false);
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: null });
+  });
+  it("one shop: the shop comes from the verified envelope, is stored, and later polls send it", async () => {
+    const p = await pairedPhone("phone_pwa_0011");
+    await publish(p.client, "phone_pwa_0011", 1, dashboard(4));
+    expect(await p.relay.poll()).toMatchObject({ kind: "updated", snapshot: { sequence: 1, projection: { newOrders: 4 } } });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: SHOP_ID });
+    expect(await p.relay.poll()).toEqual({ kind: "unchanged" });
+    const sent = p.projectionCalls().map((u) => queryOf(u).get("shopId"));
+    expect(sent).toEqual([null, SHOP_ID]);
+  });
+  it("two shops: 409 shop_required, then ONE retry with the first listed id, which is stored", async () => {
+    const p = await pairedPhone("phone_pwa_0012");
+    await publish(p.client, "phone_pwa_0012", 1, dashboard(5), SHOP_ID);
+    await publish(p.client, "phone_pwa_0012", 1, dashboard(6), OTHER_SHOP);
+    const first = [SHOP_ID, OTHER_SHOP].sort()[0] ?? "";
+    const got = await p.relay.poll();
+    expect(got).toMatchObject({ kind: "updated", snapshot: { sequence: 1 } });
+    expect(p.projectionCalls().map((u) => queryOf(u).get("shopId"))).toEqual([null, first]);
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: first });
+  });
+  it("a stored shop that answers 404 three polls in a row is forgotten and the phone rediscovers (another shop, lower sequence)", async () => {
+    const p = await pairedPhone("phone_pwa_0013");
+    await publish(p.client, "phone_pwa_0013", 9, dashboard(8));
+    expect(await p.relay.poll()).toMatchObject({ kind: "updated", snapshot: { sequence: 9 } });
+    p.world.d1.sqlite.exec("UPDATE connected_projection SET expires_at = '2020-01-01T00:00:00.000Z'");
+    expect(await p.relay.poll()).toEqual({ kind: "pending" });
+    expect(await p.relay.poll()).toEqual({ kind: "pending" });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: SHOP_ID });
+    expect(await p.relay.poll()).toEqual({ kind: "pending" });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: null });
+    await publish(p.client, "phone_pwa_0013", 1, dashboard(2), OTHER_SHOP);
+    expect(await p.relay.poll()).toMatchObject({ kind: "updated", snapshot: { sequence: 1, projection: { newOrders: 2 } } });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: OTHER_SHOP });
+  });
+  it("two 404s then a good answer do not forget the shop (the count is consecutive)", async () => {
+    const p = await pairedPhone("phone_pwa_0014");
+    await publish(p.client, "phone_pwa_0014", 1, dashboard(1));
+    expect((await p.relay.poll()).kind).toBe("updated");
+    p.world.d1.sqlite.exec("UPDATE connected_projection SET expires_at = '2020-01-01T00:00:00.000Z'");
+    await p.relay.poll(); await p.relay.poll();
+    await publish(p.client, "phone_pwa_0014", 2, dashboard(3));
+    expect((await p.relay.poll()).kind).toBe("updated");
+    p.world.d1.sqlite.exec("UPDATE connected_projection SET expires_at = '2020-01-01T00:00:00.000Z'");
+    await p.relay.poll(); await p.relay.poll();
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: SHOP_ID });
+  });
+  it("never accepts an envelope from a shop other than the stored one, nor one from a shop the relay did not list", async () => {
+    const p = await pairedPhone("phone_pwa_0015");
+    const other = await publish(p.client, "phone_pwa_0015", 1, dashboard(6), OTHER_SHOP);
+    // discovery: the relay lists SHOP_ID but serves the OTHER_SHOP envelope
+    const lying = (listed: string) => (async (input: RequestInfo | URL) => String(input).includes("shopId=") ? new Response(JSON.stringify(other), { status: 200 }) : new Response(JSON.stringify({ error: "shop_required", shops: [listed] }), { status: 409 })) as unknown as typeof fetch;
+    const liar = createRelayClient({ baseUrl: RELAY, getDb: async () => p.mem.db, fetchImpl: lying(SHOP_ID) });
+    expect(await liar.poll()).toEqual({ kind: "refused", reason: "wrong_scope" });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: null });
+    expect(await p.mem.db.get("projections", "last")).toBeUndefined();
+    // stored shop A, the relay serves shop B
+    expect((await p.relay.poll()).kind).toBe("updated");
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: OTHER_SHOP });
+    const swapped = await publish(p.client, "phone_pwa_0015", 5, dashboard(9), SHOP_ID);
+    const wrong = createRelayClient({ baseUrl: RELAY, getDb: async () => p.mem.db, fetchImpl: (async () => new Response(JSON.stringify(swapped), { status: 200 })) as unknown as typeof fetch });
+    expect(await wrong.poll()).toEqual({ kind: "refused", reason: "wrong_scope" });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: OTHER_SHOP });
+  });
+  it("a 409 with an unusable list is refused, and a 409 while a shop is stored is just a network failure", async () => {
+    const p = await pairedPhone("phone_pwa_0016");
+    const answer = (body: unknown) => createRelayClient({ baseUrl: RELAY, getDb: async () => p.mem.db, fetchImpl: (async () => new Response(JSON.stringify(body), { status: 409 })) as unknown as typeof fetch });
+    expect(await answer({ error: "shop_required", shops: [] }).poll()).toEqual({ kind: "refused", reason: "shop_required" });
+    expect(await answer({ error: "shop_required" }).poll()).toEqual({ kind: "refused", reason: "shop_required" });
+    const creds = await p.mem.db.get<Record<string, unknown>>("keys", "credentials");
+    await p.mem.db.put("keys", "credentials", { ...creds, shopId: SHOP_ID });
+    expect(await answer({ error: "shop_required", shops: [OTHER_SHOP] }).poll()).toEqual({ kind: "network" });
   });
 });
