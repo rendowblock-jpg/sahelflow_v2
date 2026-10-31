@@ -48,6 +48,13 @@ export function displayWilaya(
 const BY_CODE = new Map<number, WilayaRow>((wilayas as WilayaRow[]).map((row) => [row.code, row]));
 
 /**
+ * Every wilaya code the reference data holds (1 to 69 today), in file order. A list or a search that must
+ * visit every wilaya loops over this, never over a typed-in upper bound: the bound 58 was left behind when
+ * the eleven wilayas of Loi 26-06 (59 to 69) were added.
+ */
+export const WILAYA_CODES: readonly number[] = [...BY_CODE.keys()];
+
+/**
  * Every way an order can hold this wilaya in its `wilaya` column: a manual order keeps the French name, a
  * hosted-storefront order keeps the 2-digit code, and an Arabic spelling is possible too. The orders list filters
  * with these (`wilaya IN (...)`). Null when `code` is not a wilaya.
