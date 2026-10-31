@@ -1203,6 +1203,6 @@ describe("feedback ink: a feedback colour on its own tint (light, five looks)", 
     for (const file of shippedTsxFiles(srcDir)) {
       for (const hit of bareFeedbackPairs(readFileSync(file, "utf8"))) offenders.push(`${file.slice(srcDir.length)}:${hit}`);
     }
-    expect(offenders, `${offenders.length} places use the bare colour on its tint, use text-<kind>-ink: ${offenders.slice(0, 8).join(", ")}`).toEqual([]);
+    expect(offenders, `${offenders.length} places use the bare colour on its tint, use text-<kind>-ink: ${offenders.slice(0, 20).join(", ")}`).toEqual([]);
   });
 });
