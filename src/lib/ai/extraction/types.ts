@@ -43,6 +43,16 @@ export interface ExtractedOrder {
 /** Which method extracted this order */
 export type ExtractionMethod = "regex" | "gemini" | "groq" | "openai" | "none";
 
+/** Where a confidence number comes from. */
+export type ConfidenceBasis = "rule" | "self-reported" | "unknown";
+
+/** The stated total compared with quantity x unit price of the lines (S06b-11). */
+export interface TotalCheck {
+  status: "match" | "mismatch" | "unchecked";
+  computed: number | null;
+  stated: number | null;
+}
+
 /** The full extraction result */
 export interface ExtractionResult {
   /** The extracted order (null if extraction failed) */
@@ -61,6 +71,10 @@ export interface ExtractionResult {
   aiFailure?: string;
   /** ISO 8601: earliest time a quota-paused AI provider can be asked again. */
   aiRetryAt?: string;
+  /** Set by the route: the stated total checked against the lines. */
+  totalCheck?: TotalCheck;
+  /** Set by the route: "rule" for the offline reader, "self-reported" for a model's own claim. */
+  confidenceBasis?: ConfidenceBasis;
   /** Raw extraction metadata (for debugging) */
   raw?: unknown;
 }

@@ -41,6 +41,10 @@ export interface StorefrontWorkerEnvironment {
   MEDIA_GLOBAL_CAP_BYTES?: string;
   CONTROL: ServiceFetcher;
   CHECKOUT_RATE_LIMITER: RateLimiter;
+  /** Optional second limiter keyed on the shop alone (all buyers together). Absent: no shop-wide limit. */
+  CHECKOUT_SHOP_RATE_LIMITER?: RateLimiter;
+  /** Cloudflare Turnstile secret. Absent (the default): no challenge, nothing calls Cloudflare. */
+  TURNSTILE_SECRET?: string;
 }
 
 export type StorefrontRow = {

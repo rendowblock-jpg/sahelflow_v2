@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractOrder, recordExtractionMetric } from "@/lib/ai/extraction";
 import { geminiModelVersion } from "@/lib/ai/extraction/model-version";
+import { checkTotal, metricConfidence } from "@/lib/ai/extraction/draft-feedback";
 
 // Session 29 fix (AUDIT-7 AI1): recordExtractionMetric was defined but never
 // called outside tests → extraction analytics dashboard was permanently empty.
@@ -153,7 +154,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   void recordExtractionMetric({ prisma: db, shop: shopContext }, {
     messageId: input.messageId,
     method: result.method,
-    confidence: result.confidence,
+    // S06b-11: a model's own claim is not stored as a measurement (-1 = not measured).
+    confidence: metricConfidence(result).value,
     isComplete: result.isComplete,
     missingFields: result.missingFields,
     latencyMs: Date.now() - start,
@@ -161,7 +163,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }).catch(() => { /* best-effort */ });
 
   return NextResponse.json({
-    result,
+    result: { ...result, totalCheck: checkTotal(result.order), confidenceBasis: metricConfidence(result).basis },
     catalog: mayReadCatalog ? catalog : [],
     ai: {
       consent,
