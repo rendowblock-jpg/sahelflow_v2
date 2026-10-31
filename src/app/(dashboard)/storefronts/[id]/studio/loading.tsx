@@ -1,5 +1,5 @@
-import { FormLoading } from "@/components/shared/page-loading";
+import { StudioLoading } from "@/components/storefront/studio/studio-loading";
 
 export default function Loading() {
-  return <FormLoading />;
+  return <StudioLoading />;
 }

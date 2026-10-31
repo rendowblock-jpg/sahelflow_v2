@@ -40,6 +40,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.studioStates.photos.none": "No photo",
     "storefront.studioStates.photos.notHosted": "Photos are shown here from this computer. The online store does not host photos yet, so buyers may not see them.",
     "storefront.studioStates.create.failed": "Could not create the store: {{reason}}. Everything you entered is still here.",
+    "storefront.studioStates.route.back": "Back to my stores",
   },
   fr: {
     "storefront.studioStates.history.loadFailedTitle": "L’historique des versions ne s’est pas chargé",
@@ -74,6 +75,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.studioStates.photos.none": "Pas de photo",
     "storefront.studioStates.photos.notHosted": "Les photos s’affichent ici depuis cet ordinateur. La boutique en ligne n’héberge pas encore les photos : vos acheteurs risquent de ne pas les voir.",
     "storefront.studioStates.create.failed": "Impossible de créer la boutique : {{reason}}. Tout ce que vous avez saisi est toujours là.",
+    "storefront.studioStates.route.back": "Retour à mes boutiques",
   },
   ar: {
     "storefront.studioStates.history.loadFailedTitle": "تعذّر تحميل سجل النسخ",
@@ -108,6 +110,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.studioStates.photos.none": "بلا صورة",
     "storefront.studioStates.photos.notHosted": "تظهر الصور هنا من هذا الحاسوب. المتجر على الإنترنت لا يستضيف الصور بعد، لذا قد لا يراها المشترون.",
     "storefront.studioStates.create.failed": "تعذّر إنشاء المتجر: {{reason}}. كل ما أدخلته ما زال موجودًا.",
+    "storefront.studioStates.route.back": "العودة إلى متاجري",
   },
 };
 
