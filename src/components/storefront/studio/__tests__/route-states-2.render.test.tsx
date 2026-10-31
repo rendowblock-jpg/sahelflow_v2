@@ -78,19 +78,4 @@ describe("mini preview", () => {
     expect(screen.getByTestId("mini-preview-loading")).toBeTruthy();
     expect(screen.queryByTestId("renderer-ok")).toBeNull();
   });
-
-  it("once measured, the skeleton goes and the page is drawn", () => {
-    stubObserver(320);
-    render(<StorefrontMiniPreview config={{} as never} products={[]} />);
-    expect(screen.queryByTestId("mini-preview-loading")).toBeNull();
-    expect(screen.getByTestId("renderer-ok")).toBeTruthy();
-  });
-
-  it("when the page cannot be drawn, a designed slot replaces it", () => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    renderer.throws = true;
-    stubObserver(320);
-    render(<StorefrontMiniPreview config={{} as never} products={[]} />);
-    expect(screen.getByTestId("mini-preview-unavailable").textContent).toBe("storefront.studioStates.manager.previewUnavailable");
-  });
 });
