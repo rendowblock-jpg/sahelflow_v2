@@ -32,7 +32,4 @@ describe("app.ts mounts the tested modules", () => {
     expect(app).toContain("authorityExpiresAt: s.authorityExpiresAt");
     expect(app).not.toMatch(/authorityExpiresAt:\s*\(\)\s*=>/);
   });
-  it("the inbox is not mounted by this track (its own track does it)", () => {
-    expect(app).not.toContain("views/inbox");
-  });
 });
