@@ -20,7 +20,9 @@ export function violations(html: string): string[] {
     const c = html[i] as string;
     if (c !== "<") { text += c; i += 1; continue; }
     flush();
-    const m = TAG_RE.exec(html.slice(i, i + 4000));
+    // A tag ends at the first ">" (an attribute value may not hold one: TAG_RE rejects it), however long its values are.
+    const gt = html.indexOf(">", i);
+    const m = TAG_RE.exec(html.slice(i, gt < 0 ? html.length : gt + 1));
     if (!m) { bad.push(`raw "<" that opens no known tag at ${i}: ${JSON.stringify(html.slice(i, i + 40))}`); i += 1; continue; }
     const name = (m[2] as string).toLowerCase(); const closing = m[1] === "/";
     if (!TAGS.has(name)) bad.push(`tag not in the allowlist: <${name}>`);
