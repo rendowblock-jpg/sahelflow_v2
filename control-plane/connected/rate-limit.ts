@@ -6,7 +6,8 @@ export type RateBucket =
   | "exchange_ip"
   | "exchange_pairing_failure"
   | "command_submit"
-  | "projection_get";
+  | "projection_get"
+  | "command_status";
 
 export type RateRule = Readonly<{ limit: number; windowMs: number }>;
 
@@ -17,6 +18,7 @@ export const RATE_RULES: Readonly<Record<RateBucket, RateRule>> = {
   exchange_pairing_failure: { limit: 5, windowMs: MINUTE_MS },
   command_submit: { limit: 30, windowMs: MINUTE_MS },
   projection_get: { limit: 60, windowMs: MINUTE_MS },
+  command_status: { limit: 60, windowMs: MINUTE_MS },
 };
 
 /** Counter rows older than this are deleted, at most RATE_PRUNE_BATCH per request. */

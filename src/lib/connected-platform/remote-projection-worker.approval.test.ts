@@ -13,6 +13,8 @@ const h = vi.hoisted(() => ({
   lists: 0,
   devices: [] as unknown[],
   publish: vi.fn(),
+  publishOrders: vi.fn(async () => ({ sequence: 1 })),
+  publishConversations: vi.fn(async () => ({ sequence: 1 })),
   invalidate: vi.fn(),
 }));
 
@@ -34,6 +36,8 @@ vi.mock("./runtime", () => ({
   })),
 }));
 vi.mock("./desktop-projection", () => ({ publishRemoteDashboardProjection: h.publish }));
+vi.mock("./orders-projection", () => ({ publishRemoteOrdersProjection: h.publishOrders }));
+vi.mock("./conversations-projection", () => ({ publishRemoteConversationsProjection: h.publishConversations }));
 
 import {
   deviceApprovalsPath,

@@ -54,6 +54,8 @@ export function startConnectedProjectionWorker(): void {
         { loadConnectedRuntimeIfEnrolled },
         { trustedActorForRemoteCommand },
         { publishRemoteDashboardProjection },
+        { publishRemoteOrdersProjection },
+        { publishRemoteConversationsProjection },
         { approvedDeviceIds, readDeviceApprovals },
       ] = await Promise.all([
         import("@/lib/db"),
@@ -61,6 +63,8 @@ export function startConnectedProjectionWorker(): void {
         import("./runtime"),
         import("@/lib/identity/trusted-actor"),
         import("./desktop-projection"),
+        import("./orders-projection"),
+        import("./conversations-projection"),
         import("./device-approvals"),
       ]);
       await requireLicenseEntitlement("sahelflow.connected", shopContext);
@@ -79,11 +83,23 @@ export function startConnectedProjectionWorker(): void {
             device.deviceId,
             shopContext,
           );
-          await publishRemoteDashboardProjection({
+          const common = {
             client: runtime.client,
             desktopKeys: runtime.desktopKeys,
             actorContext,
             deviceId: device.deviceId,
+          };
+          await publishDeviceKinds({
+            dashboard: () => publishRemoteDashboardProjection(common),
+            orders: () => publishRemoteOrdersProjection(common),
+            conversations: () => publishRemoteConversationsProjection(common),
+            onSecondaryFailure: (kind, kindError) => {
+              logger.warn("connected.projection_worker.kind_failed", {
+                kind,
+                deviceId: device.deviceId,
+                reason: kindError instanceof Error ? kindError.message : String(kindError),
+              });
+            },
           });
         },
         onFailure: async (device, deviceError) => {
@@ -140,6 +156,31 @@ export function startConnectedProjectionWorker(): void {
 /** Asks the running worker to publish soon instead of at the next 8-minute tick. No-op when not started. */
 export function kickConnectedProjectionWorker(): void {
   (globalThis as WorkerGlobal)[WORKER_KEY]?.kick?.();
+}
+
+/**
+ * One device, all kinds. The dashboard goes first: it also stores the command
+ * policy, so its failure stops the device (the caller invalidates the policy).
+ * Orders and conversations fail alone and never stop each other or the policy.
+ */
+export async function publishDeviceKinds(input: Readonly<{
+  dashboard: () => Promise<unknown>;
+  orders: () => Promise<unknown>;
+  conversations: () => Promise<unknown>;
+  onSecondaryFailure: (kind: "orders" | "conversations", error: unknown) => void;
+}>): Promise<void> {
+  await input.dashboard();
+  const secondary = [
+    ["orders", input.orders],
+    ["conversations", input.conversations],
+  ] as const;
+  for (const [kind, publish] of secondary) {
+    try {
+      await publish();
+    } catch (error) {
+      input.onSecondaryFailure(kind, error);
+    }
+  }
 }
 
 export type PublishToApprovedResult = Readonly<{ published: string[]; skippedPending: string[]; failed: string[] }>;
