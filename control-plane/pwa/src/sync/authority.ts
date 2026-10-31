@@ -16,11 +16,18 @@ export function authorityOf(snapshot: unknown): CommandAuthority | null {
   if (typeof installationId !== "string" || installationId.length < 8) return null;
   return { policyVersion, installationId, revocationEpoch: epoch };
 }
+/** When the PC's command authority ends (epoch ms, from the verified projection's authority.expiresAt); null when absent or not a real time. */
+export function authorityExpiryOf(snapshot: unknown): number | null {
+  const at = obj(obj(obj(snapshot)?.projection)?.authority)?.expiresAt;
+  return typeof at === "number" && Number.isFinite(at) && at > 0 ? at : null;
+}
 export function createAuthority(db: Db) {
-  let current: CommandAuthority | null = null;
+  let current: CommandAuthority | null = null; let expiry: number | null = null;
   return {
     /** Call after every projection poll that updated the snapshot. */
-    async load(): Promise<void> { current = authorityOf(await db.get("projections", "last")); },
+    async load(): Promise<void> { const snap = await db.get("projections", "last"); current = authorityOf(snap); expiry = current ? authorityExpiryOf(snap) : null; },
+    /** The PC time the command authority ends, or undefined when unknown (the chip then shows nothing). */
+    expiresAt: (): number | undefined => expiry ?? undefined,
     policyVersion: (): number | null => current?.policyVersion ?? null,
     scope: (): PhoneScope | null => (current ? { installationId: current.installationId, revocationEpoch: current.revocationEpoch } : null),
   };
