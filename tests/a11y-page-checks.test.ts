@@ -162,6 +162,7 @@ const facts = (over: Partial<PageFacts> = {}): PageFacts => ({
   forcedColorsActive: false,
   reducedMotionActive: false,
   forcedInvisible: [],
+  collapsedText: [],
   ...over,
 });
 
@@ -212,6 +213,24 @@ describe("judgePageFacts", () => {
     expect(judgePageFacts(facts({ primaryActionReachable: true }), t)).toEqual([]);
     expect(judgePageFacts(facts({ primaryActionReachable: null }), t)).toEqual([]);
     expect(judgePageFacts(facts({ primaryActionReachable: false }), ar)).toEqual([]);
+  });
+
+  it("text200: text squeezed to no width is a failure, and only that mode looks", () => {
+    const t = { locale: "en", viewport: "desktop", mode: "text200" } as const;
+    expect(judgePageFacts(facts({ htmlDir: "ltr", htmlLang: "en", collapsedText: [] }), t)).toEqual([]);
+    expect(
+      judgePageFacts(
+        facts({ htmlDir: "ltr", htmlLang: "en", collapsedText: ["span.line-clamp-2: Revenue", "p.title: Orders"] }),
+        t,
+      ),
+    ).toEqual(["at 200% text size 2 text elements collapse to no width: span.line-clamp-2: Revenue, p.title: Orders"]);
+    expect(
+      judgePageFacts(facts({ htmlDir: "ltr", htmlLang: "en", collapsedText: ["span.line-clamp-2: Revenue"] }), {
+        locale: "en",
+        viewport: "desktop",
+        mode: "normal",
+      }),
+    ).toEqual([]);
   });
 
   it("forced: forced colours must be active and no control may vanish", () => {

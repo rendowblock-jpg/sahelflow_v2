@@ -134,6 +134,8 @@ export type PageFacts = {
   reducedMotionActive: boolean;
   /** Only measured in forced mode: controls left with no boundary and no visible content. */
   forcedInvisible: string[];
+  /** Only measured in text200 mode: elements that hold text but were squeezed to no width ("tag.class: text"). */
+  collapsedText: string[];
 };
 
 /** Sideways scroll beyond this many pixels is a failure on phone and tiny windows. */
@@ -166,6 +168,11 @@ export function judgePageFacts(
   }
   if (cell.mode === "text200" && facts.primaryActionReachable === false) {
     failures.push("at 200% text size the primary action is not reachable");
+  }
+  if (cell.mode === "text200" && facts.collapsedText.length > 0) {
+    failures.push(
+      `at 200% text size ${facts.collapsedText.length} text elements collapse to no width: ${facts.collapsedText.join(", ")}`,
+    );
   }
   if (cell.mode === "forced") {
     if (!facts.forcedColorsActive) failures.push("forced colors were not active (the emulation did not apply)");
@@ -279,6 +286,28 @@ export async function collectPageFacts(page: Page, mode: Mode): Promise<PageFact
       }
     }
 
+    // Text that exists but has been squeezed to no width: the words are in the page and a reader cannot see them. This is
+    // what a row of fixed-size controls does to a label that is allowed to shrink to nothing (WCAG 1.4.4, resize text).
+    // Hidden on purpose is not collapsed: display none, visibility hidden, aria-hidden, hidden or inert ancestors.
+    const collapsedText: string[] = [];
+    if (currentMode === "text200") {
+      const seen = new Set<Element>();
+      const textWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = textWalker.nextNode(); node; node = textWalker.nextNode()) {
+        const parent = node.parentElement;
+        const text = (node.textContent ?? "").replace(/\s+/g, " ").trim();
+        if (!parent || seen.has(parent) || text.length < 2) continue;
+        if (parent.closest("script,style,noscript,[hidden],[inert],[aria-hidden='true']")) continue;
+        const style = getComputedStyle(parent);
+        if (style.display === "none" || style.display === "contents" || style.visibility === "hidden") continue;
+        const rect = parent.getBoundingClientRect();
+        if (rect.width >= 1 || collapsedText.length >= 8) continue;
+        seen.add(parent);
+        const cls = (parent.getAttribute("class") ?? "").split(/\s+/).find((c) => c !== "") ?? "";
+        collapsedText.push(`${parent.tagName.toLowerCase()}${cls ? `.${cls}` : ""}: ${text.slice(0, 24)}`);
+      }
+    }
+
     const forcedInvisible: string[] = [];
     if (currentMode === "forced") {
       const controls = document.querySelectorAll<HTMLElement>(
@@ -315,6 +344,7 @@ export async function collectPageFacts(page: Page, mode: Mode): Promise<PageFact
       forcedColorsActive: matchMedia("(forced-colors: active)").matches,
       reducedMotionActive: matchMedia("(prefers-reduced-motion: reduce)").matches,
       forcedInvisible,
+      collapsedText,
     };
   }, mode);
 }
