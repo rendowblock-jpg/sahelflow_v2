@@ -237,7 +237,7 @@ export function StorefrontStudio({
             error?: string;
             code?: string;
             config?: SerializedConfig;
-            hostedRelease?: { status?: string; releaseId?: string; photos?: { onlyHere: number } | null };
+            hostedRelease?: { status?: string; releaseId?: string; photos?: { onlyHere: number; missing?: number } | null };
           };
           if (response.status === 409 && body.config) return { kind: "conflict" as const, config: body.config };
           if (!response.ok) {

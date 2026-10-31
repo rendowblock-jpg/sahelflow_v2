@@ -198,6 +198,9 @@ describe("pure helpers", () => {
     expect(photoPublishNote({ onlyHere: 0 }, t)).toBeNull();
     expect(photoPublishNote(null, t)).toBeNull();
     expect(photoPublishNote({ onlyHere: 3 }, t)).toBe("storefront.photos.publishedOnlyHere|3");
+    expect(photoPublishNote({ onlyHere: 0, missing: 2 }, t)).toBe("storefront.photos.publishedMissing|2");
+    expect(photoPublishNote({ onlyHere: 1, missing: 2 }, t)).toBe("storefront.photos.publishedOnlyHere|1 storefront.photos.publishedMissing|2");
+    expect(photoPublishNote({ onlyHere: 0, missing: 0 }, t)).toBeNull();
   });
 
   it("has ar, fr and en for every key with the same placeholders", () => {

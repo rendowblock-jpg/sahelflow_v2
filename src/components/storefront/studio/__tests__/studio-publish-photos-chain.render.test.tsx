@@ -278,4 +278,40 @@ describe("Studio Publish -> real publish route -> real SQLite (photos)", () => {
     expect(screen.queryByTestId("publish-retry")).toBeNull();
     expect(h.sent).toHaveLength(0);
   });
+
+  it.each(["ar", "fr", "en"] as const)("a photo whose FILE IS MISSING (%s): the line says so after Published, and the missing path never leaves", async (loc) => {
+    await seed(() => JSON.stringify([`/uploads/${SEG}/p.jpg`, `/uploads/${SEG}/gone.jpg`]));
+    const line = await publishThroughStudio(loc);
+    const reply = replies[0] as Reply;
+    expect(reply.status).toBe(200);
+    expect(reply.body.hostedRelease?.photos).toEqual({ hosted: 1, uploaded: 1, onlyHere: 0, missing: 1, serviceOn: true });
+    const releaseId = (reply.body.hostedRelease as { releaseId: string }).releaseId;
+    await waitFor(() =>
+      expect(line.textContent).toBe(
+        `${tx(loc, "storefront.studioStates.publish.published", { version: releaseId.slice(0, 8) })} ${tx(loc, "storefront.photos.publishedMissing", { count: 1 })}`,
+      ),
+    );
+    expect(JSON.stringify(h.sent[0])).not.toContain("gone.jpg");
+  });
+
+  it("ledger -> status route (real SQLite): the published photo is hosted, a photo added later is waiting, a gone file is missing, a pasted link is a link", async () => {
+    await seed(() => JSON.stringify([`/uploads/${SEG}/p.jpg`]));
+    await publishThroughStudio("en");
+    expect((replies[0] as Reply).status).toBe(200);
+    const other = await sharp({ create: { width: 640, height: 480, channels: 3, background: "#2255aa" } }).jpeg().toBuffer();
+    writeFileSync(join(cwd, "public", "uploads", SEG, "q.jpg"), other);
+    const product = await db.product.findFirstOrThrow();
+    const refs = [`/uploads/${SEG}/p.jpg`, `/uploads/${SEG}/q.jpg`, `/uploads/${SEG}/gone.jpg`, "https://own.example.test/x.jpg"];
+    await db.product.update({ where: { id: product.id }, data: { images: JSON.stringify(refs) } });
+    const { GET } = await import("@/app/api/storefront/media/status/route");
+    const response = await GET(new NextRequest(`http://localhost/api/storefront/media/status?storefrontId=${SF}`));
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { products: Record<string, Array<{ ref: string; state: string }>> };
+    expect(body.products[product.id]).toEqual([
+      { ref: refs[0], state: "hosted" },
+      { ref: refs[1], state: "waiting" },
+      { ref: refs[2], state: "missing" },
+      { ref: refs[3], state: "link" },
+    ]);
+  });
 });

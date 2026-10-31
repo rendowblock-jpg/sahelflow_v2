@@ -31,8 +31,14 @@ export function photoFailureText(code: string | null | undefined, t: Translate):
 }
 
 /** Added to the success line when some photos stayed on this PC. */
-export function photoPublishNote(summary: Readonly<{ onlyHere: number }> | null | undefined, t: Translate): string | null {
-  return summary && summary.onlyHere > 0 ? t("storefront.photos.publishedOnlyHere", { count: summary.onlyHere }) : null;
+export function photoPublishNote(summary: Readonly<{ onlyHere: number; missing?: number }> | null | undefined, t: Translate): string | null {
+  if (!summary) return null;
+  const notes: string[] = [];
+  if (summary.onlyHere > 0) notes.push(t("storefront.photos.publishedOnlyHere", { count: summary.onlyHere }));
+  const missing = summary.missing ?? 0;
+  // A photo whose file is gone is a photo the buyer will not see: the line says so too.
+  if (missing > 0) notes.push(t("storefront.photos.publishedMissing", { count: missing }));
+  return notes.length > 0 ? notes.join(" ") : null;
 }
 
 export const ANNOUNCE_GAP_MS = 2000;
