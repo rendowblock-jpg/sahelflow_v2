@@ -33,7 +33,8 @@ describe("deterministic responsive composition contract", () => {
   });
 
   it("keeps Accounting on the governed four-card primitive", () => {
-    const accounting = read("src/app/(dashboard)/accounting/page.tsx");
+    // The page hands its figures to AccountingView, which owns the card grid.
+    const accounting = read("src/components/accounting/accounting-view.tsx");
     expect(accounting).toContain('className="card-grid-4"');
   });
 });

@@ -1,13 +1,16 @@
 "use client";
 
 import {
+  photoFailureRetryable,
   publishStatusView,
   activeWaitsForPublish,
   publishedActiveBaseline,
   saveThenPublish,
+  withPhotoNote,
   type PublishPhase,
   type SaveOutcome,
 } from "@/components/storefront/studio/publish-flow";
+import { photoFailureText, photoPublishNote } from "@/components/storefront/studio/photo-state-chip";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -26,6 +29,7 @@ import type { StorefrontStudioConfig } from "@/lib/storefront/service";
 import {
   addStorefrontSection,
   createStorefrontStudioDraft,
+  studioThemeForWire,
   deleteStorefrontSection,
   duplicateStorefrontSection,
   moveStorefrontSection,
@@ -49,7 +53,8 @@ import { StudioCanvas } from "./studio-canvas";
 import { PanelHeader } from "./studio-controls";
 import { ProductsPanel, ThemePanel } from "./studio-design-panels";
 import { StudioRail, type StudioPanel } from "./studio-rail";
-import { CheckoutPanel, ContactPanel, SeoPanel } from "./studio-settings-panels";
+import { legalPublishBlock } from "@/lib/storefront/studio-legal";
+import { CheckoutPanel, ContactPanel, LegalPanel, SeoPanel } from "./studio-settings-panels";
 import { StudioTopBar, type StudioSaveState } from "./studio-top-bar";
 import type { StorefrontStudioDevice, StorefrontStudioProduct } from "./studio-types";
 
@@ -146,7 +151,7 @@ export function StorefrontStudio({
             name: parsed.data.name,
             slug: parsed.data.slug,
             description: parsed.data.description || null,
-            theme: parsed.data.theme,
+            theme: studioThemeForWire(parsed.data),
             productIds: parsed.data.selectedProductIds,
             isActive: parsed.data.isActive,
           }),
@@ -201,6 +206,14 @@ export function StorefrontStudio({
   // One click: unsaved edits are saved first, then the saved version is released.
   const publish = useCallback(async () => {
     if (publishingRef.current) return;
+    // A store going live needs legal texts the seller has read; the panel opens with the reason.
+    const legalBlock = draft.isActive ? legalPublishBlock(draft.legal) : null;
+    if (legalBlock) {
+      setPanel("legal");
+      setPanelCollapsed(false);
+      setMessage(t(legalBlock.messageKey), "warning");
+      return;
+    }
     if (draft.isActive && draft.theme.builder.shippingRules.length === 0) {
       setPanel("checkout");
       setPanelCollapsed(false);
@@ -232,11 +245,17 @@ export function StorefrontStudio({
           });
           const body = (await response.json()) as {
             error?: string;
+            code?: string;
             config?: SerializedConfig;
-            hostedRelease?: { status?: string; releaseId?: string };
+            hostedRelease?: { status?: string; releaseId?: string; photos?: { onlyHere: number; missing?: number } | null };
           };
           if (response.status === 409 && body.config) return { kind: "conflict" as const, config: body.config };
-          if (!response.ok) throw new StudioRequestError(response.status, body.error ?? null);
+          if (!response.ok) {
+            // A photo that could not be hosted stops the publish; the server sends its code in `code`, `error` is English text.
+            const photoText = photoFailureText(body.code, t);
+            if (photoText && body.code) return { kind: "photo-failed" as const, code: body.code, text: photoText };
+            throw new StudioRequestError(response.status, body.error ?? null);
+          }
           return { kind: "ok" as const, hostedRelease: body.hostedRelease };
         },
       });
@@ -260,6 +279,10 @@ export function StorefrontStudio({
         setPublishPhase({ phase: "failed", text: t("storefront.studio.newerDraft") });
         return;
       }
+      if (plan.value.kind === "photo-failed") {
+        setPublishPhase({ phase: "failed", text: plan.value.text, retry: photoFailureRetryable(plan.value.code) });
+        return;
+      }
 
       setSaveReason(null);
       // "Published" only when the hosted service answered with a published release.
@@ -269,9 +292,12 @@ export function StorefrontStudio({
       setPublishPhase({
         phase: "published",
         text: published
-          ? t("storefront.studioStates.publish.published", {
-              version: (plan.value.hostedRelease?.releaseId ?? "—").slice(0, 8),
-            })
+          ? withPhotoNote(
+              t("storefront.studioStates.publish.published", {
+                version: (plan.value.hostedRelease?.releaseId ?? "—").slice(0, 8),
+              }),
+              photoPublishNote(plan.value.hostedRelease?.photos, t),
+            )
           : t("storefront.inactive"),
       });
     } catch (error) {
@@ -498,6 +524,7 @@ export function StorefrontStudio({
               ) : null}
               {panel === "checkout" ? <CheckoutPanel draft={draft} commit={commitDraft} /> : null}
               {panel === "contact" ? <ContactPanel draft={draft} commit={commitDraft} /> : null}
+              {panel === "legal" ? <LegalPanel draft={draft} commit={commitDraft} /> : null}
               {panel === "seo" ? <SeoPanel draft={draft} commit={commitDraft} /> : null}
             </div>
           )}

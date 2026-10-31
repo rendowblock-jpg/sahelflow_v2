@@ -28,7 +28,8 @@ import {
   writeWhatsAppMediaObject,
 } from "./media-object-store";
 import { normalizeWhatsAppJid } from "./types";
-import { decideHeldApproval, isHeldOutboxIntent } from "./held-send";
+import { decideHeldApproval, decideHeldDiscard, isHeldOutboxIntent } from "./held-send";
+import { emitHeldSendNotice } from "./held-notice";
 import {
   SEND_GUARD_HOLD_ERROR_CODE,
   assessWhatsAppSend,
@@ -881,6 +882,7 @@ export async function queueWhatsAppText(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
@@ -1119,6 +1121,7 @@ export async function queueWhatsAppImage(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
@@ -1390,6 +1393,7 @@ export async function queueWhatsAppVideo(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
@@ -1658,6 +1662,7 @@ export async function queueWhatsAppDocument(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
@@ -1972,6 +1977,7 @@ export async function queueWhatsAppVoice(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
@@ -2966,4 +2972,93 @@ export async function approveHeldWhatsAppSend(
     }
   }
   return { effect: await getWhatsAppEffectStatus(context, effectKey), alreadyApproved: true };
+}
+
+const HOLD_DISCARDED_AUDIT_ACTION = "whatsapp.held_send.discarded";
+
+/** The discard audit row is also the proof that a held send was thrown away before. */
+async function hasHoldDiscard(context: ServiceContext, intentId: string): Promise<boolean> {
+  const found = await context.prisma.auditLog.findFirst({
+    where: { action: HOLD_DISCARDED_AUDIT_ACTION, entity: "outbox-intent", entityId: intentId },
+    select: { id: true },
+  });
+  return found !== null;
+}
+
+/**
+ * Held -> dead_letter plus the audit row, in one transaction that claims by
+ * status. The hold code stays on the row: it is what tells "discarded" from a
+ * send that failed for good. Workers only claim queued/retrying, so nothing
+ * will ever try this row again.
+ */
+async function discardHeldRow(
+  context: TrustedWhatsAppCommandContext,
+  row: OutboxRow,
+): Promise<void> {
+  await context.prisma.$transaction(async (tx) => {
+    const discarded = await tx.outboxIntent.updateMany({
+      where: {
+        id: row.id,
+        status: "failed",
+        outcomeState: "none",
+        lastErrorCode: SEND_GUARD_HOLD_ERROR_CODE,
+      },
+      data: { status: "dead_letter", deadLetteredAt: new Date(), nextAttemptAt: null },
+    });
+    if (discarded.count !== 1) {
+      throw new ConflictError("WhatsApp send state changed; refresh and try again");
+    }
+    await tx.auditLog.create({
+      data: {
+        action: HOLD_DISCARDED_AUDIT_ACTION,
+        entity: "outbox-intent",
+        entityId: row.id,
+        actor: context.businessPrincipal.auditActor,
+        metadata: JSON.stringify({ effectKey: row.effectKey, effectType: row.effectType }),
+      },
+    });
+  });
+}
+
+export interface HeldDiscardResult {
+  effect: WhatsAppEffectStatus;
+  /** True when this press changed nothing because the send was discarded before. */
+  alreadyDiscarded: boolean;
+}
+
+/**
+ * The discard route's core: throw a held send away ONCE. A repeat or a parallel
+ * press is a no-op that reports the current state. A send that was released
+ * can never be discarded (and a discarded one can never be released: it is no
+ * longer "failed", so the approve path refuses it).
+ */
+export async function discardHeldWhatsAppSend(
+  context: TrustedWhatsAppCommandContext,
+  effectKey: string,
+): Promise<HeldDiscardResult> {
+  if (context.businessPrincipal.kind !== "authenticated-owner") {
+    throw new SahelFlowError("Only a signed-in person can discard a held send", "FORBIDDEN", 403);
+  }
+  const row = await readRow(context, effectKey);
+  const decision = decideHeldDiscard(
+    row,
+    await hasHoldApproval(context, row.id),
+    await hasHoldDiscard(context, row.id),
+  );
+  if (decision === "not_held") {
+    throw new ConflictError("This WhatsApp send is not on hold");
+  }
+  if (decision === "already_released") {
+    throw new ConflictError("This WhatsApp send was already released and cannot be discarded");
+  }
+  if (decision === "discard") {
+    try {
+      await discardHeldRow(context, row);
+      return { effect: await getWhatsAppEffectStatus(context, effectKey), alreadyDiscarded: false };
+    } catch (error) {
+      // Lost a race with a parallel press: only then is this a no-op.
+      if (!(error instanceof ConflictError) || !(await hasHoldDiscard(context, row.id))) throw error;
+    }
+  }
+  return { effect: await getWhatsAppEffectStatus(context, effectKey), alreadyDiscarded: true };
 }

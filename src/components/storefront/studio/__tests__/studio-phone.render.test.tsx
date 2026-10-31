@@ -200,7 +200,7 @@ describe("phone class contract", () => {
     viewport(true);
     const { container } = mount();
     const items = Array.from(container.querySelectorAll("[data-studio-rail-item]"));
-    expect(items.length).toBe(6);
+    expect(items.length).toBe(7);
     for (const item of items) {
       expect(tokens(item)).toEqual(expect.arrayContaining(["max-md:min-h-11", "max-md:w-auto", "max-md:flex-1"]));
     }

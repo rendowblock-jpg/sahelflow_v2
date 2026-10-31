@@ -407,6 +407,18 @@ export function AnalyticsView({
           icon={<Truck />}
           accent="bg-emerald-500/10 dark:bg-emerald-500/15"
           config={{}}
+          dataTable={buildChartTable(
+            t,
+            t("analytics.deliveryPerformance"),
+            fmtPercent(delivery.deliveryRate),
+            [t("charts.colStatus"), t("analytics.ordersLabel")],
+            [
+              [t("analytics.delivered"), integerFormatter.format(delivery.delivered)],
+              [t("analytics.inTransit"), integerFormatter.format(delivery.inTransit)],
+              [t("dashboard.pending"), integerFormatter.format(delivery.pending)],
+              [t("analytics.returned"), integerFormatter.format(delivery.returned)],
+            ],
+          )}
         >
           <OutcomeProgress
             value={delivery.deliveryRate}

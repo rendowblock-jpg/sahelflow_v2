@@ -108,7 +108,8 @@ export function findWilayaMentions(folded: string): GeoMention[] {
   const mentions: GeoMention[] = [];
   for (const match of folded.matchAll(WILAYA_NUMBER_PATTERN)) {
     const code = Number(match.groups?.code);
-    if (code < 1 || code > 58) continue;
+    // Any code the reference data holds (1 to 69); 0, 70 and 99 are not wilayas.
+    if (!WILAYA_NAME.has(code)) continue;
     const start = match.index ?? 0;
     mentions.push({ code, start, end: start + match[0].length, score: 3 });
   }

@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { HeldSendApproveDialog } from "@/components/inbox/held-send-notice";
+import { HeldSendApproveDialog, HeldSendDiscardDialog } from "@/components/inbox/held-send-notice";
 import { EmojiPicker } from "@/components/inbox/inbox-emoji-picker";
 import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-panel";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
@@ -184,6 +184,10 @@ export function InboxV3Thread({
     heldApproveMessage,
     resolveHeldApprove,
     approveHeldMessage,
+    heldDiscardMessage,
+    resolveHeldDiscard,
+    discardHeldMessage,
+    heldDiscardStatus,
   } = workspace;
   // The same pure function the header notice uses: the composer and the notice cannot disagree.
   const link = useThreadLinkState(workspace);
@@ -772,6 +776,8 @@ export function InboxV3Thread({
                     onRetry={retryFailedMessage}
                     onApproveHeld={approveHeldMessage}
                     canApproveHeld={viewerIsOwner}
+                    onDiscardHeld={discardHeldMessage}
+                    heldDiscard={heldDiscardStatus}
                     onReply={replyToMessage}
                     canInteract={canSend}
                     upload={uploads[message.id]}
@@ -1334,6 +1340,11 @@ export function InboxV3Thread({
       <HeldSendApproveDialog
         open={heldApproveMessage !== null}
         onResolve={resolveHeldApprove}
+        t={t}
+      />
+      <HeldSendDiscardDialog
+        open={heldDiscardMessage !== null}
+        onResolve={resolveHeldDiscard}
         t={t}
       />
     </section>

@@ -7,6 +7,8 @@
  * pauses in the settings table so a restart remembers them.
  */
 
+import { noteProviderRequest } from "./quota-pending";
+
 export type AiProviderId = "gemini" | "groq" | "openai";
 export const AI_PROVIDER_IDS: readonly AiProviderId[] = ["gemini", "groq", "openai"];
 
@@ -50,7 +52,11 @@ function pauseSeconds(retryAfterSeconds: number | null | undefined): number {
   return Math.min(retryAfterSeconds, MAX_PAUSE_SECONDS);
 }
 
-export function createQuotaLedger(clock: () => Date = () => new Date()): QuotaLedger {
+export function createQuotaLedger(
+  clock: () => Date = () => new Date(),
+  /** Called for every recorded request; the shared ledger uses it to count requests per day for good. */
+  onRequest?: (provider: AiProviderId, now: Date) => void,
+): QuotaLedger {
   const pausedUntil = new Map<AiProviderId, number>();
   const counters = new Map<AiProviderId, { day: string; count: number }>();
   const meta = new Map<AiProviderId, PauseOptions>();
@@ -63,6 +69,7 @@ export function createQuotaLedger(clock: () => Date = () => new Date()): QuotaLe
 
   return {
     recordRequest(provider, now = clock()) {
+      onRequest?.(provider, now);
       const day = localDayKey(now);
       const current = counters.get(provider);
       counters.set(provider, { day, count: current?.day === day ? current.count + 1 : 1 });
@@ -110,4 +117,4 @@ export function createQuotaLedger(clock: () => Date = () => new Date()): QuotaLe
 }
 
 /** The process-wide ledger the router uses unless a test passes its own. */
-export const quotaLedger: QuotaLedger = createQuotaLedger();
+export const quotaLedger: QuotaLedger = createQuotaLedger(undefined, noteProviderRequest);

@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useI18n } from "@/hooks/use-i18n";
+import { collapseBursts } from "@/lib/notifications/burst";
 import type { NotificationCenterItem } from "@/hooks/use-notification-center";
 import { cn } from "@/lib/utils";
 
@@ -60,11 +61,15 @@ export function NotificationFeedList({
             {group.label}
           </h2>
           <ul className="divide-y divide-border/60">
-            {group.items.map((item) => (
+            {collapseBursts(
+              group.items.map((entry) => ({ ...entry, kind: entry.kind ?? null, count: entry.count ?? null })),
+            ).map((item) => (
               <NotificationFeedRow
                 key={item.id}
                 item={item}
-                onAction={onAction}
+                onAction={(id, action) => {
+                  for (const target of item.groupedIds ?? [id]) onAction(target, action);
+                }}
                 onDismiss={onDismiss}
               />
             ))}
@@ -140,7 +145,7 @@ function NotificationFeedRow({
         </div>
         {item.body ? (
           <p className="mt-0.5 line-clamp-2 text-body-sm text-muted-foreground">
-            {item.body}
+            {item.groupCount && item.bodyKey ? t(item.bodyKey, { count: item.groupCount }) : item.body}
           </p>
         ) : null}
       </div>

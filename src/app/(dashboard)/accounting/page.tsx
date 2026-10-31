@@ -1,25 +1,9 @@
 import type { Metadata } from "next";
-import { AlertTriangle, Package, Receipt, TrendingUp, Wallet } from "lucide-react";
 
+import { AccountingView } from "@/components/accounting/accounting-view";
+import { resolveAccountingState } from "@/components/accounting/accounting-state";
 import { ExpenseFormDialog } from "@/components/accounting/expense-form-dialog";
-import { ExpenseRowActions } from "@/components/accounting/expense-row-actions";
-import { ExpensesDataTable } from "@/components/accounting/expenses-data-table";
-import { DualBarChart } from "@/components/charts/dual-bar-chart";
-import { ChartCard } from "@/components/charts/chart-primitives";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
-import { PageHeader } from "@/components/shared/page-header";
-import { StateSurface } from "@/components/shared/state-surface";
-import { StatCard } from "@/components/shared/stat-card";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   getProfitabilityProjection,
   getProfitabilitySeries,
@@ -32,7 +16,7 @@ import {
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
 import { SHOP_TIME_ZONE, shopRecentMonths } from "@/lib/time/shop-day";
-import { formatDate, formatDZD, intlLocale } from "@/lib/utils";
+import { intlLocale } from "@/lib/utils";
 import type { ExpenseCategory } from "@/lib/validation";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -40,6 +24,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metadata.title.accounting") };
 }
 export const dynamic = "force-dynamic";
+
+// One failed read must not take the whole page down: each source reports on its own.
+const settle = <T,>(promise: Promise<T>) =>
+  promise.then(
+    (value) => ({ ok: true as const, value }),
+    () => ({ ok: false as const }),
+  );
 
 export default async function AccountingPage() {
   const actorContext = await requireTrustedAction("accounting.read");
@@ -58,59 +49,41 @@ export default async function AccountingPage() {
   // Calendar months are shop months (Africa/Algiers), not the computer's.
   const last6Months = shopRecentMonths(now, 6);
 
-  const aggregates = await Promise.all([
-    db.expense.findMany({
-      where: { date: { gte: periodStart, lt: now }, deletedAt: null },
-      orderBy: [{ date: "desc" }, { id: "desc" }],
-    }),
-    canReadProfitability
-      ? getProfitabilityProjection(db, period)
-      : Promise.resolve(null),
-    canReadProfitability
-      ? getProfitabilitySeries(
-          db,
-          last6Months.map((entry) => ({
-            key: entry.key,
-            period: { from: entry.gte, to: entry.lt },
-          })),
-        )
-      : Promise.resolve([]),
-  ])
-    .then(([expenses, profitability, monthlySeries]) => ({
-      expenses,
-      profitability,
-      monthlySeries,
-    }))
-    .catch(() => null);
+  const [expensesResult, profitabilityResult, seriesResult] = await Promise.all([
+    settle(
+      db.expense.findMany({
+        where: { date: { gte: periodStart, lt: now }, deletedAt: null },
+        orderBy: [{ date: "desc" }, { id: "desc" }],
+      }),
+    ),
+    settle(
+      canReadProfitability
+        ? getProfitabilityProjection(db, period)
+        : Promise.resolve(null),
+    ),
+    settle(
+      canReadProfitability
+        ? getProfitabilitySeries(
+            db,
+            last6Months.map((entry) => ({
+              key: entry.key,
+              period: { from: entry.gte, to: entry.lt },
+            })),
+          )
+        : Promise.resolve([]),
+    ),
+  ]);
 
-  // Degraded state: a transient DB hiccup should not fall through to the route
-  // error boundary — the workbench stays recognizable and offers a retry.
-  if (!aggregates) {
-    return (
-      <div className="app-content page-sections">
-        <PageHeader title={t("nav.accounting")} description={t("accounting.subtitle")} />
-        <StateSurface
-          icon={AlertTriangle}
-          title={t("accounting.loadFailed")}
-          description={t("error.requestFailed")}
-          tone="danger"
-          size="inline"
-          actions={
-            <Button asChild variant="outline" size="sm">
-              <a href="/accounting">{t("common.retry")}</a>
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
-
-  const { expenses, profitability, monthlySeries } = aggregates;
+  const expenses = expensesResult.ok ? expensesResult.value : [];
+  const profitability = profitabilityResult.ok ? profitabilityResult.value : null;
+  const monthlySeries = seriesResult.ok ? seriesResult.value : [];
+  const expensesFailed = !expensesResult.ok;
+  const figuresFailed = !profitabilityResult.ok || !seriesResult.ok;
 
   const monthlyByKey = new Map(
     monthlySeries.map((entry) => [entry.key, entry.projection]),
   );
-  const monthlyData = last6Months.map((entry) => {
+  const monthly = last6Months.map((entry) => {
     const month = monthlyByKey.get(entry.key);
     return {
       month: entry.gte.toLocaleDateString(dateLocale, {
@@ -123,170 +96,60 @@ export default async function AccountingPage() {
   });
   // MNY-06: one definition of "Expenses" (COGS included) for the card, every
   // chart bar and the chart caption; the caption totals the plotted months.
-  const totalExpenses = profitability ? totalExpensesOf(profitability) : null;
-  const chartTotals = sumMonthlyTotals(monthlyData);
+  const financials = profitability
+    ? {
+        netRevenue: profitability.netRevenue,
+        cogs: profitability.cogs,
+        totalExpenses: totalExpensesOf(profitability),
+        netProfit: profitability.netProfit,
+        profitabilityComplete: profitability.profitabilityComplete,
+      }
+    : null;
+  const hasFigures =
+    financials !== null &&
+    (financials.netRevenue !== 0 ||
+      financials.cogs !== 0 ||
+      financials.totalExpenses !== 0 ||
+      financials.netProfit !== 0);
+
+  const state = resolveAccountingState({
+    expensesFailed,
+    figuresFailed,
+    canReadFigures: canReadProfitability,
+    expenseCount: expenses.length,
+    hasFigures,
+  });
+  const dayFormat = { day: "numeric", month: "short", timeZone: SHOP_TIME_ZONE } as const;
 
   return (
-    <div className="app-content page-sections">
-      <PageHeader
-        title={t("nav.accounting")}
-        description={`${t("accounting.subtitle")} — ${periodStart.toLocaleDateString(dateLocale, { day: "numeric", month: "short", timeZone: SHOP_TIME_ZONE })} – ${now.toLocaleDateString(dateLocale, { day: "numeric", month: "short", timeZone: SHOP_TIME_ZONE })}`}
-        actions={canExport || canUpdate ? (
+    <AccountingView
+      t={t}
+      locale={locale}
+      state={state}
+      periodLabel={`${periodStart.toLocaleDateString(dateLocale, dayFormat)} – ${now.toLocaleDateString(dateLocale, dayFormat)}`}
+      canReadFigures={canReadProfitability}
+      canUpdate={canUpdate}
+      financials={financials}
+      monthly={monthly}
+      chartTotals={sumMonthlyTotals(monthly)}
+      expenses={expenses.map((expense) => ({
+        id: expense.id,
+        category: expense.category as ExpenseCategory,
+        amount: expense.amount,
+        date: expense.date.toISOString(),
+        notes: expense.notes,
+      }))}
+      failed={{ expenses: expensesFailed, figures: canReadProfitability && figuresFailed }}
+      retryHref="/accounting"
+      headerActions={
+        canExport || canUpdate ? (
           <div className="flex flex-wrap items-center gap-2">
             {canExport ? <ImportExportButtons exportRoute="/api/export/expenses" /> : null}
             {canUpdate ? <ExpenseFormDialog /> : null}
           </div>
-        ) : undefined}
-      />
-
-      {!canReadProfitability ? (
-        <StateSurface
-          icon={Wallet}
-          title={t("error.forbidden")}
-          description={t("accounting.subtitle")}
-          tone="warning"
-          size="inline"
-        />
-      ) : profitability ? (
-        <>
-          <div className="card-grid-4">
-            <StatCard
-              label={t("accounting.netRevenue")}
-              value={formatDZD(profitability.netRevenue, locale)}
-              tooltip={t("accounting.netRevenueDefinition")}
-              icon={<TrendingUp />}
-              href="/analytics"
-              hrefLabel={t("nav.analytics")}
-            />
-            {/* Missing cost prices are a fact about this number, so the card
-                carries it (and leads to the products to fix) instead of a
-                warning box above the page. */}
-            <StatCard
-              label={t("accounting.cogs")}
-              value={formatDZD(profitability.cogs, locale)}
-              icon={profitability.profitabilityComplete ? <Package /> : <AlertTriangle />}
-              tone={profitability.profitabilityComplete ? "neutral" : "warning"}
-              subtitle={
-                profitability.profitabilityComplete
-                  ? undefined
-                  : t("accounting.missingCostsCard")
-              }
-              tooltip={
-                profitability.profitabilityComplete
-                  ? undefined
-                  : t("accounting.missingCostsWarning")
-              }
-              href={profitability.profitabilityComplete ? undefined : "/products"}
-              hrefLabel={t("nav.products")}
-            />
-            <StatCard label={t("accounting.expenses")} value={formatDZD(totalExpenses ?? 0, locale)} icon={<Receipt />} />
-            <StatCard
-              label={t("accounting.netProfit")}
-              value={formatDZD(profitability.netProfit, locale)}
-              icon={<Wallet />}
-              trend={profitability.netProfit > 0 ? 1 : profitability.netProfit < 0 ? -1 : 0}
-              trendLabel={profitability.netProfit >= 0 ? t("accounting.profit") : t("accounting.loss")}
-            />
-          </div>
-
-          <ChartCard
-            title={t("accounting.revenueVsExpenses")}
-            summary={`${t("accounting.netRevenue")}: ${formatDZD(chartTotals.revenue, locale)} · ${t("accounting.expenses")}: ${formatDZD(chartTotals.expenses, locale)}`}
-            icon={<TrendingUp className="size-4" />}
-            config={{}}
-            dataTable={{
-              label: `${t("accounting.netRevenue")}: ${formatDZD(chartTotals.revenue, locale)} · ${t("accounting.expenses")}: ${formatDZD(chartTotals.expenses, locale)}`,
-              caption: t("charts.tableOf", { title: t("accounting.revenueVsExpenses") }),
-              columns: [t("charts.colMonth"), t("accounting.revenue"), t("accounting.expenses")],
-              rows: monthlyData.map((entry) => [
-                entry.month,
-                formatDZD(entry.revenue, locale),
-                formatDZD(entry.expenses, locale),
-              ]),
-              showLabel: t("charts.showAsTable"),
-              hideLabel: t("charts.showAsChart"),
-            }}
-          >
-            <DualBarChart
-              data={monthlyData}
-              revenueLabel={t("accounting.revenue")}
-              expensesLabel={t("accounting.expenses")}
-            />
-          </ChartCard>
-        </>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("accounting.recentExpenses")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {expenses.length === 0 ? (
-            <StateSurface
-              icon={Receipt}
-              title={t("accounting.noExpenses")}
-              tone="neutral"
-              size="inline"
-            />
-          ) : (
-            <>
-            <div className="md:hidden">
-              <ExpensesDataTable
-                layout="cards"
-                canUpdate={canUpdate}
-                rows={expenses.map((expense) => ({
-                  id: expense.id,
-                  category: expense.category as ExpenseCategory,
-                  amount: expense.amount,
-                  date: expense.date.toISOString(),
-                  notes: expense.notes,
-                }))}
-              />
-            </div>
-            <div className="hidden overflow-x-auto md:block">
-              <Table scrollLabel={t("accounting.recentExpenses")}>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("accounting.expenseDate")}</TableHead>
-                    <TableHead>{t("accounting.expenseCategory")}</TableHead>
-                    <TableHead className="text-end">{t("accounting.expenseAmount")}</TableHead>
-                    <TableHead>{t("accounting.expenseNotes")}</TableHead>
-                    {canUpdate ? <TableHead className="text-end">{t("common.actions")}</TableHead> : null}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell className="text-muted-foreground">{formatDate(expense.date, locale)}</TableCell>
-                      <TableCell className="font-medium">{t(`accounting.category.${expense.category}`)}</TableCell>
-                      <TableCell className="text-end font-medium tabular-nums">
-                        {/* Isolate the signed amount so the minus glyph never
-                            marries the surrounding RTL label direction. */}
-                        <span dir="ltr">−{formatDZD(expense.amount, locale)}</span>
-                      </TableCell>
-                      <TableCell className="max-w-xs text-muted-foreground">{expense.notes ?? "—"}</TableCell>
-                      {canUpdate ? (
-                        <TableCell className="text-end">
-                          <ExpenseRowActions
-                            expense={{
-                              id: expense.id,
-                              category: expense.category as ExpenseCategory,
-                              amount: expense.amount,
-                              date: expense.date.toISOString(),
-                              notes: expense.notes,
-                            }}
-                          />
-                        </TableCell>
-                      ) : null}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        ) : undefined
+      }
+      addExpenseAction={canUpdate ? <ExpenseFormDialog /> : undefined}
+    />
   );
 }

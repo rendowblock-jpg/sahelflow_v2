@@ -68,3 +68,14 @@ progress{display:block;width:100%;height:12px;accent-color:var(--ink)}
 .lock{justify-content:center}
 @media (max-width:359px){.figs{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* kit */
+.state-strip,.chip{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-block:10px;padding-inline:14px;font-size:16px;line-height:1.5;border:1px solid #DDD5C5;background:#FAF7F0;color:#15171B}
+.chip{border-inline-start:5px solid #15171B}
+.chip-committed{border-inline-start-color:#2D6A4F}
+.chip-failed,.chip-expired{border-inline-start-color:#B93A2B}
+.chip .btn,.confirm .btn,.composer .btn{min-block-size:44px;min-inline-size:44px;font-size:16px}
+.confirm{padding:16px;background:#FAF7F0;color:#15171B;border:1px solid #DDD5C5}
+.confirm .actions{display:flex;flex-direction:column;gap:8px;margin-block-start:12px}
+.composer textarea{inline-size:100%;min-block-size:96px;padding:12px;font-size:16px;color:#15171B;background:#FAF7F0;border:1px solid #DDD5C5}
+.composer label{display:block;margin-block-end:6px;font-size:16px;font-weight:600}

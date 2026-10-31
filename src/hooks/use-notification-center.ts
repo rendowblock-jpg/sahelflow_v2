@@ -9,6 +9,7 @@ import {
   listenForDesktopNotificationActions,
   sendDesktopNotification,
 } from "@/lib/notifications/native-client";
+import { createBurstGate } from "@/lib/notifications/burst";
 import { fetcher } from "@/lib/swr/fetcher";
 import { mutatePrefix } from "@/lib/swr/mutate";
 
@@ -49,6 +50,19 @@ export interface NotificationCenterItem {
   link: string;
   createdAt: string;
   nativePending: boolean;
+  /** Which of the nine kinds this row is (null for older or computed rows). */
+  kind?: string | null;
+  /** Live number for the sentence, null when the sentence has none. */
+  count?: number | null;
+  titleKey?: string;
+  bodyKey?: string;
+  /** Set on the one row that speaks for everything held by quiet hours. */
+  digestCount?: number | null;
+  nativeTitle?: string;
+  nativeBody?: string;
+  /** Set by the list when neighbouring rows of one kind are folded. */
+  groupCount?: number;
+  groupedIds?: string[];
 }
 
 export interface NotificationCenterPreference {
@@ -250,6 +264,22 @@ function revalidateNotifications(): Promise<void> {
  * and every terminal state (sent/denied/failed/suppressed) is completed with
  * its reason code.
  */
+/** One toast per kind per 90 s, however many rows a poll brings. */
+const nativeBurstGate = createBurstGate();
+
+/**
+ * "Mark all read": the stored rows are marked read on the server, and the
+ * computed alerts (which have no read state) are dismissed the same way a
+ * single dismissal is, so the bell really goes to zero.
+ */
+export async function markEverythingRead(items: readonly NotificationCenterItem[]): Promise<boolean> {
+  const response = await fetch("/api/notifications/read-all", { method: "POST" });
+  if (!response.ok) return false;
+  const computed = items.filter((item) => !item.durable);
+  if (computed.length > 0) await dismissNotifications(computed);
+  return true;
+}
+
 export function useNotificationCenter() {
   const router = useRouter();
   const { data, error, mutate } = useSWR<NotificationCenterResponse>(
@@ -320,9 +350,14 @@ export function useNotificationCenter() {
           await completeNative(notification.id, "suppressed", "foreground");
           return;
         }
+        const digest = typeof notification.digestCount === "number";
+        if (!nativeBurstGate.take(digest ? "digest" : (notification.kind ?? "other"), Date.now())) {
+          await completeNative(notification.id, "suppressed", "burst");
+          return;
+        }
         const result = await sendDesktopNotification({
-          title: claim.preview?.contactName ?? notification.title,
-          body: claim.preview?.body ?? notification.body,
+          title: digest ? (notification.nativeTitle ?? notification.title) : (claim.preview?.contactName ?? notification.title),
+          body: digest ? (notification.nativeBody ?? notification.body) : (claim.preview?.body ?? notification.body),
           link: claim.link,
           soundEnabled: claim.soundEnabled === true,
         });
@@ -381,12 +416,10 @@ export function useNotificationCenter() {
   );
 
   const readAll = useCallback(async () => {
-    const response = await fetch("/api/notifications/read-all", {
-      method: "POST",
-    });
-    if (response.ok) await revalidateNotifications();
-    return response.ok;
-  }, []);
+    const ok = await markEverythingRead(notifications);
+    if (ok) await revalidateNotifications();
+    return ok;
+  }, [notifications]);
 
   return {
     notifications,

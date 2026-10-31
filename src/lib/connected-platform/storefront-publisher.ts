@@ -6,6 +6,8 @@ import {
   storefrontReleaseItemKey,
   type StorefrontReleaseProduct,
 } from "@/lib/storefront/release-artifact";
+import { hostProductPhotos } from "@/lib/storefront/media-host";
+import { createMediaLedger, type MediaLedgerDb } from "@/lib/storefront/media-ledger";
 import type { ConnectedPlatformClient } from "./client";
 import type {
   HostedPauseTransfer,
@@ -15,6 +17,14 @@ import type {
 import type { StorefrontReceiptKeys } from "./runtime";
 
 const PROVISIONAL_PREFIX = "storefront-provisional:";
+
+export type HostedPhotoSummary = Readonly<{
+  hosted: number;
+  uploaded: number;
+  onlyHere: number;
+  missing: number;
+  serviceOn: boolean | null;
+}>;
 
 type ReleaseHistoryWithAllocation = Awaited<
   ReturnType<ConnectedPlatformClient["listStorefrontReleases"]>
@@ -91,6 +101,8 @@ export async function publishHostedStorefront(input: Readonly<{
   receiptKeys: StorefrontReceiptKeys;
   context: ServiceContext;
   prepared: PreparedStorefrontPublish;
+  /** Told how many photos were hosted, sent, or left on this PC (for the Studio's publish line). */
+  onPhotos?: (summary: HostedPhotoSummary) => void;
 }>): Promise<HostedPublishTransfer> {
   const shop = input.context.shop;
   if (!shop) throw new Error("Hosted storefront publish requires active shop authority");
@@ -135,13 +147,30 @@ export async function publishHostedStorefront(input: Readonly<{
   // The stock this operation freed (a restock, or what a pause gave back) is the
   // part the hosted side must not cap at the parent's leftovers. A first release
   // has no parent, so there is nothing to distinguish.
+  // Photos kept only on this PC become hosted https links; with hosting off they stay out of the release.
+  const photos = await hostProductPhotos({
+    client: input.client,
+    workspaceId: shop.workspaceId,
+    storefrontId: input.prepared.storefrontId,
+    shopId: shop.shopId,
+    products,
+    ledger: createMediaLedger(input.context.prisma as unknown as MediaLedgerDb),
+  });
+  input.onPhotos?.({
+    hosted: photos.hosted,
+    uploaded: photos.uploaded,
+    onlyHere: photos.onlyHere,
+    missing: photos.missing,
+    serviceOn: photos.serviceOn,
+  });
   const release = createStorefrontReleaseInput({
     workspaceId: shop.workspaceId,
     releaseId: input.prepared.releaseId,
     parentReleaseId,
     locale: input.prepared.locale,
     draft: input.prepared.draft,
-    products,
+    products: photos.products,
+    requireLegalReview: true,
     ...(parentReleaseId ? { freshByItemKey: provisional } : {}),
   });
   const published = await input.client.publishStorefrontRelease(

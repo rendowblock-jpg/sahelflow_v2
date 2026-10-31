@@ -1,6 +1,15 @@
 import { isTauriEnv } from "@/lib/env";
 
 const SAFE_DEEP_LINK = /^\/inbox\?conversation=[A-Za-z0-9%._~-]{1,240}$/;
+// Fixed screens a toast may open. Anything else is refused, not guessed.
+const SAFE_FIXED_LINKS: ReadonlySet<string> = new Set([
+  "/inbox",
+  "/orders?status=pending",
+  "/orders",
+  "/deliveries",
+  "/settings?section=backup",
+  "/settings?section=license",
+]);
 
 export interface NativeNotificationContent {
   title: string;
@@ -10,7 +19,7 @@ export interface NativeNotificationContent {
 }
 
 export function isSafeNotificationLink(value: unknown): value is string {
-  return typeof value === "string" && SAFE_DEEP_LINK.test(value);
+  return typeof value === "string" && (SAFE_DEEP_LINK.test(value) || SAFE_FIXED_LINKS.has(value));
 }
 
 export async function sendDesktopNotification(

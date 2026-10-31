@@ -29,6 +29,7 @@ import { InboxLinkPreview, firstHttpUrlInText } from "@/components/inbox/link-pr
 import { ActivityMessage } from "@/components/inbox/conversation-controls";
 import { MessageStatus } from "@/components/inbox/message-status";
 import { HeldSendNotice } from "@/components/inbox/held-send-notice";
+import type { HeldDiscardUiStatus } from "@/hooks/inbox/held-discard-client";
 import { heldSendView } from "@/lib/whatsapp/held-send";
 import { BUBBLE_FLOW, bubbleSide, messageVisual } from "@/components/inbox/inbox-message-visual";
 import { SignalShape } from "@/components/inbox/inbox-signal-shape";
@@ -52,8 +53,8 @@ export function bubbleDeliveryStatus(
   if (message.outboxState === "succeeded" && message.deliveryStatus === "failed") {
     return "sent";
   }
-  // A held send has NOT gone out: never show the sending clock or a sent tick.
-  if (message.outboxState === "held") return "failed";
+  // A held or discarded send has NOT gone out: never show the sending clock or a sent tick.
+  if (message.outboxState === "held" || message.outboxState === "discarded") return "failed";
   return message.deliveryStatus ?? "sent";
 }
 import { Button } from "@/components/ui/button";
@@ -256,6 +257,8 @@ export const MessageBubble = memo(function MessageBubble({
   onRetry,
   onApproveHeld,
   canApproveHeld = false,
+  onDiscardHeld,
+  heldDiscard,
   onReply,
   canInteract,
   upload,
@@ -277,6 +280,10 @@ export const MessageBubble = memo(function MessageBubble({
   /** Owner-only release of a send the guard held. */
   onApproveHeld?: (message: InboxMessage) => void;
   canApproveHeld?: boolean;
+  /** Owner-only: throw a held send away (a dialog asks first). */
+  onDiscardHeld?: (message: InboxMessage) => void;
+  /** Progress or failure of a discard, for the message it belongs to. */
+  heldDiscard?: HeldDiscardUiStatus | null;
   onReply: (message: InboxMessage) => void;
   canInteract: boolean;
   upload?: { progress: number; cancellable: boolean };
@@ -309,10 +316,11 @@ export const MessageBubble = memo(function MessageBubble({
   const hasActions = Boolean(message.body.trim() || message.attachment?.fileName);
   // Which side each party sits on is one constant (inbox-message-visual.ts).
   const side = bubbleSide(BUBBLE_FLOW, inbound);
+  const heldView = heldSendView(message, canApproveHeld && Boolean(onApproveHeld));
   const visual = messageVisual({
     status: inbound ? undefined : bubbleDeliveryStatus(message),
     canResend: outboxAllowsResend(message),
-    held: message.outboxState === "held",
+    held: message.outboxState === "held" || message.outboxState === "discarded",
   });
 
   // Chat geometry is direction-independent on purpose: inbound bubbles sit on
@@ -584,10 +592,13 @@ export const MessageBubble = memo(function MessageBubble({
         </div>
       ) : null}
 
-      {heldSendView(message, canApproveHeld && Boolean(onApproveHeld)) !== "none" ? (
+      {heldView !== "none" ? (
         <HeldSendNotice
-          canApprove={heldSendView(message, canApproveHeld && Boolean(onApproveHeld)) === "owner_can_release"}
+          canApprove={heldView === "owner_can_release"}
+          discarded={heldView === "discarded"}
           onApprove={() => onApproveHeld?.(message)}
+          onDiscard={onDiscardHeld ? () => onDiscardHeld(message) : undefined}
+          discard={heldDiscard && heldDiscard.effectKey === message.outboxEffectKey ? heldDiscard : undefined}
           t={t}
         />
       ) : null}

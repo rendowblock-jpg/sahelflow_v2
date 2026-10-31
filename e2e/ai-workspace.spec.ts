@@ -86,6 +86,8 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
     });
     // The projection names presence, consent and the chosen order only. Batch 16 added the per-provider
     // presence (`providers`), the order-reading readiness (`extractionReady`) and the chosen `order`.
+    // The calm free-limit notice adds `quota` (a state: ok / low / paused with a reset time) and
+    // `requestsToday` (a count); neither names a key, and the key-shaped scan below still covers both.
     expect(Object.keys(status).sort()).toEqual(
       [
         "consentAccepted",
@@ -94,7 +96,9 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
         "order",
         "provider",
         "providers",
+        "quota",
         "ready",
+        "requestsToday",
       ].sort(),
     );
     expect(status).not.toHaveProperty("apiKey");

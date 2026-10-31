@@ -12,11 +12,19 @@ describe("delivery certification badge", () => {
     expect(deliveryCredentialBadge({
       connectionStatus: "certified",
       bookingStatus: "source_reviewed",
+      registryStatus: "live",
     })).toBe("connection_checked");
     expect(deliveryCredentialBadge({
       connectionStatus: "certified",
       bookingStatus: "certified",
+      registryStatus: "live",
     })).toBe("certified");
+    // The registry has the last word: a stored "certified" does not show while the courier is only in testing.
+    expect(deliveryCredentialBadge({
+      connectionStatus: "certified",
+      bookingStatus: "certified",
+      registryStatus: "testing",
+    })).toBe("connection_checked");
 
     const route = readFileSync(
       join(process.cwd(), "src/app/api/delivery/test-connection/route.ts"),

@@ -29,6 +29,7 @@ export function servePublicStorePage(
   slug: string,
   context?: PageContext,
   productId: string | null = null,
+  legalKind: string | null = null,
 ): Promise<Response> {
   return route(
     request,
@@ -37,5 +38,6 @@ export function servePublicStorePage(
     context,
     { render: renderStorePage, assets: storeAssets(), cache: edgeCache() },
     productId,
+    legalKind,
   );
 }

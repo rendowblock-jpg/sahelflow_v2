@@ -4,6 +4,7 @@ import { getNavigationGroupsRuntimeTranslation } from "@/lib/i18n/navigation-gro
 import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
 import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
+import { getHeldSendDiscardRuntimeTranslation } from "@/lib/i18n/held-send-discard-runtime";
 import { getPreUpdateBackupRuntimeTranslation } from "@/lib/i18n/pre-update-backup-runtime";
 import { getStorefrontStudioStatesRuntimeTranslation } from "@/lib/i18n/storefront-studio-states-runtime";
 import { getStorefrontPublicStatesRuntimeTranslation } from "@/lib/i18n/storefront-public-states-runtime";
@@ -11,6 +12,7 @@ import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
 import { getDashboardStatesRuntimeTranslation } from "@/lib/i18n/dashboard-states-runtime";
+import { getAiQuotaRuntimeTranslation } from "@/lib/i18n/ai-quota-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
 import { getDataTableRuntimeTranslation } from "@/lib/i18n/data-table-runtime";
@@ -42,6 +44,9 @@ import { getSettingsPanelsStatesRuntimeTranslation } from "@/lib/i18n/settings-p
 import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 import { getWorkspacesRuntimeTranslation } from "@/lib/i18n/workspaces-runtime";
+import { getNotificationEventsRuntimeTranslation } from "@/lib/i18n/notification-events-runtime";
+import { getStorefrontPhotosRuntimeTranslation } from "@/lib/i18n/storefront-photos-runtime";
+import { getStorefrontLegalRuntimeTranslation } from "@/lib/i18n/storefront-legal-runtime";
 
 const SHARED_RUNTIME_COPY = {
   en: {
@@ -167,6 +172,7 @@ export function getRuntimeTranslation(
     getAiCanvasRuntimeTranslation(locale, key) ??
     getWhatsAppSendGuardRuntimeTranslation(locale, key) ??
     getHeldSendRuntimeTranslation(locale, key) ??
+    getHeldSendDiscardRuntimeTranslation(locale, key) ??
     getPreUpdateBackupRuntimeTranslation(locale, key) ??
     getStorefrontStudioStatesRuntimeTranslation(locale, key) ??
     getStorefrontPublicStatesRuntimeTranslation(locale, key) ??
@@ -176,6 +182,7 @@ export function getRuntimeTranslation(
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
     getDashboardStatesRuntimeTranslation(locale, key) ??
+    getAiQuotaRuntimeTranslation(locale, key) ??
     getDataTableRuntimeTranslation(locale, key) ??
     getCustomersProductsStatesRuntimeTranslation(locale, key) ??
     getDeliveriesRuntimeTranslation(locale, key) ??
@@ -188,6 +195,7 @@ export function getRuntimeTranslation(
     getInboxVoiceNoteRuntimeTranslation(locale, key) ??
     getLicenseLockoutRuntimeTranslation(locale, key) ??
     getNotificationsRuntimeTranslation(locale, key) ??
+    getNotificationEventsRuntimeTranslation(locale, key) ??
     getOnboardingRuntimeTranslation(locale, key) ??
     getOrderActionsRuntimeTranslation(locale, key) ??
     getOrderFormRuntimeTranslation(locale, key) ??
@@ -204,6 +212,8 @@ export function getRuntimeTranslation(
     getStorefrontRuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key) ??
     getWorkspacesRuntimeTranslation(locale, key) ??
+    getStorefrontPhotosRuntimeTranslation(locale, key) ??
+    getStorefrontLegalRuntimeTranslation(locale, key) ??
     // R5-a plural-agreement dictionary — last in the chain so every existing
     // dictionary keeps precedence for its own keys; only plural-suffixed
     // `${key}_${rule}` lookups (which no other dictionary defines) resolve here.

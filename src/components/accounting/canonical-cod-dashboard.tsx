@@ -155,8 +155,11 @@ function SummaryCard({
   icon: Icon,
   locale,
   count = false,
+  hint,
 }: {
   label: string;
+  /** One sentence saying what the figure counts. */
+  hint?: string;
   value: number;
   icon: ComponentType<{ className?: string }>;
   locale: string;
@@ -170,6 +173,7 @@ function SummaryCard({
           <p className="mt-1 truncate text-lg font-semibold tabular-nums">
             {count ? value : formatDZD(value, locale)}
           </p>
+          {hint ? <p className="mt-1 text-xs leading-4 text-muted-foreground">{hint}</p> : null}
         </div>
         <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
       </CardContent>
@@ -407,14 +411,14 @@ export function CanonicalCodDashboard({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label={t("codReconciliation.expected")} value={summary.totals.expectedReceivable} icon={CircleDollarSign} locale={locale} />
-        <SummaryCard label={t("codReconciliation.collectedTotal")} value={summary.totals.effectiveCollected} icon={CheckCircle2} locale={locale} />
-        <SummaryCard label={t("codReconciliation.grossRemitted")} value={summary.totals.grossRemitted} icon={ReceiptText} locale={locale} />
-        <SummaryCard label={t("codReconciliation.net")} value={summary.totals.netReceived} icon={Scale} locale={locale} />
-        <SummaryCard label={t("codReconciliation.fees")} value={summary.totals.fees} icon={ReceiptText} locale={locale} />
-        <SummaryCard label={t("codReconciliation.collectPending")} value={summary.totals.outstandingCollection} icon={Clock3} locale={locale} />
-        <SummaryCard label={t("codReconciliation.remitPending")} value={summary.totals.outstandingRemittance} icon={Clock3} locale={locale} />
-        <SummaryCard label={t("codReconciliation.reviewCount")} value={summary.reviewLines.length + summary.disputed.length} icon={AlertTriangle} locale={locale} count />
+        <SummaryCard label={t("codReconciliation.expected")} hint={t("codReconciliation.def.expected")} value={summary.totals.expectedReceivable} icon={CircleDollarSign} locale={locale} />
+        <SummaryCard label={t("codReconciliation.collectedTotal")} hint={t("codReconciliation.def.collected")} value={summary.totals.effectiveCollected} icon={CheckCircle2} locale={locale} />
+        <SummaryCard label={t("codReconciliation.grossRemitted")} hint={t("codReconciliation.def.remitted")} value={summary.totals.grossRemitted} icon={ReceiptText} locale={locale} />
+        <SummaryCard label={t("codReconciliation.net")} hint={t("codReconciliation.def.net")} value={summary.totals.netReceived} icon={Scale} locale={locale} />
+        <SummaryCard label={t("codReconciliation.fees")} hint={t("codReconciliation.def.fees")} value={summary.totals.fees} icon={ReceiptText} locale={locale} />
+        <SummaryCard label={t("codReconciliation.collectPending")} hint={t("codReconciliation.def.collectPending")} value={summary.totals.outstandingCollection} icon={Clock3} locale={locale} />
+        <SummaryCard label={t("codReconciliation.remitPending")} hint={t("codReconciliation.def.remitPending")} value={summary.totals.outstandingRemittance} icon={Clock3} locale={locale} />
+        <SummaryCard label={t("codReconciliation.reviewCount")} hint={t("codReconciliation.def.review")} value={summary.reviewLines.length + summary.disputed.length} icon={AlertTriangle} locale={locale} count />
       </div>
 
       {notice ? (

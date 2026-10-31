@@ -13,6 +13,7 @@ import {
 import { WhatsAppInboundSpool } from "./inbound-spool";
 import { createIngressHealth } from "./ingress-health";
 import { createInboundSubscriber } from "./inbound-subscriber";
+import { jidEvidence } from "./jid-evidence";
 import {
   createDispatchJournal,
   createDurableDispatcher,
@@ -338,7 +339,7 @@ app.get("/", (context) =>
 
 // `ingress` is an extra field: readers that do not know it ignore it, and
 // every field of the manager status stays exactly as it was.
-app.get("/status", (context) => context.json({ ...wa.getStatus(), ingress: ingressHealth.build() }));
+app.get("/status", (context) => context.json({ ...wa.getStatus(), ingress: ingressHealth.build(), identityEvidence: jidEvidence.summary() }));
 
 app.get("/qr", (context) => {
   const qr = wa.getQr();
@@ -1547,6 +1548,7 @@ void wa.start().catch((error) => {
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
     inboundSpool.stop();
+    jidEvidence.flush();
     clearInterval(wsExpirySweep);
     server.stop();
     process.exit(0);

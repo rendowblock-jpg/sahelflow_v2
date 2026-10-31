@@ -24,6 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/hooks/use-i18n";
 import { BrandLogo } from "@/components/brand/brand-icons";
+import { TestingBadge } from "@/components/integrations/testing-badge";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
@@ -152,6 +153,7 @@ export function MetaPixelPanel() {
         <CardTitle className="flex items-center gap-2 text-base">
           <BrandLogo id="meta" size="sm" />
           {copy("metaPixel.title")}
+          <TestingBadge integration="meta" />
         </CardTitle>
         <CardDescription>{copy("metaPixel.description")}</CardDescription>
       </CardHeader>

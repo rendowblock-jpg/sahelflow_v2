@@ -1238,6 +1238,8 @@ async function commandStatus(
   if (!validIdentity(workspaceId) || !validIdentity(deviceId)) return json({ error: "invalid_request" }, 400);
   const device = await authenticateDevice(request, environment, workspaceId, deviceId);
   if (!device) return json({ error: "unauthorized" }, 401);
+  const limited = await hitRate(environment, "command_status", `${workspaceId}:${deviceId}`);
+  if (limited) return limited;
   let command = await environment.DB.prepare(
     `SELECT relay_sequence, workspace_id, command_id, idempotency_key, envelope_digest, shop_id,
             member_id, device_id, envelope_json, state, expires_at, result_digest, result_json

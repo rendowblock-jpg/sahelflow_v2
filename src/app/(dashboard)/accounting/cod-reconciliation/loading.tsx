@@ -1,5 +1,9 @@
-import { FullPageSkeleton } from "@/components/shared/full-page-skeleton";
+"use client";
+
+import { CodReconciliationSkeleton } from "@/components/accounting/cod-reconciliation-skeleton";
+import { useI18n } from "@/hooks/use-i18n";
 
 export default function Loading() {
-  return <FullPageSkeleton />;
+  const { t } = useI18n();
+  return <CodReconciliationSkeleton label={t("common.loading")} />;
 }
