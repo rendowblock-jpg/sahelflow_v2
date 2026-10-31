@@ -140,7 +140,7 @@ Between shadcn atoms and page components sits a primitive layer, so that a page 
 
 | Primitive | Replaces | Contract | Status |
 |---|---|---|---|
-| `PageShell` | Per-page ad-hoc shells; the `sr-only` `<h1>` pattern | Visible page identity, optional actions, optional rail. **The target is every route.** | In `system/`; adopted by Inbox and Agents only. Other routes still use `PageHeader` (`shared/`). |
+| `PageShell` | Per-page ad-hoc shells; the `sr-only` `<h1>` pattern | Visible page identity, optional actions, optional rail. **The target is every route.** | In `system/`. Which routes render through it, and which still use `PageHeader` (`shared/`), is read from the code (`git grep PageShell src`), not from here. |
 | `Section` | Hand-rolled heading + description + spacing | Title, optional description, content, consistent rhythm | In `system/` (`Section`, `SectionStack`) |
 | `Row` | Bespoke settings-panel geometry | Label + description on one side, control on the other, hairline separated | In `system/` (`Row`, `RowGroup`) |
 | `Field` | Per-form label/help/error markup | Label, control, help text, error, required state, `aria-describedby` wiring | In `system/` |
@@ -163,7 +163,7 @@ Rules:
 
 ## 7. Page grammar
 
-The target is that every route renders through `PageShell` (today only Inbox and Agents do; the rest use `PageHeader`) and therefore has:
+The target is that every route renders through `PageShell` (which routes do is read from the code, not from here) and therefore has:
 
 - a page title — **visible** on document routes. Full-height workspaces (Inbox,
   Agents) whose canvas already carries identity keep an `sr-only` `<h1>` so the
@@ -232,7 +232,7 @@ still working. Durations 120–200ms, standard easing, and every animation respe
 
 - No interface text below 12px in any locale.
 - Contrast: 4.5:1 for body text, 3:1 for large text and meaningful UI boundaries, in both
-  themes and all four presets.
+  themes and every preset.
 - Every interactive element is keyboard reachable, has a visible focus ring, and an
   accessible name.
 - Async regions announce with `aria-live`; streaming and long operations expose `aria-busy`.

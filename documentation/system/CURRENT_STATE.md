@@ -61,6 +61,8 @@ A provider can be certified for tracking while create, edit and cancel remain un
 - Live Shopify, WooCommerce, YouCan and courier action certification is not established by adapter source alone.
 - Algerian-network trial readiness (#230) is not closed.
 - Beta and Stable are not established.
+- Nothing merged after Internal.46 is in a signed build or seen by the Founder, the Carnet look included.
+- The phone app is not deployed or paired against a real database; the pairing trust question is open.
 
 ## 6. Open decisions and pending records
 
@@ -76,9 +78,9 @@ A provider can be certified for tracking while create, edit and cancel remain un
 
 **Ask for after the next build is installed**
 
-- A screenshot of the repaired startup card (light and dark, the four presets, Arabic, French and English, a slow start), a Minimize and Close test, and the update chip (it appears only when a release newer than the installed one exists).
-- The build's `startup-trace.json`, `startup-trace.prev.json` (the launch before it) and `runtime-ui-diagnostic.json` (page-load numbers only), and a fresh WhatsApp diagnostics log: look for `offline.preview`, `offline.done`, `inbound.early`, `inbound.dropped`. The startup gain and the Inbox cause can be measured only on it.
-- Two oddities in the existing log are not investigated: a `provider.error` "init queries" timeout (408) exactly 60 seconds after every `connection.open`, and `upserts 0` in the first 300 seconds after open.
+- A screenshot of the repaired startup card (light and dark, every preset, three languages, a slow start), a Minimize and Close test, and the update chip (shown only when a newer release exists).
+- The build's `startup-trace.json`, `startup-trace.prev.json` (the launch before) and `runtime-ui-diagnostic.json` (page-load numbers only), and a fresh WhatsApp diagnostics log: look for `offline.preview`, `offline.done`, `inbound.early`, `inbound.dropped`. The startup gain and Inbox cause can be measured only on it.
+- Two log oddities are not investigated: a `provider.error` "init queries" timeout (408) 60 seconds after every `connection.open`, and `upserts 0` in the first 300 seconds.
 - The Founder must not clear the WhatsApp spool.
 
 **Blocked sidecar rows:** INB-13, INB-14, INB-19 and INB-32 (reactions, delete-for-everyone, avatars, typing and presence) stay blocked until a capability probe and a contract revision.
