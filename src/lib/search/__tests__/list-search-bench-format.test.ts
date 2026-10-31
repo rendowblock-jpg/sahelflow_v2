@@ -29,6 +29,7 @@ describe("list search bench: pure helpers", () => {
   it("median takes the middle sample, or the mean of the two middle ones", () => {
     expect(medianOf([9, 1, 5])).toBe(5);
     expect(medianOf([4, 1, 3, 2])).toBe(2.5);
+    expect(medianOf([10, 9, 100])).toBe(10);
     expect(medianOf([])).toBe(0);
   });
 
