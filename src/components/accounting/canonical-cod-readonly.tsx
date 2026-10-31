@@ -90,7 +90,7 @@ export async function CanonicalCodReadOnly({
 }: {
   summary: CanonicalCodDashboardSummary;
 }) {
-  const { locale } = await getI18n();
+  const { locale, t } = await getI18n();
   const text = COPY[locale as keyof typeof COPY] ?? COPY.en;
   const reviewCount = summary.reviewLines.length + summary.disputed.length;
 
@@ -104,13 +104,13 @@ export async function CanonicalCodReadOnly({
       />
 
       <div className="card-grid-4">
-        <StatCard label={text.expected} value={formatDZD(summary.totals.expectedReceivable, locale)} icon={<ReceiptText />} />
-        <StatCard label={text.collected} value={formatDZD(summary.totals.effectiveCollected, locale)} icon={<CheckCircle2 />} />
-        <StatCard label={text.remitted} value={formatDZD(summary.totals.grossRemitted, locale)} icon={<ReceiptText />} />
-        <StatCard label={text.net} value={formatDZD(summary.totals.netReceived, locale)} icon={<Scale />} />
-        <StatCard label={text.awaitingCollection} value={formatDZD(summary.totals.outstandingCollection, locale)} icon={<Clock3 />} />
-        <StatCard label={text.awaitingRemittance} value={formatDZD(summary.totals.outstandingRemittance, locale)} icon={<Clock3 />} />
-        <StatCard label={text.review} value={reviewCount} icon={<AlertTriangle />} />
+        <StatCard label={text.expected} subtitle={t("codReconciliation.def.expected")} value={formatDZD(summary.totals.expectedReceivable, locale)} icon={<ReceiptText />} />
+        <StatCard label={text.collected} subtitle={t("codReconciliation.def.collected")} value={formatDZD(summary.totals.effectiveCollected, locale)} icon={<CheckCircle2 />} />
+        <StatCard label={text.remitted} subtitle={t("codReconciliation.def.remitted")} value={formatDZD(summary.totals.grossRemitted, locale)} icon={<ReceiptText />} />
+        <StatCard label={text.net} subtitle={t("codReconciliation.def.net")} value={formatDZD(summary.totals.netReceived, locale)} icon={<Scale />} />
+        <StatCard label={text.awaitingCollection} subtitle={t("codReconciliation.def.collectPending")} value={formatDZD(summary.totals.outstandingCollection, locale)} icon={<Clock3 />} />
+        <StatCard label={text.awaitingRemittance} subtitle={t("codReconciliation.def.remitPending")} value={formatDZD(summary.totals.outstandingRemittance, locale)} icon={<Clock3 />} />
+        <StatCard label={text.review} subtitle={t("codReconciliation.def.review")} value={reviewCount} icon={<AlertTriangle />} />
       </div>
 
       <Card>
