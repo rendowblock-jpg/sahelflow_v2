@@ -20,7 +20,7 @@ function renderFacts(o: OrderProjectionRow, m: OrdersModel): string {
   const items = o.items.map((i) => `<li><bdi>${esc(i.name)}</bdi> <span class="num" dir="ltr">×${i.qty}</span></li>`).join("") + (o.moreCount > 0 ? `<li class="more num" dir="ltr">+${o.moreCount}</li>` : "");
   return `<dl class="facts">${fact(t(L, "orders.detail.customer"), o.customerName, (v) => `<bdi>${esc(v)}</bdi>`)}${fact(t(L, "orders.detail.phone"), o.phone, dial)}${fact(t(L, "orders.detail.address"), o.address, (v) => `<bdi>${esc(v)}</bdi>`)}${fact(t(L, "orders.detail.wilaya"), o.wilaya, (v) => `<bdi>${esc(v)}</bdi>`)}`
     + `<div class="fact"><dt>${esc(t(L, "orders.detail.items"))}</dt><dd><ul class="items">${items}</ul></dd></div><div class="fact"><dt>${esc(t(L, "orders.detail.source"))}</dt><dd>${esc(o.source)}</dd></div>`
-    + fact(t(L, "orders.detail.total"), o.totalPrice === undefined ? undefined : formatDzd(o.totalPrice, L), (v) => `<span class="total num" dir="ltr">${esc(v)}</span>`) + `</dl>`;
+    + fact(t(L, "orders.detail.total"), o.totalPrice === undefined ? undefined : formatDzd(o.totalPrice, L), (v) => `<span class="total num" dir="auto">${esc(v)}</span>`) + `</dl>`;
 }
 
 export function renderOrderDetail(m: OrdersModel): string {

@@ -8,7 +8,7 @@ const build = readFileSync(new URL("../build.mjs", import.meta.url), "utf8");
 describe("orders.css", () => {
   it("uses logical properties only", () => expect(css).not.toMatch(/(margin|padding|border)-(left|right)|[^-\w](left|right)\s*:|text-align\s*:\s*(left|right)|float\s*:/));
   it("every text size is at least 16 px", () => { const sizes = [...css.matchAll(/font-size\s*:\s*(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1])); expect(sizes.length).toBeGreaterThan(0); for (const s of sizes) expect(s).toBeGreaterThanOrEqual(16); });
-  it("rows, filters and buttons are at least 44 px tall", () => { for (const sel of [".orders .row-main", ".orders .filter", ".orders .btn"]) { const m = css.match(new RegExp(`${sel.replace(/[.]/g, "\\.")}[^{]*\\{[^}]*min-block-size\\s*:\\s*(\\d+)px`)); expect(m, sel).not.toBeNull(); expect(Number(m?.[1])).toBeGreaterThanOrEqual(44); } });
+  it("rows, filters and buttons are at least 44 px tall", () => { for (const sel of [".orders .row-main", ".orders .filter", ".orders .btn", ".orders .facts a"]) { const m = css.match(new RegExp(`${sel.replace(/[.]/g, "\\.")}[^{]*\\{[^}]*min-block-size\\s*:\\s*(\\d+)px`)); expect(m, sel).not.toBeNull(); expect(Number(m?.[1])).toBeGreaterThanOrEqual(44); } });
   it("forces numbers left-to-right and allows no sideways scroll", () => { expect(css).toMatch(/unicode-bidi\s*:\s*isolate/); expect(css).toMatch(/overflow-wrap\s*:\s*anywhere/); expect(css).not.toMatch(/overflow-x\s*:\s*(scroll|auto)/); });
   it("is part of the build", () => expect(build).toContain("orders.css"));
   it("status chips keep 4.5:1 text contrast", () => {

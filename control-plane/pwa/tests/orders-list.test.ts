@@ -66,7 +66,9 @@ describe("a row", () => {
   it("Arabic: order number and total stay left-to-right", () => {
     const html = renderOrdersList(mk({ locale: "ar" }));
     expect(html).toMatch(/dir="ltr">SF-1042</);
-    expect(html).toMatch(/class="total num" dir="ltr"/);
+    // The total mixes digits and an Arabic unit: the whole string is NOT forced left-to-right (dir=auto), the digits keep their own LTR run.
+    expect(html).toMatch(/class="total num" dir="auto"/);
+    expect(html).not.toMatch(/class="total num" dir="ltr"/);
   });
 });
 

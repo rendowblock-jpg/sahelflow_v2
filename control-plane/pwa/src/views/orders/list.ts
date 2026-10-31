@@ -25,7 +25,7 @@ function renderRow(o: OrderProjectionRow, m: OrdersModel): string {
   const extra = Math.max(0, o.items.length - 1) + o.moreCount;
   const what = first ? `<span class="what"><bdi>${esc(first.name)}</bdi> <span class="num" dir="ltr">×${first.qty}</span>${extra > 0 ? ` <span class="more num" dir="ltr">+${extra}</span>` : ""}</span>` : "";
   // A total the role may not see is absent from the row: nothing is drawn (the detail says "Hidden for your role").
-  const total = o.totalPrice === undefined ? "" : `<span class="total num" dir="ltr">${esc(formatDzd(o.totalPrice, L))}</span>`;
+  const total = o.totalPrice === undefined ? "" : `<span class="total num" dir="auto">${esc(formatDzd(o.totalPrice, L))}</span>`;
   const rec = listChip(m, o);
   return `<li class="row" data-id="${id}"><button type="button" class="row-main" data-act="open-order" data-id="${id}" aria-label="${esc(t(L, "orders.open", { number: o.orderNumber }))}"><span class="num ord" dir="ltr">${esc(o.orderNumber)}</span><span class="st st-${isPending(o) ? "pending" : /^[a-z]+$/.test(o.status) ? esc(o.status) : "other"}">${esc(statusLabel(L, o.status))}</span>${what}${total}<span class="age">${esc(ageLabel(o.createdAt, m.now, L))}</span></button>${rec ? renderOrderCommand(rec, o, m) : ""}</li>`;
 }

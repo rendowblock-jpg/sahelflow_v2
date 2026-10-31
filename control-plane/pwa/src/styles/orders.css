@@ -6,7 +6,8 @@
 .orders .row{padding-block:4px;border-block-end:1px solid var(--rule)}
 .orders .row-main{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;inline-size:100%;min-block-size:44px;padding:8px 4px;font:inherit;font-size:16px;text-align:start;background:transparent;color:var(--ink);border:0;cursor:pointer}
 .orders .row-main:focus-visible,.orders .filter:focus-visible,.orders .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.orders .num{font-family:var(--f-num);direction:ltr;unicode-bidi:isolate}
+.orders .num{font-family:var(--f-num);unicode-bidi:isolate}
+.orders .ord{direction:ltr}
 .orders .ord{font-weight:600}
 .orders .what,.orders .facts dd,.orders .note-text{overflow-wrap:anywhere}
 .orders .total{font-weight:600;justify-self:end}
@@ -26,6 +27,7 @@
 .orders .fact{display:grid;grid-template-columns:8rem 1fr;gap:8px;padding-block:8px;border-block-end:1px solid var(--rule)}
 .orders .facts dt{font-weight:600}
 .orders .facts dd{margin:0}
+.orders .facts a{display:inline-flex;align-items:center;min-block-size:44px;min-inline-size:44px;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
 .orders .facts .hidden{color:var(--ink2);font-style:italic}
 .orders .items{list-style:none;margin:0;padding:0}
 .orders .actions{display:flex;flex-wrap:wrap;gap:8px;margin-block:12px}
