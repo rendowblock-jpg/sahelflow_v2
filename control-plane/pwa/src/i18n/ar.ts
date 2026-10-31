@@ -35,6 +35,8 @@ export const ar: Catalog = {
   "pair.fingerprint.hint": "تأكد أن البصمة نفسها تظهر على حاسوب المحل قبل أن توافق.",
   "pair.waiting": "في انتظار موافقة حاسوبك",
   "pair.waiting.hint": "افتح SahelFlow على حاسوبك ووافق على هذا الهاتف. لا يرى الهاتف أي بيانات قبل ذلك.",
+  "pair.waiting.elapsed": "دقائق الانتظار: {{minutes}} من 10",
+  "pair.waiting.justNow": "الانتظار منذ أقل من دقيقة",
   "pair.timeout.title": "لم تتم الموافقة بعد",
   "pair.timeout": "لم تصل الموافقة خلال 10 دقائق. لم تتم مشاركة أي شيء. ابدأ من جديد برمز جديد من حاسوبك.",
   "pair.startAgain": "ابدأ من جديد",

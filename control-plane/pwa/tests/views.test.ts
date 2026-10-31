@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LOCALES, catalogs, formatDzd, formatTime, type Locale } from "../src/i18n";
+import { LOCALES, catalogs, formatDzd, formatTime, t, type Locale } from "../src/i18n";
 import { applyPreview, fixtureProjection } from "../src/app/preview";
 import { esc, renderApp, type ScreenId, type View, type ViewState } from "../src/views/view";
 
@@ -96,5 +96,28 @@ describe("other screens", () => {
     const html = render("en", "lock", "ready");
     expect(html).toMatch(/<label for="pin">/);
     expect(html).toMatch(/id="pin"[^>]*type="password"[^>]*inputmode="numeric"[^>]*maxlength="8"/);
+  });
+});
+
+describe("the waiting screen after a reload shows the time already waited and the fingerprint", () => {
+  const FP = "A1B2 C3D4 E5F6 0718";
+  const waiting = (locale: Locale, minutesAgo: number | null): string =>
+    renderApp({ ...base(locale), screen: "pair", state: "waiting", fingerprint: FP, ...(minutesAgo === null ? {} : { pairedAt: NOW - minutesAgo * 60_000 }) });
+  const plain = (html: string): string => html.replaceAll("&#39;", "'");
+  for (const locale of LOCALES) {
+    it(`${locale}: fingerprint, elapsed minutes, and 'less than a minute' under one minute`, () => {
+      const html = plain(waiting(locale, 3));
+      expect(html).toContain(FP);
+      expect(html).toContain(t(locale, "pair.waiting"));
+      expect(html).toContain(t(locale, "pair.waiting.elapsed", { minutes: 3 }));
+      expect(plain(waiting(locale, 0))).toContain(t(locale, "pair.waiting.justNow"));
+      expect(waiting(locale, 0)).not.toContain("{{");
+      expect(t(locale, "pair.waiting.elapsed", { minutes: 3 })).not.toBe("pair.waiting.elapsed");
+    });
+  }
+  it("no stored time: no elapsed line at all (never 'NaN')", () => {
+    const html = waiting("en", null);
+    expect(html).not.toContain("Minutes waiting");
+    expect(html).not.toMatch(/NaN|undefined/);
   });
 });

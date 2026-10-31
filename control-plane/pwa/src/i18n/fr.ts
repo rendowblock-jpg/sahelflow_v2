@@ -35,6 +35,8 @@ export const fr: Catalog = {
   "pair.fingerprint.hint": "Vérifiez que la même empreinte s'affiche sur le PC du magasin avant d'approuver.",
   "pair.waiting": "En attente de l'approbation de votre PC",
   "pair.waiting.hint": "Ouvrez SahelFlow sur votre PC et approuvez ce téléphone. Ce téléphone ne voit aucune donnée avant.",
+  "pair.waiting.elapsed": "Minutes d'attente : {{minutes}} sur 10",
+  "pair.waiting.justNow": "En attente depuis moins d'une minute",
   "pair.timeout.title": "Toujours pas approuvé",
   "pair.timeout": "L'approbation n'est pas arrivée en 10 minutes. Rien n'a été partagé. Recommencez avec un nouveau code depuis votre PC.",
   "pair.startAgain": "Recommencer",

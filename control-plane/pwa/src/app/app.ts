@@ -5,6 +5,7 @@ import { afterAttempt, attemptStatus, initialState, isValidPin, onHidden, onVisi
 import { watchApproval } from "../poll/approval";
 import { runPairing, takePairingLink, type PairingTransport } from "../pair/flow";
 import { createKeygen } from "../pair/keygen";
+import { readResume, savePairingRecord } from "../pair/resume";
 import { createFetchTransport } from "../pair/transport";
 import { openDb, saveDeviceKeys, type Db } from "../storage/idb";
 import { wipeAll } from "../storage/wipe";
@@ -93,8 +94,23 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
       store: { saveKeys: async (k) => saveDeviceKeys(await getDb(), k), saveTrust: async (t) => (await getDb()).put("keys", "desktop", t), saveCredentials: async (c) => (await getDb()).put("keys", "credentials", c), discard: async () => { await wipe(); } },
       onStep: (step) => set({ step }),
     });
-    if (out.ok) { set({ state: "waiting", fingerprint: out.fingerprint }); startWatch(); return; }
+    if (out.ok) {
+      const pairedAt = Date.now();
+      // Kept so a reload comes back to this screen with the window counted from now (a failed write only loses that).
+      void getDb().then((db) => savePairingRecord(db, { pairedAt, fingerprint: out.fingerprint })).catch(() => undefined);
+      set({ state: "waiting", fingerprint: out.fingerprint, pairedAt }); startWatch(); return;
+    }
     set({ state: out.reason === "expired" ? "stale" : out.reason === "offline" ? "offline" : "error", failure: out.reason, fingerprint: out.fingerprint ?? null });
+  }
+  async function resumeWaiting(): Promise<void> {
+    const r = await readResume(await getDb(), Date.now());
+    if (r.kind === "none") return;
+    const patch: Partial<View> = r.kind === "waiting"
+      ? { state: "waiting", failure: null, fingerprint: r.fingerprint || null, pairedAt: r.pairedAt }
+      : { state: "error", failure: "approval_timeout", fingerprint: r.fingerprint || null, pairedAt: r.pairedAt };
+    // A PIN lock stays in front; it returns to this screen after the PIN.
+    if (view.screen === "lock") { returnTo = "pair"; set(patch); } else set({ screen: "pair", ...patch }, true);
+    if (r.kind === "waiting") startWatch(r.remainingMs);
   }
   async function submitLock(pin: string): Promise<void> {
     if (view.lockMode === "set") {
@@ -121,9 +137,10 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set({ lockNotice: next.allowed ? { kind: "wrong", left: next.triesLeft } : { kind: "wait", seconds: next.waitSeconds } });
     if (!next.allowed) setTimeout(() => set({ lockNotice: null }), next.waitSeconds * 1000);
   }
-  function startWatch(): void {
+  function startWatch(timeoutMs?: number): void {
     watcher?.stop();
     watcher = watchApproval({
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
       poll: async () => { const r = await relay.poll(); return r.kind === "updated" || r.kind === "unchanged" ? "approved" : r.kind === "pending" ? "pending" : r.kind === "revoked" ? "revoked" : "retry"; },
       now: Date.now, setTimer: (run, ms) => setTimeout(run, ms), clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
       isHidden: () => document.visibilityState === "hidden",
@@ -191,6 +208,8 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     lockRow = row; lockState = initialState(true, row); returnTo = view.screen === "lock" ? "welcome" : view.screen;
     set({ hasLock: true, screen: "lock", lockMode: "enter", lockNotice: null });
   }).catch(() => undefined);
+  // A reload while the PC has not approved yet: back to the waiting screen, polling from the start of the backoff.
+  if (link.kind === "none" && !preview) void resumeWaiting().catch(() => undefined);
   if (link.kind === "invalid") set({ screen: "pair", state: "error", failure: "invalid_link" });
   else if (link.kind === "link") void pair();
   else if (view.screen === "today") void loadToday();

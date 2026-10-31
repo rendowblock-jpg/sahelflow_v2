@@ -12,6 +12,8 @@ export type View = Readonly<{
   projection: Projection | null; step: PairStep | null; fingerprint: string | null; failure: PairFailure | null;
   lockMode: "enter" | "set" | "confirm"; lockNotice: LockNotice; hasLock: boolean;
   version: string; confirmRemove: boolean; removeError: string | null; removed: boolean;
+  // When pairing finished (waiting screen): the minutes already waited are shown from it.
+  pairedAt?: number | null;
 }>;
 type Params = Readonly<Record<string, string | number>>;
 type Tr = (key: string, params?: Params) => string;
@@ -50,7 +52,9 @@ function pair(v: View, tr: Tr): string {
     }
     case "waiting": {
       const fp = v.fingerprint ? `<div class="sheet"><h2>${tr("pair.fingerprint.title")}</h2><p class="fp num" dir="ltr">${esc(v.fingerprint)}</p><p class="hint">${tr("pair.fingerprint.hint")}</p></div>` : "";
-      return `${head}${fp}<div class="note margin" role="status"><h2>${tr("pair.waiting")}</h2><p>${tr("pair.waiting.hint")}</p></div>`;
+      const waited = typeof v.pairedAt === "number" && Number.isFinite(v.pairedAt) ? Math.max(0, Math.floor((v.now - v.pairedAt) / 60_000)) : null;
+      const since = waited === null ? "" : `<p class="hint">${waited < 1 ? tr("pair.waiting.justNow") : tr("pair.waiting.elapsed", { minutes: formatNumber(waited) })}</p>`;
+      return `${head}${fp}<div class="note margin" role="status"><h2>${tr("pair.waiting")}</h2><p>${tr("pair.waiting.hint")}</p>${since}</div>`;
     }
     case "error": {
       const key = FAILURE_KEY[v.failure ?? "network"];

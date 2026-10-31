@@ -35,6 +35,8 @@ export const en: Catalog = {
   "pair.fingerprint.hint": "Check that the same fingerprint shows on the shop PC before you approve.",
   "pair.waiting": "Waiting for your PC to approve",
   "pair.waiting.hint": "Open SahelFlow on your PC and approve this phone. This phone sees no data until you do.",
+  "pair.waiting.elapsed": "Minutes waiting: {{minutes}} of 10",
+  "pair.waiting.justNow": "Waiting for less than a minute",
   "pair.timeout.title": "Still not approved",
   "pair.timeout": "The approval did not arrive within 10 minutes. Nothing was shared. Start again with a new code from your PC.",
   "pair.startAgain": "Start again",
