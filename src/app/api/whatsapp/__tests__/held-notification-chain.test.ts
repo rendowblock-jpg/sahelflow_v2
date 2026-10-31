@@ -21,7 +21,12 @@ vi.mock("@/lib/whatsapp/sidecar-client", async (importOriginal) => {
 });
 vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/identity/trusted-actor")>();
-  return { ...actual, isTrustedActorContext: vi.fn(() => true) };
+  const { shopContext: shop } = await import("@/lib/db");
+  const context = {
+    version: 1, shop,
+    actor: { kind: "person", personId: "5".repeat(32), workspaceMemberId: "6".repeat(32), deviceId: "7".repeat(32), sessionId: "session-chain-w169", role: "owner", policyVersion: 1, revocationEpoch: 0 },
+  };
+  return { ...actual, requireTrustedActor: vi.fn(async () => context), isTrustedActorContext: vi.fn(() => true) };
 });
 vi.mock("@/lib/identity/authorization", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/identity/authorization")>();
@@ -38,13 +43,14 @@ vi.mock("@/lib/identity/authorization", async (importOriginal) => {
     })),
   };
 });
-vi.mock("next/headers", async () => (await import("@/lib/notifications/__tests__/seller-read")).nextHeadersMock());
+vi.mock("next/headers", async () => (await import("@/lib/notifications/__tests__/next-headers-mock")).nextHeadersMock());
 
 import { POST as discardRoute } from "@/app/api/whatsapp/outbox/[id]/discard-held/route";
 import { systemBusinessPrincipal, testAuthenticatedOwnerBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
 import { LOCALES, expectWording, sellerRowsOf, syncCentre } from "@/lib/notifications/__tests__/seller-read";
 import { approveHeldWhatsAppSend, queueWhatsAppText } from "@/lib/whatsapp/durable-send";
+import { emitHeldSendNotice } from "@/lib/whatsapp/held-notice";
 import { isHeldOutboxIntent } from "@/lib/whatsapp/held-send";
 
 const ACCOUNT = "213555999000:12@s.whatsapp.net";
@@ -141,6 +147,16 @@ describe("W3-G1 r3 chain: a send the guard HOLDS -> the seller is told (real sen
     await syncCentre();
     expect(await heldEvents()).toBe(1);
     expect(await sellerRowsOf("en", "whatsapp.held")).toHaveLength(1);
+  });
+
+  it("raising the notice for one held row again (a retry, a re-queue) never makes a second event; a send that is not held makes none", async () => {
+    const id = randomUUID();
+    const hold = { decision: { action: "hold" } } as unknown as Parameters<typeof emitHeldSendNotice>[1];
+    await emitHeldSendNotice(db, hold, id, shopContext.shopId);
+    await emitHeldSendNotice(db, hold, id, shopContext.shopId);
+    expect(await heldEvents()).toBe(1);
+    await emitHeldSendNotice(db, { decision: { action: "allow" } } as unknown as Parameters<typeof emitHeldSendNotice>[1], randomUUID(), shopContext.shopId);
+    expect(await heldEvents()).toBe(1);
   });
 
   it("a hold that is rolled back (the outbox row cannot be written) emits nothing", async () => {

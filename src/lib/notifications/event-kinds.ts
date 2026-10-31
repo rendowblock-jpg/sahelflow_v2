@@ -158,7 +158,7 @@ export function buildEventKey(input: EventKeyInput): string {
     case "order.new":
       return `order.new:${day}:${bucket}`;
     case "orders.toConfirm":
-      return `orders.toConfirm:${day}`;
+      return `orders.toConfirm:${day}:${variant}`;
     case "delivery.failed":
       return `delivery.failed:${subject}:${variant}`;
     case "whatsapp.received":
@@ -183,6 +183,11 @@ export function linkFor(kind: NotificationKind, subject?: string): string {
   }
   return spec.link;
 }
+
+/** An order counts as waiting for the seller after this long in `pending` (the lead's decision: 2 hours). */
+export const TO_CONFIRM_AFTER_MS = 2 * 60 * 60_000;
+/** At most one grouped "orders to confirm" alert per this long (variant = the hour bucket). */
+export const TO_CONFIRM_ALERT_EVERY_MS = 60 * 60_000;
 
 /** A pending order older than this makes the line a warning (strictly older). */
 export const TO_CONFIRM_WARNING_AGE_MS = 2 * 60 * 60_000;

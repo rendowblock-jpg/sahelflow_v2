@@ -2,27 +2,20 @@
  * Shared by the three W3-G1 round 3 CHAIN tests (whatsapp.held, ai.quota, orders.toConfirm).
  * It is the SELLER's side of the chain: the REAL sync route and the REAL list route, read in ar / fr / en,
  * and the catalog sentence the seller must see (getRuntimeTranslation). No mock of the notification code.
- * Test files register `vi.mock("next/headers", async () => (await import("...seller-read")).nextHeadersMock())`.
+ * Test files register `vi.mock("next/headers", async () => (await import("...next-headers-mock")).nextHeadersMock())`.
  */
 import { NextRequest } from "next/server";
 import { expect } from "vitest";
 import { getI18n } from "@/lib/i18n-server";
+import { renderTranslation } from "@/lib/i18n/render-translation";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { isSafeNotificationLink } from "../native-client";
+import { cookieJar, nextHeadersMock } from "./next-headers-mock";
 
 export const LOCALES = ["ar", "fr", "en"] as const;
 export type SellerLocale = (typeof LOCALES)[number];
 
-export const cookieJar = new Map<string, string>();
-
-export function nextHeadersMock() {
-  return {
-    cookies: async () => ({
-      get: (name: string) => (cookieJar.has(name) ? { value: cookieJar.get(name) as string } : undefined),
-    }),
-    headers: async () => ({ get: () => undefined }),
-  };
-}
+export { cookieJar, nextHeadersMock };
 
 export interface SellerRow {
   id: string;
@@ -65,7 +58,8 @@ export function catalogText(locale: SellerLocale, key: string, count?: number): 
     const rule = new Intl.PluralRules(locale).select(count);
     value = getRuntimeTranslation(locale, `${key}_${rule}`) ?? value;
   }
-  return String(value).replaceAll("{{count}}", String(count ?? ""));
+  // Same rendering as the route (getI18n): in ar the number is wrapped in bidi isolates.
+  return renderTranslation(String(value), count === undefined ? undefined : { count }, locale);
 }
 
 /** One row, in one language: catalog title and body, no raw key, no template hole, Arabic letters in ar, a link the toast accepts. */

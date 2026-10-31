@@ -1,5 +1,7 @@
 import type { DbClient } from "@/lib/db";
+import { HELD_SEND_EFFECT_TYPES } from "@/lib/connected-platform/phone-today-counts";
 import { startOfShopDay } from "@/lib/time/shop-day";
+import { SEND_GUARD_HOLD_ERROR_CODE } from "@/lib/whatsapp/send-guard";
 import {
   KIND_SPECS,
   asSeverity,
@@ -11,7 +13,7 @@ import {
 } from "./event-kinds";
 
 // Taken from the real (extended) client so `db` and a transaction handle both fit.
-export type LiveClient = Pick<DbClient, "order" | "delivery" | "message">;
+export type LiveClient = Pick<DbClient, "order" | "delivery" | "message" | "outboxIntent">;
 
 export interface LiveEventInput {
   eventType: string;
@@ -61,6 +63,13 @@ export async function resolveLiveEventState(
       ]);
       const age = oldest ? now.getTime() - oldest.createdAt.getTime() : 0;
       return { kind, count, severity: toConfirmSeverity(age), stillTrue: count > 0 };
+    }
+    case "whatsapp.held": {
+      // Counted from the rows: Release and Discard take a send out of this state, so the number drops by itself.
+      const count = await client.outboxIntent.count({
+        where: { status: "failed", outcomeState: "none", lastErrorCode: SEND_GUARD_HOLD_ERROR_CODE, effectType: { in: [...HELD_SEND_EFFECT_TYPES] } },
+      });
+      return { kind, count, severity: base, stillTrue: count > 0 };
     }
     case "delivery.failed": {
       const count = await client.delivery.count({

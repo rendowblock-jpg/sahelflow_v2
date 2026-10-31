@@ -22,7 +22,12 @@ import {
 
 vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/identity/trusted-actor")>();
-  return { ...actual, isTrustedActorContext: vi.fn(() => true) };
+  const { shopContext: shop } = await import("@/lib/db");
+  const context = {
+    version: 1, shop,
+    actor: { kind: "person", personId: "5".repeat(32), workspaceMemberId: "6".repeat(32), deviceId: "7".repeat(32), sessionId: "session-chain-w169", role: "owner", policyVersion: 1, revocationEpoch: 0 },
+  };
+  return { ...actual, requireTrustedActor: vi.fn(async () => context), isTrustedActorContext: vi.fn(() => true) };
 });
 vi.mock("@/lib/identity/authorization", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/identity/authorization")>();
@@ -39,7 +44,7 @@ vi.mock("@/lib/identity/authorization", async (importOriginal) => {
     })),
   };
 });
-vi.mock("next/headers", async () => (await import("./seller-read")).nextHeadersMock());
+vi.mock("next/headers", async () => (await import("./next-headers-mock")).nextHeadersMock());
 
 import { db, shopContext } from "@/lib/db";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";

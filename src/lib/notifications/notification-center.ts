@@ -21,6 +21,7 @@ import { isInQuietHours } from "./quiet-hours";
 import { KIND_SPECS, asSeverity, kindOfEventType } from "./event-kinds";
 import { resolveLiveEventState, type LiveEventState } from "./live-state";
 import { planDigest } from "./quiet-digest";
+import { sweepOrdersToConfirm } from "./to-confirm-sweep";
 
 const PROJECTION_BATCH = 500;
 const NATIVE_LEASE_MS = 2 * 60_000;
@@ -168,6 +169,14 @@ export async function synchronizeNotifications(
     trustedActionAllowed(context, action, resource),
   );
   if (allowedActions.length === 0) return { projected: 0 };
+  if (allowedActions.includes("orders.read")) {
+    try {
+      const window = preference ?? { quietStartMinute: null, quietEndMinute: null };
+      await sweepOrdersToConfirm(db, { now, window, shopId: context.shop.shopId });
+    } catch {
+      // A failed sweep must never stop the centre from projecting what is already there.
+    }
+  }
   let projected = 0;
 
   // A bounded anti-join makes projection recovery independent of event-table

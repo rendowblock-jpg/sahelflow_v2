@@ -113,9 +113,12 @@ describe("listNotifications / synchronizeNotifications on real SQLite", () => {
     }
     await synchronizeNotifications(CTX);
     const listed = await listNotifications(CTX, QUERY);
-    expect(listed.notifications).toHaveLength(1);
-    expect(listed.notifications[0]).toMatchObject({ kind: "order.new", count: 40 });
-    expect(listed.unreadCount).toBe(1);
+    // The 40 imported orders are 3 hours old and still pending: the to-confirm sweep (w169) rightly adds ITS own line.
+    const newOrderRows = listed.notifications.filter((row) => row.kind === "order.new");
+    expect(newOrderRows).toHaveLength(1);
+    expect(newOrderRows[0]).toMatchObject({ kind: "order.new", count: 40 });
+    expect(listed.notifications.map((row) => row.kind).sort()).toEqual(["order.new", "orders.toConfirm"]);
+    expect(listed.unreadCount).toBe(2);
   });
 
   it("read-all clears the badge for every durable row", async () => {
