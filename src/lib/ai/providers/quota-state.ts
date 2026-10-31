@@ -6,7 +6,7 @@
  * A limit that is not known is simply absent: it is never read as zero, so an
  * unknown limit can never produce a "low" warning.
  */
-import type { AiProviderId } from "./quota-ledger";
+import type { AiProviderId, QuotaLedger } from "./quota-ledger";
 
 /** Google's free tier: 20 generate requests a day per model bucket (measured 25 Oct, PB-GEMINI-QUOTA). */
 export const GEMINI_FREE_DAILY_LIMIT = 20;
@@ -96,4 +96,18 @@ export function geminiFreeKeyEvidence(lastGeminiPauseEnd: string | null | undefi
   const at = Date.parse(lastGeminiPauseEnd ?? "");
   if (!Number.isFinite(at)) return false;
   return now.getTime() - at <= FREE_KEY_EVIDENCE_DAYS * DAY_MS;
+}
+
+/** The pauses still running in a ledger, in the shape resolveQuotaState reads. */
+export function pausesFromLedger(
+  ledger: Pick<QuotaLedger, "isPaused">,
+  providers: readonly AiProviderId[],
+  now: Date,
+): Partial<Record<AiProviderId, PauseInput>> {
+  const out: Partial<Record<AiProviderId, PauseInput>> = {};
+  for (const id of providers) {
+    const state = ledger.isPaused(id, now);
+    if (state.paused && state.until) out[id] = { until: state.until, retryAtKnown: state.retryAtKnown };
+  }
+  return out;
 }

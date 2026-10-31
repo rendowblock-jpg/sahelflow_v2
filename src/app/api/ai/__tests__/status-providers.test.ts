@@ -24,7 +24,8 @@ beforeEach(() => vi.clearAllMocks());
 describe("GET /api/ai/status", () => {
   it("keeps the old fields and adds each provider's key presence and the order", async () => {
     setup({ consent: true, gemini: true, groq: true, order: "gemini-first" });
-    expect(await status()).toEqual({
+    // toMatchObject: the answer also carries quota fields now (status-quota.test.ts); the old ones must not change.
+    expect(await status()).toMatchObject({
       provider: "gemini", consentAccepted: true, keyConfigured: true, ready: true, extractionReady: true,
       providers: { groq: { configured: true }, gemini: { configured: true } }, order: "gemini-first",
     });
