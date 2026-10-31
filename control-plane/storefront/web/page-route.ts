@@ -66,7 +66,8 @@ function htmlResponse(
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Content-Language": locale,
-      "Cache-Control": ttlSeconds > 0 ? `public, max-age=${ttlSeconds}` : "no-store",
+      // no-transform: Cloudflare then leaves the page alone and does not inject its analytics beacon, which our CSP would block (one console error per page).
+      "Cache-Control": `${ttlSeconds > 0 ? `public, max-age=${ttlSeconds}` : "no-store"}, no-transform`,
       "Content-Security-Policy": CONTENT_SECURITY_POLICY,
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -214,7 +215,7 @@ function withCacheState(response: Response, state: "hit" | "miss"): Response {
   // The copy kept at the edge lives for max-age seconds. A browser must not keep the page at all: the zone's default
   // 4-hour Browser Cache TTL would stretch a cacheable page to 4 hours, and a returning visitor would see an old price,
   // stock level or paused store for hours (measured on staging, 19 Oct). Failures stay "no-store".
-  if ((copy.headers.get("Cache-Control") ?? "").startsWith("public")) copy.headers.set("Cache-Control", "no-cache");
+  if ((copy.headers.get("Cache-Control") ?? "").startsWith("public")) copy.headers.set("Cache-Control", "no-cache, no-transform");
   return copy;
 }
 

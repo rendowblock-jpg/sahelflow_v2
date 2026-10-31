@@ -45,7 +45,7 @@ describe("GET /<slug> (page route)", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
     expect(response.headers.get("Content-Language")).toBe("ar");
-    expect(response.headers.get("Cache-Control")).toBe("no-cache");
+    expect(response.headers.get("Cache-Control")).toBe("no-cache, no-transform");
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(response.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
     expect(response.headers.get("Link")).toBe("</_sf/test.css>; rel=preload; as=style");
@@ -84,11 +84,11 @@ describe("GET /<slug> (page route)", () => {
     const store = await publishTestStore();
     const cache = new MemoryCache();
     const first = await servePublicStorePage(get("/sahel-store"), store.env, "sahel-store", undefined, deps(cache));
-    expect(first.headers.get("Cache-Control")).toBe("no-cache");
-    expect([...cache.store.values()][0]?.headers.get("Cache-Control")).toBe(`public, max-age=${PAGE_TTL_SECONDS}`);
+    expect(first.headers.get("Cache-Control")).toBe("no-cache, no-transform");
+    expect([...cache.store.values()][0]?.headers.get("Cache-Control")).toBe(`public, max-age=${PAGE_TTL_SECONDS}, no-transform`);
     const hit = await servePublicStorePage(get("/sahel-store"), store.env, "sahel-store", undefined, deps(cache));
     expect(hit.headers.get("X-SF-Cache")).toBe("hit");
-    expect(hit.headers.get("Cache-Control")).toBe("no-cache");
+    expect(hit.headers.get("Cache-Control")).toBe("no-cache, no-transform");
     store.database.close();
   });
 
@@ -176,7 +176,7 @@ describe("GET /<slug> (page route)", () => {
     );
     expect(response.status).toBe(404);
     expect(response.headers.get("Content-Language")).toBe("fr");
-    expect(response.headers.get("Cache-Control")).toBe("no-cache");
+    expect(response.headers.get("Cache-Control")).toBe("no-cache, no-transform");
     const body = await response.text();
     expect(body).toContain('<html lang="fr" dir="ltr">');
     expect(body).toContain('content="noindex, nofollow"');
@@ -211,7 +211,7 @@ describe("GET /<slug> (page route)", () => {
     const cache = new MemoryCache();
     const bad = await servePublicStorePage(get("/sahel-store"), corrupt.env, "sahel-store", undefined, deps(cache));
     expect(bad.status).toBe(503);
-    expect(bad.headers.get("Cache-Control")).toBe("no-store");
+    expect(bad.headers.get("Cache-Control")).toBe("no-store, no-transform");
     expect(bad.headers.get("Retry-After")).toBe("300");
     corrupt.database.close();
 
@@ -227,7 +227,7 @@ describe("GET /<slug> (page route)", () => {
     };
     const down = await servePublicStorePage(get("/sahel-store"), failing, "sahel-store", undefined, deps(cache));
     expect(down.status).toBe(503);
-    expect(down.headers.get("Cache-Control")).toBe("no-store");
+    expect(down.headers.get("Cache-Control")).toBe("no-store, no-transform");
     expect(down.headers.get("Retry-After")).toBe("30");
 
     const crash = await servePublicStorePage(
@@ -235,7 +235,7 @@ describe("GET /<slug> (page route)", () => {
       deps(cache, { render: () => { throw new Error("render failed"); } }),
     );
     expect(crash.status).toBe(500);
-    expect(crash.headers.get("Cache-Control")).toBe("no-store");
+    expect(crash.headers.get("Cache-Control")).toBe("no-store, no-transform");
     expect(await crash.text()).not.toContain("render failed");
     expect(cache.puts).toBe(0);
     healthy.database.close();
