@@ -21,9 +21,11 @@ describe("deterministic responsive composition contract", () => {
     expect(source).toContain(
       ':is(.card-grid-2, .card-grid-3, .card-grid-4)',
     );
-    expect(source).toContain("@media (min-width: 640px)");
-    expect(source).toContain("@media (min-width: 1024px)");
-    expect(source).toContain("@media (min-width: 1280px)");
+    expect(source).toContain("@media (min-width: 40rem)");
+    expect(source).toContain("@media (min-width: 64rem)");
+    expect(source).toContain("@media (min-width: 80rem)");
+    // rem, not px: the breakpoints follow the browser's font size (see the comment at the top of the file)
+    expect(source).not.toMatch(/@media[^{]*\((min|max)-width:\s*[0-9.]+px\)/);
     expect(source).toContain(
       ".card-grid-3 {\n    grid-template-columns: repeat(3, minmax(0, 1fr));",
     );
