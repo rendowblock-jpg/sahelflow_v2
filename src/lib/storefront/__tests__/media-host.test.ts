@@ -20,6 +20,9 @@ async function noiseJpeg(width: number, height: number, extra?: (s: sharp.Sharp)
   return (extra ? extra(base) : base).jpeg({ quality: 90 }).toBuffer();
 }
 
+// Noise cannot be compressed: tests that are not about the cap lift it.
+const BIG = { limits: { 640: 50_000_000, 1280: 50_000_000 } } as const;
+
 async function size(buffer: Buffer, width: number, quality: number) {
   return (await sharp(buffer).rotate().resize({ width, withoutEnlargement: true }).webp({ quality }).toBuffer()).length;
 }
@@ -36,7 +39,7 @@ describe("encodePhoto", () => {
   it("turns an EXIF-rotated photo upright (width and height swap)", async () => {
     const source = await noiseJpeg(400, 200, (s) => s.withMetadata({ orientation: 6 }));
     expect((await sharp(source).metadata()).orientation).toBe(6);
-    const out = await encodePhoto(source);
+    const out = await encodePhoto(source, BIG);
     const meta = await sharp(out[640]).metadata();
     expect([meta.width, meta.height]).toEqual([200, 400]);
   });
@@ -48,20 +51,20 @@ describe("encodePhoto", () => {
         IFD3: { GPSLatitudeRef: "N", GPSLatitude: "36/1 45/1 0/1", GPSLongitudeRef: "E", GPSLongitude: "3/1 3/1 0/1" },
       }));
     expect((await sharp(source).metadata()).exif).toBeDefined();
-    const out = await encodePhoto(source);
+    const out = await encodePhoto(source, BIG);
     expect((await sharp(out[640]).metadata()).exif).toBeUndefined();
     expect((await sharp(out[1280]).metadata()).exif).toBeUndefined();
     expect(out[640].includes(Buffer.from("private"))).toBe(false);
   });
 
   it("never enlarges a small photo", async () => {
-    const out = await encodePhoto(await noiseJpeg(300, 200));
+    const out = await encodePhoto(await noiseJpeg(300, 200), BIG);
     expect((await sharp(out[640]).metadata()).width).toBe(300);
     expect((await sharp(out[1280]).metadata()).width).toBe(300);
   });
 
   it("resizes a large photo to exactly 640 and 1280 wide, as WebP", async () => {
-    const out = await encodePhoto(await noiseJpeg(1600, 900));
+    const out = await encodePhoto(await noiseJpeg(1600, 900), BIG);
     const small = await sharp(out[640]).metadata();
     const large = await sharp(out[1280]).metadata();
     expect([small.width, small.format]).toEqual([640, "webp"]);
