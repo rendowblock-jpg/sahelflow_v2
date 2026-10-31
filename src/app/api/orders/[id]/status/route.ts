@@ -5,7 +5,7 @@ import { updateOrderStatusSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { projectOrderForTrustedActor } from "@/lib/identity/order-projection";
-import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
+import { runLegacyStatusEffects } from "@/lib/orders/decide-order-for-actor";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +25,7 @@ export const PATCH = withErrorHandler(
     // failure can never block the transition; awaiting it keeps the
     // side-channel deterministic (no SQLite write-lock race with the
     // caller's next action).
-    if (data.status === "confirmed" || data.status === "delivered") {
-      await fireCapiStageForOrder(id, data.status);
-    }
+    await runLegacyStatusEffects(id, data.status);
 
     return NextResponse.json({
       order: projectOrderForTrustedActor(actorContext, order),

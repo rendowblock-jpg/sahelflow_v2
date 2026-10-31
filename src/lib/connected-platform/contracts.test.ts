@@ -153,12 +153,12 @@ describe("connected-platform contracts", () => {
 
   it("is a superset of what the relay allow-list accepts today", () => {
     const policy = readText("./command-policy.ts");
-    const block = /REMOTE_COMMAND_ACTIONS = Object\.freeze\(\[([\s\S]*?)\]/.exec(policy);
+    const block = /EXECUTABLE_COMMAND_KINDS = Object\.freeze\(\[([\s\S]*?)\]/.exec(policy);
     expect(block).not.toBeNull();
-    const actions = [...(block?.[1] ?? "").matchAll(/"([a-z.]+)"/g)].map((m) => m[1]);
-    expect(actions.length).toBeGreaterThan(0);
-    for (const action of actions) {
-      expect(COMMAND_KINDS as readonly string[]).toContain(`command.${action}`);
+    const kinds = [...(block?.[1] ?? "").matchAll(/"([a-z.]+)"/g)].map((m) => m[1]);
+    expect(kinds.length).toBeGreaterThan(0);
+    for (const kind of kinds) {
+      expect(COMMAND_KINDS as readonly string[]).toContain(kind);
     }
   });
 });
