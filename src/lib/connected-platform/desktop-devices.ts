@@ -1,6 +1,6 @@
 // Pure helpers for the phone list: merge what the relay knows with what the
 // desktop approved, relative "last seen", and the human refusal for the limit.
-import { deviceFingerprint } from "./web/fingerprint";
+import { pairingCode } from "./web/fingerprint";
 
 export type DeviceStatus = "pending" | "approved" | "revoked";
 
@@ -35,6 +35,24 @@ function isoOrNull(value: unknown): string | null {
   return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 }
 
+/** What the seller typed from the phone, reduced to the code alphabet (0-9 A-F, upper case). */
+export function normalizePairingCodeInput(typed: string): string {
+  if (typeof typed !== "string") return "";
+  return typed
+    .normalize("NFKC")
+    .replace(/[\u0660-\u0669]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
+    .replace(/[^0-9a-fA-F]/g, "")
+    .toUpperCase();
+}
+
+/** True only when the typed text is exactly the device's code. A device with no code never matches. */
+export function pairingCodeMatches(typed: string, deviceCode: string | null): boolean {
+  if (!deviceCode) return false;
+  const wanted = normalizePairingCodeInput(deviceCode);
+  return wanted.length === 16 && normalizePairingCodeInput(typed) === wanted;
+}
+
 export async function mergeDevices(rows: readonly unknown[], local: LocalDeviceState): Promise<DeviceView[]> {
   const views: DeviceView[] = [];
   for (const raw of rows) {
@@ -50,7 +68,8 @@ export async function mergeDevices(rows: readonly unknown[], local: LocalDeviceS
       deviceId,
       memberId,
       name: null,
-      fingerprint: typeof row.signing_public_key === "string" ? await deviceFingerprint(row.signing_public_key) : null,
+      // Covers the signing key AND the RSA key: a row without a usable RSA key has no code, so it cannot be approved.
+      fingerprint: await pairingCode(row.signing_public_key as string, row.encryption_public_key),
       createdAt: isoOrNull(row.created_at) ?? (createdMs === undefined ? null : new Date(createdMs).toISOString()),
       lastSeenAt: isoOrNull(row.last_seen_at),
       revokedAt: isoOrNull(row.revoked_at),

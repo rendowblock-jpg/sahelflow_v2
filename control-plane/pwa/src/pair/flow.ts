@@ -1,4 +1,4 @@
-import { buildPairingExchangeBody, deviceFingerprint, type GenerateDeviceKeysResult, type DeviceKeys } from "../../../../src/lib/connected-platform/web";
+import { buildPairingExchangeBody, pairingCode, type GenerateDeviceKeysResult, type DeviceKeys } from "../../../../src/lib/connected-platform/web";
 import { parseDesktopPairingHash, type DesktopPairingFragment } from "../../../../src/lib/connected-platform/pairing-link";
 import { verifyDesktopKeyProof, type VerifyDesktopKeyProofReason, type VerifyDesktopKeyProofResult } from "../../../../src/lib/connected-platform/pairing-trust";
 import type { PairingIdentity, TrustedDesktop } from "./pinned";
@@ -41,7 +41,8 @@ export async function runPairing(deps: Readonly<{ link: PairingLink; online: boo
   const made = await deps.keygen.run(deps.onStep).catch(() => null);
   if (!made) return { ok: false, reason: "keygen_failed" };
   if (!made.ok) return { ok: false, reason: made.reason === "keygen_failed" ? "keygen_failed" : "unsupported" };
-  const fingerprint = await deviceFingerprint(made.publicKeys.signingPublicKey);
+  // From the keys this phone just made, never from anything the relay sends back.
+  const fingerprint = await pairingCode(made.publicKeys.signingPublicKey, made.publicKeys.encryptionPublicKey);
   if (!fingerprint) return { ok: false, reason: "keygen_failed" };
   deps.onStep("send");
   let result: ExchangeResult;

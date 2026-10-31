@@ -38,6 +38,7 @@ const APPROVED = { ...PENDING, deviceId: "phone_approved1", fingerprint: "1111-2
 
 const fetchMock = vi.fn();
 let devices: unknown[] = [];
+let pendingDevice: Record<string, unknown> = PENDING;
 let listResponse: () => Response;
 const json = (status: number, body: Record<string, unknown>) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 const posts = () => fetchMock.mock.calls.filter((call) => (call[1] as { method?: string } | undefined)?.method === "POST").map((call) => String(call[0]));
@@ -45,12 +46,13 @@ const posts = () => fetchMock.mock.calls.filter((call) => (call[1] as { method?:
 beforeEach(() => {
   harness.locale = "en";
   devices = [];
+  pendingDevice = PENDING;
   listResponse = () => json(200, { devices });
   fetchMock.mockReset();
   fetchMock.mockImplementation(async (url: string, init?: { method?: string }) => {
     if ((init?.method ?? "GET") === "GET") return listResponse();
     if (url.endsWith("/pairing")) {
-      devices = [PENDING];
+      devices = [pendingDevice];
       return json(201, { link: "https://app.sahelflow.com/#p=pair_x.token.A1B2C3D4E5F67788", code: "pair 0123 / tok / A1B2", expiresAt: new Date(Date.now() + 600_000).toISOString(), desktopFingerprint: "9999-8888-7777-6666", deviceId: PENDING.deviceId });
     }
     return json(200, { ok: true });
@@ -71,7 +73,7 @@ describe("PhonePairingCard states", () => {
     expect(container.innerHTML).not.toMatch(RTL_UNSAFE);
   });
 
-  it.each(["en", "ar"] as const)("pending and approved (%s): fingerprint in 4 groups, status as words with an icon, remove button per row", async (locale) => {
+  it.each(["en", "ar"] as const)("pending and approved (%s): approved code in 4 groups, pending code hidden, status as words with an icon, remove button per row", async (locale) => {
     harness.locale = locale;
     devices = [PENDING, APPROVED];
     render(<PhonePairingCard />);
@@ -81,7 +83,8 @@ describe("PhonePairingCard states", () => {
     expect(within(pendingRow).getByText(T("phones.status.pending"))).toBeInTheDocument();
     expect(within(approvedRow).getByText(T("phones.status.approved"))).toBeInTheDocument();
     expect(pendingRow.querySelector("[data-status] svg")).not.toBeNull();
-    expect(pendingRow.textContent).toContain("A1B2 C3D4 E5F6 7788");
+    expect(pendingRow.textContent).not.toContain("A1B2 C3D4 E5F6 7788");
+    expect(approvedRow.textContent).toContain("1111 2222 3333 4444");
     expect(within(pendingRow).getByText(T("phones.row.neverSeen"))).toBeInTheDocument();
     expect(approvedRow.textContent).not.toContain(T("phones.row.neverSeen"));
     expect(within(approvedRow).getByRole("button", { name: T("phones.remove") }).className).toContain("min-h-11");
@@ -141,13 +144,90 @@ describe("pairing dialog", () => {
     expect(screen.getByTestId("pairing-countdown")).toHaveTextContent("10:00");
     const approve = await screen.findByRole("button", { name: T("phones.approve") });
     expect(screen.getByRole("button", { name: T("phones.reject") })).toBeInTheDocument();
-    expect(within(screen.getByTestId("pairing-pending")).getByText("A1B2 C3D4 E5F6 7788")).toBeInTheDocument();
+    expect(screen.getByLabelText(T("phones.dialog.codeLabel"))).toBeInTheDocument();
+    expect(screen.getByText(T("phones.dialog.codeHint"))).toBeInTheDocument();
     expect(document.activeElement).toBe(screen.getByTestId("pair-close"));
     expect(document.activeElement).not.toBe(approve);
+  });
+});
+
+describe("approving needs the code typed from the phone", () => {
+  const openPending = async () => {
+    fireEvent.click(await screen.findByRole("button", { name: T("phones.pair") }));
+    const approve = await screen.findByRole("button", { name: T("phones.approve") });
+    const field = screen.getByLabelText(T("phones.dialog.codeLabel")) as HTMLInputElement;
+    return { approve, field, reject: screen.getByRole("button", { name: T("phones.reject") }) };
+  };
+  const type = (field: HTMLInputElement, value: string) => fireEvent.change(field, { target: { value } });
+  const mismatch = () => screen.queryByText(T("phones.dialog.codeMismatch"));
+
+  it("does not show the pending phone's code, and Approve is disabled until the right code is typed", async () => {
+    render(<PhonePairingCard />);
+    const { approve, field } = await openPending();
+    expect(document.body.textContent).not.toContain("A1B2 C3D4 E5F6 7788");
+    expect(approve).toBeDisabled();
+    type(field, "A1B2 C3D4");
+    expect(approve).toBeDisabled();
+    expect(mismatch()).toBeNull();
+    fireEvent.click(approve);
+    expect(posts().some((url) => url.endsWith("/approve"))).toBe(false);
+  });
+
+  it("a wrong code keeps Approve disabled and, at 16 characters, shows the error; fixing it clears the error", async () => {
+    render(<PhonePairingCard />);
+    const { approve, field } = await openPending();
+    type(field, "A1B2-C3D4-E5F6-7789");
+    expect(approve).toBeDisabled();
+    expect(mismatch()).not.toBeNull();
+    type(field, "A1B2-C3D4-E5F6-778");
+    expect(mismatch()).toBeNull();
+    type(field, "A1B2-C3D4-E5F6-7788");
+    expect(mismatch()).toBeNull();
+    expect(approve).toBeEnabled();
+  });
+
+  it.each([["lower case with spaces", "a1b2 c3d4 e5f6 7788"], ["no separators", "a1b2c3d4e5f67788"], ["Arabic-Indic digits", "A\u0661B\u0662 C\u0663D\u0664 E\u0665F\u0666 \u0667\u0667\u0668\u0668"], ["Eastern digits", "A\u06F1B\u06F2-C\u06F3D\u06F4-E\u06F5F\u06F6-\u06F7\u06F7\u06F8\u06F8"]])("the right code (%s) enables Approve and approving calls the server", async (_label, typed) => {
+    render(<PhonePairingCard />);
+    const { approve, field } = await openPending();
+    type(field, typed);
+    expect(approve).toBeEnabled();
+    expect(mismatch()).toBeNull();
     fireEvent.click(approve);
     await waitFor(() => expect(posts().some((url) => url.endsWith("/phone_pending1/approve"))).toBe(true));
   });
 
+  it("Reject is always enabled and still works with no code or a wrong code", async () => {
+    render(<PhonePairingCard />);
+    const { field, reject } = await openPending();
+    expect(reject).toBeEnabled();
+    type(field, "0000-0000-0000-0000");
+    expect(reject).toBeEnabled();
+    fireEvent.click(reject);
+    await waitFor(() => expect(posts().some((url) => url.endsWith("/phone_pending1/revoke"))).toBe(true));
+  });
+
+  it("a pending phone with no code can never be approved, whatever is typed", async () => {
+    pendingDevice = { ...PENDING, fingerprint: null };
+    render(<PhonePairingCard />);
+    const { approve, field, reject } = await openPending();
+    for (const typed of ["----", "0000-0000-0000-0000", "A1B2-C3D4-E5F6-7788"]) {
+      type(field, typed);
+      expect(approve).toBeDisabled();
+    }
+    expect(reject).toBeEnabled();
+    expect(posts().some((url) => url.endsWith("/approve"))).toBe(false);
+  });
+
+  it.each(["en", "fr", "ar"] as const)("(%s) the three new sentences exist", (locale) => {
+    harness.locale = locale;
+    for (const key of ["phones.dialog.codeLabel", "phones.dialog.codeHint", "phones.dialog.codeMismatch"]) {
+      expect(T(key)).not.toBe(key);
+      expect(T(key).length).toBeGreaterThan(10);
+    }
+  });
+});
+
+describe("pairing dialog (errors)", () => {
   it("the limit error is shown in words", async () => {
     fetchMock.mockImplementation(async (_url: string, init?: { method?: string }) =>
       (init?.method ?? "GET") === "GET" ? json(200, { devices: [] }) : json(409, { code: "PHONE_DEVICE_LIMIT" }));

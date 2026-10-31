@@ -3,6 +3,8 @@ import { base64UrlEncode, buildPairingExchangeBody } from "../../../src/lib/conn
 import { runPairing, takePairingLink, type ExchangeResult, type KeygenRunner, type PairStep, type PairStore, type PairingTransport } from "../src/pair/flow";
 import { createFetchTransport } from "../src/pair/transport";
 
+// A well-formed RSA public key; the pairing code needs one.
+const RSA_JWK = JSON.stringify({ kty: "RSA", n: "A".repeat(512), e: "AQAB" });
 const ID = "0123456789abcdef0123456789abcdef";
 const TOKEN = base64UrlEncode(new Uint8Array(32).fill(7));
 const HASH = `#p=${ID}.${TOKEN}.A1B2C3D4E5F67788`;
@@ -15,7 +17,7 @@ async function realishKeygen(order: string[]): Promise<KeygenRunner> {
   return {
     async run(onStep) {
       order.push("keygen"); onStep("signing"); onStep("encryption");
-      return { ok: true, keys: { signing, encryption: signing }, publicKeys: { signingPublicKey: b64, encryptionPublicKey: "enc-key" } };
+      return { ok: true, keys: { signing, encryption: signing }, publicKeys: { signingPublicKey: b64, encryptionPublicKey: RSA_JWK } };
     },
   };
 }
