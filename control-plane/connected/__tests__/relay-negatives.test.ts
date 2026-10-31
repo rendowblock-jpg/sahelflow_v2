@@ -66,6 +66,29 @@ describe("relay negatives (phone routes)", () => {
     expect((await w.submit(a, await w.commandEnvelope(a, { installationId: INSTALLATION_ID }))).status).toBe(202);
   });
 
+  it("the desktop cannot store a projection for a device under ANOTHER member's name (kills the member check of the projection route)", async () => {
+    const { w, a, b } = await setup();
+    const proj = () => w.count("SELECT COUNT(*) AS n FROM connected_projection");
+    const before = proj();
+    const refused = await w.putProjection(await w.projectionEnvelope(a, { memberId: b.memberId }));
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual({ error: "projection_recipient_rejected" });
+    expect(proj()).toBe(before);
+    expect((await w.putProjection(await w.projectionEnvelope(a))).status).toBeLessThan(300);
+    expect(proj()).toBe(before + 1);
+  });
+
+  it("two phones of the SAME member: one cannot ask for the other's command (status is scoped to the device, not only to the member)", async () => {
+    const { w, a, forbidden } = await setup();
+    const a2 = await w.pair("device_alice_02", "member_owner");
+    w.allowCommands(a2);
+    const queued = await w.submit(a2, await w.commandEnvelope(a2));
+    expect(queued.status).toBe(202);
+    const id = ((await queued.json()) as { commandId: string }).commandId;
+    expect((await w.call(statusUrl(id, a2.deviceId), { token: a2.token })).status).toBe(200);
+    await expectRefusal(await w.call(statusUrl(id, a.deviceId), { token: a.token }), 404, [...forbidden, id]);
+  });
+
   it("a replayed command id gets the same answer and one row; the same key with another body is 409", async () => {
     const { w, a } = await setup();
     const env = await w.commandEnvelope(a);
