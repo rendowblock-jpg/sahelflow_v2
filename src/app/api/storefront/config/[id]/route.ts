@@ -198,10 +198,19 @@ export const POST = withErrorHandler(
 
       let hostedRelease: Record<string, unknown>;
       if (prepared.draft.isActive) {
+        let photos: Record<string, unknown> | null = null;
         const hosted = await publishHostedStorefront({
           ...runtime,
           context,
           prepared,
+          onPhotos: (summary) => { photos = { ...summary }; },
+        }).catch(async (error: unknown) => {
+          // A photo that could not be hosted stops the publish with a code and a plain sentence.
+          const { MediaHostError } = await import("@/lib/storefront/media-host");
+          if (error instanceof MediaHostError) {
+            throw new SahelFlowError(error.message, error.code, error.code === "HOSTING_BUSY" ? 503 : 422);
+          }
+          throw error;
         });
         const finalized = await finalizeActiveStorefrontPublish(
           businessContext,
@@ -214,6 +223,7 @@ export const POST = withErrorHandler(
           artifactDigest: finalized.result.artifactDigest,
           prepareReplayed: preparedCommand.replayed,
           finalizeReplayed: finalized.replayed,
+          photos,
         };
       } else {
         const hosted = await pauseHostedStorefront({

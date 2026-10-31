@@ -180,3 +180,103 @@ describe("createPairing and listDevices (S1b)", () => {
     expect(listed.devices[0]?.revoked_at).toBeNull();
   });
 });
+
+describe("hosted photos (check and put)", () => {
+  const STOREFRONT = "storefront_12345678";
+  const WORKSPACE = "workspace_12345678";
+  const HASH = "0123456789abcdef01234567";
+  const webp = new Uint8Array([82, 73, 70, 70, 1, 2, 3, 4, 5, 6]);
+  const digest = createHash("sha256").update(webp).digest("hex");
+
+  it("check: POST with exact URL, JSON body and the bearer token", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      return Response.json({ origin: "https://media.example.test", widths: [640, 1280], present: [HASH] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const answer = await client().checkStorefrontMedia(STOREFRONT, { workspaceId: WORKSPACE, hashes: [HASH] });
+    expect(answer.present).toEqual([HASH]);
+    const [input, init] = fetchMock.mock.calls[0] ?? [];
+    expect(String(input)).toBe(`https://store.sahelflow.example/v1/desktop/storefronts/${STOREFRONT}/media/check`);
+    expect(init?.method).toBe("POST");
+    expect(init?.body).toBe(JSON.stringify({ workspaceId: WORKSPACE, hashes: [HASH] }));
+    const headers = new Headers(init?.headers);
+    expect(headers.get("Authorization")).toBe(`Bearer ${"c".repeat(40)}`);
+    expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("put: PUT with exact URL, image/webp, the digest header and the bytes", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      return Response.json({ status: "stored", url: "https://media.example.test/m/x", bytes: webp.byteLength, width: 640 }, { status: 201 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const answer = await client().putStorefrontMedia(STOREFRONT, HASH, 640, WORKSPACE, webp, digest);
+    expect(answer.status).toBe("stored");
+    const [input, init] = fetchMock.mock.calls[0] ?? [];
+    expect(String(input)).toBe(`https://store.sahelflow.example/v1/desktop/storefronts/${STOREFRONT}/media/${HASH}/640?workspaceId=${WORKSPACE}`);
+    expect(init?.method).toBe("PUT");
+    const headers = new Headers(init?.headers);
+    expect(headers.get("Content-Type")).toBe("image/webp");
+    expect(headers.get("X-SahelFlow-SHA256")).toBe(digest);
+    expect(headers.get("Authorization")).toBe(`Bearer ${"c".repeat(40)}`);
+    expect(Array.from(init?.body as Uint8Array)).toEqual(Array.from(webp));
+  });
+
+  it("put: 200 (already there) succeeds like 201", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ status: "exists", url: "u", bytes: 10, width: 1280 })));
+    await expect(client().putStorefrontMedia(STOREFRONT, HASH, 1280, WORKSPACE, webp, digest)).resolves.toMatchObject({ status: "exists" });
+  });
+
+  it.each([
+    [409, "media_conflict"],
+    [413, "media_too_large"],
+    [415, "unsupported_media_type"],
+    [507, "media_quota_exceeded"],
+    [400, "digest_mismatch"],
+  ])("put: %i becomes a typed error with the Worker's code", async (status, code) => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: code }, { status })));
+    const failure = await client().putStorefrontMedia(STOREFRONT, HASH, 640, WORKSPACE, webp, digest).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(ConnectedPlatformHttpError);
+    expect(failure).toMatchObject({ status, code });
+  });
+
+  it("keeps Retry-After of a 503 in the error, and none when the Worker sent none", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: "media_unavailable" }, { status: 503, headers: { "Retry-After": "5" } })));
+    const busy = await client().putStorefrontMedia(STOREFRONT, HASH, 640, WORKSPACE, webp, digest).catch((e: unknown) => e);
+    expect(busy).toMatchObject({ status: 503, code: "media_unavailable", retryAfterSeconds: 5 });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: "media_unavailable" }, { status: 503 })));
+    const off = await client().checkStorefrontMedia(STOREFRONT, { workspaceId: WORKSPACE, hashes: [HASH] }).catch((e: unknown) => e);
+    expect(off).toMatchObject({ status: 503, code: "media_unavailable" });
+    expect((off as ConnectedPlatformHttpError).retryAfterSeconds).toBeUndefined();
+  });
+
+  it("maps a timeout to 504 and a network failure to 503", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw Object.assign(new Error("slow"), { name: "TimeoutError" }); }));
+    await expect(client().putStorefrontMedia(STOREFRONT, HASH, 640, WORKSPACE, webp, digest)).rejects.toMatchObject({ status: 504, code: "remote_timeout" });
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("fetch failed"); }));
+    await expect(client().putStorefrontMedia(STOREFRONT, HASH, 640, WORKSPACE, webp, digest)).rejects.toMatchObject({ status: 503, code: "remote_unavailable" });
+  });
+
+  it("refuses a body over the width's cap BEFORE sending anything", async () => {
+    const fetchMock = vi.fn(async () => Response.json({}));
+    vi.stubGlobal("fetch", fetchMock);
+    const tooBig640 = new Uint8Array(160 * 1024 + 1);
+    await expect(client().putStorefrontMedia(STOREFRONT, HASH, 640, WORKSPACE, tooBig640, digest)).rejects.toMatchObject({ status: 413 });
+    const tooBig1280 = new Uint8Array(600 * 1024 + 1);
+    await expect(client().putStorefrontMedia(STOREFRONT, HASH, 1280, WORKSPACE, tooBig1280, digest)).rejects.toMatchObject({ status: 413 });
+    await expect(client().putStorefrontMedia(STOREFRONT, HASH, 640, WORKSPACE, new Uint8Array(0), digest)).rejects.toMatchObject({ status: 413 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts a body exactly at the cap and refuses names the Worker would not know", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ status: "stored", url: "u", bytes: 1, width: 640 }, { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await client().putStorefrontMedia(STOREFRONT, HASH, 640, WORKSPACE, new Uint8Array(160 * 1024), digest);
+    await client().putStorefrontMedia(STOREFRONT, HASH, 1280, WORKSPACE, new Uint8Array(600 * 1024), digest);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await expect(client().putStorefrontMedia(STOREFRONT, HASH, 800, WORKSPACE, webp, digest)).rejects.toThrow(TypeError);
+    await expect(client().putStorefrontMedia(STOREFRONT, "../etc", 640, WORKSPACE, webp, digest)).rejects.toThrow(TypeError);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});

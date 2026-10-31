@@ -45,6 +45,7 @@ import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 import { getWorkspacesRuntimeTranslation } from "@/lib/i18n/workspaces-runtime";
 import { getNotificationEventsRuntimeTranslation } from "@/lib/i18n/notification-events-runtime";
+import { getStorefrontPhotosRuntimeTranslation } from "@/lib/i18n/storefront-photos-runtime";
 
 const SHARED_RUNTIME_COPY = {
   en: {
@@ -210,6 +211,7 @@ export function getRuntimeTranslation(
     getStorefrontRuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key) ??
     getWorkspacesRuntimeTranslation(locale, key) ??
+    getStorefrontPhotosRuntimeTranslation(locale, key) ??
     // R5-a plural-agreement dictionary — last in the chain so every existing
     // dictionary keeps precedence for its own keys; only plural-suffixed
     // `${key}_${rule}` lookups (which no other dictionary defines) resolve here.

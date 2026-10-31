@@ -94,7 +94,7 @@ export function StudioTopBar({
   onPublish: () => void;
   publishDisabled: boolean;
   publishing: boolean;
-  publishLine: { text: string; role: "status" | "alert" } | null;
+  publishLine: { text: string; role: "status" | "alert"; retry?: boolean } | null;
   /** The active/paused switch differs from what is online (or that is unknown). */
   activeWaitsForPublish?: boolean;
 }) {
@@ -261,6 +261,17 @@ export function StudioTopBar({
         >
           {publishLine?.text ?? ""}
         </p>
+        {publishLine?.retry ? (
+          <button
+            type="button"
+            data-testid="publish-retry"
+            disabled={publishDisabled}
+            onClick={onPublish}
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-control px-2 text-xs font-medium text-primary underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-45"
+          >
+            {t("storefront.photos.retry")}
+          </button>
+        ) : null}
       </div>
     </header>
   );
