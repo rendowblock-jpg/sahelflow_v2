@@ -50,6 +50,44 @@ export const FALLBACK_TOOL_NAMES: readonly string[] = [
   "search_conversations",
 ];
 
+/**
+ * Offered, and nothing else, for an order-creation request (PB-AI-GROQ-WRITE-LOOKUPS). On the free
+ * Groq plan every step re-sends the tool list: with the whole read toolbox the assistant spent its
+ * 12,000-token turn before it could record the proposal. The write tool needs the customer id and
+ * each product id (create_order takes ids, not names), so exactly the two lookups that give them
+ * are offered next to it. This only narrows what is OFFERED: the permission gate, the proposal
+ * and the approval card are unchanged and still stand between the model and the database.
+ */
+export const ORDER_CREATION_TOOL_NAMES: readonly string[] = [
+  "search_customers",
+  "search_products",
+  "create_order",
+];
+
+// Create-verb + optional filler + order noun, on the normalized text (no accents). The verb must
+// come BEFORE the noun and only an article/adjective may sit between them, so "ajoute une note
+// a la commande 5" and "la commande creee hier" are not creation requests.
+const CREATE_FILLER = "(?:(?:un|une|nouvelle|nouveau|autre|new|a|an|another|draft|brouillon|jdid|jdida|1|one)\\s+)*";
+const ORDER_CREATION_LATIN = new RegExp(
+  `(?<![\\p{L}\\p{N}])(?:cree|creer|creez|ajoute|ajouter|ajoutez|enregistre|enregistrer|saisis|saisir|fais|faire|create|add|make|place|register|record|enter|submit|draft|raise|dir|zid|sajel|sjel|sajjel|3mel)\\s+${CREATE_FILLER}(?:commandes?|comandes?|kommandes?|orders?|talab|tlab|talbia|talabia|cmd)(?![\\p{L}\\p{N}])(?!\\s+(?:note|notes|status|statut|number|numero|id)(?![\\p{L}\\p{N}]))`,
+  "u",
+);
+const ORDER_CREATION_ARABIC = new RegExp(
+  "(?<![\\u0621-\\u064a])(?:اعمل|عمل|سجل|تسجيل|انشئ|انشي|انشاء|انشا|اضف|اضافه|زيد|ضيف|ادخل)(?:\\s+(?:لي|ليا|جديد|جديده|واحد|واحده))*\\s+(?:طلبيه|طلب|كوماند|كومند|اوردر)(?![\\u0621-\\u064a])",
+  "u",
+);
+// A second action in the same sentence (cancel, delete, status, confirm): keep the old, larger set.
+const OTHER_ACTION_LATIN = /(?<![\p{L}\p{N}])(?:annul|cancel|supprim|delet|remov|statut|status|confirm)/u;
+const OTHER_ACTION_ARABIC: readonly string[] = ["الغ", "حذف", "تاكيد"];
+
+export function isOrderCreationQuestion(text: string): boolean {
+  const normalized = normalizeQuestion(text);
+  if (OTHER_ACTION_LATIN.test(normalized) || OTHER_ACTION_ARABIC.some((stem) => normalized.includes(stem))) {
+    return false;
+  }
+  return ORDER_CREATION_LATIN.test(normalized) || ORDER_CREATION_ARABIC.test(normalized);
+}
+
 export interface RouterHistoryItem {
   role: "user" | "assistant";
   content: string;
@@ -61,7 +99,7 @@ export interface ToolRoute {
   tools: NeutralTool[];
   /** True when the larger set was used (no keyword, or a follow-up). */
   fallback: boolean;
-  reason: "keywords" | "follow-up" | "no-keyword";
+  reason: "keywords" | "follow-up" | "no-keyword" | "order-creation";
 }
 
 const GROUP_ORDER: readonly AiCapabilityGroupId[] = [
@@ -158,6 +196,18 @@ export function selectToolsForQuestion(
 ): ToolRoute {
   // `locale` is accepted for the caller's symmetry but not used on purpose:
   // an Arabizi or French question is common in an Arabic UI and the reverse.
+  if (isOrderCreationQuestion(input.question)) {
+    const creation = definitions.filter((d) => ORDER_CREATION_TOOL_NAMES.includes(d.name));
+    // Narrow only when the write tool itself is in the list: never offer too little.
+    if (creation.some((d) => d.name === "create_order")) {
+      return {
+        groups: ["orders", "customers", "products"],
+        tools: definitionsToNeutral(creation),
+        fallback: false,
+        reason: "order-creation",
+      };
+    }
+  }
   const history = input.history ?? [];
   const capability = aiCapabilityGroups();
   const groupOfTool = new Map<string, AiCapabilityGroupId>();

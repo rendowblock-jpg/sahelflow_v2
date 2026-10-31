@@ -47,8 +47,13 @@ const MAX_NAMED_STOCK_HOLDERS = 5;
 
 // Tells the seller which orders hold the stock so he can ship or cancel them.
 // Returns "" when no holder can be named, so the plain refusal still works.
-async function describeStockHolders(
-  tx: OrderChangeTransactionClient,
+/** The one capability describeStockHolders needs, so the AI executor can use it too. */
+export interface StockHolderQueryClient {
+  $queryRaw: <T = unknown>(query: TemplateStringsArray, ...values: unknown[]) => Promise<T>;
+}
+
+export async function describeStockHolders(
+  tx: StockHolderQueryClient,
   productId: string,
 ): Promise<string> {
   const named = await tx.$queryRaw<Array<{ orderNumber: string }>>`

@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 
 import { build, transform } from "esbuild";
 
+import { buildReform } from "../control-plane/storefront/web/client/commune-reform";
 import { getTranslations } from "../src/lib/i18n";
 import { getRuntimeTranslation } from "../src/lib/i18n/runtime-translations";
 
@@ -171,6 +172,9 @@ function buildCommunes(): { hash: string; files: Map<string, string> } {
   for (const [code, json] of serialised) for (const [latin, arabic] of JSON.parse(json) as Array<[string, string]>) index.push([latin, arabic, code]);
   index.sort((a, b) => a[0].localeCompare(b[0], "fr") || (a[2] < b[2] ? -1 : a[2] > b[2] ? 1 : 0));
   serialised.set("all", JSON.stringify(index));
+  // reform.json: the buyers' spellings and the old wilaya of each 2025 commune (data, so the page script does not carry it). In the hash too.
+  const wilayas = JSON.parse(readFileSync(join(ROOT, "data/wilayas.json"), "utf8")) as Array<{ code: number; name: string; nameAr: string }>;
+  serialised.set("reform", JSON.stringify(buildReform(wilayas)));
   // The folder name is the hash of every file in it (the index too), so a change to any list gives the page a new, never-cached address.
   const hash = createHash("sha256").update([...serialised.entries()].map(([code, json]) => `${code}${json}`).join("\n")).digest("hex").slice(0, 10);
   const files = new Map<string, string>();

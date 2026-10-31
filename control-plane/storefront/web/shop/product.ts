@@ -140,6 +140,8 @@ export function renderProduct(ctx: Ctx, product: ShopProduct, legalLine = ""): P
     communeNone: t("storefront.shop.communeNone"),
     communeFailed: t("storefront.shop.communeFailed"),
     communeCount: t("storefront.shop.communeCount", { count: "{{count}}" }),
+    communeFormerly: t("storefront.shop.communeFormerly", { wilaya: "{{wilaya}}" }),
+    communeNoDelivery: t("storefront.shop.communeNoDelivery", { wilaya: "{{wilaya}}" }),
   };
   const data = {
     v: 1,

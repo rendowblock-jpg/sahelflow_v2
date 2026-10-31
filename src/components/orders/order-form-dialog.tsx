@@ -587,6 +587,7 @@ export function OrderFormDialog({
             <div className="space-y-4">
               <p className="text-base font-medium">{t("orders.form.delivery")}</p>
               <WilayaCommuneSelect
+                search
                 wilaya={watchValues.wilaya}
                 commune={watchValues.commune}
                 // A wilaya change clears the commune; only flag the empty
