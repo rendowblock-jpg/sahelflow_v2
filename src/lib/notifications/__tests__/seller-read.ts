@@ -62,11 +62,20 @@ export function catalogText(locale: SellerLocale, key: string, count?: number): 
   return renderTranslation(String(value), count === undefined ? undefined : { count }, locale);
 }
 
+/** The kinds whose number can fall to 0 while the row stays in the list (literal on purpose: the test must not read the code it checks). */
+export const ZERO_MEANS_NOTHING = ["order.new", "orders.toConfirm", "whatsapp.held", "delivery.failed", "whatsapp.received"];
+
 /** One row, in one language: catalog title and body, no raw key, no template hole, Arabic letters in ar, a link the toast accepts. */
 export function expectWording(row: SellerRow, locale: SellerLocale, kind: string, count: number | null, link: string): void {
   const base = `notifications.events.${kind}`;
   expect(row.title).toBe(catalogText(locale, `${base}.title`));
-  expect(row.body).toBe(catalogText(locale, `${base}.body`, count ?? undefined));
+  if (count === 0 && ZERO_MEANS_NOTHING.includes(kind)) {
+    // Nothing is waiting any more and the row says so. French counts 0 as "one" ("Vous avez 1 commande"), so the plural rule must not pick the text.
+    expect(row.body).toBe(catalogText(locale, `${base}.body_zero`));
+    expect(row.body).not.toMatch(/[0-9\u0660-\u0669]/);
+  } else {
+    expect(row.body).toBe(catalogText(locale, `${base}.body`, count ?? undefined));
+  }
   expect(`${row.title} ${row.body}`).not.toMatch(/\{\{|notifications\.events|undefined|NaN/);
   if (locale === "ar") {
     expect(row.title).toMatch(/[\u0600-\u06FF]/);

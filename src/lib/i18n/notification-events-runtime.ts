@@ -28,8 +28,9 @@ function add(out: Dict, kind: string, f: Forms, arabic: boolean): void {
   if (f.other === undefined) return;
   out[`${base}.body_one`] = f.one ?? f.generic;
   out[`${base}.body_other`] = f.other;
+  // A row whose live number fell to 0 asks for this text itself: French counts 0 as "one", English as "other".
+  if (arabic || f.zero !== undefined) out[`${base}.body_zero`] = f.zero ?? f.generic;
   if (arabic) {
-    out[`${base}.body_zero`] = f.zero ?? f.generic;
     out[`${base}.body_two`] = f.two ?? f.other;
     out[`${base}.body_few`] = f.few ?? f.other;
     out[`${base}.body_many`] = f.many ?? f.other;
@@ -43,11 +44,11 @@ function build(arabic: boolean, kinds: Record<string, Forms>, extra: Dict): Dict
 }
 
 const en = build(false, {
-  "order.new": { title: "New orders", generic: "New orders came in.", one: "A new order came in.", other: "{{count}} new orders came in." },
-  "orders.toConfirm": { title: "Orders to confirm", generic: "Some orders are waiting to be confirmed.", one: "You have 1 order to confirm.", other: "You have {{count}} orders to confirm." },
-  "delivery.failed": { title: "Delivery problem", generic: "A delivery could not be completed. Open SahelFlow to see which.", other: "{{count}} deliveries could not be completed. Open SahelFlow to see which." },
-  "whatsapp.received": { title: "WhatsApp messages", generic: "New WhatsApp messages came in.", one: "You have 1 new WhatsApp message.", other: "You have {{count}} new WhatsApp messages." },
-  "whatsapp.held": { title: "Message waiting for your OK", generic: "A WhatsApp message is waiting for your OK.", other: "{{count}} WhatsApp messages are waiting for your OK." },
+  "order.new": { title: "New orders", generic: "New orders came in.", one: "A new order came in.", zero: "No new orders are waiting.", other: "{{count}} new orders came in." },
+  "orders.toConfirm": { title: "Orders to confirm", generic: "Some orders are waiting to be confirmed.", one: "You have 1 order to confirm.", zero: "No order is waiting to be confirmed.", other: "You have {{count}} orders to confirm." },
+  "delivery.failed": { title: "Delivery problem", generic: "A delivery could not be completed. Open SahelFlow to see which.", zero: "No delivery problem is open.", other: "{{count}} deliveries could not be completed. Open SahelFlow to see which." },
+  "whatsapp.received": { title: "WhatsApp messages", generic: "New WhatsApp messages came in.", one: "You have 1 new WhatsApp message.", zero: "No new WhatsApp message is waiting.", other: "You have {{count}} new WhatsApp messages." },
+  "whatsapp.held": { title: "Message waiting for your OK", generic: "A WhatsApp message is waiting for your OK.", zero: "No WhatsApp message is waiting for your OK.", other: "{{count}} WhatsApp messages are waiting for your OK." },
   "backup.failed": { title: "Backup did not finish", generic: "Your last backup did not finish. Your data is still on this PC, but not copied. Open SahelFlow to try again." },
   "licence.ending": { title: "Access ending", generic: "Your access to SahelFlow has ended. Open Settings to renew.", one: "Your access to SahelFlow ends tomorrow.", other: "Your access to SahelFlow ends in {{count}} days." },
   "update.available": { title: "Update available", generic: "A new version of SahelFlow is ready." },
@@ -69,11 +70,11 @@ const en = build(false, {
 });
 
 const fr = build(false, {
-  "order.new": { title: "Nouvelles commandes", generic: "De nouvelles commandes sont arrivées.", one: "Une nouvelle commande est arrivée.", other: "{{count}} nouvelles commandes sont arrivées." },
-  "orders.toConfirm": { title: "Commandes à confirmer", generic: "Des commandes attendent votre confirmation.", one: "Vous avez 1 commande à confirmer.", other: "Vous avez {{count}} commandes à confirmer." },
-  "delivery.failed": { title: "Problème de livraison", generic: "Une livraison n’a pas pu aboutir. Ouvrez SahelFlow pour voir laquelle.", other: "{{count}} livraisons n’ont pas pu aboutir. Ouvrez SahelFlow pour voir lesquelles." },
-  "whatsapp.received": { title: "Messages WhatsApp", generic: "De nouveaux messages WhatsApp sont arrivés.", one: "Vous avez 1 nouveau message WhatsApp.", other: "Vous avez {{count}} nouveaux messages WhatsApp." },
-  "whatsapp.held": { title: "Message en attente de votre accord", generic: "Un message WhatsApp attend votre accord.", other: "{{count}} messages WhatsApp attendent votre accord." },
+  "order.new": { title: "Nouvelles commandes", generic: "De nouvelles commandes sont arrivées.", one: "Une nouvelle commande est arrivée.", zero: "Aucune nouvelle commande en attente.", other: "{{count}} nouvelles commandes sont arrivées." },
+  "orders.toConfirm": { title: "Commandes à confirmer", generic: "Des commandes attendent votre confirmation.", one: "Vous avez 1 commande à confirmer.", zero: "Aucune commande n’attend votre confirmation.", other: "Vous avez {{count}} commandes à confirmer." },
+  "delivery.failed": { title: "Problème de livraison", generic: "Une livraison n’a pas pu aboutir. Ouvrez SahelFlow pour voir laquelle.", zero: "Aucun problème de livraison n’est ouvert.", other: "{{count}} livraisons n’ont pas pu aboutir. Ouvrez SahelFlow pour voir lesquelles." },
+  "whatsapp.received": { title: "Messages WhatsApp", generic: "De nouveaux messages WhatsApp sont arrivés.", one: "Vous avez 1 nouveau message WhatsApp.", zero: "Aucun nouveau message WhatsApp en attente.", other: "Vous avez {{count}} nouveaux messages WhatsApp." },
+  "whatsapp.held": { title: "Message en attente de votre accord", generic: "Un message WhatsApp attend votre accord.", zero: "Aucun message WhatsApp n’attend votre accord.", other: "{{count}} messages WhatsApp attendent votre accord." },
   "backup.failed": { title: "La sauvegarde n’a pas abouti", generic: "Votre dernière sauvegarde n’a pas abouti. Vos données sont toujours sur ce PC, mais pas copiées. Ouvrez SahelFlow pour réessayer." },
   "licence.ending": { title: "Accès bientôt terminé", generic: "Votre accès à SahelFlow est terminé. Ouvrez les réglages pour le renouveler.", one: "Votre accès à SahelFlow se termine demain.", other: "Votre accès à SahelFlow se termine dans {{count}} jours." },
   "update.available": { title: "Mise à jour disponible", generic: "Une nouvelle version de SahelFlow est prête." },

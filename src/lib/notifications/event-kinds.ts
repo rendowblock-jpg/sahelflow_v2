@@ -111,6 +111,14 @@ const LEGACY_EVENT_TYPES: Readonly<Record<string, NotificationKind>> = {
   "whatsapp.message.received.v1": "whatsapp.received",
 };
 
+/** Kinds whose live number can fall to 0 while the row stays in the list (Release, Discard, an order handled): the row then says nothing is waiting. */
+const ZERO_MEANS_NOTHING_KINDS: ReadonlySet<string> = new Set(["order.new", "orders.toConfirm", "whatsapp.held", "delivery.failed", "whatsapp.received"]);
+
+/** The wording key of a row with a live number. French counts 0 as "one" ("Vous avez 1 commande"), so a 0 asks for the _zero text itself. */
+export function bodyKeyForCount(kind: string | null, bodyKey: string, count: number | null): string {
+  return count === 0 && kind !== null && ZERO_MEANS_NOTHING_KINDS.has(kind) ? `${bodyKey}_zero` : bodyKey;
+}
+
 export function kindOfEventType(eventType: string): NotificationKind | null {
   const legacy = LEGACY_EVENT_TYPES[eventType];
   if (legacy) return legacy;
