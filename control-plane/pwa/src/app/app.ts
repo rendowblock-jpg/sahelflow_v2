@@ -28,6 +28,7 @@ import { createOrdersHost, ORDERS_VAULT_KEY, type OrdersHostHandle } from "./ord
 import { createSettingsHost, type SettingsHostHandle } from "./settings-host";
 import { applyPreview } from "./preview";
 import { GROUP_OF, loadScreen } from "./registry";
+import { clickTarget } from "./click-target";
 import { createScreenMount } from "./screen-mount";
 import { withShellStrip } from "./shell-strip";
 import { createVaultWiring } from "./vault-wiring";
@@ -302,7 +303,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     timers: { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) },
   });
   root.addEventListener("click", (event) => {
-    const el = (event.target as Element).closest<HTMLElement>("[data-act],[data-nav],[data-lang],[data-theme]");
+    const el = clickTarget(event.target, root);
     if (!el) return;
     const mouse = event as MouseEvent;
     if (el.dataset.nav) { if (mouse.metaKey || mouse.ctrlKey) return; event.preventDefault(); go(el.dataset.nav as ScreenId); return; }
