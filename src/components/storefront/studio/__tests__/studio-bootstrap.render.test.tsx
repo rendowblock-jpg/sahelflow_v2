@@ -79,12 +79,14 @@ describe("new-store wizard create failure", () => {
       }
     }
     expect(primary().textContent).toContain("storefront.wizard.create");
-    fetchMock.mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({ error: "Slug already used" }) });
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({ error: "Rate limit exceeded" }) });
     fireEvent.click(primary());
     const alert = await screen.findByTestId("wizard-submit-error");
     expect(alert.getAttribute("role")).toBe("alert");
     expect(alert.textContent).toContain("storefront.studioStates.create.failed");
-    expect(alert.textContent).toContain("Slug already used");
+    // A mapped server message shows as its translated reason (never developer text).
+    expect(alert.textContent).toContain("error.rateLimited");
+    expect(alert.textContent).not.toContain("Rate limit exceeded");
     expect(toastMock.error).not.toHaveBeenCalled();
     expect(primary().textContent).toContain("storefront.wizard.create");
   });
