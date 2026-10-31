@@ -4,13 +4,15 @@ import type { ScreenId } from "../views/view";
 export const DAILY_CAP = 600;
 export const MAX_DELAY_MS = 300_000;
 export const STATUS_MAX_MS = 600_000;
+// A tick on a screen with nothing to fetch re-arms this plain re-check (no request), so the polling chain never ends.
+export const RECHECK_MS = 60_000;
 export type Budget = Readonly<{ day: string; count: number }>;
 
-// While visible: Orders and Inbox every 30 s, Settings and Today every 60 s; the pairing screens never.
-const EVERY: Partial<Record<ScreenId, number>> = { orders: 30_000, order: 30_000, inbox: 30_000, conversation: 30_000, settings: 60_000, devices: 60_000, today: 60_000 };
+// While visible: Orders and Inbox every 30 s, Settings, Today and the lock screen every 60 s (a locked phone still learns that the PC removed it); the pairing screens never.
+const EVERY: Partial<Record<ScreenId, number>> = { orders: 30_000, order: 30_000, inbox: 30_000, conversation: 30_000, settings: 60_000, devices: 60_000, today: 60_000, lock: 60_000 };
 export const intervalFor = (screen: ScreenId): number | null => EVERY[screen] ?? null;
 // One fetch per kind per cycle, and only the kinds the visible screen shows.
-const KINDS: Partial<Record<ScreenId, readonly ProjectionKind[]>> = { today: ["dashboard"], orders: ["orders"], order: ["orders"], inbox: ["conversations"], conversation: ["conversations"], settings: ["dashboard"], devices: ["dashboard"] };
+const KINDS: Partial<Record<ScreenId, readonly ProjectionKind[]>> = { today: ["dashboard"], orders: ["orders"], order: ["orders"], inbox: ["conversations"], conversation: ["conversations"], settings: ["dashboard"], devices: ["dashboard"], lock: ["dashboard"] };
 export const kindsFor = (screen: ScreenId): readonly ProjectionKind[] => KINDS[screen] ?? [];
 
 // A 304, a network error or a 5xx doubles the wait up to 5 minutes; a success resets it; Retry-After can only lengthen it.

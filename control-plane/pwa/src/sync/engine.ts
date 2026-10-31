@@ -1,7 +1,7 @@
 import type { ProjectionKind } from "../../../../src/lib/connected-platform/contracts";
 import type { RelayPoll } from "../today/relay-source";
 import type { ScreenId } from "../views/view";
-import { intervalFor, kindsFor, nextDelay, spend, statusDelay, STATUS_MAX_MS, type Budget } from "./schedule";
+import { intervalFor, kindsFor, nextDelay, RECHECK_MS, spend, statusDelay, STATUS_MAX_MS, type Budget } from "./schedule";
 
 export type Timers = Readonly<{ set(fn: () => void, ms: number): unknown; clear(handle: unknown): void }>;
 export type SyncDeps = Readonly<{
@@ -28,7 +28,7 @@ export function createSync(d: SyncDeps) {
   async function cycle(manual: boolean): Promise<void> {
     if (stopped && !manual) return;
     const screen = d.screen(); const base = intervalFor(screen); const kinds = kindsFor(screen);
-    if (base === null || kinds.length === 0) return;
+    if (base === null || kinds.length === 0) { if (!manual) arm(RECHECK_MS); return; } // nothing to fetch here: keep the chain alive, the next tick may be on a polling screen
     if (!manual && (!d.visible() || !d.online())) return; // nothing while hidden or offline; coming back fetches at once
     let good = false; let bad = false; let retry: number | undefined;
     for (const kind of kinds) {

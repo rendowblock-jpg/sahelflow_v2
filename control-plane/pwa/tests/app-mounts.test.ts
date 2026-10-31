@@ -83,6 +83,21 @@ describe("app.ts mounts the inbox", () => {
     expect(app).toContain("const el = clickTarget(event.target, root);");
     expect(app).not.toContain('.closest<HTMLElement>("[data-act],[data-nav],[data-lang],[data-theme]")');
   });
+  it("W198 the sync engine is told whenever the lock screen is entered or left by set(): unlock, lock setup x2, wake-up while locked", () => {
+    expect(app).toContain('if (lockState.phase === "unlocked") { vaultWiring.unlocked(); set({ screen: returnTo, lockNotice: null }, true); sync.onScreen(); return; }');
+    expect(app).toContain('startLockSetup: () => { returnTo = "settings"; set({ screen: "lock", lockMode: "set", lockNotice: null }); sync.onScreen(); },');
+    expect(app).toContain('case "lock-set": returnTo = "settings"; set({ screen: "lock", lockMode: "set", lockNotice: null }); sync.onScreen(); break;');
+    expect(app).toContain('else if (lockState.phase === "locked" && view.screen !== "lock") { returnTo = view.screen; set({ screen: "lock", lockMode: "enter", lockNotice: null }); sync.onScreen(); }');
+    expect(app).toContain("else sync.onVisible();");
+    expect(count(/sync\.onScreen\(\)/g)).toBe(5); // go() and the four above, nowhere else
+    expect(count(/set\(\{ screen: returnTo/g)).toBe(1);
+  });
+  it("W198 a poll answer while locked draws nothing: onPoll only refreshes the sealed stack or wipes (no set, no go, no paint)", () => {
+    const line = /onPoll: \(poll\) => \{[^\n]*\n/.exec(app)?.[0] ?? "";
+    expect(line).toContain('if (poll.kind === "updated") void stack?.refresh().catch(() => undefined);');
+    expect(line).toContain('if (poll.kind === "revoked") void reactToPoll(poll, wipe).then((r) => { if (r.kind === "revoked") showRevoked(r); });');
+    for (const forbidden of ["set(", "go(", "paint(", "vault"]) expect(line, forbidden).not.toContain(forbidden);
+  });
   it("the inbox rules ship in the css, after the orders rules (one line, like orders.css)", () => {
     const o = build.indexOf("src/styles/orders.css"); const i = build.indexOf("src/styles/inbox.css");
     expect(o).toBeGreaterThan(0); expect(i).toBeGreaterThan(o);

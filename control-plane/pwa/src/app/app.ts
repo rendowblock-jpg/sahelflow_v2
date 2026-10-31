@@ -182,7 +182,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set({ lockNotice: { kind: "checking" } });
     const ok = isValidPin(pin) && (await verifyPin(pin, lockRow.pin));
     lockState = afterAttempt(lockState, ok, Date.now());
-    if (lockState.phase === "unlocked") { vaultWiring.unlocked(); return set({ screen: returnTo, lockNotice: null }, true); }
+    if (lockState.phase === "unlocked") { vaultWiring.unlocked(); set({ screen: returnTo, lockNotice: null }, true); sync.onScreen(); return; }
     if (lockState.phase !== "locked") return;
     lockRow = { pin: lockRow.pin, failures: lockState.failures, waitUntil: lockState.waitUntil };
     await (await getDb()).put("settings", "lock", lockRow);
@@ -253,7 +253,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
       db: getDb, flush: async () => { await s?.outbox.flush(); }, refresh: async () => { await s?.outbox.refresh(); },
       setLocale: (l) => { store.set("sf.locale", l); previewOn = false; set({ locale: l }); },
       setTheme: (x) => { store.set("sf.theme", x); previewOn = false; set({ theme: x }); },
-      startLockSetup: () => { returnTo = "settings"; set({ screen: "lock", lockMode: "set", lockNotice: null }); },
+      startLockSetup: () => { returnTo = "settings"; set({ screen: "lock", lockMode: "set", lockNotice: null }); sync.onScreen(); },
       wipe: async () => { const r = await wipe(); settingsHost?.notify(); return { ok: r.ok }; },
     });
     settingsHost = h; mod.attachSettingsHost(h); await h.reload();
@@ -318,7 +318,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
       case "remove": set({ confirmRemove: true }); break;
       case "remove-no": set({ confirmRemove: false }); break;
       case "remove-yes": void removePhone(); break;
-      case "lock-set": returnTo = "settings"; set({ screen: "lock", lockMode: "set", lockNotice: null }); break;
+      case "lock-set": returnTo = "settings"; set({ screen: "lock", lockMode: "set", lockNotice: null }); sync.onScreen(); break;
     }
   });
   root.addEventListener("submit", (event) => {
@@ -334,8 +334,9 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   document.addEventListener("visibilitychange", () => {
     lockState = document.hidden ? onHidden(lockState, Date.now()) : onVisible(lockState, Date.now());
     vaultWiring.visibility({ hidden: document.hidden, phase: lockState.phase, now: Date.now() }); // hidden for 5 minutes or more, or locked: the decrypted copies are dropped
-    if (document.hidden) sync.onHidden(); else sync.onVisible();
-    if (!document.hidden && lockState.phase === "locked" && view.screen !== "lock") { returnTo = view.screen; set({ screen: "lock", lockMode: "enter", lockNotice: null }); }
+    if (document.hidden) sync.onHidden();
+    else if (lockState.phase === "locked" && view.screen !== "lock") { returnTo = view.screen; set({ screen: "lock", lockMode: "enter", lockNotice: null }); sync.onScreen(); } // the lock screen polls too: tell the engine
+    else sync.onVisible();
   });
 
   void getDb().then((db) => purgeOld(db, Date.now())).catch(() => undefined);
