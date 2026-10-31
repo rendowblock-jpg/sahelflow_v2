@@ -478,7 +478,7 @@ export function AiKeyPanel({
                   {activeModel ? (
                     <p className="text-xs text-muted-foreground">
                       {t("aiKey.activeModel")} {" "}
-                      <span className="font-mono">{activeModel}</span>
+                      <span className="min-w-0 font-mono [overflow-wrap:anywhere]">{activeModel}</span>
                     </p>
                   ) : null}
                   <div className="flex flex-wrap gap-2">

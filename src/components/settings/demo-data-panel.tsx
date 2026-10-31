@@ -291,7 +291,7 @@ export function DemoDataPanel() {
               {error.detail ? (
                 <span
                   dir="ltr"
-                  className="mt-1 block font-mono text-xs text-muted-foreground"
+                  className="mt-1 block min-w-0 font-mono [overflow-wrap:anywhere] text-xs text-muted-foreground"
                 >
                   {error.detail}
                 </span>

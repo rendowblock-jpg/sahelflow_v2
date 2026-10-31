@@ -12,7 +12,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.destructive.typePrompt": "Type {{word}} to confirm",
     "settings.destructive.working": "Working…",
     "settings.destructive.resetShopData.title": "Reset this shop's data?",
-    "settings.destructive.resetShopData.lost": "All orders, customers, products and settings of this shop. This cannot be undone.",
+    "settings.destructive.resetShopData.lost": "All orders, customers, products and settings of this shop, plus saved keys and tokens and WhatsApp media files. This cannot be undone.",
     "settings.destructive.resetShopData.notAffected": "Backup files you already saved stay as they are, so you can restore from them.",
     "settings.destructive.resetShopData.confirm": "Reset the shop",
     "settings.destructive.deleteShop.title": "Delete this shop for good?",
@@ -36,6 +36,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.panelState.loading": "Loading…",
     "settings.panelState.orderLoadFailed": "We could not read which AI is tried first. Nothing was changed.",
     "settings.panelState.loadFailed": "We could not load this section. Nothing was changed.",
+    "settings.panelState.saveFailed": "Not saved. Check what you typed and try again.",
   },
   fr: {
     "settings.destructive.cancel": "Annuler",
@@ -44,7 +45,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.destructive.typePrompt": "Tapez {{word}} pour confirmer",
     "settings.destructive.working": "En cours…",
     "settings.destructive.resetShopData.title": "Réinitialiser les données de cette boutique ?",
-    "settings.destructive.resetShopData.lost": "Toutes les commandes, tous les clients, produits et réglages de cette boutique. Action irréversible.",
+    "settings.destructive.resetShopData.lost": "Toutes les commandes, tous les clients, produits et réglages de cette boutique, ainsi que les clés, jetons et fichiers média WhatsApp enregistrés. Irréversible.",
     "settings.destructive.resetShopData.notAffected": "Les sauvegardes que vous avez déjà enregistrées restent telles quelles : vous pouvez restaurer depuis elles.",
     "settings.destructive.resetShopData.confirm": "Réinitialiser la boutique",
     "settings.destructive.deleteShop.title": "Supprimer cette boutique définitivement ?",
@@ -68,6 +69,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.panelState.loading": "Chargement…",
     "settings.panelState.orderLoadFailed": "Impossible de lire quelle IA est essayée en premier. Rien n'a été modifié.",
     "settings.panelState.loadFailed": "Impossible de charger cette section. Rien n'a été modifié.",
+    "settings.panelState.saveFailed": "Non enregistré. Vérifiez votre saisie et réessayez.",
   },
   ar: {
     "settings.destructive.cancel": "إلغاء",
@@ -76,7 +78,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.destructive.typePrompt": "اكتب {{word}} للتأكيد",
     "settings.destructive.working": "جارٍ التنفيذ…",
     "settings.destructive.resetShopData.title": "إعادة ضبط بيانات هذا المتجر؟",
-    "settings.destructive.resetShopData.lost": "كل الطلبات والزبائن والمنتجات والإعدادات في هذا المتجر. لا يمكن التراجع عن هذا.",
+    "settings.destructive.resetShopData.lost": "كل الطلبات والزبائن والمنتجات والإعدادات في هذا المتجر، مع المفاتيح والرموز المحفوظة وملفات وسائط واتساب. لا يمكن التراجع.",
     "settings.destructive.resetShopData.notAffected": "نسخ الاحتياط التي حفظتها من قبل تبقى كما هي، ويمكنك الاستعادة منها.",
     "settings.destructive.resetShopData.confirm": "إعادة ضبط المتجر",
     "settings.destructive.deleteShop.title": "حذف هذا المتجر نهائيًا؟",
@@ -100,6 +102,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.panelState.loading": "جارٍ التحميل…",
     "settings.panelState.orderLoadFailed": "تعذّرت قراءة أي ذكاء اصطناعي يُجرَّب أولًا. لم يتغيّر شيء.",
     "settings.panelState.loadFailed": "تعذّر تحميل هذا القسم. لم يتغيّر شيء.",
+    "settings.panelState.saveFailed": "لم يُحفظ. راجع ما كتبته وحاول مرة أخرى.",
   },
 };
 
