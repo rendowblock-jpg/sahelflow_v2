@@ -288,6 +288,25 @@ const storefrontContactSchema = z
   })
   .strict();
 
+/** Legal pages of the hosted store. The limits are repeated in control-plane/storefront/shared.ts (validPublicLegal); studio-legal.test.ts keeps both equal. */
+export const STOREFRONT_LEGAL_LIMITS = { sellerName: 120, registerNumber: 60, extraReturns: 600, extraTerms: 1500, maxReturnDays: 30 } as const;
+export const STOREFRONT_RETURN_SHIPPING = ["seller", "buyer", "none"] as const;
+
+export const storefrontLegalSchema = z
+  .object({
+    sellerName: z.string().trim().min(1).max(STOREFRONT_LEGAL_LIMITS.sellerName),
+    registerNumber: text(STOREFRONT_LEGAL_LIMITS.registerNumber),
+    returnsDays: z.number().int().min(0).max(STOREFRONT_LEGAL_LIMITS.maxReturnDays),
+    returnShipping: z.enum(STOREFRONT_RETURN_SHIPPING),
+    extraReturns: text(STOREFRONT_LEGAL_LIMITS.extraReturns),
+    extraTerms: text(STOREFRONT_LEGAL_LIMITS.extraTerms),
+    /** Empty until the seller presses "I read this"; valid only for the texts it was pressed on (studio-legal.ts). */
+    reviewedFingerprint: z.string().max(16),
+  })
+  .strict();
+
+export type StorefrontLegal = z.infer<typeof storefrontLegalSchema>;
+
 const storefrontBuilderSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -343,6 +362,8 @@ const storefrontBuilderSchema = z
           .strict(),
       )
       .max(138),
+    // Wire/DB home of the legal block (theme JSON, like contact): the Studio lifts it into draft.legal on load.
+    legal: storefrontLegalSchema.optional(),
   })
   .strict()
   .superRefine((builder, context) => {
@@ -402,25 +423,6 @@ export const storefrontStudioThemeSchema = z
     builder: storefrontBuilderSchema,
   })
   .strict();
-
-/** Legal pages of the hosted store. The limits are repeated in control-plane/storefront/shared.ts (validPublicLegal); studio-legal.test.ts keeps both equal. */
-export const STOREFRONT_LEGAL_LIMITS = { sellerName: 120, registerNumber: 60, extraReturns: 600, extraTerms: 1500, maxReturnDays: 30 } as const;
-export const STOREFRONT_RETURN_SHIPPING = ["seller", "buyer", "none"] as const;
-
-export const storefrontLegalSchema = z
-  .object({
-    sellerName: z.string().trim().min(1).max(STOREFRONT_LEGAL_LIMITS.sellerName),
-    registerNumber: text(STOREFRONT_LEGAL_LIMITS.registerNumber),
-    returnsDays: z.number().int().min(0).max(STOREFRONT_LEGAL_LIMITS.maxReturnDays),
-    returnShipping: z.enum(STOREFRONT_RETURN_SHIPPING),
-    extraReturns: text(STOREFRONT_LEGAL_LIMITS.extraReturns),
-    extraTerms: text(STOREFRONT_LEGAL_LIMITS.extraTerms),
-    /** Empty until the seller presses "I read this"; valid only for the texts it was pressed on (studio-legal.ts). */
-    reviewedFingerprint: z.string().max(16),
-  })
-  .strict();
-
-export type StorefrontLegal = z.infer<typeof storefrontLegalSchema>;
 
 export const storefrontStudioDraftSchema = z
   .object({

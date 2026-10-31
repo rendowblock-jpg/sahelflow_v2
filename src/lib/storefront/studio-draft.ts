@@ -23,10 +23,29 @@ export interface StorefrontStudioDraft {
   legal?: StorefrontLegal;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Raw theme JSON from a saved row -> the theme without builder.legal, and the legal block that travelled in it (unvalidated). */
+export function splitLegalFromThemeJson(raw: unknown): { theme: unknown; legal: unknown } {
+  if (!isRecord(raw) || !isRecord(raw.builder) || !("legal" in raw.builder)) return { theme: raw, legal: undefined };
+  const { legal, ...builder } = raw.builder;
+  return { theme: { ...raw, builder }, legal };
+}
+
+/** The theme as it goes on the wire and into the draft column: the working draft.legal travels at theme.builder.legal. */
+export function studioThemeForWire(draft: StorefrontStudioDraft): StorefrontTheme {
+  return draft.legal ? { ...draft.theme, builder: { ...draft.theme.builder, legal: draft.legal } } : draft.theme;
+}
+
 export function createStorefrontStudioDraft(
   config: StorefrontConfig,
 ): StorefrontStudioDraft {
   const theme = normalizeStorefrontTheme(config.theme);
+  // The legal block travels inside the theme JSON; the Studio works on ONE copy, draft.legal.
+  const { legal, ...builderWithoutLegal } = theme.builder;
+  theme.builder = builderWithoutLegal;
   const contact = theme.builder.contact;
   const hasDraftContact = Boolean(
     contact.phone || contact.whatsapp || contact.email || contact.address,
@@ -48,6 +67,7 @@ export function createStorefrontStudioDraft(
     theme,
     selectedProductIds: [...config.productIds],
     isActive: config.isActive,
+    ...(legal ? { legal } : {}),
   };
 }
 

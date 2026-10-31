@@ -120,7 +120,7 @@ export function createStorefrontReleaseInput(input: Readonly<{
       });
     }
   }
-  const { domain: _privateDomain, shippingRules, ...publicBuilder } = draft.theme.builder;
+  const { domain: _privateDomain, shippingRules, legal: _privateLegal, ...publicBuilder } = draft.theme.builder;
   return {
     workspaceId: input.workspaceId,
     releaseId: input.releaseId,

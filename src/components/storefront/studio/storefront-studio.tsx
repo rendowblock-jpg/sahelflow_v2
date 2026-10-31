@@ -26,6 +26,7 @@ import type { StorefrontStudioConfig } from "@/lib/storefront/service";
 import {
   addStorefrontSection,
   createStorefrontStudioDraft,
+  studioThemeForWire,
   deleteStorefrontSection,
   duplicateStorefrontSection,
   moveStorefrontSection,
@@ -147,7 +148,7 @@ export function StorefrontStudio({
             name: parsed.data.name,
             slug: parsed.data.slug,
             description: parsed.data.description || null,
-            theme: parsed.data.theme,
+            theme: studioThemeForWire(parsed.data),
             productIds: parsed.data.selectedProductIds,
             isActive: parsed.data.isActive,
           }),
