@@ -35,7 +35,14 @@ export async function queuePhoneReply(
   if (!conversation || !conversation.sourceId) {
     throw new NotFoundError("Conversation", data.conversationId);
   }
-  if (data.lastSeenMessageId && data.force !== true) {
+  // A replay (the PC ran this reply, the answer to the relay was lost, the relay offers the command again) has its own first
+  // outbound row, which would count as "newer than the seen message". The message id IS the clientMessageId, so a row with that id
+  // in this chat means "already queued by this very command": skip the answer check and let queueWhatsAppText return the stored result.
+  const replayOfThisCommand = await context.prisma.message.findFirst({
+    where: { id: clientMessageId, conversationId: conversation.id },
+    select: { id: true },
+  });
+  if (data.lastSeenMessageId && data.force !== true && !replayOfThisCommand) {
     const seen = await context.prisma.message.findFirst({
       where: { id: data.lastSeenMessageId, conversationId: conversation.id },
       select: { timestamp: true },
