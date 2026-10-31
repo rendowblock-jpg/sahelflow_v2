@@ -17,6 +17,9 @@ import {
 } from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
 
+import { PanelSkeleton } from "./panel-skeleton";
+import { SaveStatus, type SaveState } from "./save-status";
+
 interface DailyReportSettings {
   daily_report_enabled: string;
   daily_report_phone: string;
@@ -39,6 +42,7 @@ export function DailyReportPanel() {
   const [settings, setSettings] = useState<DailyReportSettings>(EMPTY_SETTINGS);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [pending, startTransition] = useTransition();
+  const [saveState, setSaveState] = useState<SaveState>("idle");
 
   const loadSettings = useCallback(async () => {
     setLoadState("loading");
@@ -69,6 +73,7 @@ export function DailyReportPanel() {
   }, [loadSettings]);
 
   function handleSave() {
+    setSaveState("saving");
     startTransition(async () => {
       try {
         const response = await fetch("/api/settings", {
@@ -80,8 +85,10 @@ export function DailyReportPanel() {
           const data = await response.json().catch(() => ({}));
           throw new Error(data.error || t("reports.saveFailed"));
         }
+        setSaveState("saved");
         toast.success(t("reports.settingsSaved"));
       } catch (error) {
+        setSaveState("failed");
         toast.error(
           translateServerError(error instanceof Error ? error.message : "", t, t("reports.errorShort")),
         );
@@ -90,6 +97,7 @@ export function DailyReportPanel() {
   }
 
   function handleTestReport() {
+    setSaveState("idle");
     startTransition(async () => {
       try {
         const response = await fetch("/api/reports/daily?trigger=manual", {
@@ -131,8 +139,8 @@ export function DailyReportPanel() {
   if (loadState === "loading") {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        <CardContent className="py-6">
+          <PanelSkeleton rows={4} label={t("settings.panelState.loading")} testId="daily-report-skeleton" />
         </CardContent>
       </Card>
     );
@@ -270,6 +278,12 @@ export function DailyReportPanel() {
             <Send className="size-4 icon-rtl-flip" aria-hidden="true" />
             {t("reports.testNow")}
           </Button>
+          <SaveStatus
+            state={saveState}
+            saving={t("settings.panelState.saving")}
+            saved={t("reports.settingsSaved")}
+            failed={t("reports.saveFailed")}
+          />
         </div>
 
         <details className="rounded-control border border-border/50 text-xs text-muted-foreground">

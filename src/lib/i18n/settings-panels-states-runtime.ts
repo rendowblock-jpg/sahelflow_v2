@@ -36,6 +36,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.panelState.loading": "Loading…",
     "settings.panelState.orderLoadFailed": "We could not read which AI is tried first. Nothing was changed.",
     "settings.panelState.loadFailed": "We could not load this section. Nothing was changed.",
+    "settings.panelState.saveFailed": "Not saved. Check what you typed and try again.",
   },
   fr: {
     "settings.destructive.cancel": "Annuler",
@@ -68,6 +69,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.panelState.loading": "Chargement…",
     "settings.panelState.orderLoadFailed": "Impossible de lire quelle IA est essayée en premier. Rien n'a été modifié.",
     "settings.panelState.loadFailed": "Impossible de charger cette section. Rien n'a été modifié.",
+    "settings.panelState.saveFailed": "Non enregistré. Vérifiez votre saisie et réessayez.",
   },
   ar: {
     "settings.destructive.cancel": "إلغاء",
@@ -100,6 +102,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.panelState.loading": "جارٍ التحميل…",
     "settings.panelState.orderLoadFailed": "تعذّرت قراءة أي ذكاء اصطناعي يُجرَّب أولًا. لم يتغيّر شيء.",
     "settings.panelState.loadFailed": "تعذّر تحميل هذا القسم. لم يتغيّر شيء.",
+    "settings.panelState.saveFailed": "لم يُحفظ. راجع ما كتبته وحاول مرة أخرى.",
   },
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Loader2, Phone, Plus, RefreshCw } from "lucide-react";
+import { AlertTriangle, Phone, Plus, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,9 @@ import {
   DZ_PHONE_PLACEHOLDER,
   formatDZPhone,
 } from "@/lib/validation/phone";
+
+import { PanelSkeleton } from "./panel-skeleton";
+import { SaveStatus, type SaveState } from "./save-status";
 
 interface BadPhone {
   phone: string;
@@ -37,6 +40,7 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [phone, setPhone] = useState("");
   const [reason, setReason] = useState("");
+  const [added, setAdded] = useState(false);
 
   const loadList = useCallback(async () => {
     setLoadState("loading");
@@ -67,11 +71,20 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
   const addMutation = useApiMutation({
     successMessage: t("phoneReputation.added"),
     onSuccess: async () => {
+      setAdded(true);
       setPhone("");
       setReason("");
       await loadList();
     },
   });
+
+  const saveState: SaveState = addMutation.isSubmitting
+    ? "saving"
+    : addMutation.error
+      ? "failed"
+      : added
+        ? "saved"
+        : "idle";
 
   return (
     <Card>
@@ -121,16 +134,17 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
               <Button
                 type="button"
                 size="sm"
-                disabled={!phone.trim() || !reason.trim()}
-                onClick={() =>
-                  addMutation.submit("/api/phone-reputation", {
+                disabled={!phone.trim() || !reason.trim() || addMutation.isSubmitting}
+                onClick={() => {
+                  setAdded(false);
+                  void addMutation.submit("/api/phone-reputation", {
                     method: "POST",
                     body: JSON.stringify({
                       phone: phone.trim(),
                       reason: reason.trim(),
                     }),
-                  })
-                }
+                  });
+                }}
               >
                 <Plus className="size-4" aria-hidden="true" />
                 {t("common.add")}
@@ -138,12 +152,17 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
             </div>
           </div>
         ) : null}
+        {canManage ? (
+          <SaveStatus
+            state={saveState}
+            saving={t("settings.panelState.saving")}
+            saved={t("phoneReputation.added")}
+            failed={t("settings.panelState.saveFailed")}
+          />
+        ) : null}
 
         {loadState === "loading" ? (
-          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
-            {copy("loading")}
-          </div>
+          <PanelSkeleton rows={3} label={copy("loading")} testId="phone-reputation-skeleton" />
         ) : loadState === "error" ? (
           <div className="flex flex-wrap items-start justify-between gap-4 rounded-surface border border-warning/25 bg-warning-subtle p-4">
             <div className="flex min-w-0 items-start gap-3">

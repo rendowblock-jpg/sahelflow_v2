@@ -11,6 +11,8 @@ import { useI18n } from "@/hooks/use-i18n";
 import { getAutoPullCopy } from "@/lib/i18n/auto-pull";
 import { toast } from "@/lib/toast";
 
+import { SaveStatus, type SaveState } from "./save-status";
+
 /**
  * The seller's off switch for the scheduled pull (INT-03). One panel per kind:
  * "courier" sits on the delivery page, "commerce" on the shop page.
@@ -38,13 +40,14 @@ function readCanManage(data: unknown, kind: Kind): boolean {
 }
 
 export function AutoPullPanel({ kind, canManage }: { kind: Kind; canManage: boolean }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const copy = getAutoPullCopy(locale);
   const text = copy[kind];
   const [phase, setPhase] = useState<Phase>("loading");
   const [value, setValue] = useState<boolean | null>(null);
   const [serverAllows, setServerAllows] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
   const manageable = canManage && serverAllows;
   const switchId = `auto-pull-${kind}`;
 
@@ -74,6 +77,7 @@ export function AutoPullPanel({ kind, canManage }: { kind: Kind; canManage: bool
   async function change(next: boolean) {
     if (saving || phase !== "ready" || !manageable) return;
     setSaving(true);
+    setSaveState("saving");
     try {
       const response = await fetch(ENDPOINT, {
         method: "PUT",
@@ -84,9 +88,15 @@ export function AutoPullPanel({ kind, canManage }: { kind: Kind; canManage: bool
       const answered = readSwitch(data, kind);
       if (!response.ok || answered === null) throw new Error("not saved");
       setValue(answered);
-      if (answered === next) toast.success(copy.saved);
-      else toast.error(copy.failed);
+      if (answered === next) {
+        setSaveState("saved");
+        toast.success(copy.saved);
+      } else {
+        setSaveState("failed");
+        toast.error(copy.failed);
+      }
     } catch {
+      setSaveState("failed");
       toast.error(copy.failed);
     } finally {
       setSaving(false);
@@ -140,6 +150,15 @@ export function AutoPullPanel({ kind, canManage }: { kind: Kind; canManage: bool
           </p>
         </div>
       )}
+      {phase === "ready" ? (
+        <SaveStatus
+          className="mt-2"
+          state={saveState}
+          saving={t("settings.panelState.saving")}
+          saved={copy.saved}
+          failed={copy.failed}
+        />
+      ) : null}
     </Panel>
   );
 }
