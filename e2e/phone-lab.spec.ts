@@ -197,8 +197,9 @@ for (const loc of LOCALES) {
         const dom = await page.evaluate(() => document.documentElement.outerHTML);
         for (const n of ["فاطمة", "Maximilian", "Karim", "Yasmine", "Unread Ulla", "Held Hana", "Plain Pat", "ORD-000"]) expect(dom, `locked DOM has ${n}`).not.toContain(n);
         await page.locator("#pin").fill(PIN); await page.locator("#pin").press("Enter"); await expect(page.locator("#pin")).toHaveCount(0, { timeout: 30_000 });
-        await tabs(page, "orders").click(); await expect(page.locator('[data-act="open-order"]').first()).toBeVisible({ timeout: 30_000 });
-        const back = await page.locator('[data-act="open-order"]').count();
+        // Step 5 left an order open: the Orders tab keeps that detail (the customer name is in .facts), otherwise the list shows. Either way the data is back.
+        await tabs(page, "orders").click(); const shown = page.locator('[data-act="open-order"], .facts bdi'); await expect(shown.first()).toBeVisible({ timeout: 30_000 });
+        const back = await shown.count();
         await tabs(page, "settings").click(); await expect(page.locator('[data-screen="settings"]')).toBeVisible();
         return `lock set (${after.slice(0, 50)}); locked DOM clean; ${back} orders back after unlock; left unlocked on Settings`;
       });

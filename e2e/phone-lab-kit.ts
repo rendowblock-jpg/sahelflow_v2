@@ -13,7 +13,8 @@ export function phrase(loc: string, en: string): string {
   const dir = join(process.cwd(), "control-plane/pwa/src/i18n");
   const src = (l: string): string => readdirSync(dir).filter((f) => f === `${l}.ts` || f.includes(`.${l}.ts`)).map((f) => readFileSync(join(dir, f), "utf8")).join("\n");
   const esc = en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); const enSrc = src("en");
-  const key = (new RegExp(`"([\\w.-]+)":\\s*"${esc}"`).exec(enSrc) ?? new RegExp(`"([\\w.-]+)":\\s*"${esc}[^"]*"`).exec(enSrc))?.[1];
+  const at = (tail: string): string | undefined => new RegExp(`"([\\w.-]+)":\\s*"${esc}${tail}"`).exec(enSrc)?.[1];
+  const key = at("") ?? at("\\.") ?? at("[^\"]*"); // exact, then with the final full stop, then a longer text that starts with it
   const hit = key ? new RegExp(`"${key}":\\s*"((?:[^"\\\\]|\\\\.)*)"`).exec(src(loc))?.[1] : undefined;
   return (hit ?? en).split("{{")[0]?.trim() ?? en;
 }
