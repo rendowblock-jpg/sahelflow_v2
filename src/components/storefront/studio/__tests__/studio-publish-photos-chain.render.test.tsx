@@ -22,6 +22,7 @@ import { db, shopContext } from "@/lib/db";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { hashPhoto, shopSegment } from "@/lib/storefront/media-host";
 import { createDefaultStorefrontTheme } from "@/lib/storefront/theme-default";
+import { markLegalReviewed } from "@/lib/storefront/studio-legal";
 import { render } from "@/test-utils/render";
 
 type Loc = "ar" | "fr" | "en";
@@ -124,6 +125,8 @@ async function seed(images: (hash: string) => string) {
   });
   const theme = createDefaultStorefrontTheme("sahara");
   theme.builder.shippingRules = [{ wilayaCode: "16", deliveryMode: "home", feeDzd: 500 }];
+  // An active store only goes live with legal texts the seller has read (track B2); they travel in theme.builder.legal.
+  theme.builder.legal = markLegalReviewed({ sellerName: "Chain shop", registerNumber: "", returnsDays: 7, returnShipping: "seller", extraReturns: "", extraTerms: "" });
   await db.storefrontConfig.create({
     data: {
       id: SF, slug: "chain-shop", name: "Chain shop", description: "", theme: JSON.stringify(theme),

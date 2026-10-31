@@ -9,6 +9,7 @@ vi.mock("server-only", () => ({}));
 import type { ServiceContext } from "@/lib/data/service-base";
 import { hashPhoto, MediaHostError } from "@/lib/storefront/media-host";
 import { createDefaultStorefrontTheme } from "@/lib/storefront/theme-default";
+import { markLegalReviewed } from "@/lib/storefront/studio-legal";
 
 import { ConnectedPlatformHttpError, type ConnectedPlatformClient } from "./client";
 import type { StorefrontReceiptKeys } from "./runtime";
@@ -35,7 +36,9 @@ function prepared(images: string | null): PreparedStorefrontPublish {
   theme.builder.shippingRules = [{ wilayaCode: "16", deliveryMode: "home", feeDzd: 500 }];
   return {
     storefrontId: STOREFRONT, releaseId: RELEASE, draftUpdatedAt: "2026-10-19T10:00:00.000Z", locale: "ar",
-    draft: { name: "Sahel store", slug: "sahel-store", description: "", theme, selectedProductIds: ["product_12345678"], isActive: true },
+    draft: { name: "Sahel store", slug: "sahel-store", description: "", theme, selectedProductIds: ["product_12345678"], isActive: true,
+      // An active store only goes live with legal texts the seller has read (track B2).
+      legal: markLegalReviewed({ sellerName: "Chain shop", registerNumber: "", returnsDays: 7, returnShipping: "seller", extraReturns: "", extraTerms: "" }) },
     products: [{ id: "product_12345678", name: "Product", sku: "SKU-1", images, price: 2500, stock: 5, productVariants: [] }],
   };
 }
