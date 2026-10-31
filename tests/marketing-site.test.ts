@@ -246,6 +246,19 @@ const BANNED: Record<string, RegExp[]> = {
     /\btypical online cod platform\b/i,
     /\b1,900\b|\b24,500\b/,
     /no (?:double sends|silent failures)/i,
+    // Honesty pass: sentences that said more than the product has proved.
+    /only after you approve it/i,
+    /nothing is sent or written without your approval/i,
+    /understand darja\?\s*yes/i,
+    /read darja, french and arabic as they are written/i,
+    /no per-order fees, ever/i,
+    /proven today/i,
+    /rates for all 69 wilayas|69 wilayas · home and desk|dinars, 69 wilayas/i,
+    /questions sellers ask first/i,
+    /your database lives on your pc, encrypted/i,
+    /no sahelflow server holds your customers/i,
+    /your team keeps confirming/i,
+    /see my orders\?\s*no\./i,
   ],
   fr: [
     /\bsign(?:é|ée|és|ées)(?![a-zà-ÿ])/i,
@@ -263,6 +276,19 @@ const BANNED: Record<string, RegExp[]> = {
     /plateforme cod en ligne typique/i,
     /\b1 900\b|\b24 500\b/,
     /sans double envoi|sans échec silencieux/i,
+    // Honesty pass.
+    /sahelflow n'envoie une réponse qu'après votre validation/i,
+    /rien n'est envoyé ni écrit sans votre accord/i,
+    /comprend-elle la darja \?\s*oui/i,
+    /tels qu'ils s'écrivent/i,
+    /jamais de frais par commande/i,
+    /prouvé aujourd'hui/i,
+    /tarifs des 69 wilayas|69 wilayas · domicile et bureau|dinars, 69 wilayas/i,
+    /questions qu'on nous pose d'abord/i,
+    /votre base vit sur votre pc, chiffrée/i,
+    /aucun serveur sahelflow ne détient vos clients/i,
+    /votre équipe continue de confirmer/i,
+    /voir mes commandes \?\s*non\./i,
   ],
   ar: [
     // JS \b only sees ASCII letters, so no \b next to an Arabic or accented letter below.
@@ -282,6 +308,19 @@ const BANNED: Record<string, RegExp[]> = {
     /منصة دفع عند الاستلام معتادة/,
     /\b1 900\b|\b24 500\b/,
     /بلا إرسال مكرَّر|ولا فشل صامت|بلا إرسال مكرر|ولا فشل صامت/,
+    // Honesty pass.
+    /لا يرسل SahelFlow أي ردّ إلا بعد موافقتك/,
+    /لا يُرسَل ولا يُكتب شيء إلا بموافقتك/,
+    /يفهم الذكاء الاصطناعي الدارجة؟\s*نعم/,
+    /كما تُكتب/,
+    /ولا رسوم على كل طلبية، أبداً/,
+    /ما ثبت اليوم/,
+    /أسعار الـ 69 ولاية|69 ولاية · منزل ومكتب|الدينار، 69 ولاية/,
+    /أول ما يسأله التجار/,
+    /قاعدة بياناتك تعيش على حاسوبك، مشفّرة/,
+    /لا يحتفظ أي خادم لـ SahelFlow بزبائنك/,
+    /يواصل فريقك التأكيد/,
+    /هل يرى SahelFlow طلبياتي؟\s*لا\./,
   ],
 };
 
@@ -298,6 +337,12 @@ const KNOWN_BAD: Record<string, string[]> = {
     "Typical online COD platform",
     "no double sends, no silent failures",
     "Ban-proof WhatsApp for your shop",
+    "SahelFlow sends a reply only after you approve it.",
+    "Nothing is sent or written without your approval.",
+    "Does the AI understand Darja? Yes. Order extraction is built",
+    "No per-order fees, ever.",
+    "Proven today",
+    "Rates for all 69 wilayas, to the door or to the desk.",
   ],
   fr: [
     "Un installateur signé numériquement qui se met à jour seul.",
@@ -309,6 +354,12 @@ const KNOWN_BAD: Record<string, string[]> = {
     "La plupart des outils COD en Algérie sont des abonnements",
     "Sans risque de blocage",
     "Résultat garanti",
+    "SahelFlow n'envoie une réponse qu'après votre validation.",
+    "Rien n'est envoyé ni écrit sans votre accord.",
+    "L'IA comprend-elle la darja ? Oui. L'extraction",
+    "Jamais de frais par commande.",
+    "Prouvé aujourd'hui",
+    "Les tarifs des 69 wilayas, à domicile ou au bureau.",
   ],
   ar: [
     "مثبّت موقَّع رقمياً، يُحدِّث نفسه تلقائياً.",
@@ -320,6 +371,12 @@ const KNOWN_BAD: Record<string, string[]> = {
     "مفتاح Gemini الخاص بك؛ المجاني يكفي",
     "معظم أدوات الدفع عند الاستلام في الجزائر اشتراكات",
     "واتساب بدون حظر",
+    "لا يرسل SahelFlow أي ردّ إلا بعد موافقتك.",
+    "لا يُرسَل ولا يُكتب شيء إلا بموافقتك.",
+    "هل يفهم الذكاء الاصطناعي الدارجة؟ نعم. الاستخراج",
+    "ولا رسوم على كل طلبية، أبداً.",
+    "ما ثبت اليوم",
+    "أسعار الـ 69 ولاية، للمنزل أو للمكتب.",
   ],
 };
 
@@ -379,7 +436,8 @@ describe("sahelflow.com claims on the built pages", () => {
 
   it("writes the wilaya count from the registry on the pages that state it", () => {
     for (const locale of SITE.locales) {
-      const text = builtText(pages.get(`${locale}/module:delivery`) ?? "");
+      // The delivery page states rates by wilaya; the count itself is only the address list, on the product page.
+      const text = builtText(pages.get(`${locale}/product`) ?? "");
       expect(text, locale).toContain(String(claims.WILAYA_COUNT));
     }
   });
@@ -596,5 +654,131 @@ describe("sahelflow.com Carnet look", () => {
     const { HOME } = (await import("../marketing/src/i18n/home.mjs")) as { HOME: Record<string, unknown> };
     expect(shape(HOME.fr)).toEqual(shape(HOME.ar));
     expect(shape(HOME.en)).toEqual(shape(HOME.ar));
+  });
+});
+
+type Words = { en: string; fr: string; ar: string };
+/** What each honesty rule now says, per language, and the page that must carry it ("*" = every page). */
+const TRUTHFUL: Array<{ rule: string; page: string } & Words> = [
+  { rule: "approval: footer names the automations", page: "*",
+    en: "Replies the AI drafts go out only after you approve them. Automations you switch on send their own messages.",
+    fr: "Les réponses rédigées par l'IA ne partent qu'après votre validation. Les automatisations que vous activez envoient leurs propres messages.",
+    ar: "الردود التي يصوغها الذكاء الاصطناعي لا تُرسَل إلا بعد موافقتك. والأتمتة التي تُفعّلها ترسل رسائلها بنفسها." },
+  { rule: "approval: home step 3", page: "home",
+    en: "The AI drafts the reply and the order; you approve each draft.",
+    fr: "L'IA prépare la réponse et la commande ; vous validez chaque brouillon.",
+    ar: "الذكاء الاصطناعي يُعدّ مسودة الرد والطلب، وأنت تعتمد كل مسودة." },
+  { rule: "darja: FAQ says built, not measured", page: "help",
+    en: "It is built to read Darja, French, Arabic or a mix. We have not measured its accuracy on real orders yet, so check each draft.",
+    fr: "Elle est conçue pour lire la darja, le français, l'arabe ou un mélange. Nous n'avons pas encore mesuré sa précision sur de vraies commandes : vérifiez chaque brouillon.",
+    ar: "صُمّم ليقرأ الدارجة والفرنسية والعربية أو خليطاً منها. لم نقِس دقته على طلبيات حقيقية بعد، فراجع كل مسودة." },
+  { rule: "darja: home FAQ says built, not measured", page: "home",
+    en: "It is built to read Darja, French, Arabic or a mix.",
+    fr: "Elle est conçue pour lire la darja, le français, l'arabe ou un mélange.",
+    ar: "صُمّم ليقرأ الدارجة والفرنسية والعربية أو خليطاً منها." },
+  { rule: "darja: inbox module says built, not measured", page: "module:inbox",
+    en: "We have not measured its accuracy on real orders yet, so check each draft.",
+    fr: "Nous n'avons pas encore mesuré sa précision sur de vraies commandes : vérifiez chaque brouillon.",
+    ar: "لم نقِس دقته على طلبيات حقيقية بعد، فراجع كل مسودة." },
+  { rule: "wilayas: delivery page names the 11 new wilayas", page: "module:delivery",
+    en: "the 11 new wilayas use their old wilaya's rate for now",
+    fr: "les 11 nouvelles wilayas prennent pour l'instant le tarif de leur ancienne wilaya",
+    ar: "الولايات الـ 11 الجديدة تأخذ حالياً سعر ولايتها القديمة" },
+  { rule: "wilayas: the 69 is the address list", page: "product",
+    en: "addresses for 69 wilayas", fr: "adresses des 69 wilayas", ar: "عناوين 69 ولاية" },
+  { rule: "offline: the team needs internet", page: "why",
+    en: "Team members on phones or other PCs, WhatsApp and couriers need the internet.",
+    fr: "Les membres sur téléphone ou sur un autre PC, WhatsApp et les livreurs ont besoin d'internet.",
+    ar: "أعضاء الفريق على الهواتف أو حواسيب أخرى، وواتساب وشركات التوصيل، تحتاج كلها إلى الإنترنت." },
+  { rule: "offline: the table cell is about the PC", page: "why",
+    en: "Yes, on your PC", fr: "Oui, sur votre PC", ar: "نعم، على حاسوبك" },
+  { rule: "offline: the FAQ lists team members", page: "help",
+    en: "team members connecting from phones or other PCs",
+    fr: "membres de l'équipe qui se connectent depuis un téléphone ou un autre PC",
+    ar: "أعضاء الفريق الذين يتصلون من هاتف أو حاسوب آخر" },
+  { rule: "encryption: the database claim is about fields", page: "product",
+    en: "Your database lives on your PC; customer names, phones, addresses and keys are encrypted.",
+    fr: "Votre base vit sur votre PC ; noms, téléphones, adresses et clés des clients sont chiffrés.",
+    ar: "قاعدة بياناتك تعيش على حاسوبك؛ أسماء الزبائن وهواتفهم وعناوينهم والمفاتيح مشفّرة." },
+  { rule: "encryption: the help answer is about fields", page: "help",
+    en: "Customer names, phones, addresses, chats and keys are encrypted there.",
+    fr: "Les noms, téléphones, adresses, conversations et clés des clients y sont chiffrés.",
+    ar: "أسماء الزبائن وهواتفهم وعناوينهم ومحادثاتهم والمفاتيح مشفّرة فيه." },
+  { rule: "relay: SahelFlow says what passes through Cloudflare", page: "security",
+    en: "pass through our Cloudflare servers encrypted",
+    fr: "transitent chiffrées par nos serveurs Cloudflare",
+    ar: "فتمرّ مشفّرة عبر خوادم Cloudflare لدينا" },
+  { rule: "fees: per-order fee is tied to this licence", page: "why",
+    en: "No per-order fee with this licence.",
+    fr: "Aucun frais par commande avec cette licence.",
+    ar: "ولا رسوم على كل طلبية مع هذا الترخيص." },
+  { rule: "no customers yet: the questions are not 'asked by sellers'", page: "home",
+    en: "Questions to ask first", fr: "Les questions à poser d'abord", ar: "أسئلة عليك طرحها أولاً" },
+  { rule: "security heading", page: "security",
+    en: "Built and tested", fr: "Construit et testé", ar: "ما بنيناه واختبرناه" },
+];
+
+describe("sahelflow.com honesty: no sentence says more than the product has proved", () => {
+  let out = "";
+  const text = new Map<string, string>();
+
+  beforeAll(() => {
+    out = mkdtempSync(join(tmpdir(), "sahelflow-honesty-"));
+    build(out);
+    for (const locale of SITE.locales) {
+      for (const [id, path] of model.sitePages() as Array<[string, string]>) {
+        text.set(`${locale}/${id}`, builtText(readFileSync(join(out, locale, path, "index.html"), "utf8")));
+      }
+    }
+  });
+  afterAll(() => rmSync(out, { recursive: true, force: true }));
+
+  const pagesOf = (locale: string) => [...text].filter(([key]) => key.startsWith(`${locale}/`));
+
+  it("carries every corrected sentence in Arabic, French and English", () => {
+    const missing: string[] = [];
+    for (const locale of SITE.locales) {
+      for (const item of TRUTHFUL) {
+        const wanted = item[locale as keyof Words];
+        const where = item.page === "*" ? pagesOf(locale) : pagesOf(locale).filter(([key]) => key === `${locale}/${item.page}`);
+        if (where.length === 0) missing.push(`${locale}: no page ${item.page}`);
+        for (const [key, body] of where) if (!body.includes(wanted)) missing.push(`${key}: ${item.rule}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it("never states the unmeasured, partial or future thing as a fact on any page", () => {
+    const hits: string[] = [];
+    for (const [key, body] of text) {
+      const locale = key.split("/")[0] ?? "";
+      // A live registry phrase (for example "signing key") may carry a banned word.
+      let rest = body;
+      for (const phrase of claims.allowedPhrases(locale)) rest = rest.split(phrase).join(" ");
+      for (const pattern of BANNED[locale] ?? []) if (pattern.test(rest)) hits.push(`${key}: ${pattern}`);
+    }
+    expect(hits).toEqual([]);
+  });
+
+  it("starts the five years of updates and support at the official stable launch, wherever the site names them", () => {
+    const unanchored: string[] = [];
+    const phrase = /updates (?:and|&) support|mises à jour et (?:de )?support|التحديثات والدعم/g;
+    const anchor = /stable launch|sortie stable|الإطلاق المستقر/;
+    for (const [key, body] of text) {
+      if (!/\/(?:pricing|help|home|why)$/.test(key)) continue;
+      for (const match of body.matchAll(phrase)) {
+        if (!anchor.test(body.slice(match.index, (match.index ?? 0) + 110))) unanchored.push(`${key}: …${body.slice(match.index, (match.index ?? 0) + 60)}`);
+      }
+    }
+    expect(unanchored).toEqual([]);
+  });
+
+  it("says 'chats' are encrypted only while the code encrypts message bodies", () => {
+    const source = readFileSync(new URL("../src/lib/crypto/protected-pii.ts", import.meta.url), "utf8");
+    expect(source).toMatch(/MESSAGE_PROTECTED_FIELDS = \["body"\]/);
+    expect(source).toMatch(/Message: MESSAGE_PROTECTED_FIELDS/);
+    for (const [key, body] of text) {
+      if (key === "en/security") expect(body).toContain("Phones, addresses, chats and keys are encrypted");
+    }
   });
 });
