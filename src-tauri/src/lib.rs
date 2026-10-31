@@ -60,6 +60,7 @@ fn compiled_license_configuration() -> [(&'static str, &'static str); 3] {
 mod startup_recovery;
 mod startup_trace_history;
 mod update_progress;
+mod warm_set;
 
 use runtime_protocol::RuntimeProtocol;
 use runtime_supervisor::{RestartDecision, RuntimeSupervisor};
@@ -1175,6 +1176,39 @@ fn warm_packaged_standalone(root: &std::path::Path, stop: &std::sync::atomic::At
     use std::io::Read;
     use std::sync::atomic::Ordering;
     if !root.is_dir() {
+        return;
+    }
+    // A boot-set manifest next to server.js names the files the first page opens,
+    // in order. Missing, stale or unsafe: fall through to the full walk below.
+    let boot_plan = std::fs::read_to_string(root.join(warm_set::BOOT_SET_FILE))
+        .ok()
+        .and_then(|text| warm_set::parse_boot_set(&text))
+        .and_then(|entries| {
+            warm_set::warm_plan(root, &entries, |path| {
+                std::fs::symlink_metadata(path)
+                    .map(|meta| meta.is_file())
+                    .unwrap_or(false)
+            })
+        });
+    if let Some(plan) = boot_plan {
+        let mut buffer = vec![0_u8; 128 * 1024];
+        for path in plan {
+            if stop.load(Ordering::Relaxed) {
+                return;
+            }
+            let Ok(mut file) = open_warm_file(&path) else {
+                continue;
+            };
+            loop {
+                if stop.load(Ordering::Relaxed) {
+                    return;
+                }
+                match file.read(&mut buffer) {
+                    Ok(0) | Err(_) => break,
+                    Ok(_) => {}
+                }
+            }
+        }
         return;
     }
     let mut stack = vec![root.to_path_buf()];
