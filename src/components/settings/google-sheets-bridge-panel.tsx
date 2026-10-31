@@ -26,6 +26,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
+import { DestructiveConfirmDialog } from "./destructive-confirm-dialog";
+import { destructiveKey } from "./destructive-confirm";
 import { fillCopy, getGoogleSheetsBridgeCopy } from "@/lib/i18n/google-sheets-bridge";
 import { toast } from "@/lib/toast";
 import { cn, formatDateTime } from "@/lib/utils";
@@ -120,8 +123,9 @@ type ApiError = { error?: string; code?: string };
 const JSON_HEADERS = { "Content-Type": "application/json", "x-requested-with": "sahelflow" };
 
 export function GoogleSheetsBridgePanel({ canManage }: { canManage: boolean }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const copy = getGoogleSheetsBridgeCopy(locale);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [state, setState] = useState<BridgeState | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -174,14 +178,14 @@ export function GoogleSheetsBridgePanel({ canManage }: { canManage: boolean }) {
           if (!response.ok) throw new Error(body.error || copy.errors.generic);
           await onSuccess(body);
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : copy.errors.generic);
+          toast.error(translateServerError(error instanceof Error ? error.message : "", t, copy.errors.generic));
         } finally {
           setBusy(null);
         }
       };
       await attempt();
     },
-    [copy.errors.generic],
+    [copy.errors.generic, t],
   );
 
   async function verifyPin() {
@@ -199,7 +203,7 @@ export function GoogleSheetsBridgePanel({ canManage }: { canManage: boolean }) {
       setNeedsPin(null);
       await retry();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : copy.errors.generic);
+      toast.error(translateServerError(error instanceof Error ? error.message : "", t, copy.errors.generic));
     } finally {
       setBusy(null);
     }
@@ -263,8 +267,10 @@ export function GoogleSheetsBridgePanel({ canManage }: { canManage: boolean }) {
       },
     );
 
-  const disconnect = () => {
-    if (!window.confirm(copy.disconnectConfirm)) return;
+  const disconnect = () => setDisconnectOpen(true);
+
+  const performDisconnect = () => {
+    setDisconnectOpen(false);
     void request(
       "disconnect",
       "/api/integrations/google-sheets/bridge",
@@ -288,6 +294,15 @@ export function GoogleSheetsBridgePanel({ canManage }: { canManage: boolean }) {
 
   return (
     <Panel data-google-sheets-bridge={state?.connected ? "connected" : "setup"} className="p-5">
+      <DestructiveConfirmDialog
+        open={disconnectOpen}
+        onOpenChange={setDisconnectOpen}
+        title={t(destructiveKey("disconnectGoogleSheets", "title"))}
+        lost={t(destructiveKey("disconnectGoogleSheets", "lost"))}
+        notAffected={t(destructiveKey("disconnectGoogleSheets", "notAffected"))}
+        confirmLabel={t(destructiveKey("disconnectGoogleSheets", "confirm"))}
+        onConfirm={performDisconnect}
+      />
       <PanelHeader>
         <div className="flex min-w-0 items-start gap-3">
           <BrandLogo id="google_sheets" size="md" />

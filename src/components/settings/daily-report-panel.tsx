@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
@@ -82,7 +83,7 @@ export function DailyReportPanel() {
         toast.success(t("reports.settingsSaved"));
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : t("reports.errorShort"),
+          translateServerError(error instanceof Error ? error.message : "", t, t("reports.errorShort")),
         );
       }
     });

@@ -35,6 +35,7 @@ import { getPhase5RuntimeTranslation } from "@/lib/i18n/phase5-runtime";
 import { getPhonePairingRuntimeTranslation } from "@/lib/i18n/phone-pairing-runtime";
 import { getPluralsRuntimeTranslation } from "@/lib/i18n/plurals-runtime";
 import { getSecurityRuntimeTranslation } from "@/lib/i18n/security-runtime";
+import { getSettingsPanelsStatesRuntimeTranslation } from "@/lib/i18n/settings-panels-states-runtime";
 import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 import { getWorkspacesRuntimeTranslation } from "@/lib/i18n/workspaces-runtime";
@@ -193,6 +194,7 @@ export function getRuntimeTranslation(
     getPhase5RuntimeTranslation(locale, key) ??
     getPhonePairingRuntimeTranslation(locale, key) ??
     getSecurityRuntimeTranslation(locale, key) ??
+    getSettingsPanelsStatesRuntimeTranslation(locale, key) ??
     getStorefrontRuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key) ??
     getWorkspacesRuntimeTranslation(locale, key) ??

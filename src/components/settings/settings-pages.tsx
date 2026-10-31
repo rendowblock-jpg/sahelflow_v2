@@ -23,6 +23,7 @@ import {
 
 import { ProfileEditor } from "@/components/profile/profile-editor";
 import { MemberAccountPanel } from "@/components/settings/member-account-panel";
+import { AiApprovalNote } from "@/components/settings/ai-approval-note";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { ChatGptPlanCard } from "@/components/settings/chatgpt-plan-card";
 import { AiProviderOrderCard } from "@/components/settings/ai-provider-order-card";
@@ -266,6 +267,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     visible: (access) => access.aiKey || access.aiConsent,
     render: ({ access }) => (
       <div className="space-y-6">
+        <AiApprovalNote />
         <GeminiRuntimePanel canManage={access.aiConsent || access.aiKey} />
         <AiProviderOrderCard canManage={access.aiKey} />
         <AiKeyPanel provider="groq" canManageKey={access.aiKey} canManageConsent={access.aiConsent} />

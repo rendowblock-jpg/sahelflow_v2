@@ -14,7 +14,8 @@ import {
   XCircle,
 } from "lucide-react";
 
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { destructiveKey } from "./destructive-confirm";
+import { DestructiveConfirmDialog } from "./destructive-confirm-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -126,6 +127,7 @@ export function AiKeyPanel({
   const [editing, setEditing] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [result, setResult] = useState<SaveResult | null>(null);
@@ -315,6 +317,7 @@ export function AiKeyPanel({
   async function performDelete() {
     if (!canManageKey) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       const response = await fetch(KEY_ENDPOINTS[provider], {
         method: "DELETE",
@@ -330,6 +333,7 @@ export function AiKeyPanel({
       }
       if (!response.ok || !data.ok) {
         setResult({ ok: false, code: data.code, error: rejectionCopy(data, t) });
+        setDeleteError(rejectionCopy(data, t));
         return;
       }
       setConfigured(false);
@@ -337,8 +341,10 @@ export function AiKeyPanel({
       setActiveModel(null);
       setResult(null);
       setAuthorityState("ready");
+      setDeleteConfirmOpen(false);
     } catch {
       setResult({ ok: false, error: t("aiKey.errorDelete") });
+      setDeleteError(t("aiKey.errorDelete"));
     } finally {
       setDeleting(false);
     }
@@ -491,7 +497,10 @@ export function AiKeyPanel({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setDeleteConfirmOpen(true)}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeleteConfirmOpen(true);
+                      }}
                       disabled={deleting}
                       className="text-destructive hover:text-destructive"
                     >
@@ -727,14 +736,15 @@ export function AiKeyPanel({
       </Card>
 
       {canManageKey ? (
-        <ConfirmDialog
+        <DestructiveConfirmDialog
           open={deleteConfirmOpen}
           onOpenChange={setDeleteConfirmOpen}
-          title={t("aiKey.confirmDelete")}
-          description={t("aiKey.confirmDeleteDesc")}
-          confirmLabel={t("aiKey.delete")}
-          cancelLabel={t("common.cancel")}
-          destructive
+          title={t(destructiveKey("revokeAiKey", "title"))}
+          lost={t(destructiveKey("revokeAiKey", "lost"))}
+          notAffected={t(destructiveKey("revokeAiKey", "notAffected"))}
+          confirmLabel={t(destructiveKey("revokeAiKey", "confirm"))}
+          error={deleteError}
+          busy={deleting}
           onConfirm={performDelete}
         />
       ) : null}
