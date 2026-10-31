@@ -388,8 +388,8 @@ export const DEFAULT_RESULTS_PATH = "audit/waves/W3-H2-results.jsonl";
  *   css (A11Y_TEXT200=css): `html { font-size: 200% }` is forced by a style rule. The content doubles but the rem media
  *     queries stay at their 100% pixel widths, so every layout keeps its desktop columns with twice-as-large content. Nobody
  *     gets this from a setting; it is kept as a harsher stress variant and its findings are not defects for a person who
- *     changes the browser's font size (measured in a real browser, 31 Oct 2026: 13 squeezed-text cells in the css variant,
- *     one label in the browser variant).
+ *     changes the browser's font size (measured in a real browser, 31 Oct 2026, English, 1366 px, 7 routes: the css variant
+ *     squeezed 15 text elements on 5 routes, the browser variant one label).
  */
 export type Text200Method = "browser" | "css";
 
