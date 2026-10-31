@@ -85,10 +85,11 @@ function today(v: View, tr: Tr): string {
   if (v.state === "expired") return head + note("alert", "status", "", tr("today.expired"));
   const strip = v.state === "stale" || v.state === "offline"
     ? `<div class="strip" role="status"><strong>${tr("today.stale", { time: formatTime(p.generatedAt, v.locale) })}</strong><span>${tr("today.stale.hint")}</span></div>` : "";
-  const call = p.toConfirm > 0 ? `<div class="note margin" role="status"><h2>${tr("today.call.title")}</h2><p>${tr("today.call.body", { count: formatNumber(p.toConfirm) })}</p></div>` : "";
+  const waiting = p.toConfirmIsFloor ? tr("today.atLeast", { count: formatNumber(p.toConfirm) }) : formatNumber(p.toConfirm);
+  const call = p.toConfirm > 0 ? `<div class="note margin" role="status"><h2>${tr("today.call.title")}</h2><p>${tr("today.call.body", { count: waiting })}</p></div>` : "";
   if (v.state === "empty") return `${head}<p class="stamp">${tr("common.readonly")}</p>${strip}${note("", "status", "", tr("today.empty"))}`;
   const fig = (label: string, value: string, wide = ""): string => `<div class="fig${wide}"><dt>${label}</dt><dd class="num">${value}</dd></div>`;
-  return `${head}<p class="stamp">${tr("common.readonly")}</p>${strip}${call}<dl class="figs">${fig(tr("today.newOrders"), formatNumber(p.newOrders))}${fig(tr("today.toConfirm"), formatNumber(p.toConfirm))}${fig(tr("today.inDelivery"), formatNumber(p.inDelivery))}${p.whatsappHeld == null ? "" : fig(tr("today.whatsappHeld"), formatNumber(p.whatsappHeld))}${fig(tr("today.cod"), esc(formatDzd(p.codToCollectDzd, v.locale)), " wide")}</dl>${bars(p, v, tr)}`;
+  return `${head}<p class="stamp">${tr("common.readonly")}</p>${strip}${call}<dl class="figs">${fig(tr("today.newOrders"), formatNumber(p.newOrders))}${fig(tr("today.toConfirm"), waiting)}${fig(tr("today.inDelivery"), formatNumber(p.inDelivery))}${fig(tr("today.whatsappHeld"), p.whatsappHeld == null ? "—" : formatNumber(p.whatsappHeld))}${fig(tr("today.cod"), esc(formatDzd(p.codToCollectDzd, v.locale)), " wide")}</dl>${bars(p, v, tr)}`;
 }
 
 function settings(v: View, tr: Tr): string {

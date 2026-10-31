@@ -59,6 +59,7 @@ export const fr: Catalog = {
   "today.title": "Aujourd'hui",
   "today.newOrders": "Nouvelles commandes",
   "today.toConfirm": "À confirmer",
+  "today.atLeast": "Au moins {{count}}",
   "today.inDelivery": "En livraison",
   "today.cod": "À encaisser à la livraison",
   "today.week": "7 derniers jours",

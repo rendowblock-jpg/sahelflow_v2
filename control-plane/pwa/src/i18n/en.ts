@@ -59,6 +59,7 @@ export const en: Catalog = {
   "today.title": "Today",
   "today.newOrders": "New orders",
   "today.toConfirm": "To confirm",
+  "today.atLeast": "At least {{count}}",
   "today.inDelivery": "In delivery",
   "today.cod": "Cash to collect on delivery",
   "today.week": "Last 7 days",

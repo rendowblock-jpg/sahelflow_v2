@@ -59,6 +59,7 @@ export const ar: Catalog = {
   "today.title": "اليوم",
   "today.newOrders": "طلبات جديدة",
   "today.toConfirm": "بانتظار التأكيد",
+  "today.atLeast": "على الأقل {{count}}",
   "today.inDelivery": "قيد التوصيل",
   "today.cod": "للتحصيل عند التسليم",
   "today.week": "آخر 7 أيام",
