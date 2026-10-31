@@ -143,3 +143,40 @@ describe("ConnectedPlatformClient.revokeDevice", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("createPairing and listDevices (S1b)", () => {
+  const PROOF = `${"A".repeat(86)}==.sahelflow.pairing.rsa-key.v1`;
+  const ids = { workspaceId: "workspace_12345678", memberId: "member_12345678", deviceId: "phone_12345678" };
+
+  function bodies() {
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      sent.push(JSON.parse(String(init?.body ?? "null")));
+      return Response.json({ pairingId: "pair_x", pairingToken: "t", expiresAt: "2026-10-31T00:00:00.000Z" }, { status: 201 });
+    }));
+    return sent;
+  }
+
+  it("passes desktopKeyProof to the relay when there is one", async () => {
+    const sent = bodies();
+    await client().createPairing({ ...ids, desktopKeyProof: PROOF });
+    expect(sent).toEqual([{ ...ids, desktopKeyProof: PROOF }]);
+  });
+
+  it("sends no desktopKeyProof member at all when there is none", async () => {
+    const sent = bodies();
+    await client().createPairing(ids);
+    expect(sent).toEqual([ids]);
+    expect(sent[0]).not.toHaveProperty("desktopKeyProof");
+  });
+
+  it("types the relay's device rows with created_at and revoked_at", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ devices: [{
+      device_id: "phone_12345678", member_id: "member_12345678", signing_public_key: "k", encryption_public_key: "j",
+      revocation_epoch: 0, last_seen_at: null, created_at: "2026-10-30 10:00:00", revoked_at: null,
+    }] })));
+    const listed = await client().listDevices("workspace_12345678");
+    expect(listed.devices[0]?.created_at).toBe("2026-10-30 10:00:00");
+    expect(listed.devices[0]?.revoked_at).toBeNull();
+  });
+});

@@ -335,7 +335,7 @@ export function CommerceSyncRecoveryPanel() {
                               <span className="font-medium">
                                 {t("commerce.runtime.sourceOrder")}
                               </span>
-                              <span dir="ltr" className="font-mono text-xs">
+                              <span dir="ltr" className="min-w-0 font-mono [overflow-wrap:anywhere] text-xs">
                                 {item.sourceOrderId}
                               </span>
                               <Badge variant={statusVariant(item.status)}>

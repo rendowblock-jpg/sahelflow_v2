@@ -1,7 +1,7 @@
 import type { ExchangeBody, ExchangeResult, PairingTransport } from "./flow";
 
-// Real fetch behind PairingTransport. No cookies, no referrer. The relay has
-// no CORS yet (S1), so this only works once S1 lands; tests use a fake fetch.
+// Real fetch behind PairingTransport. No cookies, no referrer. Tests use a fake
+// fetch or the real relay worker.
 export function createFetchTransport(options: Readonly<{ baseUrl: string; fetchImpl?: typeof fetch }>): PairingTransport {
   const base = options.baseUrl.replace(/\/+$/, "");
   return {
@@ -19,9 +19,18 @@ export function createFetchTransport(options: Readonly<{ baseUrl: string; fetchI
       if (!response.ok) return { ok: false, reason: "network" };
       const json: unknown = await response.json().catch(() => null);
       const rec = json && typeof json === "object" ? (json as Record<string, unknown>) : {};
-      if (typeof rec.deviceId !== "string" || typeof rec.deviceToken !== "string") return { ok: false, reason: "network" };
+      const text = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : null);
+      const deviceId = text(rec.deviceId); const deviceToken = text(rec.deviceToken); const workspaceId = text(rec.workspaceId); const memberId = text(rec.memberId);
+      if (!deviceId || !deviceToken || !workspaceId || !memberId) return { ok: false, reason: "network" };
+      // A reply without the desktop's keys or proof is NOT a network error: it goes on
+      // to the trust check, which refuses it with its own typed reason.
       // The relay activates the device at once; the desktop approval gate is S2, so the phone treats it as pending.
-      return { ok: true, deviceId: rec.deviceId, deviceToken: rec.deviceToken, approval: "pending" };
+      return {
+        ok: true, deviceId, deviceToken, workspaceId, memberId, shopId: text(rec.shopId), approval: "pending",
+        desktopSigningPublicKey: typeof rec.desktopSigningPublicKey === "string" ? rec.desktopSigningPublicKey : "",
+        desktopEncryptionPublicKey: typeof rec.desktopEncryptionPublicKey === "string" ? rec.desktopEncryptionPublicKey : "",
+        desktopKeyProof: typeof rec.desktopKeyProof === "string" ? rec.desktopKeyProof : null,
+      };
     },
   };
 }

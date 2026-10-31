@@ -229,7 +229,7 @@ export function SecurityAuthorityPanel() {
               <dl className="mt-3 space-y-2 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">ID</dt>
-                  <dd dir="ltr" className="font-mono text-xs">
+                  <dd dir="ltr" className="min-w-0 font-mono [overflow-wrap:anywhere] text-xs">
                     {shortId(authority.workspace.id)}
                   </dd>
                 </div>
@@ -249,7 +249,7 @@ export function SecurityAuthorityPanel() {
                 <dl key={device.id} className="mt-3 space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
                     <dt className="text-muted-foreground">ID</dt>
-                    <dd dir="ltr" className="font-mono text-xs">
+                    <dd dir="ltr" className="min-w-0 font-mono [overflow-wrap:anywhere] text-xs">
                       {shortId(device.id)}
                     </dd>
                   </div>

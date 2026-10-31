@@ -1,6 +1,6 @@
 "use client";
 
-import { PageError } from "@/components/shared/page-error";
+import { StudioRouteError } from "@/components/storefront/studio/studio-route-error";
 
 export default function Error({
   error,
@@ -9,5 +9,5 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <PageError error={error} reset={reset} />;
+  return <StudioRouteError error={error} reset={reset} />;
 }

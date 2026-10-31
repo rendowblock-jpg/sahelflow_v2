@@ -6,7 +6,6 @@ import { AlertTriangle, Download, KeyRound, Loader2, Trash2 } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
 import {
@@ -15,6 +14,9 @@ import {
 } from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
 import { useShopStore } from "@/stores/shop-store";
+
+import { DestructiveConfirmDialog } from "./destructive-confirm-dialog";
+import { destructiveKey } from "./destructive-confirm";
 
 type ApiPayload = { error?: string; code?: string };
 
@@ -29,7 +31,8 @@ export function DangerZonePanel({
   const locale = rawLocale as SettingsWorkspaceLocale;
   const copy = (key: Parameters<typeof getSettingsWorkspaceCopy>[1]) =>
     getSettingsWorkspaceCopy(locale, key);
-  const [confirmText, setConfirmText] = useState("");
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // The re-authentication gate is shared: both the reset and the full data
   // export are `requireRecentReauthentication()` actions server-side, so the
@@ -57,16 +60,11 @@ export function DangerZonePanel({
   // An unnamed/whitespace shop name must not degenerate the gate into an
   // always-matching empty token — RESET stays the neutral fallback.
   const confirmToken = shopToken.length > 0 ? shopToken : "RESET";
-  const confirmTextMatches =
-    confirmText === confirmToken || confirmText === "RESET";
 
   async function handleReset(proofRefreshed = false) {
     if (!canReset) return;
-    if (!confirmTextMatches) {
-      toast.error(t("settings.dangerZone.typeReset", { token: confirmToken }));
-      return;
-    }
     setLoading(true);
+    setResetError(null);
     setReauthError(null);
     try {
       const response = await fetch("/api/settings/reset", {
@@ -84,6 +82,7 @@ export function DangerZonePanel({
         payload.code === "REAUTHENTICATION_REQUIRED" &&
         !proofRefreshed
       ) {
+        setResetOpen(false);
         setReauthAction("reset");
         return;
       }
@@ -93,13 +92,14 @@ export function DangerZonePanel({
       toast.success(t("settings.dangerZone.resetSuccess"));
       window.location.assign("/setup");
     } catch (error) {
-      toast.error(
-        translateServerError(
-          error instanceof Error ? error.message : "",
-          t,
-          t("settings.dangerZone.resetFailed"),
-        ),
+      const message = translateServerError(
+        error instanceof Error ? error.message : "",
+        t,
+        t("settings.dangerZone.resetFailed"),
       );
+      // The dialog is open: say it there. After a PIN check it is closed: use the toast.
+      if (resetOpen) setResetError(message);
+      else toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -276,30 +276,15 @@ export function DangerZonePanel({
                 {t("settings.dangerZone.resetWarning")}
               </p>
             </div>
-            <div className="space-y-1.5">
-              {/* IA-05: this Label carried no htmlFor and the Input no id, so
-                  the two were never associated — on the one control that gates
-                  a database reset. */}
-              <Label htmlFor="danger-zone-confirm" className="text-xs">
-                {t("settings.dangerZone.typeReset", { token: confirmToken })}
-              </Label>
-              <Input
-                id="danger-zone-confirm"
-                value={confirmText}
-                onChange={(event) => setConfirmText(event.target.value)}
-                placeholder={confirmToken}
-                dir="auto"
-                className="max-w-xs"
-                spellCheck={false}
-                autoComplete="off"
-              />
-            </div>
             <Button
               type="button"
               variant="destructive"
               size="sm"
-              onClick={() => void handleReset()}
-              disabled={loading || !confirmTextMatches || reauthAction !== null}
+              onClick={() => {
+                setResetError(null);
+                setResetOpen(true);
+              }}
+              disabled={loading || reauthAction !== null}
             >
               {loading ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -310,6 +295,18 @@ export function DangerZonePanel({
                 ? t("settings.dangerZone.resetting")
                 : t("settings.dangerZone.resetEverything")}
             </Button>
+            <DestructiveConfirmDialog
+              open={resetOpen}
+              onOpenChange={setResetOpen}
+              title={t(destructiveKey("resetShopData", "title"))}
+              lost={t(destructiveKey("resetShopData", "lost"))}
+              notAffected={t(destructiveKey("resetShopData", "notAffected"))}
+              confirmLabel={t(destructiveKey("resetShopData", "confirm"))}
+              confirmWord={confirmToken}
+              error={resetError}
+              busy={loading}
+              onConfirm={() => handleReset()}
+            />
 
           </div>
         ) : null}

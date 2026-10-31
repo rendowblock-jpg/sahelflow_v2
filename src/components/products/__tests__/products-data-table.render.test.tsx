@@ -124,7 +124,10 @@ describe("products list on a phone", () => {
   it("error: nothing to show and the request failed -> what failed + Retry that asks again, search box kept", async () => {
     mount(noRowsYet, { status: 500, body: { error: "boom" } });
     const retry = await screen.findByTestId("state-retry");
-    expect(screen.getByRole("alert").textContent).toContain("boom");
+    // A raw server message ("boom", developer English) never reaches the seller: one calm sentence does
+    // (translateServerError, wave 2 first-run). The mocked t() echoes the key.
+    expect(screen.getByRole("alert").textContent).toContain("firstRun.error.unmapped");
+    expect(screen.getByRole("alert").textContent).not.toContain("boom");
     expect(screen.getByPlaceholderText("products.searchPlaceholder")).toBeTruthy();
     reply = { status: 200, body: response };
     fireEvent.click(retry);

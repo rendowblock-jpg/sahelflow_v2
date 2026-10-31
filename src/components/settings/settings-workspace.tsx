@@ -310,7 +310,7 @@ export function SettingsWorkspace({
           mobile
             ? inModal
               ? "h-full overflow-y-auto"
-              : "min-h-[calc(100dvh-9rem)]"
+              : "min-h-[calc(100dvh-9rem)] overflow-clip"
             : "grid h-full md:grid-cols-[15.625rem_minmax(0,1fr)]",
         )}
       >
@@ -324,7 +324,12 @@ export function SettingsWorkspace({
               : "flex min-h-0 flex-col border-e border-border bg-sidebar",
           )}
         >
-          <div className={cn("shrink-0", mobile ? "px-1 pb-3" : "px-3 pb-3 pt-4")}>
+          <div
+            className={cn(
+              "shrink-0",
+              mobile ? "sticky top-0 z-10 bg-background px-1 pb-3 pt-1" : "px-3 pb-3 pt-4",
+            )}
+          >
             {/* The full page already carries a "Settings" page header. */}
             {inModal ? (
               <p className={cn("mb-3 px-2.5 text-foreground", mobile ? "text-title-2" : "text-body font-semibold")}>
@@ -353,14 +358,14 @@ export function SettingsWorkspace({
                 placeholder={copy("searchSettings")}
                 aria-label={copy("searchSettings")}
                 data-settings-search="true"
-                className="h-9 w-full rounded-control border border-border bg-card ps-8 pe-8 text-body-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 [&::-webkit-search-cancel-button]:hidden"
+                className="h-9 [@media(pointer:coarse)]:h-11 w-full rounded-control border border-border bg-card ps-8 pe-8 text-body-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 [&::-webkit-search-cancel-button]:hidden"
               />
               {query ? (
                 <button
                   type="button"
                   aria-label={copy("searchSettings")}
                   onClick={() => setQuery("")}
-                  className="absolute end-1.5 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="absolute end-1.5 top-1/2 inline-flex size-6 [@media(pointer:coarse)]:size-11 -translate-y-1/2 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <X className="size-3.5" aria-hidden="true" />
                 </button>

@@ -262,11 +262,14 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     page,
   }) => {
     const workspace = page.locator('[data-settings-control-center="true"]');
-    const dataButton = page.locator('[data-settings-group="danger"]');
+    // The draft lives in the Profile page (the email field). It used to be the inline "RESET" token of the danger
+    // page, but the reset now asks for its typed word inside the shared confirmation dialog (it names what is lost,
+    // focus starts on Cancel), and a modal dialog cannot be the field of a test that moves focus to the rail.
+    const dataButton = page.locator('[data-settings-group="profile"]');
     const detailHeading = page.locator('[data-settings-detail-heading="true"]');
 
     await dataButton.click();
-    const resetDraft = page.getByPlaceholder("RESET");
+    const resetDraft = page.locator("#email");
     await resetDraft.fill("RES");
     await resetDraft.focus();
 

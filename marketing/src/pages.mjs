@@ -34,10 +34,11 @@ const meta = (locale, key) => COPY[locale].meta[key];
 
 /* ───────────────────────────── shared blocks ───────────────────────────── */
 
-function pageHero({ locale, eyebrow, eyebrowIcon, title, lead, actions = "", art = "", cls = "" }) {
+export function pageHero({ locale, before = "", eyebrow, eyebrowIcon, title, lead, actions = "", art = "", cls = "" }) {
   return `<section class="sheet-head ${cls}${art ? " has-art" : ""}">
   <div class="container sheet-in">
     <div class="sheet-copy">
+      ${before}
       ${eyebrow ? `<p class="eyebrow">${eyebrowIcon ? icon(eyebrowIcon) : ""}${esc(eyebrow)}</p>` : ""}
       <h1 class="page-title">${esc(title)}</h1>
       ${lead ? `<p class="page-lead">${esc(lead)}</p>` : ""}
@@ -48,7 +49,7 @@ function pageHero({ locale, eyebrow, eyebrowIcon, title, lead, actions = "", art
 </section>`;
 }
 
-function finalCta(locale, { title, text } = {}) {
+export function finalCta(locale, { title, text } = {}) {
   const t = COPY[locale];
   return `<section class="end">
 <div class="in">
@@ -61,7 +62,7 @@ ${ctas(locale)}
 }
 
 const monogram = (key) => BRAND_NAMES[key].replace(/[^A-Za-z]/g, "").slice(0, 2);
-function brandTile(key) {
+export function brandTile(key) {
   return `<span class="brand-tile" aria-hidden="true">${esc(monogram(key))}</span>`;
 }
 
@@ -79,7 +80,7 @@ function marquee(locale) {
 }
 
 /** The calm number-safety sentence, shown wherever the WhatsApp inbox is sold. */
-function whatsappNote(locale) {
+export function whatsappNote(locale) {
   return `<section class="section tight">
   <div class="container">
     <p class="notice reveal">${icon("whatsapp")}<span>${esc(COPY[locale].common.whatsappNote)}</span></p>
@@ -235,177 +236,6 @@ export function homePage(locale) {
   return shell({ locale, pageId: "home", path: "", title, description }, `<div class="page">\n${sections}\n</div>\n${finalCta(locale)}`);
 }
 
-/* ───────────────────────────── product ───────────────────────────── */
-
-export function productPage(locale) {
-  const t = COPY[locale];
-  const p = t.productPage;
-  const [title, description] = meta(locale, "product");
-  const body = `${pageHero({ locale, eyebrow: p.eyebrow, eyebrowIcon: "layers", title: p.title, lead: p.lead, actions: ctas(locale), cls: "is-center" })}
-<section class="section tight">
-  <div class="container">${screenStack(locale)}</div>
-</section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: p.coreTitle, lead: p.coreText, center: true })}
-    <div class="reveal">${coreDiagram(locale)}</div>
-  </div>
-</section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ eyebrow: p.modulesTitle, title: t.home.tour.lead, center: true })}
-    <div class="module-grid reveal-stagger">${MODULES.map((m) => moduleCard(locale, m.key)).join("")}</div>
-  </div>
-</section>
-${whatsappNote(locale)}
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: p.principlesTitle, center: true })}
-    <div class="principles reveal-stagger">${p.principles.map(([k, v], i) => `<article class="principle reveal"><span class="principle-num">0${i + 1}</span><h3>${esc(k)}</h3><p>${esc(v)}</p></article>`).join("")}</div>
-  </div>
-</section>
-${finalCta(locale)}`;
-  return shell({ locale, pageId: "product", path: "product", title, description, preload: shotUrl("dashboard", locale) }, body);
-}
-
-export function modulePage(locale, key) {
-  const t = COPY[locale];
-  const m = moduleByKey[key];
-  const c = t.modules[key];
-  const index = MODULES.findIndex((x) => x.key === key);
-  const related = [1, 2, 3].map((d) => MODULES[(index + d) % MODULES.length].key);
-  const heroArt = m.shot
-    ? appWindow(m.shot, locale, { eager: true, cls: "is-hero" })
-    : `<figure class="app-window scene-window is-hero"><div class="app-window-bar" aria-hidden="true"><i></i><i></i><i></i><span>SahelFlow</span></div>${assistantScene(locale)}<figcaption class="scene-label">${esc(t.common.illustration)}</figcaption></figure>`;
-  const visuals = [...m.gallery];
-  const sections = c.sections
-    .map(([title, text, bullets], i) => {
-      const shot = visuals[i];
-      const visual = shot ? appWindow(shot, locale) : specPanel(title, bullets, m.hue);
-      return `<section class="feature-row${i % 2 ? " is-flipped" : ""}">
-  <div class="feature-copy reveal">
-    <span class="feature-num" style="--hue:${m.hue}">0${i + 1}</span>
-    <h2>${esc(title)}</h2>
-    <p>${esc(text)}</p>
-    <ul class="check-list">${bullets.map((b) => `<li>${icon("check")}<span>${esc(b)}</span></li>`).join("")}</ul>
-  </div>
-  <div class="feature-visual reveal">${visual}</div>
-</section>`;
-    })
-    .join("");
-  const crumbs = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "SahelFlow", item: `${SITE.origin}${href(locale)}` },
-      { "@type": "ListItem", position: 2, name: t.nav.product, item: `${SITE.origin}${href(locale, "product")}` },
-      { "@type": "ListItem", position: 3, name: c.name, item: `${SITE.origin}${href(locale, `product/${key}`)}` },
-    ],
-  };
-  const body = `<section class="page-hero module-hero" style="--hue:${m.hue}">
-  <div class="container">
-    <nav class="crumbs" aria-label="breadcrumb"><a href="${href(locale, "product")}">${esc(t.nav.product)}</a>${icon("chevron", "crumb-sep")}<span aria-current="page">${esc(c.name)}</span></nav>
-    <div class="module-hero-copy reveal">
-      <p class="eyebrow module-eyebrow"><span class="module-icon">${icon(m.icon)}</span>${esc(c.name)}</p>
-      <h1 class="page-title">${esc(c.title)}</h1>
-      <p class="page-lead">${esc(c.lead)}</p>
-      ${ctas(locale)}
-      <ul class="chip-row">${c.points.map((p) => `<li>${icon("check")}${esc(p)}</li>`).join("")}</ul>
-    </div>
-    <div class="module-hero-art reveal">${heroArt}</div>
-  </div>
-</section>
-<div class="container features">${sections}</div>
-${key === "inbox" ? whatsappNote(locale) : ""}
-<section class="section">
-  <div class="container narrow">
-    ${sectionHead({ eyebrow: t.common.questions, title: c.name, center: true })}
-    ${faqList(c.faq, { name: `faq-${key}` })}
-  </div>
-</section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: t.common.related, center: true })}
-    <div class="module-grid is-three reveal-stagger">${related.map((k) => moduleCard(locale, k, { compact: true })).join("")}</div>
-  </div>
-</section>
-${finalCta(locale)}`;
-  return shell(
-    { locale, pageId: `module:${key}`, path: `product/${key}`, title: `${c.name} — SahelFlow`, description: c.lead, preload: m.shot ? shotUrl(m.shot, locale) : null, jsonLd: [crumbs, faqJsonLd(c.faq)] },
-    body,
-  );
-}
-
-/* ───────────────────────────── solutions ───────────────────────────── */
-
-export function solutionPage(locale, key) {
-  const t = COPY[locale];
-  const s = t.solutions[key];
-  const sol = SOLUTIONS.find((x) => x.key === key);
-  const lead = moduleByKey[s.modules[0]];
-  const body = `${pageHero({
-    locale,
-    eyebrow: s.name,
-    eyebrowIcon: sol.icon,
-    title: s.title,
-    lead: s.lead,
-    actions: ctas(locale),
-    art: lead.shot ? appWindow(lead.shot, locale, { eager: true }) : "",
-  })}
-<section class="section">
-  <div class="container">
-    <div class="pain-grid reveal-stagger">${s.pains.map(([k, v]) => `<article class="pain reveal"><span class="pain-x">${icon("x")}</span><h3>${esc(k)}</h3><p>${esc(v)}</p></article>`).join("")}</div>
-  </div>
-</section>
-<section class="section">
-  <div class="container">
-    <ol class="steps reveal-stagger">${s.steps.map(([k, v], i) => `<li class="step reveal"><span class="step-num">${i + 1}</span><h3>${esc(k)}</h3><p>${esc(v)}</p></li>`).join("")}</ol>
-  </div>
-</section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: t.common.allModules, center: true })}
-    <div class="module-grid is-four reveal-stagger">${s.modules.map((k) => moduleCard(locale, k, { compact: true })).join("")}</div>
-  </div>
-</section>
-${s.modules.includes("inbox") ? whatsappNote(locale) : ""}
-${finalCta(locale)}`;
-  return shell({ locale, pageId: `solution:${key}`, path: `solutions/${key}`, title: `${s.name} — SahelFlow`, description: s.lead }, body);
-}
-
-/* ───────────────────────────── integrations ───────────────────────────── */
-
-export function integrationsPage(locale) {
-  const t = COPY[locale];
-  const p = t.integrationsPage;
-  const [title, description] = meta(locale, "integrations");
-  const chips = [`<button type="button" class="chip-btn" aria-pressed="true" data-filter="all">${esc(p.all)}</button>`, ...INTEGRATIONS.map((g) => `<button type="button" class="chip-btn" aria-pressed="false" data-filter="${g.group}">${esc(p.groups[g.group])}</button>`)].join("");
-  const groups = INTEGRATIONS.map(
-    (g) => `<section class="int-group" data-group="${g.group}">
-  <h2 class="int-group-title">${esc(p.groups[g.group])}</h2>
-  <div class="int-grid">${g.items
-    .map(
-      (key) => `<article class="int-card reveal" id="${key}" data-status="${integrationStatus(key)}" data-spotlight>
-  <header>${brandTile(key)}<h3>${esc(BRAND_NAMES[key])}</h3>${statusBadge(integrationStatus(key), locale)}</header>
-  <p>${esc(p.items[key])}</p>${key === "whatsapp" ? `\n  <p class="int-note">${esc(t.common.whatsappNote)}</p>` : ""}
-</article>`,
-    )
-    .join("")}</div>
-</section>`,
-  ).join("");
-  const body = `${pageHero({ locale, eyebrow: p.eyebrow, eyebrowIcon: "sheet", title: p.title, lead: p.lead, cls: "is-center" })}
-${marquee(locale)}
-<section class="section">
-  <div class="container">
-    <div class="chip-bar" role="toolbar" data-filter-bar>${chips}</div>
-    ${groups}
-    <p class="missing">${icon("whatsapp")}<a href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${esc(p.missing)}</a></p>
-  </div>
-</section>
-${finalCta(locale)}`;
-  return shell({ locale, pageId: "integrations", path: "integrations", title, description }, body);
-}
-
 /* ───────────────────────────── pricing ───────────────────────────── */
 
 export function pricingPage(locale) {
@@ -459,52 +289,31 @@ ${finalCta(locale)}`;
 /* ───────────────────────────── why ───────────────────────────── */
 
 export function whyPage(locale) {
-  const t = COPY[locale];
-  const w = t.why;
+  const w = COPY[locale].why;
   const [title, description] = meta(locale, "why");
-  const reasonIcons = ["key", "chart", "lock", "wifiOff", "whatsapp", "coins"];
-  const cell = ([text, kind], us) => `<span role="cell"${us ? ' class="vs-us"' : ""}>${statusIcon(kind)}<span>${esc(text)}</span></span>`;
-  const sahel = PACKAGE.priceDzd;
-  const monthly = 9500;
-  const years = PACKAGE.updateYears;
-  const body = `${pageHero({ locale, eyebrow: w.eyebrow, eyebrowIcon: "scale", title: w.title, lead: w.lead, actions: ctas(locale, { primary: w.cta }), cls: "is-center" })}
-<section class="section tight">
-  <div class="container">
-    <div class="reasons reveal-stagger">${w.reasons.map(([k, v], i) => `<article class="reason reveal" data-spotlight><span class="reason-icon">${icon(reasonIcons[i])}</span><h2>${esc(k)}</h2><p>${esc(v)}</p></article>`).join("")}</div>
+  const reasonIcons = ["key", "chart", "lock", "wifiOff"];
+  const row = ([label, a, b]) => `<div class="cmp-r"><h3>${esc(label)}</h3><p>${statusIcon(a[1])}<span>${esc(a[0])}</span></p><p>${statusIcon(b[1])}<span>${esc(b[0])}</span></p></div>`;
+  const body = `${pageHero({ locale, eyebrow: w.eyebrow, eyebrowIcon: "scale", title: w.title, lead: w.lead, actions: ctas(locale, { primary: w.cta }) })}
+<section class="sheet-sec">
+  <div class="container narrow">
+    <h2>${esc(w.reasonsTitle)}</h2>
+    <ul class="ruled nn-list">${w.reasons.map(([k, v], i) => `<li><span class="nn" aria-hidden="true">${icon(reasonIcons[i] ?? "key")}</span><div><h3>${esc(k)}</h3><p>${esc(v)}</p></div></li>`).join("")}</ul>
   </div>
 </section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: w.tableTitle, lead: w.tableLead, center: true })}
-    <div class="vs-scroll reveal">
-      <div class="vs-table is-three" role="table">
-        <div class="vs-row vs-head" role="row"><span role="columnheader"></span>${w.columns.map((col, i) => `<span role="columnheader"${i === 0 ? ' class="vs-us"' : ""}>${i === 0 ? `<img src="/img/mark.svg" alt="" width="20" height="20">` : ""}${esc(col)}</span>`).join("")}</div>
-        ${w.rows.map(([label, a, b, c]) => `<div class="vs-row" role="row"><span role="rowheader">${esc(label)}</span>${cell(a, true)}${cell(b)}${cell(c)}</div>`).join("")}
-      </div>
+<section class="sheet-sec">
+  <div class="container narrow">
+    <h2>${esc(w.tableTitle)}</h2>
+    <p class="lead">${esc(w.tableLead)}</p>
+    <div class="cmp">
+      <div class="cmp-h"><span>${esc(w.columns[0] ?? "")}</span><span>${esc(w.columns[1] ?? "")}</span></div>
+      ${w.rows.map(row).join("")}
     </div>
   </div>
 </section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: w.costTitle, lead: w.costLead, center: true })}
-    <form class="calc-card cost-calc reveal" data-calc="cost" data-sahel="${sahel}" data-currency="${locale === "ar" ? "دج" : "DA"}">
-      <label class="calc-field"><span class="calc-label">${esc(w.costMonthly)}</span>
-        <span class="calc-control"><input type="range" name="monthly" min="1900" max="24500" step="100" value="${monthly}" data-calc-input><output data-calc-out="monthly">${money(monthly, locale)}</output></span></label>
-      <label class="calc-field"><span class="calc-label">${esc(w.costYears)}</span>
-        <span class="calc-control"><input type="range" name="years" min="1" max="${years}" step="1" value="${years}" data-calc-input><output data-calc-out="years">${years}</output></span></label>
-      <div class="cost-bars">
-        <div class="cost-bar is-them"><span>${esc(w.costSubscription)}</span><i style="--w:100%" data-cost-bar="them"></i><b data-calc-result="them">${money(monthly * years * 12, locale)}</b></div>
-        <div class="cost-bar is-us"><span>${esc(w.costSahel)}</span><i style="--w:${((sahel / (monthly * years * 12)) * 100).toFixed(1)}%" data-cost-bar="us"></i><b>${money(sahel, locale)}</b></div>
-      </div>
-      <p class="cost-saved"><span>${esc(w.costSaved)}</span><b data-calc-result="saved">${money(monthly * years * 12 - sahel, locale)}</b></p>
-      <p class="calc-note">${icon("calculator")}<span>${esc(w.costNote)}</span></p>
-    </form>
-  </div>
-</section>
-<section class="section">
+<section class="sheet-sec">
   <div class="container narrow">
-    ${sectionHead({ title: w.honestTitle, center: true })}
-    <div class="honest reveal-stagger">${w.honest.map(([k, v]) => `<article class="reveal"><h3>${esc(k)}</h3><p>${esc(v)}</p></article>`).join("")}</div>
+    <h2>${esc(w.honestTitle)}</h2>
+    <div class="callbook">${w.honest.map(([k, v]) => `<div class="mrow is-risk"><span class="mg">${esc(w.honestMark)}</span><span class="tx"><b>${esc(k)}</b><span>${esc(v)}</span></span></div>`).join("")}</div>
   </div>
 </section>
 ${finalCta(locale, { title: w.cta })}`;
@@ -527,14 +336,8 @@ export function securityPage(locale) {
   const body = `${pageHero({ locale, eyebrow: s.eyebrow, eyebrowIcon: "shield", title: s.title, lead: s.lead })}
 <section class="sheet-sec">
   <div class="container two">
-    <div><h2>${esc(S.secProven)}</h2><ul class="ruled facts">${fact("data-encrypted", s.items[1] ?? ["", ""])}${fact("updates-verified", s.items[5] ?? ["", ""])}</ul></div>
+    <div><h2>${esc(S.secProven)}</h2><ul class="ruled facts">${fact("local-first", s.items[0] ?? ["", ""])}${fact("pin-roles", s.items[2] ?? ["", ""])}${fact("ai-asks-first", s.items[4] ?? ["", ""])}${fact("data-encrypted", s.items[1] ?? ["", ""])}${fact("updates-verified", s.items[5] ?? ["", ""])}</ul></div>
     <div><h2>${esc(S.secPending)}</h2><ul class="ruled facts">${fact("backup-restore-new-pc", s.items[3] ?? ["", ""])}</ul></div>
-  </div>
-</section>
-<section class="sheet-sec">
-  <div class="container narrow">
-    <h2>${esc(S.secBuilt)}</h2>
-    <ul class="ruled">${plain([s.items[0], s.items[2], s.items[4]].filter((x) => x !== undefined))}</ul>
   </div>
 </section>
 <section class="sheet-sec">
@@ -599,92 +402,7 @@ export function downloadPage(locale) {
 
 /* ───────────────────────────── help ───────────────────────────── */
 
-export function helpPage(locale) {
-  const t = COPY[locale];
-  const h = t.helpPage;
-  const [title, description] = meta(locale, "help");
-  const all = HELP_TOPICS.flatMap((topic) => h.topics[topic.key][2]);
-  const body = `<section class="page-hero help-hero">
-  <div class="container narrow reveal">
-    <p class="eyebrow">${icon("help")}${esc(h.eyebrow)}</p>
-    <h1 class="page-title">${esc(h.title)}</h1>
-    <p class="page-lead">${esc(h.lead)}</p>
-    <label class="help-search">${icon("search")}<input type="search" placeholder="${esc(h.search)}" aria-label="${esc(h.search)}" data-help-search></label>
-  </div>
-</section>
-<section class="section tight">
-  <div class="container">
-    <div class="topic-grid reveal-stagger">${HELP_TOPICS.map((topic) => {
-      const [name, text, items] = h.topics[topic.key];
-      return `<a class="topic-card reveal" href="#${topic.key}" data-spotlight><span class="reason-icon">${icon(topic.icon)}</span><strong>${esc(name)}</strong><small>${esc(text)}</small><em>${items.length}</em></a>`;
-    }).join("")}</div>
-  </div>
-</section>
-${whatsappNote(locale)}
-<section class="section">
-  <div class="container narrow" data-help-list>
-    ${HELP_TOPICS.map((topic) => {
-      const [name, , items] = h.topics[topic.key];
-      return `<section class="help-topic" id="${topic.key}" data-help-topic><h2>${icon(topic.icon)}<span>${esc(name)}</span></h2>${faqList(items, { name: `help-${topic.key}` })}</section>`;
-    }).join("")}
-    <p class="help-empty" data-help-empty hidden>${esc(h.noResult)}</p>
-    <div class="help-band reveal">
-      <p>${esc(t.contactPage.title)}</p>
-      ${button(whatsappHref(t.whatsappMessage), t.nav.talk, { kind: "glass", iconName: "whatsapp", external: true })}
-    </div>
-  </div>
-</section>`;
-  return shell({ locale, pageId: "help", path: "help", title, description, jsonLd: [faqJsonLd(all)] }, body);
-}
-
-/* ───────────────────────────── contact ───────────────────────────── */
-
-export function contactPage(locale) {
-  const t = COPY[locale];
-  const c = t.contactPage;
-  const [title, description] = meta(locale, "contact");
-  const card = ([name, text], ic, url, cta, external) => `<article class="contact-card reveal" data-spotlight>
-  <span class="reason-icon">${icon(ic)}</span><h2>${esc(name)}</h2><p>${esc(text)}</p>
-  ${button(url, cta, { kind: "ghost", iconName: ic === "mail" ? "mail" : "whatsapp", external })}
-</article>`;
-  const body = `${pageHero({ locale, eyebrow: c.eyebrow, eyebrowIcon: "message", title: c.title, lead: c.lead, cls: "is-center" })}
-<section class="section tight">
-  <div class="container contact-grid reveal-stagger">
-    ${card(c.whatsapp, "whatsapp", whatsappHref(t.whatsappMessage), c.write, true)}
-    ${card(c.demo, "sparkle", whatsappHref(c.demoMessage), c.demo[0], true)}
-    ${card(c.email, "mail", `mailto:${SITE.email}`, SITE.email, false)}
-  </div>
-</section>
-${finalCta(locale)}`;
-  return shell({ locale, pageId: "contact", path: "contact", title, description }, body);
-}
-
-/* ───────────────────────────── legal, 404, root ───────────────────────────── */
-
-export function legalPage(locale, kind) {
-  const t = COPY[locale];
-  const sections = (kind === "privacy" ? PRIVACY : TERMS)[locale];
-  const heading = kind === "privacy" ? t.legal.privacyTitle : t.legal.termsTitle;
-  const [title, description] = meta(locale, kind);
-  const body = `<section class="page-hero legal-hero"><div class="container narrow"><h1 class="page-title">${esc(heading)}</h1><p class="page-lead">${esc(t.legal.updated)}: <time datetime="${LEGAL_UPDATED}">${LEGAL_UPDATED}</time></p></div></section>
-<section class="section tight"><div class="container narrow prose">${sections.map(([h, p]) => `<h2>${esc(h)}</h2><p>${esc(p)}</p>`).join("")}</div></section>`;
-  return shell({ locale, pageId: kind, path: kind, title, description }, body);
-}
-
-export function notFoundPage() {
-  const locale = SITE.defaultLocale;
-  const t = COPY[locale];
-  const others = SITE.locales.filter((l) => l !== locale);
-  const body = `<section class="page-hero notfound">
-  <div class="container narrow reveal">
-    <p class="notfound-code">404</p>
-    <h1 class="page-title">${esc(t.notFound.title)}</h1>
-    <p class="page-lead">${esc(t.notFound.text)}</p>
-    <p class="cta-row">${button(href(locale), t.notFound.back, { iconName: "arrow" })}${others.map((l) => button(href(l), COPY[l].notFound.back, { kind: "ghost", attrs: `lang="${l}" hreflang="${l}"` })).join("")}</p>
-  </div>
-</section>`;
-  return shell({ locale, pageId: "404", path: "", title: `${t.notFound.title} — SahelFlow`, description: t.notFound.text }, body);
-}
+/* help, contact, legal and 404 are in inner.mjs */
 
 export function rootRedirect() {
   const locales = JSON.stringify(SITE.locales);
@@ -710,3 +428,5 @@ location.replace("/"+(l.indexOf(c)>=0?c:"${SITE.defaultLocale}")+"/")})();
 </html>
 `;
 }
+
+export { contactPage, helpPage, integrationsPage, legalPage, modulePage, notFoundPage, productPage, solutionPage } from "./inner.mjs";

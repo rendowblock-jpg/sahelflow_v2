@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { BrandLogo } from "@/components/brand/brand-icons";
 import {
   getSettingsWorkspaceCopy,
@@ -189,7 +190,7 @@ export function DeliveryCredentialsPanel() {
     } catch (error) {
       setResult({
         ok: false,
-        message: error instanceof Error ? error.message : copy("unavailableDescription"),
+        message: translateServerError(error instanceof Error ? error.message : "", t, copy("unavailableDescription")),
       });
     } finally {
       setBusy(null);
@@ -219,7 +220,7 @@ export function DeliveryCredentialsPanel() {
       setResult({ ok: true, message: body.message ?? t("delivery.saved") });
       await load();
     } catch (error) {
-      setResult({ ok: false, message: error instanceof Error ? error.message : t("delivery.connectionFailed") });
+      setResult({ ok: false, message: translateServerError(error instanceof Error ? error.message : "", t, t("delivery.connectionFailed")) });
     } finally {
       setBusy(null);
     }
@@ -259,7 +260,7 @@ export function DeliveryCredentialsPanel() {
       setResult({ ok: true, message: body.message ?? t("delivery.saved") });
       await load();
     } catch (error) {
-      setResult({ ok: false, message: error instanceof Error ? error.message : t("delivery.connectionFailed") });
+      setResult({ ok: false, message: translateServerError(error instanceof Error ? error.message : "", t, t("delivery.connectionFailed")) });
     } finally {
       setBusy(null);
     }

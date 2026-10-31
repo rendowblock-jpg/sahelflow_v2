@@ -16,6 +16,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import {
+  MANAGER_TOUCH,
+  ManagerEmpty,
+  ManagerNoStore,
+  ManagerSaveLine,
+  settleResponse,
+  useManagerAction,
+} from "@/components/storefront/studio/manager-states";
 import { toast } from "@/lib/toast";
 
 export interface OfferRow {
@@ -58,7 +67,8 @@ export function StorefrontOffersManager({
 }: Props) {
   const { t } = useI18n();
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const { state: actionState, busy, run } = useManagerAction(canManage);
+  const [pendingDelete, setPendingDelete] = useState<OfferRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
     slug: storefronts[0]?.slug ?? "",
@@ -76,9 +86,7 @@ export function StorefrontOffersManager({
 
   async function createOffer(event: React.FormEvent): Promise<void> {
     event.preventDefault();
-    if (!canManage || busy) return;
-    setBusy(true);
-    try {
+    await run(async () => {
       const response = await fetch("/api/storefront/offers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,44 +103,28 @@ export function StorefrontOffersManager({
             : {}),
         }),
       });
-      const data = (await response.json().catch(() => ({}))) as ApiPayload;
-      if (!response.ok) {
-        toast.error(data.error ?? t("storefronts.offers.error"));
-        return;
-      }
+      const result = await settleResponse<ApiPayload>(response, t);
+      if (!result.ok) return result;
       toast.success(t("storefronts.offers.createdToast"));
       setCreating(false);
       setForm((current) => ({ ...current, triggerProductId: "", rewardProductId: "" }));
       router.refresh();
-    } catch {
-      toast.error(t("storefronts.offers.error"));
-    } finally {
-      setBusy(false);
-    }
+      return { ok: true };
+    });
   }
 
   async function removeOffer(offerId: string): Promise<void> {
-    if (!canManage || busy) return;
-    setBusy(true);
-    try {
-      const response = await fetch(
-        `/api/storefront/offers/${encodeURIComponent(offerId)}`,
-        { method: "DELETE" },
-      );
-      if (!response.ok) {
-        toast.error(t("storefronts.offers.error"));
-        return;
-      }
+    await run(async () => {
+      const response = await fetch(`/api/storefront/offers/${encodeURIComponent(offerId)}`, { method: "DELETE" });
+      const result = await settleResponse<ApiPayload>(response, t);
+      if (!result.ok) return result;
       toast.success(t("storefronts.offers.deletedToast"));
       router.refresh();
-    } catch {
-      toast.error(t("storefronts.offers.error"));
-    } finally {
-      setBusy(false);
-    }
+      return { ok: true };
+    });
   }
 
-  if (storefronts.length === 0) return null;
+  if (storefronts.length === 0) return <ManagerNoStore />;
 
   return (
     <Card>
@@ -144,12 +136,18 @@ export function StorefrontOffersManager({
         <CardDescription>{t("storefronts.offers.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {offers.length === 0 ? (
+          <ManagerEmpty
+            title={t("storefront.studioStates.manager.offersEmptyTitle")}
+            body={t("storefront.studioStates.manager.offersEmptyBody")}
+          />
+        ) : null}
         {offers.length > 0 ? (
           <ul className="max-h-96 space-y-2 overflow-y-auto pe-1" role="list">
             {offers.map((offer) => (
               <li
                 key={offer.id}
-                className="flex items-center justify-between gap-2 rounded-surface border p-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-surface border p-3 text-sm"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">
@@ -185,9 +183,9 @@ export function StorefrontOffersManager({
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 text-destructive"
+                      className="h-8 w-8 text-destructive [@media(pointer:coarse)]:size-11"
                       disabled={busy}
-                      onClick={() => removeOffer(offer.id)}
+                      onClick={() => setPendingDelete(offer)}
                       aria-label={t("storefronts.offers.delete")}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -307,7 +305,7 @@ export function StorefrontOffersManager({
                 ) : null}
               </div>
               <div className="flex gap-2">
-                <Button type="submit" size="sm" disabled={busy}>
+                <Button type="submit" size="sm" className={MANAGER_TOUCH} disabled={busy}>
                   {busy ? <Loader2 className="me-1 h-3.5 w-3.5 animate-spin" /> : <Plus className="me-1 h-3.5 w-3.5" />}
                   {t("storefronts.offers.create")}
                 </Button>
@@ -322,11 +320,28 @@ export function StorefrontOffersManager({
               </div>
             </form>
           ) : (
-            <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+            <Button size="sm" variant="outline" className={MANAGER_TOUCH} onClick={() => setCreating(true)}>
               <Plus className="me-1 h-3.5 w-3.5" />
               {t("storefronts.offers.create")}
             </Button>
           )
+        ) : null}
+        <ManagerSaveLine state={actionState} verb="remove" />
+        {pendingDelete ? (
+          <ConfirmDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) setPendingDelete(null);
+            }}
+            destructive
+            title={t("storefront.studioStates.manager.offerDeleteTitle")}
+            description={t("storefront.studioStates.manager.offerDeleteBody", {
+              name: pendingDelete.triggerProductName,
+              quantity: pendingDelete.triggerQuantity,
+            })}
+            confirmLabel={t("storefront.studioStates.manager.offerDeleteConfirm")}
+            onConfirm={() => removeOffer(pendingDelete.id)}
+          />
         ) : null}
       </CardContent>
     </Card>

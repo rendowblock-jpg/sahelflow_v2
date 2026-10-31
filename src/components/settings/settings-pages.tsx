@@ -23,6 +23,7 @@ import {
 
 import { ProfileEditor } from "@/components/profile/profile-editor";
 import { MemberAccountPanel } from "@/components/settings/member-account-panel";
+import { AiApprovalNote } from "@/components/settings/ai-approval-note";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { ChatGptPlanCard } from "@/components/settings/chatgpt-plan-card";
 import { AiProviderOrderCard } from "@/components/settings/ai-provider-order-card";
@@ -40,6 +41,8 @@ import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
 import { DemoDataPanel } from "@/components/settings/demo-data-panel";
 import { LicensePanel } from "@/components/settings/license-panel";
+import { PhonePairingCard } from "@/components/settings/phone-pairing-card";
+import { PHONE_PAIRING_AVAILABLE } from "@/lib/connected-platform/pairing-link";
 import { MetaPixelPanel } from "@/components/settings/meta-pixel-panel";
 import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
@@ -199,7 +202,12 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     description: "pageLicenseDescription",
     keywords: "license licence ترخيص plan offre خطة activation",
     visible: (access) => access.license,
-    render: () => <LicensePanel />,
+    render: () => (
+      <>
+        <LicensePanel />
+        {PHONE_PAIRING_AVAILABLE ? <PhonePairingCard /> : null}
+      </>
+    ),
   },
   {
     id: "commerce",
@@ -260,6 +268,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     visible: (access) => access.aiKey || access.aiConsent,
     render: ({ access }) => (
       <div className="space-y-6">
+        <AiApprovalNote />
         <GeminiRuntimePanel canManage={access.aiConsent || access.aiKey} />
         <AiProviderOrderCard canManage={access.aiKey} />
         <AiKeyPanel provider="groq" canManageKey={access.aiKey} canManageConsent={access.aiConsent} />

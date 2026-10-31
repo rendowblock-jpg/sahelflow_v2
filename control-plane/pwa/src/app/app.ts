@@ -1,12 +1,16 @@
+import { supportsEd25519 } from "../../../../src/lib/connected-platform/web";
 import { DEFAULT_LOCALE, dirOf, isLocale, type Locale } from "../i18n";
 import { createPinRecord, verifyPin, type PinRecord } from "../lock/pin";
 import { afterAttempt, attemptStatus, initialState, isValidPin, onHidden, onVisible, type LockState } from "../lock/state";
+import { watchApproval } from "../poll/approval";
 import { runPairing, takePairingLink, type PairingTransport } from "../pair/flow";
 import { createKeygen } from "../pair/keygen";
+import { readResume, savePairingRecord } from "../pair/resume";
 import { createFetchTransport } from "../pair/transport";
 import { openDb, saveDeviceKeys, type Db } from "../storage/idb";
 import { wipeAll } from "../storage/wipe";
 import type { UpdateController } from "../sw/update";
+import { createRelayClient } from "../today/relay-source";
 import { freshness, type Projection, type ProjectionSource } from "../today/projection";
 import { renderApp, type ScreenId, type Theme, type View } from "../views/view";
 import { applyPreview } from "./preview";
@@ -24,7 +28,8 @@ const store = {
 };
 
 export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<{ attachUpdates(c: UpdateController): void }> {
-  const source: ProjectionSource = options.source ?? { load: async () => ({ ok: false, reason: "none" }) };
+  const relay = createRelayClient({ baseUrl: __RELAY_URL__, getDb: () => getDb() });
+  const source: ProjectionSource = options.source ?? relay.source;
   const transport = options.transport ?? createFetchTransport({ baseUrl: __RELAY_URL__ });
   const standalone = matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
   const savedLocale = store.get("sf.locale"); const savedTheme = store.get("sf.theme");
@@ -37,6 +42,8 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     projection: null, step: null, fingerprint: null, failure: null, lockMode: "enter", lockNotice: null, hasLock: false,
     version: __APP_VERSION__, confirmRemove: false, removeError: null, removed: false,
   };
+  // Old WebViews without Ed25519 get the typed "update your browser" screen now, not a failure after the scan.
+  void supportsEd25519().then((ok) => { if (!ok && view.screen === "welcome") set({ state: "error" }); }).catch(() => undefined);
   const preview = new URLSearchParams(location.search).has("state");
   let previewOn = preview;
   let dbPromise: Promise<Db> | null = null;
@@ -45,6 +52,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   let updates: UpdateController | null = null;
   let lockState: LockState = { phase: "unset" }; let lockRow: LockRow | null = null; let pendingPin = ""; let returnTo: ScreenId = "welcome";
   let link: ReturnType<typeof takePairingLink> = { kind: "none" };
+  let watcher: Readonly<{ stop(): void }> | null = null;
 
   const derive = (v: View): View => {
     if (v.screen !== "today") return v;
@@ -72,6 +80,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     if (screen === "today") void loadToday();
   };
   async function loadToday(): Promise<void> {
+    if (!options.source) await relay.poll().catch(() => null);
     const r = await source.load().catch(() => null);
     if (!r) return set({ projection: null, state: "error" });
     set(r.ok ? { projection: r.projection as Projection, state: "ready" } : { projection: null, state: r.reason === "unreadable" ? "error" : "empty" });
@@ -82,11 +91,26 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set({ screen: "pair", state: "keygen", step: "signing", failure: null, fingerprint: null }, true);
     const out = await runPairing({
       link: link.link, online: navigator.onLine, keygen: createKeygen(), transport,
-      store: { saveKeys: async (k) => saveDeviceKeys(await getDb(), k), saveCredentials: async (c) => (await getDb()).put("keys", "credentials", c) },
+      store: { saveKeys: async (k) => saveDeviceKeys(await getDb(), k), saveTrust: async (t) => (await getDb()).put("keys", "desktop", t), saveCredentials: async (c) => (await getDb()).put("keys", "credentials", c), discard: async () => { await wipe(); } },
       onStep: (step) => set({ step }),
     });
-    if (out.ok) return set({ state: "waiting", fingerprint: out.fingerprint });
+    if (out.ok) {
+      const pairedAt = Date.now();
+      // Kept so a reload comes back to this screen with the window counted from now (a failed write only loses that).
+      void getDb().then((db) => savePairingRecord(db, { pairedAt, fingerprint: out.fingerprint })).catch(() => undefined);
+      set({ state: "waiting", fingerprint: out.fingerprint, pairedAt }); startWatch(); return;
+    }
     set({ state: out.reason === "expired" ? "stale" : out.reason === "offline" ? "offline" : "error", failure: out.reason, fingerprint: out.fingerprint ?? null });
+  }
+  async function resumeWaiting(): Promise<void> {
+    const r = await readResume(await getDb(), Date.now());
+    if (r.kind === "none") return;
+    const patch: Partial<View> = r.kind === "waiting"
+      ? { state: "waiting", failure: null, fingerprint: r.fingerprint || null, pairedAt: r.pairedAt }
+      : { state: "error", failure: "approval_timeout", fingerprint: r.fingerprint || null, pairedAt: r.pairedAt };
+    // A PIN lock stays in front; it returns to this screen after the PIN.
+    if (view.screen === "lock") { returnTo = "pair"; set(patch); } else set({ screen: "pair", ...patch }, true);
+    if (r.kind === "waiting") startWatch(r.remainingMs);
   }
   async function submitLock(pin: string): Promise<void> {
     if (view.lockMode === "set") {
@@ -113,13 +137,33 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set({ lockNotice: next.allowed ? { kind: "wrong", left: next.triesLeft } : { kind: "wait", seconds: next.waitSeconds } });
     if (!next.allowed) setTimeout(() => set({ lockNotice: null }), next.waitSeconds * 1000);
   }
-  async function removePhone(): Promise<void> {
+  function startWatch(timeoutMs?: number): void {
+    watcher?.stop();
+    watcher = watchApproval({
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+      poll: async () => { const r = await relay.poll(); return r.kind === "updated" || r.kind === "unchanged" ? "approved" : r.kind === "pending" ? "pending" : r.kind === "revoked" ? "revoked" : "retry"; },
+      now: Date.now, setTimer: (run, ms) => setTimeout(run, ms), clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+      isHidden: () => document.visibilityState === "hidden",
+      onVisibilityChange: (run) => { document.addEventListener("visibilitychange", run); return () => document.removeEventListener("visibilitychange", run); },
+      onEnd: (end) => {
+        watcher = null;
+        if (view.screen !== "pair") return;
+        if (end === "approved") go("today");
+        else set({ state: "error", failure: end === "timeout" ? "approval_timeout" : "rejected" }, true);
+      },
+    });
+  }
+  async function wipe(): ReturnType<typeof wipeAll> {
+    watcher?.stop(); watcher = null;
     const db = await getDb().catch(() => null); dbPromise = null;
-    const result = await wipeAll({
+    return wipeAll({
       db, factory: indexedDB, caches: typeof caches === "undefined" ? null : caches,
       unregister: async () => { const regs = (await navigator.serviceWorker?.getRegistrations()) ?? []; await Promise.all(regs.map((r) => r.unregister())); },
       storage: { keys: () => { try { return Object.keys(localStorage); } catch { return []; } }, remove: (k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } } },
     });
+  }
+  async function removePhone(): Promise<void> {
+    const result = await wipe();
     set(result.ok ? { removed: true, confirmRemove: false, hasLock: false, projection: null } : { removeError: result.failed.join(", "), confirmRemove: false });
   }
 
@@ -133,6 +177,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     switch (el.dataset.act) {
       case "install": void installEvent?.prompt().then(() => { installEvent = null; set({ canInstall: false }); }); break;
       case "go-pair": go("pair"); break;
+      case "restart-pair": link = { kind: "none" }; go("pair"); break;
       case "retry": if (view.screen === "pair") { if (link.kind === "link") void pair(); else go("pair"); } else go(view.screen); break;
       case "update": updates?.apply(); break;
       case "remove": set({ confirmRemove: true }); break;
@@ -163,6 +208,8 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     lockRow = row; lockState = initialState(true, row); returnTo = view.screen === "lock" ? "welcome" : view.screen;
     set({ hasLock: true, screen: "lock", lockMode: "enter", lockNotice: null });
   }).catch(() => undefined);
+  // A reload while the PC has not approved yet: back to the waiting screen, polling from the start of the backoff.
+  if (link.kind === "none" && !preview) void resumeWaiting().catch(() => undefined);
   if (link.kind === "invalid") set({ screen: "pair", state: "error", failure: "invalid_link" });
   else if (link.kind === "link") void pair();
   else if (view.screen === "today") void loadToday();

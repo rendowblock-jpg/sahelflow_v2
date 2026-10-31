@@ -12,6 +12,7 @@ import {
   type ConnectedEnvelope,
 } from "../../src/lib/connected-platform/protocol";
 import { allowedOrigin, corsHeaders, parseAllowedOrigins } from "./cors";
+import { parseDesktopKeyProofField } from "./key-proof";
 import { RATE_PRUNE_BATCH, RATE_RULES, decideRate, pruneBeforeMs, windowStartMs, type RateBucket } from "./rate-limit";
 
 type D1RunResult = {
@@ -66,6 +67,7 @@ type PairingRow = {
   token_hash: string;
   expires_at: string;
   consumed_at: string | null;
+  desktop_key_proof: string | null;
 };
 
 type DeviceRow = {
@@ -658,10 +660,12 @@ async function putCommandPolicy(
 async function createPairing(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
   let body: unknown;
   try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
-  const input = body as { workspaceId?: unknown; memberId?: unknown; deviceId?: unknown };
+  const input = body as { workspaceId?: unknown; memberId?: unknown; deviceId?: unknown; desktopKeyProof?: unknown };
   if (!validIdentity(input.workspaceId) || !validIdentity(input.memberId) || !validIdentity(input.deviceId)) {
     return json({ error: "invalid_request" }, 400);
   }
+  const keyProof = parseDesktopKeyProofField(input.desktopKeyProof);
+  if (!keyProof.ok) return json({ error: "invalid_key_proof" }, 400);
   const workspace = await authenticateDesktop(request, environment, input.workspaceId);
   if (!workspace) return json({ error: "unauthorized" }, 401);
   const pairingId = `pair_${crypto.randomUUID().replace(/-/g, "")}`;
@@ -670,8 +674,8 @@ async function createPairing(request: Request, environment: ConnectedWorkerEnvir
   const expiresAt = new Date(Date.now() + PAIRING_TTL_MS).toISOString();
   const result = await environment.DB.prepare(
     `INSERT INTO connected_pairing
-      (pairing_id, workspace_id, member_id, device_id, token_hash, expires_at)
-     SELECT ?1, ?2, ?3, ?4, ?5, ?6
+      (pairing_id, workspace_id, member_id, device_id, token_hash, expires_at, desktop_key_proof)
+     SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?9
       WHERE NOT EXISTS (
         SELECT 1 FROM connected_device
          WHERE workspace_id = ?2 AND device_id = ?4 AND revoked_at IS NULL
@@ -718,6 +722,7 @@ async function createPairing(request: Request, environment: ConnectedWorkerEnvir
     expiresAt,
     workspace.device_limit,
     workspace.member_limit,
+    keyProof.proof,
   ).run();
   if (!result.success) return json({ error: "pairing_unavailable" }, 503);
   if (result.meta?.changes !== 1) return json({ error: "entitlement_limit_reached" }, 403);
@@ -750,7 +755,8 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
   if (locked) return locked;
   const tokenHash = await sha256Hex(input.pairingToken);
   const pairing = await environment.DB.prepare(
-    `SELECT pairing_id, workspace_id, member_id, device_id, token_hash, expires_at, consumed_at
+    `SELECT pairing_id, workspace_id, member_id, device_id, token_hash, expires_at, consumed_at,
+            desktop_key_proof
        FROM connected_pairing
       WHERE pairing_id = ?1 AND token_hash = ?2`,
   ).bind(input.pairingId, tokenHash).first<PairingRow>();
@@ -829,6 +835,7 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
     deviceToken,
     desktopSigningPublicKey: workspace.desktop_signing_public_key,
     desktopEncryptionPublicKey: workspace.desktop_encryption_public_key,
+    desktopKeyProof: pairing.desktop_key_proof ?? null,
     revocationEpoch: workspace.entitlement_revocation_epoch,
   }, 201);
 }
@@ -838,7 +845,8 @@ async function listDevices(request: Request, environment: ConnectedWorkerEnviron
   if (!validIdentity(workspaceId)) return json({ error: "invalid_request" }, 400);
   if (!(await authenticateDesktop(request, environment, workspaceId))) return json({ error: "unauthorized" }, 401);
   const result = await environment.DB.prepare(
-    `SELECT device_id, member_id, signing_public_key, encryption_public_key, revocation_epoch, last_seen_at
+    `SELECT device_id, member_id, signing_public_key, encryption_public_key, revocation_epoch, last_seen_at,
+            created_at, revoked_at
        FROM connected_device WHERE workspace_id = ?1 AND revoked_at IS NULL ORDER BY created_at ASC`,
   ).bind(workspaceId).all<{
     device_id: string;
@@ -847,6 +855,8 @@ async function listDevices(request: Request, environment: ConnectedWorkerEnviron
     encryption_public_key: string;
     revocation_epoch: number;
     last_seen_at: string | null;
+    created_at: string;
+    revoked_at: string | null;
   }>();
   return json({ devices: result.results ?? [] });
 }
@@ -981,7 +991,9 @@ async function getProjection(request: Request, environment: ConnectedWorkerEnvir
   const deviceId = url.searchParams.get("deviceId");
   const shopId = url.searchParams.get("shopId");
   const type = url.searchParams.get("type");
-  if (!validIdentity(workspaceId) || !validIdentity(deviceId) || !validIdentity(shopId) || !type || !/^[a-z0-9._-]{2,95}$/.test(type)) {
+  // shopId is OPTIONAL: a freshly paired phone does not know it (the exchange reply carries none). Absent = "the
+  // device's own live projection"; present but malformed is still a 400.
+  if (!validIdentity(workspaceId) || !validIdentity(deviceId) || (shopId !== null && !validIdentity(shopId)) || !type || !/^[a-z0-9._-]{2,95}$/.test(type)) {
     return json({ error: "invalid_request" }, 400);
   }
   const sinceRaw = url.searchParams.get("sinceSequence");
@@ -991,11 +1003,27 @@ async function getProjection(request: Request, environment: ConnectedWorkerEnvir
   if (!device) return json({ error: "unauthorized" }, 401);
   const limited = await hitRate(environment, "projection_get", `${workspaceId}:${deviceId}`);
   if (limited) return limited;
-  const row = await environment.DB.prepare(
-    `SELECT envelope_json, expires_at, sequence FROM connected_projection
-      WHERE workspace_id = ?1 AND shop_id = ?2 AND device_id = ?3 AND member_id = ?4 AND projection_type = ?5`,
-  ).bind(workspaceId, shopId, deviceId, device.member_id, type).first<{ envelope_json: string; expires_at: string; sequence: number }>();
-  if (!row || Date.parse(row.expires_at) <= Date.now()) return json({ error: "projection_unavailable" }, 404);
+  type ProjectionRow = { shop_id: string; envelope_json: string; expires_at: string; sequence: number };
+  let row: ProjectionRow | null;
+  if (shopId !== null) {
+    row = await environment.DB.prepare(
+      `SELECT shop_id, envelope_json, expires_at, sequence FROM connected_projection
+        WHERE workspace_id = ?1 AND shop_id = ?2 AND device_id = ?3 AND member_id = ?4 AND projection_type = ?5`,
+    ).bind(workspaceId, shopId, deviceId, device.member_id, type).first<ProjectionRow>();
+    if (row && Date.parse(row.expires_at) <= Date.now()) row = null;
+  } else {
+    // Scoped to THIS device and member, like the query above. Zero live shops = not approved yet (404); one = serve it;
+    // more = the phone must choose (409 with the ids, which are the device's own).
+    const found = await environment.DB.prepare(
+      `SELECT shop_id, envelope_json, expires_at, sequence FROM connected_projection
+        WHERE workspace_id = ?1 AND device_id = ?2 AND member_id = ?3 AND projection_type = ?4
+        ORDER BY shop_id ASC LIMIT 20`,
+    ).bind(workspaceId, deviceId, device.member_id, type).all<ProjectionRow>();
+    const live = (found.results ?? []).filter((candidate) => Date.parse(candidate.expires_at) > Date.now());
+    if (live.length > 1) return json({ error: "shop_required", shops: live.map((candidate) => candidate.shop_id) }, 409);
+    row = live[0] ?? null;
+  }
+  if (!row) return json({ error: "projection_unavailable" }, 404);
   // Weak ETag from (device, kind, sequence): a newer sequence is the only way the body changes.
   const etag = `W/"${deviceId}.${type}.${row.sequence}"`;
   const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", ETag: etag };

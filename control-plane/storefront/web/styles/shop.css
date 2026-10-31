@@ -105,9 +105,8 @@ body[data-voice=sahara] .sf-brand b{font-size:15px;letter-spacing:.16em;text-tra
 .sf-mono{flex:none;width:38px;height:38px;border-radius:var(--rc);background:var(--primary);color:var(--primary-foreground);display:grid;place-items:center;font:700 16px var(--sf-display)}
 body[data-voice=sahara] .sf-mono{border-radius:50%}
 body[data-voice=oasis] .sf-mono{border-radius:50% 50% 50% 8px}
-.sf-lang{display:inline-flex;padding:3px;border-radius:999px;background:var(--accent);font-size:12px;font-weight:700}
-.sf-lang-i{position:relative;min-width:40px;height:32px;display:inline-grid;place-items:center;border-radius:999px;text-decoration:none;color:var(--muted-foreground);transition:background-color .2s,color .2s}
-.sf-lang-i::after{content:"";position:absolute;inset:-6px -2px}
+.sf-lang{display:inline-flex;padding:0;border-radius:999px;background:var(--accent);font-size:12px;font-weight:700}
+.sf-lang-i{position:relative;min-width:44px;height:44px;display:inline-grid;place-items:center;border-radius:999px;text-decoration:none;color:var(--muted-foreground);transition:background-color .2s,color .2s}
 .sf-lang-i[aria-current]{background:var(--background);color:var(--foreground);box-shadow:var(--sh1)}
 
 /* ---- type and buttons ---- */
@@ -387,7 +386,7 @@ body[data-voice=sahara] .sf-buy{border-radius:36px 36px 0 0}
 body[data-voice=sahara] .sf-foot strong{letter-spacing:.06em}
 html[lang=ar] .sf-foot strong{line-height:1.4}
 html:not([lang=ar]) .sf-foot strong:lang(ar){line-height:1.4}
-.sf-foot small{font-size:12px;opacity:.8}
+.sf-foot small{font-size:12px}
 
 /* words stay whole. The page-wide overflow-wrap:anywhere (a safety net for long product names) let small boxes shrink to one letter and break words in the middle ("téléphoniqu|e"). Short labels now keep their word width and the box next to them shrinks instead. Measured with a probe over 5 styles x 3 pages x ar/fr/en x 320/360/390/430 px. */
 .sf-trust li>span:not(.sf-chip){min-width:0;overflow-wrap:normal}
@@ -395,20 +394,22 @@ html:not([lang=ar]) .sf-foot strong:lang(ar){line-height:1.4}
 @media (max-width:359px){.sf-trust{grid-template-columns:1fr}}
 .sf-sum dt{flex:0 0 auto;max-width:60%}
 body[data-voice] .sf-sticky .sf-cta--bar{min-width:max-content;padding-inline:14px;overflow-wrap:normal}
-@media (max-width:389px){body[data-voice] .sf-head .sf-lang-i{min-width:36px}body[data-voice] .sf-head .sf-nav a{padding-inline:8px}}
-@media (max-width:359px){body[data-voice] .sf-head .sf-lang-i{min-width:32px}body[data-voice] .sf-head .sf-nav a{padding-inline:6px}}
+@media (max-width:389px){body[data-voice] .sf-head .sf-nav a{padding-inline:8px}}
+@media (max-width:359px){body[data-voice] .sf-head .sf-nav a{padding-inline:6px}}
 @media (max-width:359px){body[data-voice] .sf-head .sf-mono{width:30px;height:30px;font-size:14px}body[data-voice] .sf-head .sf-brand{gap:6px}body[data-voice] .sf-head .sf-brand b{font-size:14px}}
 /* plain notice pages (not found, paused, error): no theme variables on <body> */
 .sf-notice{display:grid;min-height:100vh;min-height:100dvh;place-items:center;padding:2rem;text-align:center;background:#fafaf9;color:#1c1917}
 .sf-notice h1{font-size:1.25rem;font-weight:700;margin:0}
 .sf-notice p{margin:.5rem 0 0;color:#57534e}
+[data-sf=photo-missing]{background:var(--accent)}
+.sf-notice-link{display:inline-flex;align-items:center;min-height:44px;margin-top:1.25rem;padding:0 1.25rem;border-radius:12px;background:#1c1917;color:#fafaf9;font-weight:700;text-decoration:none}
 
 @media (prefers-reduced-motion:reduce){*,::before,::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.sf-blob{display:none}}
 
 /* Windows High Contrast (forced-colors): the system drops background colours and shadows, which is how the selected size/colour chip, the buttons' edges and the field focus are drawn above. Here they come back as borders and outlines in system colours. Nothing outside this block changes. The selected rules start with `body` so a style's own `.sf-pill span` border cannot outrank them. */
 @media (forced-colors:active){
 :focus-visible,.sf-field input:focus,.sf-field select:focus,.sf-field textarea:focus,.sf-pill input:focus-visible+span,.sf-mode input:focus-visible+.sf-mode-in{outline:2px solid Highlight;outline-offset:2px}
-.sf-btn,.sf-cta,.sf-stepper button,.sf-chips span,.sf-chip{border:1px solid ButtonText}
+.sf-btn,.sf-cta,.sf-notice-link,.sf-stepper button,.sf-chips span,.sf-chip{border:1px solid ButtonText}
 .sf-field input,.sf-field select,.sf-field textarea,.sf-stepper,.sf-pill span,.sf-mode-in{border:1.5px solid ButtonText}
 .sf-search-list{border:1.5px solid ButtonText}
 .sf-opt.is-active{outline:3px solid Highlight;outline-offset:-3px;border-inline-start-color:Highlight}
@@ -416,3 +417,7 @@ body .sf-pill input:checked+span{border:3px solid Highlight;padding-inline:18.5p
 body .sf-mode input:checked+.sf-mode-in{border:3px solid Highlight;padding:10.5px 12.5px}
 .sf-cta::after{display:none}
 }
+
+/* A photo that fails to load shows its alt text on a plain surface, not the browser's broken-image icon. */
+img{position:relative}
+img::before{content:attr(alt);position:absolute;inset:0;display:grid;place-items:center;padding:8px;overflow:hidden;background:var(--accent);color:var(--muted-foreground);font-size:13px;text-align:center}

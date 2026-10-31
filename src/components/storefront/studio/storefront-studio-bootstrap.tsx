@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -88,6 +88,8 @@ export function StorefrontStudioBootstrap({ products }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState<Step>("brand");
+  const formRef = useRef<HTMLDivElement>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [attempted, setAttempted] = useState<Partial<Record<Step, boolean>>>({});
   const [device, setDevice] = useState<StorefrontStudioDevice>("desktop");
 
@@ -169,9 +171,17 @@ export function StorefrontStudioBootstrap({ products }: Props) {
     setSlug((current) => (current === slugify(name) || current === "" ? slugify(value) : current));
   }
 
+  // The error is announced in an alert; keyboard and screen-reader users land on the field it is about.
+  function focusFirstInvalid() {
+    window.setTimeout(() => {
+      formRef.current?.querySelector<HTMLElement>("[aria-invalid='true']")?.focus();
+    }, 0);
+  }
+
   function next() {
     if (errors[step]) {
       setAttempted((current) => ({ ...current, [step]: true }));
+      focusFirstInvalid();
       return;
     }
     const following = STEPS[index + 1];
@@ -183,11 +193,13 @@ export function StorefrontStudioBootstrap({ products }: Props) {
     if (firstInvalid) {
       setStep(firstInvalid);
       setAttempted((current) => ({ ...current, [firstInvalid]: true }));
-      toast.error(errors[firstInvalid] ?? t("storefront.builder.error.generic"));
+      focusFirstInvalid();
       return;
     }
 
     startTransition(async () => {
+      setSubmitError(null);
+      let reason: string | null = null;
       try {
         const response = await fetch("/api/storefront/config", {
           method: "POST",
@@ -208,19 +220,27 @@ export function StorefrontStudioBootstrap({ products }: Props) {
         });
         if (!response.ok) {
           const data = (await response.json().catch(() => ({}))) as { error?: unknown };
-          throw new Error(translateServerError(data.error, t, t("storefront.builder.error.createFailed")));
+          reason = translateServerError(data.error, t, t("storefront.builder.error.createFailed"));
+          throw new Error(reason);
         }
         const data = (await response.json()) as { config: { id: string } };
         toast.success(t("storefront.builder.created"));
         router.push(`/storefronts/${encodeURIComponent(data.config.id)}`);
         router.refresh();
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : t("storefront.builder.error.generic"));
+      } catch {
+        // Persistent and linked to nothing that disappears: the form below keeps everything typed.
+        setSubmitError(
+          t("storefront.studioStates.create.failed", {
+            reason: reason ?? t("storefront.studioStates.failure.noConnection"),
+          }),
+        );
       }
     });
   }
 
   const shownError = attempted[step] ? errors[step] : null;
+  const nameInvalid = step === "brand" && Boolean(shownError) && name.trim().length === 0;
+  const slugInvalid = step === "brand" && Boolean(shownError) && !nameInvalid;
 
   return (
     <div data-storefront-studio="bootstrap" className="flex h-full min-h-0 flex-1 flex-col bg-background">
@@ -285,7 +305,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
             <h3 className="mt-1.5 text-title-2 font-semibold">{t(`storefront.wizard.${step}Title`)}</h3>
             <p className="mt-1.5 text-body-sm leading-5 text-muted-foreground">{t(`storefront.wizard.${step}Hint`)}</p>
 
-            <div className="mt-6 space-y-5">
+            <div ref={formRef} className="mt-6 space-y-5">
               {step === "brand" ? (
                 <>
                   <TextField
@@ -293,6 +313,8 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                     value={name}
                     maxLength={100}
                     placeholder={t("storefront.builder.shopNamePlaceholder")}
+                    invalid={nameInvalid}
+                    describedBy={nameInvalid ? "wizard-step-error" : undefined}
                     onChange={handleNameChange}
                   />
                   <div className="space-y-1.5">
@@ -309,11 +331,13 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                         value={slug}
                         maxLength={50}
                         spellCheck={false}
+                        aria-invalid={slugInvalid || undefined}
+                        aria-describedby={slugInvalid ? "wizard-step-error wizard-slug-hint" : "wizard-slug-hint"}
                         onChange={(event) => setSlug(slugify(event.target.value))}
                         className="h-full min-w-0 flex-1 bg-transparent px-3 font-mono text-body-sm outline-none"
                       />
                     </div>
-                    <p className="text-caption text-muted-foreground">{t("storefront.wizard.urlHint")}</p>
+                    <p id="wizard-slug-hint" className="text-caption text-muted-foreground">{t("storefront.wizard.urlHint")}</p>
                   </div>
                   <TextAreaField
                     label={t("storefront.builder.description")}
@@ -391,8 +415,17 @@ export function StorefrontStudioBootstrap({ products }: Props) {
               ) : null}
 
               {shownError ? (
-                <p role="alert" className="rounded-control border border-destructive/30 bg-destructive-soft px-3 py-2 text-body-sm text-destructive">
+                <p id="wizard-step-error" role="alert" className="rounded-control border border-destructive/30 bg-destructive-soft px-3 py-2 text-body-sm text-destructive">
                   {shownError}
+                </p>
+              ) : null}
+              {submitError ? (
+                <p
+                  role="alert"
+                  data-testid="wizard-submit-error"
+                  className="rounded-control border border-destructive/30 bg-destructive-soft px-3 py-2 text-body-sm text-destructive"
+                >
+                  {submitError}
                 </p>
               ) : null}
             </div>

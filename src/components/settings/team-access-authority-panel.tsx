@@ -600,7 +600,7 @@ export function TeamAccessAuthorityPanel() {
                     ) : null}
                   </p>
                   <p className="mt-0.5 flex flex-wrap gap-x-3 text-body-sm text-muted-foreground">
-                    <span dir="ltr" className="font-mono">
+                    <span dir="ltr" className="min-w-0 font-mono [overflow-wrap:anywhere]">
                       {member.loginId}
                     </span>
                     <span>
@@ -733,7 +733,7 @@ export function TeamAccessAuthorityPanel() {
                   className="font-normal text-muted-foreground"
                 >
                   <span dir="auto">{member.displayName}</span>
-                  <span dir="ltr" className="ms-1 font-mono">
+                  <span dir="ltr" className="ms-1 min-w-0 font-mono [overflow-wrap:anywhere]">
                     ({member.loginId})
                   </span>
                 </Badge>

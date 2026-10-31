@@ -19,7 +19,18 @@ export type DashboardFieldAccess = Readonly<{
   risk: boolean;
 }>;
 
+/**
+ * Exact counts the desktop read for the phone's Today screen. null or missing
+ * means "unknown" (not asked, or the read failed); 0 is a real answer.
+ */
+export type DashboardTodayCounts = Readonly<{
+  ordersWaiting?: number | null;
+  whatsappHeld?: number | null;
+  codToCollectDzd?: number | null;
+}>;
+
 type DashboardProjectionSource = Readonly<{
+  todayCounts?: DashboardTodayCounts;
   stats: Readonly<{
     ordersToday: number;
     ordersTrend: number;
@@ -98,6 +109,32 @@ export function resolveDashboardFieldAccess(
   });
 }
 
+function isWholeCount(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+/**
+ * The phone's exact numbers. A key exists only when the viewer may see it AND
+ * the desktop has a real answer: absent = unknown, never null, never a made-up 0.
+ */
+function todayCountsForActor(
+  counts: DashboardTodayCounts,
+  fieldAccess: DashboardFieldAccess,
+): { ordersWaiting?: number; whatsappHeld?: number; codToCollectDzd?: number } {
+  const out: { ordersWaiting?: number; whatsappHeld?: number; codToCollectDzd?: number } = {};
+  if (fieldAccess.orders && isWholeCount(counts.ordersWaiting)) {
+    out.ordersWaiting = counts.ordersWaiting;
+  }
+  if (fieldAccess.conversations && isWholeCount(counts.whatsappHeld)) {
+    out.whatsappHeld = counts.whatsappHeld;
+  }
+  // A money amount: same gate as the order totals.
+  if (fieldAccess.orderFinancials && isWholeCount(counts.codToCollectDzd)) {
+    out.codToCollectDzd = counts.codToCollectDzd;
+  }
+  return out;
+}
+
 /** Project the server-rendered dashboard into the actor's exact allowlist. */
 export function projectDashboardForTrustedActor(
   source: DashboardProjectionSource,
@@ -125,6 +162,7 @@ export function projectDashboardForTrustedActor(
     lowStockProducts: fieldAccess.products
       ? source.stats.lowStockProducts
       : null,
+    ...todayCountsForActor(source.todayCounts ?? {}, fieldAccess),
   });
 
   const recentOrders = fieldAccess.orders

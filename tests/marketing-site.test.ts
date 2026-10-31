@@ -384,7 +384,7 @@ describe("sahelflow.com claims on the built pages", () => {
     }
   });
 
-  it("renders every integration card and marquee tile with its registry status and label", () => {
+  it("shows all 13 integrations on the integrations page and the home marquee, each with its registry status and label", () => {
     const brands = Object.keys(model.BRAND_NAMES);
     for (const locale of SITE.locales) {
       const integrations = pages.get(`${locale}/integrations`) ?? "";
@@ -396,7 +396,8 @@ describe("sahelflow.com claims on the built pages", () => {
         expect(status, `${locale} ${id}`).toBe(claims.integrationStatus(id));
         expect(builtText(card[2] ?? ""), `${locale} ${id}`).toContain(claims.integrationLabel(id, locale));
       }
-      for (const page of ["home", "integrations"]) {
+      // The integrations page is the list of cards above; the marquee of tiles is on the home page.
+      for (const page of ["home"]) {
         const html = pages.get(`${locale}/${page}`) ?? "";
         const tiles = [...html.matchAll(/<li data-status="([^"]*)"[^>]*>([\s\S]*?)<\/li>/g)];
         expect(tiles.length, `${locale} ${page} marquee tiles`).toBe(brands.length);

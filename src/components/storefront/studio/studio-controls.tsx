@@ -46,6 +46,8 @@ export function TextField({
   type = "text",
   dir,
   hint,
+  invalid = false,
+  describedBy,
 }: {
   label: string;
   value: string;
@@ -55,6 +57,10 @@ export function TextField({
   type?: "text" | "url" | "email" | "tel";
   dir?: "ltr" | "auto";
   hint?: string;
+  /** Marks the field as the one the current error is about. */
+  invalid?: boolean;
+  /** id(s) of the element(s) that explain the field, e.g. its error. */
+  describedBy?: string;
 }) {
   const id = useId();
   return (
@@ -74,6 +80,8 @@ export function TextField({
         value={value}
         maxLength={maxLength}
         placeholder={placeholder}
+      aria-invalid={invalid || undefined}
+      aria-describedby={describedBy}
         inputMode={type === "tel" ? "tel" : undefined}
         onChange={(event) => onChange(event.target.value)}
       />

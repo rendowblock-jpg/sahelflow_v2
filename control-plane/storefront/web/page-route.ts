@@ -2,7 +2,7 @@ import { validPublicArtifact, type PublicArtifact } from "../shared";
 import { withMotherFeeFallback } from "../wilaya-fallback";
 import type { StorefrontWorkerEnvironment } from "../types";
 import { parsePublicLocale, type PublicLocale } from "./locale";
-import { renderNoticePage, type NoticeKind } from "./notice-page";
+import { noticeExit, renderNoticePage, type NoticeKind } from "./notice-page";
 import type { ShippingRow } from "./shop/ui";
 import type { RenderStorePage, StockRow } from "./types";
 import type { Assets } from "./shop/ui";
@@ -66,7 +66,8 @@ function htmlResponse(
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Content-Language": locale,
-      "Cache-Control": ttlSeconds > 0 ? `public, max-age=${ttlSeconds}` : "no-store",
+      // no-transform: Cloudflare then leaves the page alone and does not inject its analytics beacon, which our CSP would block (one console error per page).
+      "Cache-Control": `${ttlSeconds > 0 ? `public, max-age=${ttlSeconds}` : "no-store"}, no-transform`,
       "Content-Security-Policy": CONTENT_SECURITY_POLICY,
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -84,8 +85,9 @@ function notice(
   deps: PageDeps,
   ttlSeconds: number,
   extra: Record<string, string> = {},
+  exitHref: string | null = null,
 ): Built {
-  const html = renderNoticePage({ locale, kind, cssPath: deps.assets.css });
+  const html = renderNoticePage({ locale, kind, cssPath: deps.assets.css, exitHref });
   return {
     response: htmlResponse(html, status, locale, deps.assets.css, ttlSeconds, extra),
     cacheable: ttlSeconds > 0,
@@ -149,7 +151,7 @@ async function build(
     }
   } catch (error) {
     logFailure("database", slug, error);
-    return notice("error", 503, requested ?? "ar", deps, 0, { "Retry-After": "30" });
+    return notice("error", 503, requested ?? "ar", deps, 0, { "Retry-After": "30" }, noticeExit("error", slug, productId, requested));
   }
 
   const fallbackLocale = requested ?? row?.locale ?? "ar";
@@ -157,7 +159,7 @@ async function build(
     return notice("notFound", 404, fallbackLocale, deps, NOTICE_TTL_SECONDS);
   }
   if (row.state !== "active") {
-    return notice("paused", 503, fallbackLocale, deps, NOTICE_TTL_SECONDS, { "Retry-After": "600" });
+    return notice("paused", 503, fallbackLocale, deps, NOTICE_TTL_SECONDS, { "Retry-After": "600" }, noticeExit("paused", slug, null, requested));
   }
 
   let artifact: PublicArtifact;
@@ -167,7 +169,7 @@ async function build(
     artifact = parsed;
   } catch (error) {
     logFailure("artifact", slug, error);
-    return notice("error", 503, fallbackLocale, deps, 0, { "Retry-After": "300" });
+    return notice("error", 503, fallbackLocale, deps, 0, { "Retry-After": "300" }, noticeExit("error", slug, productId, requested));
   }
 
   const stock = new Map<string, StockRow>(
@@ -200,11 +202,11 @@ async function build(
       shipping: rules,
       productId,
     });
-    if (html === null) return notice("notFound", 404, locale, deps, NOTICE_TTL_SECONDS);
+    if (html === null) return notice("productNotFound", 404, locale, deps, NOTICE_TTL_SECONDS, {}, noticeExit("productNotFound", slug, productId, requested));
     return { response: htmlResponse(html, 200, locale, deps.assets.css, PAGE_TTL_SECONDS), cacheable: true };
   } catch (error) {
     logFailure("render", slug, error);
-    return notice("error", 500, locale, deps, 0, { "Retry-After": "300" });
+    return notice("error", 500, locale, deps, 0, { "Retry-After": "300" }, noticeExit("error", slug, productId, requested));
   }
 }
 
@@ -214,7 +216,7 @@ function withCacheState(response: Response, state: "hit" | "miss"): Response {
   // The copy kept at the edge lives for max-age seconds. A browser must not keep the page at all: the zone's default
   // 4-hour Browser Cache TTL would stretch a cacheable page to 4 hours, and a returning visitor would see an old price,
   // stock level or paused store for hours (measured on staging, 19 Oct). Failures stay "no-store".
-  if ((copy.headers.get("Cache-Control") ?? "").startsWith("public")) copy.headers.set("Cache-Control", "no-cache");
+  if ((copy.headers.get("Cache-Control") ?? "").startsWith("public")) copy.headers.set("Cache-Control", "no-cache, no-transform");
   return copy;
 }
 

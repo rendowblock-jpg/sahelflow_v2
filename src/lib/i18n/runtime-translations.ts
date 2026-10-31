@@ -5,6 +5,8 @@ import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
 import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
 import { getPreUpdateBackupRuntimeTranslation } from "@/lib/i18n/pre-update-backup-runtime";
+import { getStorefrontStudioStatesRuntimeTranslation } from "@/lib/i18n/storefront-studio-states-runtime";
+import { getStorefrontPublicStatesRuntimeTranslation } from "@/lib/i18n/storefront-public-states-runtime";
 import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
@@ -33,8 +35,10 @@ import { getOrderFormRuntimeTranslation } from "@/lib/i18n/order-form-runtime";
 import { getOrderLifecycleRuntimeTranslation } from "@/lib/i18n/order-lifecycle-runtime";
 import { getOrdersWorkspaceTranslation } from "@/lib/i18n/orders-workspace";
 import { getPhase5RuntimeTranslation } from "@/lib/i18n/phase5-runtime";
+import { getPhonePairingRuntimeTranslation } from "@/lib/i18n/phone-pairing-runtime";
 import { getPluralsRuntimeTranslation } from "@/lib/i18n/plurals-runtime";
 import { getSecurityRuntimeTranslation } from "@/lib/i18n/security-runtime";
+import { getSettingsPanelsStatesRuntimeTranslation } from "@/lib/i18n/settings-panels-states-runtime";
 import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 import { getWorkspacesRuntimeTranslation } from "@/lib/i18n/workspaces-runtime";
@@ -164,6 +168,8 @@ export function getRuntimeTranslation(
     getWhatsAppSendGuardRuntimeTranslation(locale, key) ??
     getHeldSendRuntimeTranslation(locale, key) ??
     getPreUpdateBackupRuntimeTranslation(locale, key) ??
+    getStorefrontStudioStatesRuntimeTranslation(locale, key) ??
+    getStorefrontPublicStatesRuntimeTranslation(locale, key) ??
     getAnalyticsRuntimeTranslation(locale, key) ??
     getAutomationRuntimeTranslation(locale, key) ??
     getCodRuntimeTranslation(locale, key) ??
@@ -192,7 +198,9 @@ export function getRuntimeTranslation(
     getOrdersWorkspaceTranslation(locale, key) ??
     getFirstRunStatesRuntimeTranslation(locale, key) ??
     getPhase5RuntimeTranslation(locale, key) ??
+    getPhonePairingRuntimeTranslation(locale, key) ??
     getSecurityRuntimeTranslation(locale, key) ??
+    getSettingsPanelsStatesRuntimeTranslation(locale, key) ??
     getStorefrontRuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key) ??
     getWorkspacesRuntimeTranslation(locale, key) ??

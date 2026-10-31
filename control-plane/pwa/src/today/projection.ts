@@ -9,9 +9,13 @@ export type Projection = Readonly<{
   generatedAt: number;
   newOrders: number;
   toConfirm: number;
+  // true when toConfirm was counted from the few recent orders (a floor), false/absent when the desktop sent the exact total.
+  toConfirmIsFloor?: boolean;
   inDelivery: number;
   codToCollectDzd: number;
   week: readonly DayCount[];
+  // Held WhatsApp messages: shown only when the desktop publishes the count.
+  whatsappHeld?: number | null;
 }>;
 export type ProjectionResult =
   | Readonly<{ ok: true; projection: Projection }>
