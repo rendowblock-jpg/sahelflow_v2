@@ -45,4 +45,19 @@ describe("settings panels: failures are translated, destructive actions use the 
       .map(({ name }) => name);
     expect(offenders).toEqual([]);
   });
+
+  const source = (name: string) => panels.find((panel) => panel.name === name)?.source ?? "";
+
+  it("the AI page says the seller approves before anything is sent, above the AI panels", () => {
+    const pages = source("settings-pages.tsx");
+    const note = pages.indexOf("<AiApprovalNote />");
+    expect(note).toBeGreaterThan(-1);
+    expect(note).toBeLessThan(pages.indexOf("<GeminiRuntimePanel"));
+  });
+
+  it("deleting an AI key uses the shared destructive dialog, not the plain confirm", () => {
+    const aiKey = source("ai-key-panel.tsx");
+    expect(aiKey).toContain("<DestructiveConfirmDialog");
+    expect(aiKey).not.toContain("@/components/shared/confirm-dialog");
+  });
 });

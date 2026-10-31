@@ -94,4 +94,12 @@ describe("the destructive action registry (one contract for every destructive ac
       }
     }
   });
+
+  it("does not promise what the code does not do: the AI key text says nothing about where the key is stored", () => {
+    for (const locale of LOCALES) {
+      const lost = String(getRuntimeTranslation(locale, destructiveKey("revokeAiKey", "lost")));
+      expect(lost, locale).not.toMatch(/this computer|cet ordinateur|هذا الحاسوب/);
+    }
+    expect(getRuntimeTranslation("en", destructiveKey("revokeAiKey", "lost"))).toMatch(/plain rules/);
+  });
 });
