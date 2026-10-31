@@ -1,7 +1,6 @@
 "use client";
 
 import { Clock, Cloud, HardDrive, ImageOff } from "lucide-react";
-import { useParams } from "next/navigation";
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 
 import { useI18n } from "@/hooks/use-i18n";
@@ -108,6 +107,8 @@ export function loadPhotoStatus(storefrontId: string, force = false): Promise<vo
   return inflight;
 }
 
+const subscribeNever = (): (() => void) => () => {};
+
 const VIEW: Readonly<Record<Exclude<PhotoState, "link">, { key: string; Icon: typeof Cloud }>> = {
   hosted: { key: "storefront.photos.hosted", Icon: Cloud },
   waiting: { key: "storefront.photos.waiting", Icon: Clock },
@@ -129,8 +130,9 @@ export function PhotoStateChip({
   storefrontId?: string;
 }) {
   const { t } = useI18n();
-  const params = useParams();
-  const routeId = params && typeof params.id === "string" ? params.id : null;
+  // The Studio lives at /storefronts/<id>/studio. The server snapshot is empty so the first paint matches the server's.
+  const pathname = useSyncExternalStore(subscribeNever, () => window.location.pathname, () => "");
+  const routeId = /^\/storefronts\/([A-Za-z0-9_-]+)\/studio(?:\/|$)/.exec(pathname)?.[1] ?? null;
   const id = storefrontId ?? routeId;
   const view = useSyncExternalStore(subscribe, () => store, () => store);
   const progress = view.data?.progress ?? null;

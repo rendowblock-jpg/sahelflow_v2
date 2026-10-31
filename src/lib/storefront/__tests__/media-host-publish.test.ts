@@ -141,7 +141,8 @@ describe("hostProductPhotos", () => {
     for (const put of fake.log.puts) {
       expect(put.sha).toBe(sha256Hex(put.bytes));
       expect(put.bytes.subarray(8, 12).toString()).toBe("WEBP");
-      expect((await sharp(put.bytes).metadata()).width).toBe(put.width);
+      // The fixture is 900 px wide and a photo is never enlarged.
+      expect((await sharp(put.bytes).metadata()).width).toBe(Math.min(put.width, 900));
       expect(put.bytes.length).toBeLessThanOrEqual(put.width === 640 ? 160 * 1024 : 600 * 1024);
     }
   });
