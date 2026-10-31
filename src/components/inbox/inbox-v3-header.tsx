@@ -4,6 +4,7 @@ import { useState } from "react";
 import { EllipsisVertical, PlugZap, RefreshCw } from "lucide-react";
 
 import { InboxLinkSurface } from "@/components/inbox/inbox-link-surface";
+import { pairingButtonPlacement } from "@/components/inbox/inbox-link-state";
 import { WhatsAppPairingDialog } from "@/components/inbox/whatsapp-pairing-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,10 +109,14 @@ export function InboxV3Header({
     canManageWhatsApp,
     setLogoutConfirmOpen,
   } = workspace;
-  // While the account is waiting to be linked, the link surface's banner owns
-  // the pairing button; showing a second one here would be a second notice.
-  const bannerOwnsPairing =
-    transport.status === "qr" && canManageWhatsApp && transport.reachable !== false;
+  // One problem, one action: while the account waits for a scan the link surface's
+  // banner owns the pairing button, and when the WhatsApp service does not answer
+  // the banner's Retry is the only action (Connect cannot help there).
+  const placement = pairingButtonPlacement({
+    status: transport.status,
+    reachable: transport.reachable,
+    canManage: canManageWhatsApp,
+  });
 
   return (
     <div className="shrink-0 border-b bg-background/95 backdrop-blur-sm">
@@ -145,7 +150,7 @@ export function InboxV3Header({
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />
           </Button>
-          {bannerOwnsPairing ? null : <WhatsAppPairingDialog workspace={workspace} />}
+          {placement === "header" ? <WhatsAppPairingDialog workspace={workspace} /> : null}
           {transport.status === "connected" && canManageWhatsApp ? (
             <Button
               type="button"
