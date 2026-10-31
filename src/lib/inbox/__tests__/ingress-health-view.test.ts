@@ -44,7 +44,7 @@ describe("the thresholds are the Founder's numbers", () => {
 });
 
 describe("grey note: last customer message (Q4)", () => {
-  const cases: Array<[string, string, number | null, number | undefined]> = [
+  const cases: Array<[string, string | null | undefined, number | null, number | undefined]> = [
     ["5h59m", "connected", 5 * H + 59 * MIN, undefined],
     ["exactly 6h (not older than 6h)", "connected", 6 * H, undefined],
     ["6h and 1 ms", "connected", 6 * H + 1, 6],

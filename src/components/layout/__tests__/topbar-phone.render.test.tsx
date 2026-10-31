@@ -117,10 +117,18 @@ const barButtons = () => within(bar()).getAllByRole("button");
 const barNames = () => barButtons().map((button) => button.getAttribute("aria-label"));
 const badge = () => bar().querySelector('[data-slot="notification-count"]') as HTMLElement | null;
 
+// The avatar is the last button of the bar; fail loudly when the bar has no button at all.
+function lastBarButton(): HTMLElement {
+  const buttons = barButtons();
+  const last = buttons[buttons.length - 1];
+  if (!last) throw new Error("the top bar has no button");
+  return last;
+}
+
 async function openAvatarMenu() {
   const user = userEvent.setup();
-  const buttons = barButtons();
-  await user.click(buttons[buttons.length - 1]);
+  const avatarButton = lastBarButton();
+  await user.click(avatarButton);
   const menu = await screen.findByRole("menu");
   return { user, menu };
 }
@@ -225,8 +233,7 @@ describe("top bar on a phone (under 768 px)", () => {
   it("opens the avatar menu with Enter, closes it with Escape and returns focus to the avatar", async () => {
     mount();
     const user = userEvent.setup();
-    const buttons = barButtons();
-    const avatar = buttons[buttons.length - 1];
+    const avatar = lastBarButton();
     avatar.focus();
     await user.keyboard("{Enter}");
     expect(await screen.findByRole("menu")).toBeInTheDocument();

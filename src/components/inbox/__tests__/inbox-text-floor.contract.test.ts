@@ -12,7 +12,8 @@ const SCOPES = ["src/components/inbox", "src/app/(dashboard)/inbox"];
 const FLOOR_PX = 12;
 const UNIT_PX: Record<string, number> = { px: 1, rem: 16, em: 16, pt: 4 / 3 };
 
-const toPx = (num: string, unit: string | undefined) => Number(num) * UNIT_PX[unit ?? "px"];
+// A missing number or unit counts as 0 px (it is flagged, never skipped); the patterns below always capture both.
+const toPx = (num: string | undefined, unit: string | undefined) => Number(num ?? 0) * (UNIT_PX[unit ?? "px"] ?? 1);
 
 // Only a glyph or badge that is NOT text may be listed here, with the reason.
 // Each entry is the exact hit text in that file; a stale entry fails the test.
