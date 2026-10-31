@@ -1,28 +1,14 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  AlertTriangle,
-  Ban,
-  Calendar,
-  MapPin,
-  Phone,
-  ShoppingBag,
-  Sparkles,
-  TrendingUp,
-  Truck,
-} from "lucide-react";
+import { Ban, ShoppingBag, TrendingUp, Truck } from "lucide-react";
 import { askAiHref } from "@/lib/ai/ask-ai-link";
 
-import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
+import { CustomerDetailHeader } from "@/components/customers/customer-detail-header";
+import { RecordsOfflineBanner } from "@/components/customers/records-status-banner";
 import { CustomerOrderHistory } from "@/components/customers/customer-order-history";
 import { CustomerRiskCard } from "@/components/customers/customer-risk-card";
-import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
-import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCustomerDetailWorkbench } from "@/lib/customers/customer-detail-workbench";
 import { riskActionCopyKey } from "@/lib/orders/order-risk-presentation";
@@ -118,69 +104,29 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         ]}
       />
 
-      <PageHeader
-        title={customerLabel}
-        description={
-          <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            {customer.phone ? (
-              <span className="inline-flex items-center gap-1">
-                <Phone className="size-3.5" aria-hidden="true" />
-                <span className="font-mono">{customer.phone}</span>
-              </span>
-            ) : null}
-            {customer.phone2 ? (
-              <span className="inline-flex items-center gap-1">
-                <Phone className="size-3.5" aria-hidden="true" />
-                <span className="font-mono">{customer.phone2}</span>
-              </span>
-            ) : null}
-            {customer.wilaya ? (
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="size-3.5" aria-hidden="true" />
-                {displayWilaya(customer.wilaya, locale)}{customer.commune ? ` · ${customer.commune}` : ""}
-              </span>
-            ) : null}
-            <span className="inline-flex items-center gap-1">
-              <Calendar className="size-3.5" aria-hidden="true" />
-              {t("customers.customerSince")} {formatDate(customer.createdAt, locale)}
-            </span>
-          </span>
+      <RecordsOfflineBanner kind="customer" />
+
+      <CustomerDetailHeader
+        label={customerLabel}
+        name={customer.name}
+        phone={customer.phone}
+        phone2={customer.phone2}
+        placeLabel={
+          customer.wilaya
+            ? `${displayWilaya(customer.wilaya, locale)}${customer.commune ? ` · ${customer.commune}` : ""}`
+            : null
         }
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {canAskAi && customer.name ? (
-              <Button variant="outline" size="sm" asChild>
-                <Link
-                  href={askAiHref(
-                    t("ai.ask.customerPrompt", { name: customer.name }),
-                  )}
-                  data-testid="customer-header-ask-ai"
-                >
-                  <Sparkles className="me-1.5 size-4" aria-hidden="true" />
-                  {t("ai.ask.button")}
-                </Link>
-              </Button>
-            ) : null}
-            {/* R3-b: generic WhatsApp deep link (no order context). */}
-            <OrderWhatsAppButton
-              phone={customer.phone}
-              customerName={customer.name}
-              testId="customer-header-whatsapp"
-            />
-            {riskBadge && riskScore !== null ? (
-              <Badge variant={riskBadge.variant}>
-                <AlertTriangle className="size-3.5" aria-hidden="true" />
-                {riskBadge.label} · {riskScore}
-              </Badge>
-            ) : null}
-            {canManageRisk ? (
-              <BlacklistToggle
-                customerId={customer.id}
-                isBlacklisted={customer.isBlacklisted === true}
-                variant="button"
-              />
-            ) : null}
-          </div>
+        sinceLabel={`${t("customers.customerSince")} ${formatDate(customer.createdAt, locale)}`}
+        askAi={
+          canAskAi && customer.name
+            ? { href: askAiHref(t("ai.ask.customerPrompt", { name: customer.name })), label: t("ai.ask.button") }
+            : null
+        }
+        risk={riskBadge && riskScore !== null ? { ...riskBadge, score: riskScore } : null}
+        blacklist={
+          canManageRisk
+            ? { customerId: customer.id, isBlacklisted: customer.isBlacklisted === true }
+            : null
         }
       />
 

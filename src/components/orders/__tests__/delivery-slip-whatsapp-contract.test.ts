@@ -84,9 +84,11 @@ describe("R3-b WhatsApp deep-link contract", () => {
     const detail = read("src/app/(dashboard)/orders/[id]/page.tsx");
     expect(detail).toContain("<OrderWhatsAppButton");
 
-    const customer = read("src/app/(dashboard)/customers/[id]/page.tsx");
+    // Wave 2: the customer detail header markup lives in CustomerDetailHeader (the page only passes data to it).
+    const customer = read("src/components/customers/customer-detail-header.tsx");
     expect(customer).toContain("<OrderWhatsAppButton");
     expect(customer).toContain('testId="customer-header-whatsapp"');
+    expect(read("src/app/(dashboard)/customers/[id]/page.tsx")).toContain("<CustomerDetailHeader");
   });
 
   it("registers every order-actions key in the shared runtime resolver (en/fr/ar)", () => {

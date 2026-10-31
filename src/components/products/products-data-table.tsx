@@ -15,6 +15,8 @@ import { ProductRowActions } from "@/components/products/product-row-actions";
 import { ProductThumbnail } from "@/components/products/product-thumbnail";
 import { ListSearchInput } from "@/components/shared/list-search-input";
 import { ProductsEmptyState } from "@/components/shared/empty-states";
+import { RecordsListStatusBanner } from "@/components/customers/records-status-banner";
+import { OfflineWriteGate } from "@/components/orders/offline-write-gate";
 import { resolveState } from "@/components/shared/resolve-state";
 import { StateView } from "@/components/shared/state-view";
 import { Badge } from "@/components/ui/badge";
@@ -261,10 +263,12 @@ export function ProductsDataTable({
               </EntityPreview>
             </EntityInspector>
             {fieldAccess.manage ? (
-              <ProductRowActions
-                product={product}
-                categories={categories}
-              />
+              <OfflineWriteGate>
+                <ProductRowActions
+                  product={product}
+                  categories={categories}
+                />
+              </OfflineWriteGate>
             ) : null}
           </div>
         );
@@ -280,6 +284,7 @@ export function ProductsDataTable({
         className="max-w-sm"
         placeholder={t("products.searchPlaceholder")}
       />
+      <RecordsListStatusBanner error={isLoading ? null : error} rows={data?.products} onRefresh={() => void mutate()} />
       {state === "error" ? (
         <StateView
           kind="error"
@@ -290,7 +295,6 @@ export function ProductsDataTable({
         />
       ) : (
         <>
-          {state === "partial" ? <StateView kind="partial" onRefresh={() => void mutate()} /> : null}
           <DataTable
             columns={columns}
             data={data?.products ?? []}

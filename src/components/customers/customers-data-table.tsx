@@ -13,6 +13,7 @@ import {
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { ListSearchInput } from "@/components/shared/list-search-input";
 import { CustomersEmptyState } from "@/components/shared/empty-states";
+import { RecordsListStatusBanner } from "@/components/customers/records-status-banner";
 import { resolveState } from "@/components/shared/resolve-state";
 import { StateView } from "@/components/shared/state-view";
 import { Badge } from "@/components/ui/badge";
@@ -174,6 +175,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
         className="max-w-sm"
         placeholder={t("customers.searchPlaceholder")}
       />
+      <RecordsListStatusBanner error={isLoading ? null : error} rows={data?.customers} onRefresh={() => void mutate()} />
       {state === "error" ? (
         <StateView
           kind="error"
@@ -184,7 +186,6 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
         />
       ) : (
         <>
-          {state === "partial" ? <StateView kind="partial" onRefresh={() => void mutate()} /> : null}
           <DataTable
             columns={columns}
             data={data?.customers ?? []}

@@ -1,5 +1,5 @@
-import { FormLoading } from "@/components/shared/page-loading";
+import { ProductDetailSkeleton } from "@/components/products/product-detail-skeleton";
 
 export default function Loading() {
-  return <FormLoading />;
+  return <ProductDetailSkeleton />;
 }
