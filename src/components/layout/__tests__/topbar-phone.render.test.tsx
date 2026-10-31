@@ -136,7 +136,7 @@ describe("top bar on a phone (under 768 px)", () => {
       "common.openMenu",
       "topbar.searchPlaceholder",
       "common.notifications",
-      "common.openMenu",
+      "topbar.user",
     ]);
     const name = bar().querySelector('[data-slot="topbar-name"]') as HTMLElement;
     expect(name).not.toBeNull();
@@ -144,6 +144,12 @@ describe("top bar on a phone (under 768 px)", () => {
     expect(name.tagName).not.toBe("BUTTON");
     expect(name.className).toContain("truncate");
     expect(name.className).toContain("min-w-0");
+  });
+
+  it("never gives two bar buttons the same accessible name (the menu button and the avatar are different things)", () => {
+    mount();
+    const names = barNames();
+    expect(new Set(names).size).toBe(names.length);
   });
 
   it("does not show the theme, language or shop-switcher buttons in the bar", () => {
@@ -240,7 +246,7 @@ describe("top bar from 768 px up", () => {
       "العربية",
       "theme.switchToDark",
       "common.notifications",
-      "common.openMenu",
+      "topbar.user",
     ]);
   });
 

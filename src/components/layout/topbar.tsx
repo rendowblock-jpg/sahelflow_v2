@@ -640,7 +640,7 @@ export function Topbar({
               variant="ghost"
               size="icon-sm"
               className="ms-0.5 rounded-full"
-              aria-label={t("common.openMenu")}
+              aria-label={memberIdentity?.displayName ?? t("topbar.user")}
             >
               <Avatar className="size-7 ring-1 ring-border">
                 <AvatarFallback className="bg-primary-soft text-xs font-semibold text-primary">
