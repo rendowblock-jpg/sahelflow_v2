@@ -1,5 +1,5 @@
 // W3b PWA lab: helpers for e2e/phone-lab.spec.ts (numbers, pictures, axe, the lab control endpoint). Pictures and numbers are NOT committed.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 
@@ -11,10 +11,11 @@ export async function ctl<T = Record<string, unknown>>(path: string): Promise<T>
 /** The phone's text for an English catalog value, in another locale (looked up by key in the catalog files). */
 export function phrase(loc: string, en: string): string {
   const dir = join(process.cwd(), "control-plane/pwa/src/i18n");
-  const esc = en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const key = new RegExp(`"([\\w.-]+)":\\s*"${esc}"`).exec(readFileSync(join(dir, "en.ts"), "utf8"))?.[1];
-  const hit = key ? new RegExp(`"${key}":\\s*"((?:[^"\\\\]|\\\\.)*)"`).exec(readFileSync(join(dir, `${loc}.ts`), "utf8"))?.[1] : undefined;
-  return hit ?? en;
+  const src = (l: string): string => readdirSync(dir).filter((f) => f === `${l}.ts` || f.includes(`.${l}.ts`)).map((f) => readFileSync(join(dir, f), "utf8")).join("\n");
+  const esc = en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); const enSrc = src("en");
+  const key = (new RegExp(`"([\\w.-]+)":\\s*"${esc}"`).exec(enSrc) ?? new RegExp(`"([\\w.-]+)":\\s*"${esc}[^"]*"`).exec(enSrc))?.[1];
+  const hit = key ? new RegExp(`"${key}":\\s*"((?:[^"\\\\]|\\\\.)*)"`).exec(src(loc))?.[1] : undefined;
+  return (hit ?? en).split("{{")[0]?.trim() ?? en;
 }
 const NUM = join(SHOTS, "numbers.json");
 export function record(key: string, value: unknown): void {

@@ -34,11 +34,18 @@ const hide = (p: Page, hidden: boolean, skewMinutes = 0): Promise<void> => p.eva
 async function setPin(p: Page, loc: string): Promise<string> {
   await p.locator('[data-act="s-lock-set"],[data-act="lock-set"]').first().click();
   const pin = p.locator("#pin"); await expect(pin).toBeVisible();
+  const title = p.locator("#main h1").first(); const again = phrase(loc, "Type the code again"); let how = "Enter";
   await pin.fill(PIN); await pin.press("Enter");
-  await expect(p.locator("#main h1").first()).toHaveText(phrase(loc, "Type the code again"), { timeout: 15_000 });
+  if (!(await expect(title).toHaveText(again, { timeout: 5_000 }).then(() => true, () => false))) {
+    const seen = `after Enter: h1="${await title.innerText()}", value length ${(await pin.inputValue()).length}, alert="${await p.locator("#pin-msg").innerText().catch(() => "none")}"`;
+    record(`${loc}-8-enter-did-nothing`, seen); how = "button (Enter did nothing)";
+    await p.locator('form[data-form="lock"] button[type=submit]').click();
+    await expect(title, `the first submit did not reach the confirm step: ${seen}`).toHaveText(again, { timeout: 10_000 });
+  }
   await p.locator("#pin").fill(PIN); await p.locator("#pin").press("Enter");
+  if (!(await expect(p.locator('[data-screen="settings"]')).toBeVisible({ timeout: 10_000 }).then(() => true, () => false))) { how += " + button"; await p.locator('form[data-form="lock"] button[type=submit]').click(); }
   await expect(p.locator('[data-screen="settings"]')).toBeVisible({ timeout: 30_000 });
-  return (await p.locator("#main").innerText()).replace(/\s+/g, " ").slice(0, 120);
+  return `${how}: ${(await p.locator("#main").innerText()).replace(/\s+/g, " ").slice(0, 80)}`;
 }
 async function lockNow(p: Page): Promise<void> { await hide(p, true); await hide(p, false, 6); await expect(p.locator("#pin")).toBeVisible({ timeout: 15_000 }); }
 
@@ -155,7 +162,7 @@ for (const loc of LOCALES) {
         await page.screenshot({ path: `/opt/agent-sandbox/workspace/audit/waves/shots/pwa-lab/${loc}-6a-held-chat.png` });
         await page.locator('[data-act="back"]').first().click();
         await ctl("/freeze"); await page.locator('[data-act="open-chat"]', { hasText: "Unread Ulla" }).click();
-        const box = page.locator("textarea[name=text]"); const send = page.locator('[data-form="composer"] button[type=submit]');
+        const box = page.locator('textarea[id^="cmp-"]'); const send = page.locator('[data-form="composer"][data-mode="reply"] button[type=submit]');
         await box.fill("On the way"); await send.click();
         await until(async () => ((await ctl<{ count: number }>("/sends")).count) === 1, 60_000);
         const done = phrase(loc, "Handed to WhatsApp on your PC");
