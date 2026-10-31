@@ -27,7 +27,7 @@ import {
 } from "../e2e/support/marketing-screens-plan";
 
 // The site is plain ESM; its modules are imported as data (same pattern as marketing-site.test.ts).
-const model = (await import("../marketing/src/model.mjs")) as {
+const model = (await import("../marketing/src/model.mjs")) as unknown as {
   MODULES: { shot: string | null; gallery: string[] }[];
 };
 const lib = (await import("../marketing/scripts/screens-lib.mjs")) as {
@@ -266,5 +266,16 @@ describe("marketing screens plan: forbidden claims (never imply a live courier o
     expect(forbiddenClaims(far)).toEqual([]);
     const near = `WhatsApp ${"x".repeat(10)} connected`;
     expect(forbiddenClaims(near)).toHaveLength(1);
+  });
+
+  it("pins the window with literal gaps, so widening the constant cannot move the test with it", () => {
+    // gap = characters between the end of the name and the start of the state word
+    const atEdge = `WhatsApp ${"x".repeat(46)} connected`; // 1 + 46 + 1 = 48
+    const pastEdge = `WhatsApp ${"x".repeat(47)} connected`; // 49
+    const wayPast = `WhatsApp ${"x".repeat(300)} connected`;
+    expect(CLAIM_WINDOW).toBe(48);
+    expect(forbiddenClaims(atEdge)).toHaveLength(1);
+    expect(forbiddenClaims(pastEdge)).toEqual([]);
+    expect(forbiddenClaims(wayPast)).toEqual([]);
   });
 });

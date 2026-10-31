@@ -8,7 +8,7 @@ import sharp from "sharp";
 import { forbiddenClaims } from "../e2e/support/marketing-screens-plan";
 
 // Same import pattern as marketing-site.test.ts: the site is plain ESM.
-const model = (await import("../marketing/src/model.mjs")) as { MODULES: { shot: string | null; gallery: string[] }[] };
+const model = (await import("../marketing/src/model.mjs")) as unknown as { MODULES: { shot: string | null; gallery: string[] }[] };
 const { COPY } = (await import("../marketing/src/i18n/index.mjs")) as {
   COPY: Record<string, { common: { demoData: string; realScreenshot: string } }>;
 };
