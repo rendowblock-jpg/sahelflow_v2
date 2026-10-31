@@ -21,6 +21,8 @@ export type CmdEvent =
   // A sealed result that was opened, verified, and names THIS device and THIS command.
   | Readonly<{ type: "result"; at: number; outcome: "committed" | "failed" | "expired"; code?: string; guarded?: boolean }>
   | Readonly<{ type: "result_unreadable"; at: number; reason: string }>
+  // The relay has no record of a command this phone sent: we do not know what happened, so unknown (never failed).
+  | Readonly<{ type: "relay_missing"; at: number }>
   | Readonly<{ type: "tick"; at: number }>
   | Readonly<{ type: "reread"; at: number; executed: boolean }>;
 
@@ -41,6 +43,7 @@ export function transition(r: OutboxRecord, e: CmdEvent): OutboxRecord {
     // An expired RESULT envelope means the PC already answered: unknown (re-read the projection), never failed.
     case "result_unreadable": return e.reason === "expired" ? { ...r, state: "unknown", lastError: "result_expired" } : { ...r, lastError: `result_${e.reason}` };
     case "tick": return (r.state === "queued" || r.state === "sent") && e.at >= r.expiresAt ? { ...r, state: "expired", lastError: "deadline" } : r;
+    case "relay_missing": return r.state === "sent" ? { ...r, state: "unknown", lastError: "relay_404" } : r;
     case "reread": return r.state === "unknown" && e.executed ? { ...r, state: "committed" } : r;
     case "send_failed": {
       const attempts = r.attempts + 1; const wait = e.retryAfterMs ?? BACKOFF_MS[Math.min(attempts - 1, 3)] ?? 300_000;

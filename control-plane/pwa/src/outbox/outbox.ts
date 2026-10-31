@@ -63,10 +63,11 @@ export function createOutbox(d: OutboxDeps) {
   // Ask the relay what it stored. committed needs the relay AND a result that opens, verifies and names THIS device and THIS command.
   async function check(r: OutboxRecord): Promise<OutboxRecord> {
     let reply: Reply; try { reply = await d.status(r.commandId); } catch { return r; }
+    if (reply.status === 404) return apply(r, { type: "relay_missing", at: d.now() });
     if (reply.status !== 200) return r;
     const body = obj(reply.body); const state = body?.state; const at = d.now(); let next = r;
     if (typeof state === "string" && RELAY_STATES.includes(state)) next = await apply(next, { type: "relay_state", at, state: state as RelayCommandState });
-    if (body?.result && (state === "committed" || state === "rejected" || state === "conflict") && next.state === "sent") {
+    if (body?.result && (state === "committed" || state === "rejected" || state === "conflict") && (next.state === "sent" || next.state === "unknown")) {
       const parsed = await d.openResult(body.result);
       if (!parsed.ok) next = await apply(next, { type: "result_unreadable", at, reason: parsed.reason });
       else if (parsed.deviceId === d.deviceId && parsed.commandId === r.commandId) next = await apply(next, { type: "result", at, outcome: parsed.outcome, ...(parsed.code === undefined ? {} : { code: parsed.code }), ...(parsed.guarded === true ? { guarded: true } : {}) });
