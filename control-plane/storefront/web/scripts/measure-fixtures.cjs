@@ -61,14 +61,29 @@ const PROBE = () => {
     if ((cs.overflowX !== 'visible' || cs.textOverflow === 'ellipsis') && el.scrollWidth > el.clientWidth + 1 && ownText(el)) out.cut.push(`${label(el)} ${el.scrollWidth}>${el.clientWidth}`);
     if (el.tagName === 'IMG' && el.complete && el.naturalWidth === 0) out.broken.push(label(el) + ' ' + (el.getAttribute('src') || '').slice(-30));
   }
+  // Every image, hidden ones too: a broken image must not escape the count by being display:none. a = rendered and broken
+  // (box > 0, complete, naturalWidth 0); c = the sticky bar thumbnail (alt="") on its CSS surface; d = hidden by the
+  // fallback script (data-broken), its slot is counted in b; x = broken and hidden by something else; pending = not loaded yet.
+  const imgs = { total: 0, pending: 0, a: [], c: [], d: [], x: [] };
+  for (const img of document.querySelectorAll('img')) {
+    imgs.total += 1;
+    if (!img.complete) { imgs.pending += 1; continue; }
+    if (img.naturalWidth !== 0 || !img.getAttribute('src')) continue;
+    const r = img.getBoundingClientRect(), st = getComputedStyle(img);
+    const rendered = r.width > 0 && r.height > 0 && st.display !== 'none' && st.visibility !== 'hidden';
+    const tag = label(img) + ' ' + (img.getAttribute('src') || '').slice(-24);
+    if (rendered) (img.classList.contains('sf-sticky-thumb') && img.getAttribute('alt') === '' ? imgs.c : imgs.a).push(tag);
+    else (img.dataset.broken ? imgs.d : imgs.x).push(tag);
+  }
   const fonts = [...document.fonts].filter((f) => f.status !== 'loaded').map((f) => `${f.family} ${f.weight} ${f.status}`);
-  return { ...out, fonts, sw: document.documentElement.scrollWidth, iw: innerWidth, m: window.__m, h: document.documentElement.scrollHeight };
+  return { ...out, imgA: imgs.a, imgC: imgs.c, imgD: imgs.d, imgX: imgs.x, imgTotal: imgs.total, imgPending: imgs.pending, imgB: document.querySelectorAll('span[data-sf="photo-missing"]').length, fonts, sw: document.documentElement.scrollWidth, iw: innerWidth, m: window.__m, h: document.documentElement.scrollHeight };
 };
 
 (async () => {
   const rows = await (await fetch(`${base}/index.json`)).json();
   const todo = rows.filter((r) => new RegExp(filter).test(r.file));
-  const browser = await chromium.launch();
+  // SF_CHROME = a browser binary when the one this playwright version expects is not installed.
+  const browser = await chromium.launch(process.env.SF_CHROME ? { executablePath: process.env.SF_CHROME } : {});
   const ctx = await browser.newContext({ viewport: { width: 360, height: 732 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce', colorScheme: 'light' });
   await ctx.addInitScript(() => {
     window.__m = { lcp: 0, cls: 0 };
@@ -76,6 +91,7 @@ const PROBE = () => {
     new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__m.cls += e.value; }).observe({ type: 'layout-shift', buffered: true });
   });
   const results = [];
+  let thumbs = 0;
   for (const row of todo) {
     const page = await ctx.newPage();
     const r = { ...row, console: [], failed: [], req: 0, bytes: 0, html: 0, jsGz: 0, cssGz: 0 };
@@ -96,7 +112,14 @@ const PROBE = () => {
     try {
       await page.goto(`${base}/${row.file}`, { waitUntil: 'load', timeout: 20000 });
       await page.waitForTimeout(700);
+      // A lazy image below the fold has not started loading: ask for all of them, or a broken one would never be counted.
+      await page.evaluate(() => { for (const i of document.querySelectorAll('img[loading=lazy]')) i.loading = 'eager'; });
+      await page.waitForTimeout(600);
       Object.assign(r, await page.evaluate(PROBE));
+      if (process.env.SF_THUMB_DIR && r.imgC && r.imgC.length && thumbs < 12) {
+        thumbs += 1;
+        await page.locator('.sf-sticky-thumb').first().screenshot({ path: `${process.env.SF_THUMB_DIR}/${row.file}.png` });
+      }
     } catch (e) { r.error = String(e).slice(0, 120); }
     await page.close();
     results.push(r);
@@ -106,6 +129,16 @@ const PROBE = () => {
   const rule = (k) => { const m = new Map(); for (const r of results) for (const s of new Set(r[k] || [])) { const key = s.replace(/ \d+x\d+$/, '').replace(/ [\d.]+<[\d.]+ [\d.]+px$/, ''); m.set(key, (m.get(key) || 0) + 1); } return [...m].sort((a, b) => b[1] - a[1]).slice(0, 12); };
   console.log(`pages ${results.length}; sideways ${results.filter((r) => r.sw > r.iw).length}; errors ${results.filter((r) => r.error).length}`);
   for (const k of ['contrast', 'tap', 'cut', 'rtl', 'broken', 'fonts', 'console', 'failed']) { console.log(`== ${k}: pages with it ${results.filter((r) => (r[k] || []).length).length}`); for (const [s, n] of rule(k)) console.log(`  ${n}x ${s}`); }
+  const where = (f) => { const p = results.filter(f); const n = (t) => p.filter((r) => (t === 'product' ? /^product/.test(r.page) : r.page === t)).length; return `${p.length} pages (home ${n('home')}, product ${n('product')}, other ${p.length - n('home') - n('product')})`; };
+  const sum = (k) => results.reduce((t, r) => t + (typeof r[k] === 'number' ? r[k] : (r[k] || []).length), 0);
+  console.log(`IMG total ${sum('imgTotal')}, not loaded after wait ${sum('imgPending')}`);
+  console.log(`IMG (a) visible broken image: ${where((r) => (r.imgA || []).length)}; images ${sum('imgA')}`);
+  console.log(`IMG (b) replaced by the fallback span: ${where((r) => r.imgB > 0)}; spans ${sum('imgB')}`);
+  console.log(`IMG (c) sticky thumbnail on its CSS surface: ${where((r) => (r.imgC || []).length)}; images ${sum('imgC')}`);
+  console.log(`IMG (d) hidden by the fallback: ${where((r) => (r.imgD || []).length)}; images ${sum('imgD')}`);
+  console.log(`IMG (x) broken and hidden by something else: ${where((r) => (r.imgX || []).length)}; images ${sum('imgX')}`);
+  console.log(`IMG (a) or (c) in total: ${where((r) => (r.imgA || []).length + (r.imgC || []).length)}`);
+  for (const [s, n] of rule('imgA')) console.log(`  (a) ${n}x ${s}`);
   const mx = (f) => Math.max(...results.map(f));
   console.log(`max LCP ${mx((r) => r.m ? r.m.lcp : 0)} ms; max CLS ${mx((r) => r.m ? r.m.cls : 0).toFixed(3)}; max HTML ${mx((r) => r.html)} B; max jsGz ${mx((r) => r.jsGz)}; max cssGz ${mx((r) => r.cssGz)}; max requests ${mx((r) => r.req)}; max weight ${mx((r) => r.bytes)}`);
 })();
