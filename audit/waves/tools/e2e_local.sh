@@ -94,7 +94,7 @@ unset CI AUTH_SECRET SF_PHASE5_OWNER_STORAGE_STATE E2E_BASE_URL E2E_SERVER_READY
 # SF_MASTER_KEY: the public placeholder after `||` in the workflow env (the repo secret is not available here)
 SF_MASTER_KEY=$(grep -m1 -oE "\|\| '[0-9a-f]{64}'" "$WTDIR/.github/workflows/phase5-experience.yml" | grep -oE '[0-9a-f]{64}')
 [ -n "$SF_MASTER_KEY" ] || { say "ERROR: no placeholder SF_MASTER_KEY found in the workflow"; exit 2; }
-export SF_MASTER_KEY NEXT_TELEMETRY_DISABLED=1 FORCE_COLOR=0 NO_COLOR=1
+export SF_MASTER_KEY NEXT_TELEMETRY_DISABLED=1 FORCE_COLOR=0
 export SF_TEST_ROOT=$ROOT SF_DATA_DIR=$ROOT/data DATABASE_URL=file:$ROOT/data/shops/test.db
 if [ "$AUTHSEC" = 1 ]; then
   AUTH_SECRET=$(grep -m1 -E '^\s+AUTH_SECRET:' "$WF" | sed -E 's/^\s+AUTH_SECRET:\s*//')
