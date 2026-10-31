@@ -8,7 +8,8 @@ vi.mock("@/lib/whatsapp/durable-send", async (o) => ({ ...(await o<typeof import
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanDb, seedCustomer, seedOrder, seedProduct } from "@/lib/data/__tests__/helpers";
-import { db } from "@/lib/db";
+import { listInternalComments } from "@/lib/collaboration/comments";
+import { db, shopContext } from "@/lib/db";
 import { phoneOf } from "./roundtrip-phone";
 import { actorFor, buildRig } from "./roundtrip-world";
 
@@ -56,8 +57,10 @@ describe("reply and note: phone -> real relay -> desktop executor on real SQLite
     await phone.outbox.enqueue({ kind: "command.comments.write", target: { type: "order", id: order.id }, labelForUi: "Order", draftText: "Call him after 6" });
     await phone.outbox.flush(); await rig.runDesktop(); await phone.outbox.refresh();
     expect(await phone.only()).toMatchObject({ state: "committed" });
-    const rows = await db.collaborationComment.findMany();
-    expect(rows.length).toBe(1);
-    expect(rows[0]).toMatchObject({ entityType: "order", entityId: order.id, body: "Call him after 6" });
+    // The body is sealed in bodyJson: read it back the way the PC's own note thread does (listInternalComments), not by column.
+    expect(await db.collaborationComment.count()).toBe(1);
+    const thread = await listInternalComments({ prisma: raw, shop: shopContext } as never, "order", order.id);
+    expect(thread).toHaveLength(1);
+    expect(thread[0]).toMatchObject({ entityType: "order", entityId: order.id, body: "Call him after 6" });
   });
 });

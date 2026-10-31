@@ -15,7 +15,7 @@ export async function phoneOf(rig: Rig, clock: { t: number }, fetchImpl: typeof 
   const polled = await relay.poll();
   await authority.load();
   const identity = await rig.identity();
-  const transport = createPhoneTransport({ relayBase: RELAY, keys: rig.phoneKeys, pinned: await rig.pinned(), identity, scope: authority.scope, fetch: rig.relayFetch, now });
+  const transport = createPhoneTransport({ relayBase: RELAY, keys: rig.phoneKeys, pinned: await rig.pinned(), identity, scope: authority.scope, fetch: fetchImpl, now });
   const outbox = createOutbox({ db: rig.db, now, deviceId: identity.deviceId, newId: () => newCommandId(), policyVersion: authority.policyVersion, ...transport });
   const only = async () => (await outbox.list())[0];
   return { relay, authority, outbox, polled, now, identity, only };
