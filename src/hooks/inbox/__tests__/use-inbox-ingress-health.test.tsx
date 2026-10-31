@@ -28,7 +28,7 @@ function status(over: { lost?: object; spool?: object } = {}) {
 describe("describeIngressHealth", () => {
   it("has the pinned thresholds", () => {
     expect(NOTICE_SETTLE_MS).toBe(1_000);
-    expect(WAITING_MIN_AGE_SEC).toBe(60);
+    expect(WAITING_MIN_AGE_SEC).toBe(600);
   });
 
   it("says nothing when everything is zero, absent or not a record", () => {
@@ -64,17 +64,28 @@ describe("describeIngressHealth", () => {
     expect(describeIngressHealth(fractional, false).notices).toEqual([]);
   });
 
-  it("calls a backlog 'waiting' only at 60 s or when stuck, with whole minutes", () => {
-    const at = (oldestPendingSec: number, stuck = 0) =>
-      describeIngressHealth(status({ spool: { pending: 2, oldestPendingSec, stuck } }), false).notices;
+  it("calls a backlog 'waiting' only after 10 minutes (Q6), with whole minutes", () => {
+    const at = (oldestPendingSec: number) =>
+      describeIngressHealth(status({ spool: { pending: 2, oldestPendingSec } }), false).notices;
     expect(at(59)).toEqual([]);
-    expect(at(60)).toEqual([{ kind: "waiting", count: 2, minutes: 1 }]);
-    expect(at(300)).toEqual([{ kind: "waiting", count: 2, minutes: 5 }]);
-    expect(at(0, 1)).toEqual([{ kind: "waiting", count: 2, minutes: null }]);
-    expect(
-      describeIngressHealth(status({ spool: { pending: 0, oldestPendingSec: 900, stuck: 1 } }), false)
-        .notices,
-    ).toEqual([]);
+    expect(at(300)).toEqual([]);
+    expect(at(600)).toEqual([]);
+    expect(at(601)).toEqual([{ kind: "waiting", count: 2, minutes: 10 }]);
+    expect(at(900)).toEqual([{ kind: "waiting", count: 2, minutes: 15 }]);
+  });
+
+  it("tells a measured stall (connected, messages stuck) as 'stalled', never while the link is down", () => {
+    const spool = { pending: 2, oldestPendingSec: 30, stuck: 1 };
+    expect(describeIngressHealth(status({ spool }), false).notices).toEqual([
+      { kind: "stalled", count: 2, minutes: null },
+    ]);
+    expect(describeIngressHealth({ ...status({ spool }), status: "disconnected" }, false).notices).toEqual([]);
+    expect(describeIngressHealth(status({ spool: { pending: 0, stuck: 1 } }), false).notices).toEqual([]);
+  });
+
+  it("counts failed and unreadable spool files with the messages that could not be saved", () => {
+    const failed = status({ lost: { spoolFailed: 1 }, spool: { quarantined: 1, unreadable: 2 } });
+    expect(describeIngressHealth(failed, false).notices).toEqual([{ kind: "lost", count: 4, minutes: null }]);
   });
 
   it("shows 'unreachable' only after the helper has been seen reachable", () => {
