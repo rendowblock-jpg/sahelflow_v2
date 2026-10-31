@@ -16,15 +16,17 @@ export type RelayPoll =
 const obj = (v: unknown): Record<string, unknown> | null => (v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 const count = (v: unknown): number | null => (typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? v : null);
 
-// The desktop's dashboard payload -> what Today shows. "Waiting" is counted from the
-// recent orders the desktop sends; whatsappHeld is shown only when the desktop sends it.
+// The desktop's dashboard payload -> what Today shows. Orders waiting: stats.ordersWaiting when the desktop sends the
+// exact total; else a FLOOR counted from the few recent orders (status is a plain string on the desktop, "pending" = waiting
+// for confirmation, matched exactly) and flagged so the view says "at least". whatsappHeld / codToCollectDzd: only when sent.
 export function parseDashboard(payload: unknown, generatedAt: number): Projection | null {
   const root = obj(payload); const stats = obj(root?.stats);
   if (!root || !stats || !Number.isFinite(generatedAt)) return null;
   const newOrders = count(stats.ordersToday);
   if (newOrders === null) return null;
   const recent: readonly unknown[] = Array.isArray(root.recentOrders) ? root.recentOrders : [];
-  const toConfirm = recent.filter((o) => String(obj(o)?.status ?? "").toLowerCase() === "pending").length;
+  const exact = count(stats.ordersWaiting);
+  const toConfirm = exact ?? recent.filter((o) => obj(o)?.status === "pending").length;
   const rawSeries = obj(root.analytics)?.revenueSeries;
   const series: readonly unknown[] = Array.isArray(rawSeries) ? rawSeries : [];
   const week: DayCount[] = [];
@@ -32,8 +34,8 @@ export function parseDashboard(payload: unknown, generatedAt: number): Projectio
     const row = obj(item); const at = typeof row?.date === "string" ? Date.parse(row.date) : Number.NaN; const orders = count(row?.orders);
     if (Number.isFinite(at) && orders !== null) week.push({ at, orders });
   }
-  // The desktop does not publish cash-on-delivery to collect yet: NaN is shown as a dash.
-  return { generatedAt, newOrders, toConfirm, inDelivery: count(stats.pendingDeliveries) ?? 0, codToCollectDzd: Number.NaN, week, whatsappHeld: count(stats.whatsappHeld) };
+  // Cash to collect is whole DZD; absent or unusable = NaN, which the view prints as a dash.
+  return { generatedAt, newOrders, toConfirm, toConfirmIsFloor: exact === null, inDelivery: count(stats.pendingDeliveries) ?? 0, codToCollectDzd: count(stats.codToCollectDzd) ?? Number.NaN, week, whatsappHeld: count(stats.whatsappHeld) };
 }
 
 const FORGET_AFTER = 3;

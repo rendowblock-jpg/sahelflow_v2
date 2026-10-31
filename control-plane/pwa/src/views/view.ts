@@ -12,6 +12,8 @@ export type View = Readonly<{
   projection: Projection | null; step: PairStep | null; fingerprint: string | null; failure: PairFailure | null;
   lockMode: "enter" | "set" | "confirm"; lockNotice: LockNotice; hasLock: boolean;
   version: string; confirmRemove: boolean; removeError: string | null; removed: boolean;
+  // When pairing finished (waiting screen): the minutes already waited are shown from it.
+  pairedAt?: number | null;
 }>;
 type Params = Readonly<Record<string, string | number>>;
 type Tr = (key: string, params?: Params) => string;
@@ -50,7 +52,9 @@ function pair(v: View, tr: Tr): string {
     }
     case "waiting": {
       const fp = v.fingerprint ? `<div class="sheet"><h2>${tr("pair.fingerprint.title")}</h2><p class="fp num" dir="ltr">${esc(v.fingerprint)}</p><p class="hint">${tr("pair.fingerprint.hint")}</p></div>` : "";
-      return `${head}${fp}<div class="note margin" role="status"><h2>${tr("pair.waiting")}</h2><p>${tr("pair.waiting.hint")}</p></div>`;
+      const waited = typeof v.pairedAt === "number" && Number.isFinite(v.pairedAt) ? Math.max(0, Math.floor((v.now - v.pairedAt) / 60_000)) : null;
+      const since = waited === null ? "" : `<p class="hint">${waited < 1 ? tr("pair.waiting.justNow") : tr("pair.waiting.elapsed", { minutes: formatNumber(waited) })}</p>`;
+      return `${head}${fp}<div class="note margin" role="status"><h2>${tr("pair.waiting")}</h2><p>${tr("pair.waiting.hint")}</p>${since}</div>`;
     }
     case "error": {
       const key = FAILURE_KEY[v.failure ?? "network"];
@@ -81,10 +85,11 @@ function today(v: View, tr: Tr): string {
   if (v.state === "expired") return head + note("alert", "status", "", tr("today.expired"));
   const strip = v.state === "stale" || v.state === "offline"
     ? `<div class="strip" role="status"><strong>${tr("today.stale", { time: formatTime(p.generatedAt, v.locale) })}</strong><span>${tr("today.stale.hint")}</span></div>` : "";
-  const call = p.toConfirm > 0 ? `<div class="note margin" role="status"><h2>${tr("today.call.title")}</h2><p>${tr("today.call.body", { count: formatNumber(p.toConfirm) })}</p></div>` : "";
+  const waiting = p.toConfirmIsFloor ? tr("today.atLeast", { count: formatNumber(p.toConfirm) }) : formatNumber(p.toConfirm);
+  const call = p.toConfirm > 0 ? `<div class="note margin" role="status"><h2>${tr("today.call.title")}</h2><p>${tr("today.call.body", { count: waiting })}</p></div>` : "";
   if (v.state === "empty") return `${head}<p class="stamp">${tr("common.readonly")}</p>${strip}${note("", "status", "", tr("today.empty"))}`;
   const fig = (label: string, value: string, wide = ""): string => `<div class="fig${wide}"><dt>${label}</dt><dd class="num">${value}</dd></div>`;
-  return `${head}<p class="stamp">${tr("common.readonly")}</p>${strip}${call}<dl class="figs">${fig(tr("today.newOrders"), formatNumber(p.newOrders))}${fig(tr("today.toConfirm"), formatNumber(p.toConfirm))}${fig(tr("today.inDelivery"), formatNumber(p.inDelivery))}${p.whatsappHeld == null ? "" : fig(tr("today.whatsappHeld"), formatNumber(p.whatsappHeld))}${fig(tr("today.cod"), esc(formatDzd(p.codToCollectDzd, v.locale)), " wide")}</dl>${bars(p, v, tr)}`;
+  return `${head}<p class="stamp">${tr("common.readonly")}</p>${strip}${call}<dl class="figs">${fig(tr("today.newOrders"), formatNumber(p.newOrders))}${fig(tr("today.toConfirm"), waiting)}${fig(tr("today.inDelivery"), formatNumber(p.inDelivery))}${fig(tr("today.whatsappHeld"), p.whatsappHeld == null ? "—" : formatNumber(p.whatsappHeld))}${fig(tr("today.cod"), esc(formatDzd(p.codToCollectDzd, v.locale)), " wide")}</dl>${bars(p, v, tr)}`;
 }
 
 function settings(v: View, tr: Tr): string {
