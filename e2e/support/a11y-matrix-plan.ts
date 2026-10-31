@@ -484,8 +484,11 @@ export function cellVerdict(input: {
   failures: readonly string[];
   reportOnly: boolean;
   settled: boolean;
+  /** false = a loading placeholder was still drawn when axe ran (default true: nothing to say) */
+  loaded?: boolean;
 }): Verdict {
   const { cell, violations, failures, reportOnly, settled } = input;
+  const loaded = input.loaded ?? true;
   if (violations.length === 0 && failures.length === 0) {
     return { status: "pass", shouldThrow: false, message: "" };
   }
@@ -495,6 +498,9 @@ export function cellVerdict(input: {
   for (const failure of failures) lines.push(`check: ${failure}`);
   if (violations.length > 0) lines.push(formatAxeViolations(violations));
   if (!settled) lines.push("(the page was still animating when axe ran; a faint element may only be mid-fade)");
+  if (!loaded) {
+    lines.push("(a loading placeholder was still on the page when axe ran; a region may only look empty because its content had not arrived)");
+  }
   return { status: "fail", shouldThrow: !reportOnly, message: lines.join("\n") };
 }
 
