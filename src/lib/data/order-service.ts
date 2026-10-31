@@ -15,6 +15,7 @@ import {
   SahelFlowError,
   ValidationError,
 } from "@/types/errors";
+import { assertOrderTotalWithinLimit } from "@/lib/orders/money-limits";
 import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import { updateOrderSchema } from "@/lib/validation";
 import {
@@ -435,12 +436,14 @@ export const orderService = {
             data.items,
             effectiveDeliveryCost,
           ).totalPrice;
+          assertOrderTotalWithinLimit(recomputedTotalPrice, "items");
         } else if (data.deliveryCost !== undefined) {
           const existing = await tx.orderItem.findMany({ where: { orderId: id } });
           recomputedTotalPrice = orderTotalOf(
             existing,
             data.deliveryCost,
           ).totalPrice;
+          assertOrderTotalWithinLimit(recomputedTotalPrice, "deliveryCost");
         }
 
         const row = await tx.order.update({

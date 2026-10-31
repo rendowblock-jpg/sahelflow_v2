@@ -460,6 +460,45 @@ describe("canonical customer returns, exchanges and refunds", () => {
     });
   });
 
+  it("refuses to create a replacement order whose total is above the money ceiling", async () => {
+    const { order } = await seedDeliveredOrder({ quantity: 1, stock: 5, price: 2400 });
+    const orderItem = required(order.items[0], "order item");
+    const replacement = await db.product.create({
+      data: {
+        name: `Replacement ${sequence}`,
+        // Two of them are 1.2 billion dinars: above MAX_MONEY_DZD (999,999,999).
+        price: 600_000_000,
+        cost: 1200,
+        stock: 7,
+        isActive: true,
+      },
+    });
+
+    const requested = await requestReturn({
+      orderId: order.id,
+      expectedVersion: 5,
+      orderItemId: orderItem.id,
+      quantity: 1,
+      caseType: "exchange",
+      exchangeItems: [{ productId: replacement.id, quantity: 2 }],
+      exchangeDeliveryCost: 300,
+      key: "customer-exchange-over-ceiling",
+    });
+
+    await expect(
+      completeReturn({
+        orderId: order.id,
+        returnId: requested.result.returnId,
+        orderItemId: orderItem.id,
+        quantity: 1,
+        startVersion: requested.result.orderVersion,
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", message: "The order total is too large" });
+
+    // No replacement order was written; the delivered order is still the only one.
+    expect(await db.order.count()).toBe(1);
+  });
+
   it("issues partial and full refunds and reverses an exact amount without touching stock", async () => {
     const { order, product, customer } = await seedDeliveredOrder({
       quantity: 1,

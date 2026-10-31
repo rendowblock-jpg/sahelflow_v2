@@ -30,7 +30,7 @@ import {
   type CanonicalReturnOrder,
   type CanonicalReturnOrderItem,
 } from "@/lib/orders/canonical-return-authority";
-import { orderMoneySchema } from "@/lib/orders/money-limits";
+import { assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
 import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import { TRUSTED_MANUAL_ORDER_AUTHORITY } from "@/lib/orders/manual-order-authority";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
@@ -687,6 +687,7 @@ async function createReplacementOrder(
     "EXC",
   );
   const { totalPrice } = orderTotalOf(items, agreement.deliveryCost);
+  assertOrderTotalWithinLimit(totalPrice, "exchangeItems");
   const replacement = await tx.order.create({
     data: {
       orderNumber,

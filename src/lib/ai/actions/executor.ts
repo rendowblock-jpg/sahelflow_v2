@@ -38,6 +38,8 @@ import {
   ValidationError,
 } from "@/types/errors";
 import { describeStockHolders } from "@/lib/data/product-service";
+import { assertOrderTotalWithinLimit } from "@/lib/orders/money-limits";
+import { sumLineTotals } from "@/lib/orders/order-total";
 import { aiActionHash, parseSensitiveAiToolArgs } from "./contracts";
 import {
   assertAiActionExecutionAuthority,
@@ -317,10 +319,8 @@ async function createOrder(
   });
 
   const phone = canonicalAlgerianPhone(String(args.phone), "phone");
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0,
-  );
+  const totalPrice = sumLineTotals(items);
+  assertOrderTotalWithinLimit(totalPrice, "items");
   const orderNumber = await nextOrderNumber(tx as unknown as DbClient, "ORD");
   const sourceMetadata = canonicalSourceOrderSourceMetadata({
     source: "ai_chat",
