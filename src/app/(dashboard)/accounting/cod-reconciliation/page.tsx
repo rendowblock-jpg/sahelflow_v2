@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 
 import { CanonicalCodDashboard } from "@/components/accounting/canonical-cod-dashboard";
 import { CanonicalCodReadOnly } from "@/components/accounting/canonical-cod-readonly";
-import { PageHeader } from "@/components/shared/page-header";
+import { CodReconciliationView } from "@/components/accounting/cod-reconciliation-view";
+import {
+  isCodSummaryEmpty,
+  resolveCodState,
+} from "@/components/accounting/cod-reconciliation-state";
 import { getCanonicalCodWorkspaceSummary } from "@/lib/accounting/canonical-cod-projections";
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
@@ -24,50 +28,43 @@ export default async function CodReconciliationPage() {
   assertTrustedAction(actorContext, "orders.financials.read");
   assertTrustedAction(actorContext, "customers.contact.read");
   const { t } = await getI18n();
+  // A failed read shows the page's own error screen with Retry, not the route boundary.
   const summary = await getCanonicalCodWorkspaceSummary({
     prisma: db,
     shop: shopContext,
-  });
+  }).then(
+    (value) => value,
+    () => null,
+  );
   const canUpdate = trustedActionAllowed(
     actorContext,
     "accounting.update",
     { shopId: actorContext.shop.shopId },
   );
+  const truncated = summary ? summary.truncated.orders || summary.truncated.settlements : false;
 
   return (
-    <div className="app-content page-sections">
-      <PageHeader
-        title={t("codReconciliation.title")}
-        description={t("codReconciliation.description")}
-      />
-      {/* MNY-03: an order with an inconsistent receivable record is reported
-          here instead of failing the whole workspace. Order numbers only. */}
-      {summary.flaggedOrders.length > 0 ? (
-        <p
-          role="alert"
-          className="rounded-control border border-destructive/30 bg-destructive-soft p-3 text-sm text-destructive"
-        >
-          {t("codReconciliation.flaggedNotice")}:
-          {summary.flaggedOrders.slice(0, 5).map((entry, index) => (
-            <span key={entry.orderId}>
-              {index > 0 ? ", " : " "}
-              <bdi>{entry.orderNumber}</bdi>
-            </span>
-          ))}
-          {summary.flaggedOrders.length > 5 ? " …" : null}
-        </p>
-      ) : null}
-      {/* MNY-01: the read is capped; say so instead of looking complete. */}
-      {summary.truncated.orders || summary.truncated.settlements ? (
-        <p role="status" className="rounded-control border p-3 text-sm text-muted-foreground">
-          {t("codReconciliation.truncatedNotice")}
-        </p>
-      ) : null}
-      {canUpdate ? (
-        <CanonicalCodDashboard summary={summary} />
-      ) : (
-        <CanonicalCodReadOnly summary={summary} />
-      )}
-    </div>
+    <CodReconciliationView
+      t={t}
+      state={resolveCodState({
+        failed: summary === null,
+        truncated,
+        flaggedCount: summary ? summary.flaggedOrders.length : 0,
+        empty: summary ? isCodSummaryEmpty(summary) : false,
+      })}
+      flaggedOrders={summary ? summary.flaggedOrders : []}
+      truncated={truncated}
+      retryHref="/accounting/cod-reconciliation"
+      ordersHref="/orders"
+      body={
+        summary ? (
+          canUpdate ? (
+            <CanonicalCodDashboard summary={summary} />
+          ) : (
+            <CanonicalCodReadOnly summary={summary} />
+          )
+        ) : null
+      }
+    />
   );
 }
