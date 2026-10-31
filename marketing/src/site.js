@@ -1,12 +1,11 @@
 // sahelflow.com progressive enhancement. Every page works without this file;
 // it adds the theme switch, the phone menu, the ledger replay, the price
-// count-up and the calculators / filters / search of the inner pages.
+// count-up and the help search.
 (() => {
   "use strict";
 
   const doc = document;
   const root = doc.documentElement;
-  const rtl = root.dir === "rtl";
   const locale = root.lang || "ar";
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const $ = (sel, el = doc) => el.querySelector(sel);
@@ -18,7 +17,6 @@
   };
   const nf = new Intl.NumberFormat("fr-FR");
   const fmt = (n) => nf.format(Math.round(n)).replace(/[   ]/g, " ");
-  const money = (n, cur) => `${fmt(n)} ${cur}`;
 
   /* ── language choice is remembered for the root redirect ── */
   for (const link of $$("[data-set-lang]")) link.addEventListener("click", () => store.set("sf-lang", link.dataset.setLang));
@@ -87,74 +85,6 @@
     counts.forEach((el) => io.observe(el));
   }
 
-  /* ── calculators ── */
-  const fillRange = (input) => {
-    const min = Number(input.min), max = Number(input.max);
-    input.style.setProperty("--fill", `${((Number(input.value) - min) / (max - min)) * 100}%`);
-  };
-  for (const form of $$("[data-calc]")) {
-    // Enter in a field must not reload the page. Done here, not as an inline attribute, so the page's CSP needs no inline handlers.
-    form.addEventListener("submit", (event) => event.preventDefault());
-    const kind = form.dataset.calc;
-    const cur = form.dataset.currency;
-    const inputs = Object.fromEntries($$("[data-calc-input]", form).map((i) => [i.name, i]));
-    const out = (name, text) => { const el = $(`[data-calc-out="${name}"]`, form); if (el) el.textContent = text; };
-    const result = (name, text) => { const el = $(`[data-calc-result="${name}"]`, form); if (el) el.textContent = text; };
-    const v = (name) => Number(inputs[name].value);
-    const update = () => {
-      Object.values(inputs).forEach(fillRange);
-      if (kind === "returns") {
-        out("orders", fmt(v("orders")));
-        out("rate", `${v("rate")} %`);
-        out("fee", money(v("fee"), cur));
-        const monthly = v("orders") * (v("rate") / 100) * v("fee");
-        result("monthly", money(monthly, cur));
-        result("yearly", money(monthly * 12, cur));
-      } else if (kind === "licence") {
-        const shops = v("shops");
-        const included = Number(form.dataset.included);
-        const extra = Math.max(0, shops - included);
-        const total = Number(form.dataset.base) + extra * Number(form.dataset.extra);
-        out("shops", String(shops));
-        result("total", money(total, cur));
-        const split = $("[data-calc-split]", form);
-        if (split) split.textContent = extra ? `${split.dataset.includedLabel} · ${split.dataset.extraLabel.replace("{n}", extra)}` : split.dataset.includedLabel;
-        const monthlyLabel = $("[data-calc-monthly-label]", form);
-        if (monthlyLabel) monthlyLabel.textContent = monthlyLabel.dataset.calcMonthlyLabel.replace("{amount}", money(total / Number(form.dataset.months), cur));
-        $$("[data-shop-dot]", form).forEach((dot, i) => {
-          dot.classList.toggle("is-in", i < included);
-          dot.classList.toggle("is-extra", i >= included && i < shops);
-        });
-      } else if (kind === "cost") {
-        const them = v("monthly") * v("years") * 12;
-        const us = Number(form.dataset.sahel);
-        out("monthly", money(v("monthly"), cur));
-        out("years", String(v("years")));
-        result("them", money(them, cur));
-        result("saved", money(Math.max(0, them - us), cur));
-        const max = Math.max(them, us);
-        $("[data-cost-bar='them']", form)?.style.setProperty("--w", `${(them / max) * 100}%`);
-        $("[data-cost-bar='us']", form)?.style.setProperty("--w", `${(us / max) * 100}%`);
-      }
-    };
-    Object.values(inputs).forEach((i) => i.addEventListener("input", update));
-    update();
-  }
-
-  /* ── integrations filter ── */
-  const filterBar = $("[data-filter-bar]");
-  if (filterBar) {
-    const chips = $$("[data-filter]", filterBar);
-    const groups = $$("[data-group]");
-    for (const chip of chips) {
-      chip.addEventListener("click", () => {
-        const f = chip.dataset.filter;
-        chips.forEach((c) => c.setAttribute("aria-pressed", String(c === chip)));
-        groups.forEach((g) => { g.hidden = f !== "all" && g.dataset.group !== f; });
-      });
-    }
-  }
-
   /* ── help centre search ── */
   const helpSearch = $("[data-help-search]");
   if (helpSearch) {
@@ -173,6 +103,7 @@
           if (terms.length && hit && shown === 1) item.open = true;
         }
         topic.hidden = shown === 0;
+        if (terms.length && shown > 0) topic.open = true;
         any ||= shown > 0;
       }
       emptyMsg.hidden = any;
