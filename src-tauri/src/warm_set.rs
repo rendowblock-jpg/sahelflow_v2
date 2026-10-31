@@ -92,6 +92,31 @@ pub fn warm_plan(
     }
 }
 
+/// When the background read of the standalone tree is told to stop.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WarmStop {
+    /// The old full-tree walk: it cost 67 s and 540 s on two machines, so it ends with the migration.
+    MigrationEnd,
+    /// A bounded boot-set read: it runs until the server answers, because the server opens those files next.
+    RuntimeReady,
+}
+
+/// Most files a plan may hold and still run until the server answers
+/// (mirrors BOOT_SET_MAX_FILES in scripts/boot-set-nft.ts).
+pub const MAX_BOUNDED_PLAN_FILES: usize = 1500;
+
+pub fn plan_is_bounded(files: usize) -> bool {
+    files > 0 && files <= MAX_BOUNDED_PLAN_FILES
+}
+
+pub fn warm_stop_point(plan_in_use: bool) -> WarmStop {
+    if plan_in_use {
+        WarmStop::RuntimeReady
+    } else {
+        WarmStop::MigrationEnd
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,5 +245,23 @@ mod tests {
         });
         assert!(plan.is_none());
         assert_eq!(*asked.borrow(), [root.join("a.js"), root.join("b.js")]);
+    }
+
+    #[test]
+    fn full_walk_stops_when_the_migration_ends() {
+        assert_eq!(warm_stop_point(false), WarmStop::MigrationEnd);
+    }
+
+    #[test]
+    fn bounded_plan_runs_until_the_server_answers() {
+        assert_eq!(warm_stop_point(true), WarmStop::RuntimeReady);
+    }
+
+    #[test]
+    fn plan_bound_table() {
+        assert!(!plan_is_bounded(0));
+        assert!(plan_is_bounded(1));
+        assert!(plan_is_bounded(MAX_BOUNDED_PLAN_FILES));
+        assert!(!plan_is_bounded(MAX_BOUNDED_PLAN_FILES + 1));
     }
 }

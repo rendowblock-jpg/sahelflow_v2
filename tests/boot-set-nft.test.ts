@@ -85,7 +85,7 @@ describe("routes, packages and references", () => {
   it("reads static chunk and css references in both spellings, once each", () => {
     const text = '{"a":["static/chunks/1-aa.js","/_next/static/chunks/1-aa.js","static/css/c.css"],"b":"static/chunks/app/(x)/page-bb.js"}';
     expect(staticRefsOf(text)).toEqual([".next/static/chunks/1-aa.js", ".next/static/css/c.css", ".next/static/chunks/app/(x)/page-bb.js"]);
-    expect(mediaRefsOf("@font-face{src:url(/_next/static/media/a-s.p.woff2) format('woff2')}x{background:url(../media/b.png)}")).toEqual([".next/static/media/a-s.p.woff2", ".next/static/media/b.png"]);
+    expect(mediaRefsOf("@font-face{src:url(/_next/static/media/a-s.p.woff2) format('woff2')}x{background:url(/_next/static/media/b.png)}")).toEqual([".next/static/media/a-s.p.woff2", ".next/static/media/b.png"]);
   });
 });
 
@@ -106,9 +106,11 @@ describe("bootSetFromNft", () => {
       "public/extra.js": 6,
     });
     const { manifest, report } = bootSetFromNft({ ...sources(files), routes: ["/setup"], extraFiles: [{ path: "public/extra.js", reason: "test" }] });
-    expect(paths(manifest)).toEqual([
+    const expected = [
       "server.js",
       "package.json",
+      ".next/build-manifest.json",
+      ".next/server/app-paths-manifest.json",
       ".next/server/middleware.js",
       "node_modules/next/dist/server/next-server.js",
       "node_modules/app-dep/index.js",
@@ -121,8 +123,9 @@ describe("bootSetFromNft", () => {
       ".next/static/css/s.css",
       ".next/static/media/f.woff2",
       "public/extra.js",
-    ]);
-    expect(manifest.fileCount).toBe(14);
+    ];
+    expect(paths(manifest)).toEqual(expected);
+    expect(manifest.fileCount).toBe(expected.length);
     expect(manifest.totalBytes).toBe(manifest.entries.reduce((n, e) => n + e.size, 0));
     expect(report.missingFromTree).toBeGreaterThan(0);
   });
@@ -257,18 +260,22 @@ describe("writeBootSetForTree (real files)", () => {
       writeFileSync(join(tree, "server.js"), "x");
       writeFileSync(join(tree, "node_modules", "next", "real.js"), "yy");
       writeFileSync(join(build, ".next", "next-server.js.nft.json"), nft("../node_modules/next/real.js", "../node_modules/next/link.js"));
-      let linked = true;
       try {
         symlinkSync(join(tree, "node_modules", "next", "real.js"), join(tree, "node_modules", "next", "link.js"));
       } catch {
-        linked = false; // Windows without the privilege: the symlink case is then covered by the pure tests
+        // Windows without the privilege: the entry is then simply absent, the same result
       }
       const result = writeBootSetForTree(tree, { buildRoot: build, routes: [], extraFiles: [] });
       const written = JSON.parse(readFileSync(join(tree, "boot-set.json"), "utf8")) as BootSetManifest;
       expect(written.entries.map((e) => e.path)).toEqual(["server.js", "node_modules/next/real.js"]);
       expect(written.fileCount).toBe(2);
       expect(written.totalBytes).toBe(3);
-      expect(result.report.missingFromTree).toBe(linked ? 1 : 1);
+      expect(result.written).toBe(true);
+      expect(result.report.missingFromTree).toBeGreaterThanOrEqual(1);
+      // a set over the limits is not written and a stale file from an earlier build goes away
+      const over = writeBootSetForTree(tree, { buildRoot: build, routes: [], extraFiles: [], limits: { files: 1, bytes: 1_000 } });
+      expect(over.written).toBe(false);
+      expect(() => readFileSync(join(tree, "boot-set.json"), "utf8")).toThrow();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

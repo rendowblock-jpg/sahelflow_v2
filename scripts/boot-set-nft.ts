@@ -12,7 +12,7 @@
  *   bun run scripts/boot-set-nft.ts --tree DIR [--routes /setup,/login] [--out FILE] [--build-root DIR]
  *   bun run scripts/boot-set-nft.ts --tree DIR --compare TRACE.json
  */
-import { lstatSync, readFileSync, writeFileSync } from "node:fs";
+import { lstatSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { areaOf, serializeBootSet, type BootSetEntry, type BootSetManifest } from "./boot-set";
 
@@ -386,8 +386,11 @@ export function compareBootSets(nft: BootSetManifest, traced: BootSetManifest, t
   };
 }
 
-export function withinBounds(manifest: BootSetManifest): boolean {
-  return manifest.fileCount <= BOOT_SET_MAX_FILES && manifest.totalBytes <= BOOT_SET_MAX_BYTES;
+export function withinBounds(
+  manifest: BootSetManifest,
+  limits: Readonly<{ files: number; bytes: number }> = { files: BOOT_SET_MAX_FILES, bytes: BOOT_SET_MAX_BYTES },
+): boolean {
+  return manifest.fileCount <= limits.files && manifest.totalBytes <= limits.bytes;
 }
 
 // ---- disk shell ---------------------------------------------------------
@@ -398,6 +401,7 @@ export type DiskOptions = Readonly<{
   /** Project root of the build: next-server.js.nft.json lives in its .next, not in the standalone tree. */
   buildRoot?: string;
   prune?: PruneOptions;
+  limits?: Readonly<{ files: number; bytes: number }>;
 }>;
 
 export function bootSetFromDisk(tree: string, options: DiskOptions = {}): NftResult {
@@ -426,11 +430,18 @@ export function bootSetFromDisk(tree: string, options: DiskOptions = {}): NftRes
   });
 }
 
-/** Writes <tree>/boot-set.json. Call it BEFORE the tree manifest hash so the file is listed. */
-export function writeBootSetForTree(tree: string, options: DiskOptions = {}): NftResult {
+/**
+ * Writes <tree>/boot-set.json. Call it BEFORE the tree manifest hash so the file is listed.
+ * A set over the limits is NOT written (the shell keeps the warm-up running until the server
+ * answers only for a bounded set) and a stale file from an earlier build is removed.
+ */
+export function writeBootSetForTree(tree: string, options: DiskOptions = {}): NftResult & Readonly<{ written: boolean }> {
   const result = bootSetFromDisk(tree, options);
-  writeFileSync(resolve(tree, BOOT_SET_FILE), serializeBootSet(result.manifest), "utf8");
-  return result;
+  const target = resolve(tree, BOOT_SET_FILE);
+  const written = withinBounds(result.manifest, options.limits);
+  if (written) writeFileSync(target, serializeBootSet(result.manifest), "utf8");
+  else rmSync(target, { force: true });
+  return { ...result, written };
 }
 
 function argValue(argv: readonly string[], name: string): string | undefined {

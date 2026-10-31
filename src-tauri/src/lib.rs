@@ -510,10 +510,17 @@ pub fn run() {
                     let standalone_dir = resource_dir.join("standalone");
                     let warm_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
                     let warm_stop_for_thread = std::sync::Arc::clone(&warm_stop);
+                    // Raised by the warm thread when it found a fresh, bounded boot set.
+                    let warm_bounded = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+                    let warm_bounded_for_thread = std::sync::Arc::clone(&warm_bounded);
                     let warmup = std::thread::Builder::new()
                         .name("sahelflow-runtime-warm".to_string())
                         .spawn(move || {
-                            warm_packaged_standalone(&standalone_dir, &warm_stop_for_thread)
+                            warm_packaged_standalone(
+                                &standalone_dir,
+                                &warm_stop_for_thread,
+                                &warm_bounded_for_thread,
+                            )
                         })
                         .map_err(|error| {
                             eprintln!("[sahelflow] runtime warm thread did not start: {error}");
@@ -594,9 +601,16 @@ pub fn run() {
                         "runtime-warm-started",
                         None,
                     );
-                    // Migration is done: tell the pre-read to stop and do NOT wait
-                    // for it. The thread exits on its own at its next file.
-                    warm_stop.store(true, std::sync::atomic::Ordering::SeqCst);
+                    // Migration is done: tell the full-tree walk to stop and do NOT
+                    // wait for it. A bounded boot-set read keeps going until the
+                    // server answers (stopped below). If the thread has not decided
+                    // yet, this stops it: the old behaviour.
+                    if warm_set::warm_stop_point(
+                        warm_bounded.load(std::sync::atomic::Ordering::SeqCst),
+                    ) == warm_set::WarmStop::MigrationEnd
+                    {
+                        warm_stop.store(true, std::sync::atomic::Ordering::SeqCst);
+                    }
                     drop(warmup);
                     startup_recovery::record_startup_stage(
                         &app_data_dir,
@@ -604,7 +618,10 @@ pub fn run() {
                         None,
                     );
 
-                    let runtime = match spawn_initial_services(&app_handle) {
+                    let spawned = spawn_initial_services(&app_handle);
+                    // Runtime ready or failed: a bounded boot-set read is done.
+                    warm_stop.store(true, std::sync::atomic::Ordering::SeqCst);
+                    let runtime = match spawned {
                         Ok(runtime) => runtime,
                         Err(error) => {
                             let detail = error.to_string();
@@ -1172,7 +1189,11 @@ fn sidecar_env(
 /// finishes). The cold open was paying one slow `CreateFile` per module inside
 /// Node; this must never delay the server launch, so it is cooperative and
 /// is never joined.
-fn warm_packaged_standalone(root: &std::path::Path, stop: &std::sync::atomic::AtomicBool) {
+fn warm_packaged_standalone(
+    root: &std::path::Path,
+    stop: &std::sync::atomic::AtomicBool,
+    bounded: &std::sync::atomic::AtomicBool,
+) {
     use std::io::Read;
     use std::sync::atomic::Ordering;
     if !root.is_dir() {
@@ -1191,6 +1212,7 @@ fn warm_packaged_standalone(root: &std::path::Path, stop: &std::sync::atomic::At
             })
         });
     if let Some(plan) = boot_plan {
+        bounded.store(warm_set::plan_is_bounded(plan.len()), Ordering::SeqCst);
         let mut buffer = vec![0_u8; 128 * 1024];
         for path in plan {
             if stop.load(Ordering::Relaxed) {
