@@ -37,6 +37,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.studioStates.publish.published": "Published: the SahelFlow online service accepted this version ({{version}}).",
     "storefront.studioStates.toggle.on": "Storefront: active",
     "storefront.studioStates.toggle.off": "Storefront: paused",
+    "storefront.studioStates.photos.none": "No photo",
+    "storefront.studioStates.photos.notHosted": "Photos are shown here from this computer. The online store does not host photos yet, so buyers may not see them.",
   },
   fr: {
     "storefront.studioStates.history.loadFailedTitle": "L’historique des versions ne s’est pas chargé",
@@ -68,6 +70,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.studioStates.publish.published": "Publiée : le service en ligne SahelFlow a accepté cette version ({{version}}).",
     "storefront.studioStates.toggle.on": "Boutique : active",
     "storefront.studioStates.toggle.off": "Boutique : en pause",
+    "storefront.studioStates.photos.none": "Pas de photo",
+    "storefront.studioStates.photos.notHosted": "Les photos s’affichent ici depuis cet ordinateur. La boutique en ligne n’héberge pas encore les photos : vos acheteurs risquent de ne pas les voir.",
   },
   ar: {
     "storefront.studioStates.history.loadFailedTitle": "تعذّر تحميل سجل النسخ",
@@ -99,6 +103,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.studioStates.publish.published": "تم النشر: قبلت خدمة SahelFlow عبر الإنترنت هذه النسخة ({{version}}).",
     "storefront.studioStates.toggle.on": "المتجر: مفعّل",
     "storefront.studioStates.toggle.off": "المتجر: متوقف مؤقتًا",
+    "storefront.studioStates.photos.none": "بلا صورة",
+    "storefront.studioStates.photos.notHosted": "تظهر الصور هنا من هذا الحاسوب. المتجر على الإنترنت لا يستضيف الصور بعد، لذا قد لا يراها المشترون.",
   },
 };
 
