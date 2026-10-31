@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { DbClient } from "@/lib/db";
 import { startOfShopDay } from "@/lib/time/shop-day";
 import {
   KIND_SPECS,
@@ -10,7 +10,8 @@ import {
   type NotificationSeverity,
 } from "./event-kinds";
 
-export type LiveClient = Pick<Prisma.TransactionClient, "order" | "delivery" | "message">;
+// Taken from the real (extended) client so `db` and a transaction handle both fit.
+export type LiveClient = Pick<DbClient, "order" | "delivery" | "message">;
 
 export interface LiveEventInput {
   eventType: string;

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import type { DbClient } from "@/lib/db";
 import {
   KIND_SPECS,
   asSeverity,
@@ -10,7 +10,9 @@ import {
   type NotificationSeverity,
 } from "./event-kinds";
 
-export type NotificationEmitClient = Pick<Prisma.TransactionClient, "notificationEvent">;
+// Taken from the real (extended) client: a transaction handle of it carries the very same
+// notificationEvent delegate, so both the shop client and a `tx` fit without a cast.
+export type NotificationEmitClient = Pick<DbClient, "notificationEvent">;
 
 export interface EmitInput {
   kind: NotificationKind;
