@@ -29,13 +29,31 @@ export type StraceAnalysis = Readonly<{
 }>;
 export type VerifyResult = Readonly<{ ok: boolean; problems: string[] }>;
 
-/** Files the shell must always warm. A manifest that lacks one is refused. */
-export const REQUIRED_ENTRY_RULES: readonly { name: string; test: RegExp }[] = [
+export type BootPlatform = "linux" | "windows";
+type EntryRule = { name: string; test: RegExp };
+
+const COMMON_ENTRY_RULES: readonly EntryRule[] = [
   { name: "server entry", test: /^server\.js$/ },
   { name: "middleware", test: /^\.next\/server\/(?:middleware|proxy)\.js$/ },
-  { name: "prisma query engine", test: /(?:^|\/)(?:lib)?query_engine[^/]*\.node$/ },
-  { name: "sqlite binary", test: /(?:^|\/)[^/]*sqlite[^/]*\.node$/ },
 ];
+
+/**
+ * Files the shell must always warm. A manifest that lacks one is refused.
+ * Linux keeps the Prisma engine inside the tree. The Windows installer ships it as
+ * resources/runtime/query_engine-windows.dll.node and points PRISMA_QUERY_ENGINE_LIBRARY
+ * at it, so the Windows tree is not asked to hold one. There is no sqlite rule: the
+ * app reaches SQLite through that engine and the built tree holds no sqlite file.
+ */
+export function requiredEntryRules(platform: BootPlatform): readonly EntryRule[] {
+  if (platform === "windows") return COMMON_ENTRY_RULES;
+  return [...COMMON_ENTRY_RULES, { name: "prisma query engine", test: /(?:^|\/)libquery_engine-[^/]*\.so\.node$/ }];
+}
+
+/** undefined option = linux; anything but the two names = undefined (the CLI refuses it). */
+export function parseBootPlatform(value: string | undefined): BootPlatform | undefined {
+  if (value === undefined) return "linux";
+  return value === "linux" || value === "windows" ? value : undefined;
+}
 
 // Compiled binaries differ per platform (a Linux trace names .so.node files, the
 // Windows tree has .dll.node), so the shell may skip these when they are absent.
@@ -148,7 +166,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Fails when the manifest cannot be trusted against THIS build's file list. */
-export function verifyBootSet(manifest: unknown, tree: readonly TreeEntry[]): VerifyResult {
+export function verifyBootSet(manifest: unknown, tree: readonly TreeEntry[], platform: BootPlatform = "linux"): VerifyResult {
   const problems: string[] = [];
   if (!isRecord(manifest)) return { ok: false, problems: ["manifest is not an object"] };
   if (manifest.formatVersion !== 1) problems.push(`unsupported formatVersion: ${String(manifest.formatVersion)}`);
@@ -181,7 +199,7 @@ export function verifyBootSet(manifest: unknown, tree: readonly TreeEntry[]): Ve
   }
   if (manifest.fileCount !== rawEntries.length) problems.push(`fileCount ${String(manifest.fileCount)} does not match ${rawEntries.length} entries`);
   if (manifest.totalBytes !== sum) problems.push(`totalBytes ${String(manifest.totalBytes)} does not match the entries (${sum})`);
-  for (const rule of REQUIRED_ENTRY_RULES) {
+  for (const rule of requiredEntryRules(platform)) {
     if (!listed.some((path) => rule.test.test(path))) problems.push(`required entry missing: ${rule.name}`);
   }
   return { ok: problems.length === 0, problems };
@@ -254,7 +272,12 @@ function option(args: readonly string[], name: string): string | undefined {
 function main(args: readonly string[]): number {
   const treeArg = option(args, "--tree");
   if (!treeArg) {
-    console.error("usage: boot-set.ts (--from-strace FILE [--out FILE] | --verify FILE | --summary FILE) --tree DIR");
+    console.error("usage: boot-set.ts (--from-strace FILE [--out FILE] | --verify FILE | --summary FILE) --tree DIR [--platform linux|windows]");
+    return 2;
+  }
+  const platform = parseBootPlatform(option(args, "--platform"));
+  if (!platform) {
+    console.error("--platform must be linux or windows");
     return 2;
   }
   const root = realpathSync(treeArg);
@@ -262,7 +285,7 @@ function main(args: readonly string[]): number {
   const fromStrace = option(args, "--from-strace");
   if (fromStrace) {
     const analysis = analyzeStrace(readFileSync(fromStrace, "utf8"), root, tree);
-    const verdict = verifyBootSet(analysis.manifest, tree);
+    const verdict = verifyBootSet(analysis.manifest, tree, platform);
     const out = option(args, "--out");
     if (out) writeFileSync(out, serializeBootSet(analysis.manifest), "utf8");
     console.log(JSON.stringify({ treeFiles: tree.filter((t) => t.kind === "file").length, bootFiles: analysis.manifest.fileCount, bootBytes: analysis.manifest.totalBytes, directoriesScanned: analysis.directoriesScanned, failedOpens: analysis.failedOpens, verify: verdict }));
@@ -271,7 +294,7 @@ function main(args: readonly string[]): number {
   const manifestPath = option(args, "--verify") ?? option(args, "--summary");
   if (!manifestPath) return 2;
   const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf8"));
-  const verdict = verifyBootSet(manifest, tree);
+  const verdict = verifyBootSet(manifest, tree, platform);
   if (option(args, "--verify")) {
     console.log(verdict.ok ? "boot-set: OK" : `boot-set: STALE\n${verdict.problems.join("\n")}`);
     return verdict.ok ? 0 : 1;

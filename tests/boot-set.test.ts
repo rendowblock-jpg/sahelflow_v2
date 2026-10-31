@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  REQUIRED_ENTRY_RULES,
   analyzeStrace,
+  parseBootPlatform,
   parseStrace,
+  requiredEntryRules,
   verifyBootSet,
+  type BootPlatform,
   type BootSetManifest,
   type TreeEntry,
 } from "../scripts/boot-set";
@@ -145,7 +147,7 @@ const withEntries = (m: BootSetManifest, entries: unknown[]) => ({
 
 describe("verifyBootSet", () => {
   it("accepts a fresh manifest that names every required entry file", () => {
-    expect(REQUIRED_ENTRY_RULES.length).toBeGreaterThanOrEqual(4);
+    expect(requiredEntryRules("linux").map((r) => r.name)).toEqual(["server entry", "middleware", "prisma query engine"]);
     expect(verifyBootSet(goodManifest(), TREE)).toEqual({ ok: true, problems: [] });
   });
 
@@ -167,7 +169,6 @@ describe("verifyBootSet", () => {
     ["server.js", "server entry"],
     [".next/server/middleware.js", "middleware"],
     ["node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node", "prisma"],
-    ["node_modules/better-sqlite3/build/Release/better_sqlite3.node", "sqlite"],
   ])("fails when the required entry %s is not listed", (path) => {
     const m = goodManifest();
     const r = verifyBootSet(withEntries(m, m.entries.filter((e) => e.path !== path)), TREE);
@@ -205,5 +206,62 @@ describe("verifyBootSet", () => {
     for (const bad of [null, 5, "x", [], {}, { formatVersion: 1, entries: "no" }]) {
       expect(verifyBootSet(bad, TREE).ok).toBe(false);
     }
+  });
+});
+
+const WIN_ENGINE = "node_modules/.prisma/client/query_engine-windows.dll.node";
+const TREE_WITH_WIN_ENGINE: TreeEntry[] = [...TREE, f(WIN_ENGINE, 30000)];
+const lines = (...paths: string[]) => paths.map((p) => open(`${ROOT}/${p}`)).join("\n");
+const LINUX_ENGINE = "node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node";
+
+describe("required entries per platform", () => {
+  it("a correct Linux manifest needs no sqlite file (the real tree has none: SQLite runs inside the Prisma engine)", () => {
+    const m = parseStrace(lines("server.js", ".next/server/middleware.js", LINUX_ENGINE), ROOT, TREE);
+    expect(verifyBootSet(m, TREE, "linux")).toEqual({ ok: true, problems: [] });
+  });
+
+  it("Windows asks for server and middleware only: its engine ships in resources/runtime, outside the tree", () => {
+    const m = parseStrace(lines("server.js", ".next/server/middleware.js", ".next/server/app/page.js"), ROOT, TREE);
+    expect(verifyBootSet(m, TREE, "windows")).toEqual({ ok: true, problems: [] });
+    expect(verifyBootSet(m, TREE, "linux").problems).toEqual(["required entry missing: prisma query engine"]);
+  });
+
+  it("the default platform is linux", () => {
+    const m = parseStrace(lines("server.js", ".next/server/middleware.js"), ROOT, TREE);
+    expect(verifyBootSet(m, TREE)).toEqual(verifyBootSet(m, TREE, "linux"));
+    expect(verifyBootSet(m, TREE).ok).toBe(false);
+  });
+
+  it("a Windows engine file name does not satisfy the Linux rule", () => {
+    const m = parseStrace(lines("server.js", ".next/server/middleware.js", WIN_ENGINE), ROOT, TREE_WITH_WIN_ENGINE);
+    expect(verifyBootSet(m, TREE_WITH_WIN_ENGINE, "linux").problems).toEqual(["required entry missing: prisma query engine"]);
+    expect(verifyBootSet(m, TREE_WITH_WIN_ENGINE, "windows").ok).toBe(true);
+  });
+
+  it.each([
+    ["server.js", "server entry"],
+    [".next/server/middleware.js", "middleware"],
+  ])("Windows still refuses a manifest without %s", (path, name) => {
+    const all = ["server.js", ".next/server/middleware.js", ".next/server/app/page.js"];
+    const m = parseStrace(lines(...all.filter((p) => p !== path)), ROOT, TREE);
+    expect(verifyBootSet(m, TREE, "windows").problems).toEqual([`required entry missing: ${name}`]);
+  });
+
+  it.each<[BootPlatform, string[]]>([
+    ["linux", ["server entry", "middleware", "prisma query engine"]],
+    ["windows", ["server entry", "middleware"]],
+  ])("%s rule names", (platform, names) => {
+    expect(requiredEntryRules(platform).map((r) => r.name)).toEqual(names);
+  });
+
+  it.each<[string | undefined, string | undefined]>([
+    ["linux", "linux"],
+    ["windows", "windows"],
+    [undefined, "linux"],
+    ["win32", undefined],
+    ["Windows", undefined],
+    ["", undefined],
+  ])("parseBootPlatform(%s) is %s", (input, expected) => {
+    expect(parseBootPlatform(input)).toBe(expected);
   });
 });
