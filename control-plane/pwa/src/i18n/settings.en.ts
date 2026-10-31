@@ -16,4 +16,8 @@ export const settingsEn: Catalog = {
   "settings.commands.state.unknown": "Not sure it ran. Check again.",
   "settings.commands.retry": "Retry",
   "settings.commands.discard": "Discard",
+  "settings.commands.kind.confirm": "Confirm order",
+  "settings.commands.kind.reject": "Reject order",
+  "settings.commands.kind.reply": "Reply",
+  "settings.commands.kind.note": "Note",
 };

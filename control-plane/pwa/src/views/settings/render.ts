@@ -20,11 +20,15 @@ const day = (at: number, l: Locale, tz?: string): string =>
   new Intl.DateTimeFormat(`${l}-u-nu-latn`, { day: "numeric", month: "short", year: "numeric", ...(tz ? { timeZone: tz } : {}) }).format(at);
 const btn = (act: string, label: string, kind: string, extra = ""): string => `<button type="button" class="btn btn-${kind}" data-act="${act}"${extra}>${label}</button>`;
 
+// The outbox keeps NO label for a reply or a note (it was the customer name / the note text): the row says the kind instead.
+const KIND_WORD: Readonly<Record<string, string>> = { "command.orders.confirm": "confirm", "command.orders.reject": "reject", "command.messages.reply": "reply", "command.comments.write": "note" };
+const kindWord = (r: OutboxRecord, L: Locale): string => (KIND_WORD[r.kind] ? t(L, `settings.commands.kind.${KIND_WORD[r.kind]}`) : "");
+
 function commandRow(r: OutboxRecord, m: SettingsModel): string {
   const L = m.locale; const state = esc(t(L, `settings.commands.state.${r.state}`));
   const retry = canRetry(r) ? btn("s-retry", esc(t(L, "settings.commands.retry")), "small", m.online ? "" : " disabled") : "";
   const discard = canDiscard(r) ? btn("s-discard", esc(t(L, "settings.commands.discard")), "ghost") : "";
-  return `<li data-id="${esc(r.commandId)}" data-state="${esc(r.state)}"><span class="cmd-label">${esc(r.labelForUi)}</span> <span class="stamp">${state}</span>${retry}${discard}</li>`;
+  return `<li data-id="${esc(r.commandId)}" data-state="${esc(r.state)}"><span class="cmd-label">${r.labelForUi.trim() === "" ? esc(kindWord(r, L)) : esc(r.labelForUi)}</span> <span class="stamp">${state}</span>${retry}${discard}</li>`;
 }
 
 export function renderSettings(m: SettingsModel): string {

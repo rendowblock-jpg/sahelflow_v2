@@ -16,4 +16,8 @@ export const settingsAr: Catalog = {
   "settings.commands.state.unknown": "لسنا متأكدين أنه نُفّذ. تحقق مرة أخرى.",
   "settings.commands.retry": "أعد المحاولة",
   "settings.commands.discard": "احذف",
+  "settings.commands.kind.confirm": "تأكيد الطلب",
+  "settings.commands.kind.reject": "رفض الطلب",
+  "settings.commands.kind.reply": "رد",
+  "settings.commands.kind.note": "ملاحظة",
 };

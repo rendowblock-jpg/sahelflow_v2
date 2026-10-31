@@ -14,20 +14,21 @@ import { createVault, purgeOld } from "../storage/sealed";
 import { wipeAll } from "../storage/wipe";
 import { createSync } from "../sync/engine";
 import { reactToPoll, type PollReaction } from "../sync/revoke";
-import type { ScreenModule } from "../kit/screen-contract";
+import { focusKeyOf } from "../kit/focus";
 import { createDirectPoll } from "./direct-poll";
 import type { Budget } from "../sync/schedule";
 import type { UpdateController } from "../sw/update";
 import { createRelayClient } from "../today/relay-source";
 import { freshness, type Projection, type ProjectionSource } from "../today/projection";
-import { renderApp, type ScreenId, type Theme, type View } from "../views/view";
+import { effectiveScreen, isLazyScreen, renderApp, type ScreenId, type Theme, type View } from "../views/view";
 import { createInboxHost } from "../views/inbox/host";
 import { createCommandStack, type CommandStack } from "./commands";
 import { createInboxMount } from "./inbox-mount";
 import { createOrdersHost, ORDERS_VAULT_KEY, type OrdersHostHandle } from "./orders-host";
 import { createSettingsHost, type SettingsHostHandle } from "./settings-host";
 import { applyPreview } from "./preview";
-import { GROUP_OF } from "./registry";
+import { GROUP_OF, loadScreen } from "./registry";
+import { createScreenMount } from "./screen-mount";
 import { withShellStrip } from "./shell-strip";
 import { createVaultWiring } from "./vault-wiring";
 
@@ -37,7 +38,7 @@ type InstallEvent = Event & { prompt(): Promise<void> };
 type LockRow = Readonly<{ pin: PinRecord; failures: number; waitUntil: number }>;
 export type AppOptions = Readonly<{ source?: ProjectionSource; transport?: PairingTransport }>;
 
-const SCREENS: readonly ScreenId[] = ["welcome", "pair", "today", "settings", "lock", "install"];
+const SCREENS: readonly ScreenId[] = ["welcome", "pair", "today", "settings", "lock", "orders", "order", "inbox", "conversation", "devices", "install"];
 const store = {
   get: (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k: string, v: string): void => { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
@@ -75,8 +76,8 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   const vault = createVault();
   // W3b F6a: every direct poll (inbox, orders) acts on a revoked answer at once (one tested function, direct-poll.ts).
   const directPoll = createDirectPoll({ poll: (k) => relay.poll(k), wipe, onRevoked: showRevoked });
-  // The install screen: its chunk loads the first time the screen is shown (own file, own tests).
-  let installScreen: ScreenModule | null = null; let unbindInstall: (() => void) | null = null; let installLoading: Promise<void> | null = null;
+  // The lazy screens (orders, inbox, devices, install) are drawn into <main> by ONE mounter (screen-mount.ts, own tests): skeleton, render, bind, Retry.
+  const screenMount = createScreenMount({ load: loadScreen, ctx: () => ({ view, go: (x) => go(x) }), root: () => root.querySelector<HTMLElement>("#main") });
   // Lock / hidden >= 5 min / unlock / wipe on the vault: one tested module. `wake`: the orders screen redraws from what is left and reloads if it was emptied.
   const vaultWiring = createVaultWiring({
     vault, key: ORDERS_VAULT_KEY,
@@ -99,13 +100,10 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     document.documentElement.lang = v.locale; document.documentElement.dir = dirOf(v.locale);
     document.documentElement.dataset.theme = v.theme === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : v.theme;
     // "Your PC is off" on every screen that shows shop data (Today and Orders draw their own strip; this one is added once, only when none is there).
+    const focusKey = focusKeyOf(document.activeElement, root); const shown = effectiveScreen(v);
+    screenMount.dispose();
     root.innerHTML = withShellStrip(renderApp(v), { screen: v.screen, pcoff: v.pcoff === true, asOf: v.projection?.generatedAt ?? null, locale: v.locale });
-    unbindInstall?.(); unbindInstall = null;
-    if (v.screen === "install") {
-      const main = root.querySelector<HTMLElement>("#main"); const mod = installScreen;
-      if (main && mod) { const ctx = { view: v, go: (x: ScreenId) => go(x) }; main.innerHTML = mod.render(ctx); unbindInstall = mod.bind(main, ctx); }
-      else if (main) { main.innerHTML = ""; installLoading ??= import("../views/install/screen").then((m) => { installScreen = m.screen; paint(); }, () => { installLoading = null; }); }
-    }
+    if (isLazyScreen(shown)) screenMount.show(shown, focusKey);
     if (v.screen === "lock") root.querySelector<HTMLInputElement>("#pin")?.focus();
   };
   const set = (patch: Partial<View>, focusMain = false): void => {
@@ -116,14 +114,12 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     previewOn = false;
     history.pushState(null, "", `/?screen=${screen}`);
     set({ screen, state: screen === "today" ? "empty" : "empty", confirmRemove: false, removed: false, removeError: null, ...patch }, true);
-    if (GROUP_OF[screen] === "orders") void attachOrders().catch(() => undefined);
-    if (GROUP_OF[screen] === "settings") void attachSettings().catch(() => undefined);
-    if (screen === "inbox" || screen === "conversation") void attachInbox(screen).catch(() => undefined);
+    attachFor();
     if (screen === "today") void loadToday(); else sync.onScreen();
   };
   function showRevoked(reaction: Extract<PollReaction, { kind: "revoked" }>): void {
     sync.stop();
-    set({ screen: "settings", state: "empty", revoked: true, removed: false, hasLock: false, projection: null, pcoff: false, removeError: reaction.wiped ? null : reaction.failed.join(", ") });
+    set({ screen: "settings", state: "empty", revoked: true, paired: false, removed: false, hasLock: false, projection: null, pcoff: false, removeError: reaction.wiped ? null : reaction.failed.join(", ") });
   }
   async function loadToday(): Promise<void> {
     if (!options.source) {
@@ -201,13 +197,13 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
       onEnd: (end) => {
         watcher = null;
         if (view.screen !== "pair") return;
-        if (end === "approved") go("today");
+        if (end === "approved") { go("today"); detectPaired(); }
         else set({ state: "error", failure: end === "timeout" ? "approval_timeout" : "rejected" }, true);
       },
     });
   }
   async function wipe(): ReturnType<typeof wipeAll> {
-    watcher?.stop(); watcher = null; vaultWiring.wipe(); stack = null; ordersHost = null; inboxMount = null;
+    watcher?.stop(); watcher = null; vaultWiring.wipe(); stack = null; ordersHost = null; inboxMount = null; view = { ...view, paired: false };
     const db = await getDb().catch(() => null); dbPromise = null;
     return wipeAll({
       db, factory: indexedDB, caches: typeof caches === "undefined" ? null : caches,
@@ -274,6 +270,18 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     });
     await inboxMount.visit(screen);
   }
+  // A lazy screen draws nothing real until its host exists: attach once (first visit), then draw it again. Orders and Inbox need the paired stack; Settings does not.
+  const attachFor = (): void => {
+    const id = effectiveScreen(view); const group = GROUP_OF[id];
+    const redraw = (): void => { if (effectiveScreen(view) === id && view.screen !== "lock") screenMount.show(id); };
+    if (group === "orders" && !ordersHost) void attachOrders().then(redraw, () => undefined);
+    else if (group === "settings" && !settingsHost) void attachSettings().then(redraw, () => undefined);
+    else if (group === "inbox") { const first = inboxMount === null; void attachInbox(id as "inbox" | "conversation").then(() => { if (first) redraw(); }, () => undefined); }
+  };
+  // The tabs Orders and Inbox appear once the command stack exists (a paired phone); never for a phone that is not paired.
+  function detectPaired(): void {
+    void getStack().then((s) => { if (s && view.paired !== true) { set({ paired: true }); attachFor(); } }, () => undefined);
+  }
   // Polling budget: fetch on open/visible/online/Refresh, 30 s on Orders and Inbox, 60 s elsewhere, nothing while hidden, 600 a day.
   const sync = createSync({
     now: Date.now, visible: () => !document.hidden, online: () => navigator.onLine, screen: () => view.screen,
@@ -316,7 +324,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   window.addEventListener("appinstalled", () => set({ installed: true, canInstall: false }));
   window.addEventListener("online", () => { set({ online: true }); sync.onOnline(); });
   window.addEventListener("offline", () => set({ online: false }));
-  window.addEventListener("popstate", () => { const s = SCREENS.find((x) => x === new URLSearchParams(location.search).get("screen")); set({ screen: s ?? "welcome" }); });
+  window.addEventListener("popstate", () => { const s = SCREENS.find((x) => x === new URLSearchParams(location.search).get("screen")); set({ screen: s ?? "welcome" }); attachFor(); });
   document.addEventListener("visibilitychange", () => {
     lockState = document.hidden ? onHidden(lockState, Date.now()) : onVisible(lockState, Date.now());
     vaultWiring.visibility({ hidden: document.hidden, phase: lockState.phase, now: Date.now() }); // hidden for 5 minutes or more, or locked: the decrypted copies are dropped
@@ -326,7 +334,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
 
   void getDb().then((db) => purgeOld(db, Date.now())).catch(() => undefined);
   link = takePairingLink(location.hash, location.pathname + location.search, (u) => history.replaceState(null, "", u));
-  paint();
+  paint(); attachFor(); detectPaired();
   void getDb().then((db) => db.get<LockRow>("settings", "lock")).then((row) => {
     if (!row) return;
     lockRow = row; lockState = initialState(true, row); vaultWiring.locked(); returnTo = view.screen === "lock" ? "welcome" : view.screen;

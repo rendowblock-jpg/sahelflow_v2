@@ -54,7 +54,9 @@ describe("app.ts mounts the inbox", () => {
     expect(count(/void s\.outbox\.flush\(\)/g)).toBe(1);
   });
   it("go() attaches the inbox for inbox and conversation; a wipe forgets the mount; an unlock revisits it only when the phone is not locked", () => {
-    expect(app).toContain('if (screen === "inbox" || screen === "conversation") void attachInbox(screen)');
+    // The screen mounter owns the draw now: go(), popstate and startup call attachFor(), which attaches the inbox host for the inbox group.
+    expect(app).toContain('else if (group === "inbox") { const first = inboxMount === null; void attachInbox(id as "inbox" | "conversation")');
+    expect(app).toContain("attachFor();");
     expect(app).toContain("stack = null; ordersHost = null; inboxMount = null;");
     expect(app).toMatch(/lockState\.phase !== "locked" && GROUP_OF\[view\.screen === "lock" \? returnTo : view\.screen\] === "inbox"\) void inboxMount\?\.visit\("inbox"\)/);
   });

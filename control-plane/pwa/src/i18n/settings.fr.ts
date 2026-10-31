@@ -16,4 +16,8 @@ export const settingsFr: Catalog = {
   "settings.commands.state.unknown": "Pas sûr qu’elle ait été exécutée. Vérifiez à nouveau.",
   "settings.commands.retry": "Réessayer",
   "settings.commands.discard": "Abandonner",
+  "settings.commands.kind.confirm": "Confirmer la commande",
+  "settings.commands.kind.reject": "Refuser la commande",
+  "settings.commands.kind.reply": "Réponse",
+  "settings.commands.kind.note": "Note",
 };
