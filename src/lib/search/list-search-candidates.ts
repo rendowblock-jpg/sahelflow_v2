@@ -9,7 +9,7 @@ import {
   matchesSearchQuery,
   normalizeSearchText,
 } from "@/lib/search/universal-search";
-import { wilayaStoredSpellings } from "@/lib/wilaya-display";
+import { WILAYA_CODES, wilayaStoredSpellings } from "@/lib/wilaya-display";
 
 /**
  * Candidate ids for the customer, order, product and canned-response lists, so
@@ -78,7 +78,7 @@ export async function customerIdsMatching(
 /** Every stored spelling (French, Arabic, code) of the wilayas that match the typed text. The list is small and fixed. */
 export function foldedWilayaSpellings(q: string): string[] {
   const spellings = new Set<string>();
-  for (let code = 1; code <= 58; code += 1) {
+  for (const code of WILAYA_CODES) {
     for (const spelling of wilayaStoredSpellings(code) ?? []) {
       if (matchesSearchQuery(q, [spelling])) spellings.add(spelling);
     }
