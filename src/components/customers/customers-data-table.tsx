@@ -56,7 +56,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
           {row.original.isBlacklisted === true ? (
             <Badge
               variant="outline"
-              className="gap-1 border-destructive/20 bg-destructive-soft text-destructive"
+              className="gap-1 border-destructive/20 bg-destructive-soft text-destructive-ink"
             >
               <Ban className="size-3" aria-hidden="true" />
               {t("customers.blacklisted")}

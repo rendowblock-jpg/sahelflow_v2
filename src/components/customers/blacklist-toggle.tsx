@@ -180,7 +180,7 @@ export function BlacklistToggle({
           variant="outline"
           size="sm"
           onClick={() => setAddOpen(true)}
-          className="text-destructive hover:text-destructive dark:text-red-400"
+          className="text-destructive hover:text-destructive dark:text-red-300 dark:hover:text-red-300"
         >
           <Ban className="me-1.5 h-4 w-4" />
           {t("risk.blacklist.add")}

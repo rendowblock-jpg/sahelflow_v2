@@ -269,7 +269,7 @@ export function DangerZonePanel({
         {canReset ? (
           <div className="space-y-3 rounded-surface border border-destructive/30 bg-destructive-subtle p-4">
             <div>
-              <p className="text-sm font-medium text-destructive">
+              <p className="text-sm font-medium text-destructive-ink">
                 {t("settings.dangerZone.resetDatabase")}
               </p>
               <p className="text-xs text-muted-foreground">

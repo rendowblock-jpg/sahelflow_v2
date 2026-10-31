@@ -447,7 +447,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
               {partiallyDegraded ? (
                 <p
-                  className="mx-1 my-1 flex items-start gap-2 rounded-control bg-warning-subtle px-3 py-2 text-caption text-warning"
+                  className="mx-1 my-1 flex items-start gap-2 rounded-control bg-warning-subtle px-3 py-2 text-caption text-warning-ink"
                   role="status"
                 >
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />

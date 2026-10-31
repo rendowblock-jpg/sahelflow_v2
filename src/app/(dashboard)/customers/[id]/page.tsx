@@ -134,7 +134,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         <div className="flex items-start gap-3 rounded-surface border border-destructive/25 bg-destructive-subtle p-4">
           <Ban className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-destructive">
+            <p className="text-sm font-semibold text-destructive-ink">
               {t("customers.blacklisted")}
             </p>
             {customer.blacklistReason ? (

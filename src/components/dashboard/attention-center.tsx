@@ -16,8 +16,8 @@ export interface AttentionItem {
 
 const TONE: Record<NonNullable<AttentionItem["tone"]>, string> = {
   neutral: "border-border/70 bg-muted/20 text-muted-foreground",
-  warning: "border-warning/20 bg-warning-subtle text-warning",
-  danger: "border-destructive/20 bg-destructive-subtle text-destructive",
+  warning: "border-warning/20 bg-warning-subtle text-warning-ink",
+  danger: "border-destructive/20 bg-destructive-subtle text-destructive-ink",
 };
 
 interface AttentionCenterProps {

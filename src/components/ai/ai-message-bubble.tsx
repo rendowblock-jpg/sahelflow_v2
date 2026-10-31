@@ -153,7 +153,7 @@ const MessageBubble = memo(function MessageBubble({
               onClick={() => onFeedback(message.id, "down")}
               className={cn(
                 actionButton,
-                message.feedback === "down" && "bg-destructive-soft text-destructive",
+                message.feedback === "down" && "bg-destructive-soft text-destructive-ink",
               )}
             >
               <ThumbsDown className="size-3.5" aria-hidden="true" />

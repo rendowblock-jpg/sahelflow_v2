@@ -241,11 +241,11 @@ export function AutomationRunRecoveryPanel({ initialRuns, activeAutomationIds }:
                       <span>{formatter.format(new Date(run.createdAt))}</span>
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-control bg-success-soft px-2 py-1 text-success">
+                      <span className="rounded-control bg-success-soft px-2 py-1 text-success-ink">
                         {run.succeededStepCount} {t("automations.runtime.state.succeeded")}
                       </span>
                       {run.failedStepCount > 0 ? (
-                        <span className="rounded-control bg-destructive-soft px-2 py-1 text-destructive">
+                        <span className="rounded-control bg-destructive-soft px-2 py-1 text-destructive-ink">
                           {run.failedStepCount} {t("automations.runtime.state.failed")}
                         </span>
                       ) : null}

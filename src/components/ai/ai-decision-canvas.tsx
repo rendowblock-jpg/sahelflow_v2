@@ -279,7 +279,7 @@ export function AiDecisionCanvas({
                 {getAiDecisionCopy(locale, "reviewEvidence")}
               </span>
               {reviewBadgeCount > 0 ? (
-                <span className="rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning">
+                <span className="rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning-ink">
                   {reviewBadgeCount}
                 </span>
               ) : null}
