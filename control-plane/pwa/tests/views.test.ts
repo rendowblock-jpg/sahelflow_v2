@@ -121,3 +121,35 @@ describe("the waiting screen after a reload shows the time already waited and th
     expect(html).not.toMatch(/NaN|undefined/);
   });
 });
+
+describe("preview switches for the screens the pairing and Today work added", () => {
+  const REFUSALS = ["proof_missing", "bad_signature", "key_mismatch_with_pin", "wrong_context", "malformed", "unavailable"] as const;
+  for (const locale of LOCALES) for (const failure of REFUSALS) {
+    it(`${locale}: ?failure=${failure} shows its own refusal screen with the one instruction and no retry`, () => {
+      const html = render(locale, "pair", "error", `&failure=${failure}`);
+      expect(html).toContain(esc(t(locale, `pair.trust.${failure}`)));
+      expect(html).toContain(esc(t(locale, "pair.trust.instruction")));
+      expect(html).not.toContain('data-act="retry"');
+    });
+  }
+  for (const locale of LOCALES) {
+    it(`${locale}: ?failure=approval_timeout shows the calm timeout with Start again`, () => {
+      const html = render(locale, "pair", "error", "&failure=approval_timeout");
+      expect(html).toContain(esc(t(locale, "pair.timeout.title"))); expect(html).toContain('data-act="restart-pair"');
+    });
+    it(`${locale}: ?waited=7 shows the minutes already waited, ?waited=0 the just-now line, none shows neither`, () => {
+      expect(render(locale, "pair", "waiting", "&waited=7")).toContain(esc(t(locale, "pair.waiting.elapsed", { minutes: "7" })));
+      expect(render(locale, "pair", "waiting", "&waited=0")).toContain(esc(t(locale, "pair.waiting.justNow")));
+      const none = render(locale, "pair", "waiting");
+      expect(none).not.toContain(esc(t(locale, "pair.waiting.justNow"))); expect(none).not.toContain(esc(t(locale, "pair.waiting.elapsed", { minutes: "0" })));
+    });
+    it(`${locale}: ?floor=1 marks the waiting orders as 'at least' and exact numbers do not`, () => {
+      expect(render(locale, "today", "ready", "&floor=1")).toContain(esc(t(locale, "today.atLeast", { count: "4" })));
+      expect(render(locale, "today", "ready")).not.toContain(esc(t(locale, "today.atLeast", { count: "4" })));
+    });
+  }
+  it("an unknown failure or a non-numeric waited value falls back to the safe defaults", () => {
+    const view = applyPreview(base("en"), "?screen=pair&state=error&failure=__proto__&waited=abc");
+    expect(view.failure).toBe("rejected"); expect(view.pairedAt ?? null).toBeNull();
+  });
+});

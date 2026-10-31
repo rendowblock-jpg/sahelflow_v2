@@ -8,6 +8,12 @@ import type { ScreenId, Theme, View, ViewState } from "../views/view";
 const SCREENS: readonly ScreenId[] = ["welcome", "pair", "today", "settings", "lock"];
 const STATES: readonly ViewState[] = ["loading", "empty", "error", "stale", "offline", "ready", "expired", "keygen", "waiting"];
 const HOUR = 3_600_000;
+// ?failure=bad_signature (with state=error) shows one refusal or error screen; ?waited=7 (state=waiting) the minutes already waited;
+// ?floor=1 (screen=today) the "at least" count. Unknown values fall back to the defaults.
+const FAILURES: readonly PairFailure[] = [
+  "invalid_link", "unsupported", "keygen_failed", "storage_failed", "offline", "expired", "rejected", "network", "approval_timeout",
+  "proof_missing", "bad_signature", "key_mismatch_with_pin", "wrong_context", "malformed", "unavailable",
+];
 
 export function fixtureProjection(now: number, ageMs: number, zero = false): Projection {
   const week = [3, 5, 2, 8, 6, 4, zero ? 0 : 9].map((orders, i) => ({ at: now - (6 - i) * 24 * HOUR, orders: zero ? 0 : orders }));
@@ -25,10 +31,15 @@ export function applyPreview(base: View, search: string): View {
   const failure: PairFailure = "rejected"; const step: PairStep = "encryption";
   switch (screen) {
     case "welcome": return { ...v, updateReady: state === "stale", canInstall: v.ios ? false : state === "ready" || state === "empty" };
-    case "pair": return { ...v, step, failure, fingerprint: state === "waiting" ? "A1B2-C3D4-E5F6-7788" : null };
+    case "pair": {
+      const chosen = FAILURES.find((f) => f === q.get("failure")) ?? failure;
+      const waitedRaw = q.get("waited"); const waited = waitedRaw !== null && /^\d{1,4}$/.test(waitedRaw) ? Number(waitedRaw) : null;
+      return { ...v, step, failure: chosen, fingerprint: state === "waiting" ? "A1B2-C3D4-E5F6-7788" : null, pairedAt: state === "waiting" && waited !== null ? v.now - waited * 60_000 : null };
+    }
     case "today": {
       const age = state === "ready" ? 2 * 60_000 : state === "expired" ? 30 * HOUR : 3 * HOUR;
-      return { ...v, projection: state === "loading" || state === "error" ? null : fixtureProjection(v.now, age, state === "empty") };
+      const shown = state === "loading" || state === "error" ? null : fixtureProjection(v.now, age, state === "empty");
+      return { ...v, projection: shown && q.get("floor") === "1" ? { ...shown, toConfirmIsFloor: true } : shown };
     }
     case "settings": return { ...v, updateReady: state === "stale", removeError: state === "error" ? "caches" : null };
     case "lock": {
