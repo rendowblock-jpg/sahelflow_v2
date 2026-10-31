@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DiagnosticValue, DiagnosticsSink } from "./diagnostics-log";
@@ -7,6 +8,7 @@ import {
   createInboundSubscriber,
   decideInboundAccount,
 } from "./inbound-subscriber";
+import { createIngressHealth } from "./ingress-health";
 import type { IncomingMessage, SidecarEvent } from "./whatsapp";
 
 // On 2026-10-18 the Founder closed SahelFlow, a message arrived, and after
@@ -264,12 +266,76 @@ describe("inbound gate: losses are reported to the ingress-health recorder", () 
   });
 });
 
+// How customers arrive (identity design, slice 1): customer messages counted by the
+// KIND of chat address, never by the address.
+describe("how customers arrive: kinds counted, ids never kept", () => {
+  const LID_NUMBER = "98765432109876";
+  function arrival() {
+    const dir = mkdtempSync(join(tmpdir(), "sf-arrival-"));
+    const lines: Array<{ event: string; fields: Record<string, DiagnosticValue> }> = [];
+    const sink: DiagnosticsSink = { record: (event, fields) => void lines.push({ event, fields: { ...(fields ?? {}) } }) };
+    const health = createIngressHealth({ file: join(dir, "health.json"), spool: () => null });
+    const subscriber = createInboundSubscriber({
+      getStatus: () => ({ status: "connecting", user: null }),
+      credentialAccountId: () => ACCOUNT,
+      spool: { enqueue: () => undefined },
+      diagnostics: sink,
+      broadcast: () => undefined,
+      health,
+    });
+    return { dir, lines, health, subscriber };
+  }
+
+  it("counts an @lid customer message as kind lid and a phone message as kind phone", () => {
+    const { dir, health, subscriber } = arrival();
+    try {
+      subscriber(messageEvent(incoming(1, { remoteJid: `${LID_NUMBER}@lid` })));
+      subscriber(messageEvent(incoming(2, { remoteJid: `${LID_NUMBER}1@lid` })));
+      subscriber(messageEvent(incoming(3)));
+      expect(health.build().inbound.kinds).toEqual({ phone: 1, lid: 2 });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("own (fromMe) messages are not counted as customers", () => {
+    const { dir, health, subscriber } = arrival();
+    try {
+      subscriber(messageEvent(incoming(1, { remoteJid: `${LID_NUMBER}@lid`, fromMe: true })));
+      subscriber(messageEvent(incoming(2, { fromMe: true })));
+      const block = health.build();
+      expect(block.inbound.kinds).toEqual({ phone: 0, lid: 0 });
+      expect(block.inbound.lastSpooledAt).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("never records the id text in any diagnostics line or in the counts", () => {
+    const { dir, lines, health, subscriber } = arrival();
+    try {
+      subscriber(messageEvent(incoming(1, { remoteJid: `${LID_NUMBER}@lid` })));
+      subscriber(messageEvent(incoming(2)));
+      subscriber(messageEvent(incoming(3, { remoteJid: "120363000000000000@g.us" })));
+      const everything = JSON.stringify({ lines, kinds: health.build().inbound.kinds });
+      expect(lines.length).toBeGreaterThan(0);
+      expect(everything).not.toMatch(/\d{6,}/);
+      expect(everything).not.toContain("@");
+      expect(everything).not.toContain(LID_NUMBER);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("wiring", () => {
   const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
   it("/status adds the ingress block next to the manager status and changes none of its fields", () => {
     const index = read("sidecars/whatsapp/index.ts");
-    expect(index).toContain('app.get("/status", (context) => context.json({ ...wa.getStatus(), ingress: ingressHealth.build() }));');
+    expect(index).toContain(
+      'app.get("/status", (context) => context.json({ ...wa.getStatus(), ingress: ingressHealth.build(), identityEvidence: jidEvidence.summary() }));',
+    );
   });
 
   it("index.ts builds its subscriber from the tested gate and no longer carries the old inline check", () => {
