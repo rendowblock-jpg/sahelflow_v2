@@ -12,6 +12,8 @@ export type Projection = Readonly<{
   inDelivery: number;
   codToCollectDzd: number;
   week: readonly DayCount[];
+  // Held WhatsApp messages: shown only when the desktop publishes the count.
+  whatsappHeld?: number | null;
 }>;
 export type ProjectionResult =
   | Readonly<{ ok: true; projection: Projection }>
