@@ -1,0 +1,37 @@
+/* W3-F4 orders + notes. Logical properties only; every text >= 16px; every target >= 44px. Light theme only (CARNET). */
+.orders .filters{display:flex;gap:8px;margin-block:12px}
+.orders .filter{flex:1 1 0;min-block-size:44px;padding-inline:12px;font:inherit;font-size:16px;background:var(--sheet);color:var(--ink);border:1px solid var(--edge);border-radius:2px;cursor:pointer}
+.orders .filter[aria-pressed=true]{font-weight:700;background:var(--paper);border-inline-start:5px solid var(--ink)}
+.orders .rows{list-style:none;margin:0;padding:0}
+.orders .row{padding-block:4px;border-block-end:1px solid var(--rule)}
+.orders .row-main{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;inline-size:100%;min-block-size:44px;padding:8px 4px;font:inherit;font-size:16px;text-align:start;background:transparent;color:var(--ink);border:0;cursor:pointer}
+.orders .row-main:focus-visible,.orders .filter:focus-visible,.orders .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.orders .num{font-family:var(--f-num);direction:ltr;unicode-bidi:isolate}
+.orders .ord{font-weight:600}
+.orders .what,.orders .facts dd,.orders .note-text{overflow-wrap:anywhere}
+.orders .total{font-weight:600;justify-self:end}
+.orders .age{font-size:16px;color:var(--ink2)}
+.orders .st{display:inline-block;padding-block:2px;padding-inline:8px;font-size:16px;font-weight:600;border-radius:2px;border:1px solid var(--edge)}
+.st-pending{background:#EADBB3;color:#5F4507}
+.st-confirmed,.st-delivered,.st-shipped{background:#DEEBE0;color:#1C4B36}
+.st-cancelled,.st-returned{background:#F6E4DE;color:#7A2418}
+.st-other{background:#EBE5D8;color:#15171B}
+.orders .row .chip{margin-block:4px 8px}
+.chip-neutral{border-inline-start-color:#625E52}
+.orders .hint{margin-block:8px;font-size:16px;color:var(--ink2)}
+.orders .back{margin-block-end:8px}
+.orders .btn{min-block-size:44px;min-inline-size:44px;font-size:16px}
+.orders .btn[disabled]{opacity:.55;cursor:not-allowed}
+.orders .facts{margin-block:12px}
+.orders .fact{display:grid;grid-template-columns:8rem 1fr;gap:8px;padding-block:8px;border-block-end:1px solid var(--rule)}
+.orders .facts dt{font-weight:600}
+.orders .facts dd{margin:0}
+.orders .facts .hidden{color:var(--ink2);font-style:italic}
+.orders .items{list-style:none;margin:0;padding:0}
+.orders .actions{display:flex;flex-wrap:wrap;gap:8px;margin-block:12px}
+.orders .notes{margin-block-start:20px;padding-block-start:12px;border-block-start:2px solid var(--ink)}
+.orders .note-list{list-style:none;margin:0;padding:0}
+.orders .note-item{padding-block:8px;border-block-end:1px solid var(--rule)}
+.orders .note-text{margin:0 0 4px;white-space:pre-wrap}
+.orders .count{margin-block:4px 8px;font-size:16px;color:var(--ink2)}
+.orders .composer textarea{max-inline-size:100%;overflow-wrap:anywhere}
