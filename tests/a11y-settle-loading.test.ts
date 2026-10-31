@@ -15,11 +15,13 @@
  * The predicate runs inside the page (it is serialised by waitForFunction), so it is tested here against a DOM; the
  * browser run (probe in the pull request) shows the effect on the real panel.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Page } from "@playwright/test";
 import { AXE_LOAD_TIMEOUT_MS, noLoadingPlaceholders, settleLoading } from "../e2e/support/axe";
 import { cellVerdict, type Cell } from "../e2e/support/a11y-matrix-plan";
-import { gateCell } from "../e2e/support/page-checks";
+import { gateCell, settlePage } from "../e2e/support/page-checks";
 
 const cell: Cell = { route: "/profile", locale: "ar", theme: "light", viewport: "desktop", mode: "text200" };
 
@@ -168,5 +170,54 @@ describe("cellVerdict note about loading", () => {
 
   it("keeps a passing cell silent", () => {
     expect(cellVerdict({ ...base, violations: [], loaded: false })).toEqual({ status: "pass", shouldThrow: false, message: "" });
+  });
+});
+
+describe("settlePage", () => {
+  const kindOf = (call: Recorded) => (call.kind === "axe" ? "axe" : call.source.includes("skeleton") ? "loading" : call.source.includes("getAnimations") ? "motion" : "other");
+
+  it("waits for loading first and for motion second, and reports both", async () => {
+    const { page, calls } = recordingPage();
+    await expect(settlePage(page)).resolves.toEqual({ loaded: true, settled: true });
+    expect(calls.map(kindOf)).toEqual(["loading", "motion"]);
+  });
+
+  it("says the page did not finish loading, and still waits for motion", async () => {
+    const { page, calls } = recordingPage(timeoutError());
+    await expect(settlePage(page)).resolves.toEqual({ loaded: false, settled: true });
+    expect(calls.map(kindOf)).toEqual(["loading", "motion"]);
+  });
+
+  it("is what gateCell waits with, so axe never runs before it", async () => {
+    body('<button type="button">Save</button>');
+    const { page, calls } = recordingPage();
+    await gateCell(page, cell, { reportOnly: true, failures: [] });
+    expect(calls.map(kindOf)).toEqual(["loading", "motion", "axe"]);
+  });
+});
+
+/**
+ * The page facts (the squeezed-text check among them) are measured in the matrix spec, before gateCell. Measured on
+ * 31 Oct 2026 (Chromium 149, 32 px browser font, 24 loads of /profile and /settings): measured right after the network
+ * went quiet, three text elements of the open Settings dialog (its title, its description and its Close label, boxes
+ * that are 1 px wide by design) came out under 1 px in 7 loads; measured after the page had loaded, in none of the 24.
+ * Whether the missing second was the placeholder or the dialog's opening animation was not separated. The 90-cell run
+ * that first carried the loading wait failed /profile in English and French on exactly this check. So the matrix settles
+ * the page BEFORE it measures it, as well as before axe.
+ */
+describe("the matrix spec measures the page facts after the page has settled", () => {
+  const spec = readFileSync(resolve(process.cwd(), "e2e/a11y-matrix.spec.ts"), "utf8");
+
+  it("imports settlePage and calls it before collectPageFacts", () => {
+    expect(spec).toMatch(/\bsettlePage\b[^;]*from "\.\/support\/page-checks"|from "\.\/support\/page-checks"[\s\S]{0,40}settlePage/);
+    const settle = spec.indexOf("await settlePage(page)");
+    const facts = spec.indexOf("await collectPageFacts(page");
+    expect(settle).toBeGreaterThan(-1);
+    expect(facts).toBeGreaterThan(-1);
+    expect(settle).toBeLessThan(facts);
+  });
+
+  it("measures the page facts once, in the one place that settles first", () => {
+    expect(spec.match(/await collectPageFacts\(page/g)).toHaveLength(1);
   });
 });

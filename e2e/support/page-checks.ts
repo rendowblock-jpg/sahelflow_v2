@@ -235,15 +235,26 @@ export function violationsForMode(violations: readonly AxeViolation[], mode: Mod
   return mode === "forced" ? violations.filter((violation) => violation.id !== "color-contrast") : [...violations];
 }
 
+/**
+ * Waits until the page has loaded and stopped moving: loading first, then motion (content that has just arrived may
+ * still fade in). Neither wait hides anything from a check: axe and the page facts still run strict afterwards; both only
+ * keep them from judging a placeholder, a half-drawn card or a dialog that is still opening as the page. The matrix spec
+ * calls this before it measures the page facts, and gateCell calls it again before axe (it returns at once on a page that
+ * is already settled). `loaded` is false when a placeholder was still drawn after the limit; `settled` is false when
+ * motion was still running after its limit.
+ */
+export async function settlePage(page: Page): Promise<{ loaded: boolean; settled: boolean }> {
+  const loaded = await settleLoading(page);
+  const settled = await settleMotion(page);
+  return { loaded, settled };
+}
+
 export async function gateCell(
   page: Page,
   cell: Cell,
   options: { reportOnly: boolean; failures: readonly string[] },
 ): Promise<GateResult> {
-  // Loading first, then motion: content that has just arrived may still fade in. Neither wait hides anything from axe,
-  // which still runs strict afterwards; both only keep it from judging a placeholder or a half-drawn card as the page.
-  const loaded = await settleLoading(page);
-  const settled = await settleMotion(page);
+  const { loaded, settled } = await settlePage(page);
   const violations = violationsForMode(await runAxe(page), cell.mode);
   const verdict = cellVerdict({
     cell,
