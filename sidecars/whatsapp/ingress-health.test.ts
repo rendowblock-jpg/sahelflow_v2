@@ -107,8 +107,8 @@ describe("ingress health block", () => {
       unreadable: 0,
       lastFailureCode: null,
     });
-    expect(block.lost.total).toEqual({ spoolFailed: 0, noPairedAccount: 0, quarantinePruned: 0 });
-    expect(block.lost.sinceStart).toEqual({ spoolFailed: 0, noPairedAccount: 0 });
+    expect(block.lost.total).toEqual({ spoolFailed: 0, noPairedAccount: 0, quarantinePruned: 0, unsupportedChat: 0 });
+    expect(block.lost.sinceStart).toEqual({ spoolFailed: 0, noPairedAccount: 0, unsupportedChat: 0 });
     expect(block.lost.lastAt).toBeNull();
     expect(block.inbound.lastSpooledAt).toBeNull();
     expect(block.inbound.lastCommittedAt).toBeNull();
@@ -166,7 +166,7 @@ describe("ingress health block", () => {
     expect(block.lost.lastAt).toBe("2026-10-24T12:00:00.000Z");
   });
 
-  it("groups, status broadcasts and reactions are not counted as lost; a decrypt stub counts as undecryptable only", () => {
+  it("groups and status broadcasts are counted ONLY as unsupportedChat (not as a real loss); a decrypt stub counts as undecryptable only", () => {
     const dir = temporaryDirectory();
     const health = createIngressHealth({ file: join(dir, "health.json"), spool: () => null });
     const enqueue = vi.fn();
@@ -176,9 +176,9 @@ describe("ingress health block", () => {
     health.recordUndecryptable(2);
     const block = health.build();
     expect(enqueue).not.toHaveBeenCalled();
-    expect(block.lost.total).toEqual({ spoolFailed: 0, noPairedAccount: 0, quarantinePruned: 0 });
-    expect(block.lost.sinceStart).toEqual({ spoolFailed: 0, noPairedAccount: 0 });
-    expect(block.lost.lastAt).toBeNull();
+    expect(block.lost.total).toEqual({ spoolFailed: 0, noPairedAccount: 0, quarantinePruned: 0, unsupportedChat: 2 });
+    expect(block.lost.sinceStart).toEqual({ spoolFailed: 0, noPairedAccount: 0, unsupportedChat: 2 });
+    expect(block.lost.lastAt).not.toBeNull();
     expect(block.inbound.lastSpooledAt).toBeNull();
     expect(block.undecryptable.sinceStart).toBe(2);
   });
@@ -250,7 +250,7 @@ describe("ingress health block", () => {
       const file = join(dir, `health-${i}.json`);
       writeFileSync(file, text, "utf8");
       const block = createIngressHealth({ file, spool: () => null }).build();
-      expect(block.lost.total).toEqual({ spoolFailed: 0, noPairedAccount: 0, quarantinePruned: 0 });
+      expect(block.lost.total).toEqual({ spoolFailed: 0, noPairedAccount: 0, quarantinePruned: 0, unsupportedChat: 0 });
       expect(block.lost.lastAt).toBeNull();
     });
     // A file that cannot be written must not break the caller either.

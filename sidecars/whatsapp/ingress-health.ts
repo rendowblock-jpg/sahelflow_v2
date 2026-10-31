@@ -31,7 +31,13 @@ const PERSIST_EVERY_MS = 30_000;
 // Anything else is not a code and is not repeated.
 const FAILURE_CODE = /^[A-Za-z0-9_.:-]{1,64}$/;
 
-export type IngressLossKind = "spoolFailed" | "noPairedAccount" | "quarantinePruned";
+export type IngressLossKind =
+  | "spoolFailed"
+  | "noPairedAccount"
+  | "quarantinePruned"
+  // A customer message from a group, status or broadcast list: skipped on
+  // purpose, but the seller must be able to see that it was.
+  | "unsupportedChat";
 export type IngressJidKind = "phone" | "lid" | "other";
 
 /** What the health block needs from the spool. */
@@ -60,8 +66,13 @@ export interface IngressHealthBlock {
     lastFailureCode: string | null;
   };
   lost: {
-    sinceStart: { spoolFailed: number; noPairedAccount: number };
-    total: { spoolFailed: number; noPairedAccount: number; quarantinePruned: number };
+    sinceStart: { spoolFailed: number; noPairedAccount: number; unsupportedChat: number };
+    total: {
+      spoolFailed: number;
+      noPairedAccount: number;
+      quarantinePruned: number;
+      unsupportedChat: number;
+    };
     lastAt: string | null;
   };
   /** Decrypt stubs: information only. The real message arrives again, so this is not a loss. */
@@ -91,7 +102,12 @@ export interface IngressHealthOptions {
 }
 
 interface Saved {
-  lost: { spoolFailed: number; noPairedAccount: number; quarantinePruned: number };
+  lost: {
+    spoolFailed: number;
+    noPairedAccount: number;
+    quarantinePruned: number;
+    unsupportedChat: number;
+  };
   lastLostAt: string | null;
   lastSpooledAt: string | null;
   lastCommittedAt: string | null;
@@ -99,7 +115,7 @@ interface Saved {
 
 function emptySaved(): Saved {
   return {
-    lost: { spoolFailed: 0, noPairedAccount: 0, quarantinePruned: 0 },
+    lost: { spoolFailed: 0, noPairedAccount: 0, quarantinePruned: 0, unsupportedChat: 0 },
     lastLostAt: null,
     lastSpooledAt: null,
     lastCommittedAt: null,
@@ -129,6 +145,7 @@ function readSaved(file: string): Saved {
         spoolFailed: savedCount(lost.spoolFailed),
         noPairedAccount: savedCount(lost.noPairedAccount),
         quarantinePruned: savedCount(lost.quarantinePruned),
+        unsupportedChat: savedCount(lost.unsupportedChat),
       },
       lastLostAt: savedTime(record.lastLostAt),
       lastSpooledAt: savedTime(record.lastSpooledAt),
@@ -156,7 +173,7 @@ export function createIngressHealth(options: IngressHealthOptions): IngressHealt
 
   const saved = readSaved(options.file);
   const total = { ...saved.lost };
-  const sinceStart = { spoolFailed: 0, noPairedAccount: 0 };
+  const sinceStart = { spoolFailed: 0, noPairedAccount: 0, unsupportedChat: 0 };
   const kinds = { phone: 0, lid: 0 };
   let undecryptable = 0;
   let lastLostAt = saved.lastLostAt;
