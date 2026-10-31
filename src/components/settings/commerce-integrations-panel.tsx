@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { BrandLogo } from "@/components/brand/brand-icons";
+import { TestingBadge } from "@/components/integrations/testing-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -300,6 +301,7 @@ export function CommerceIntegrationsPanel({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold">{definition.name}</p>
+                      <TestingBadge integration={definition.id} />
                       {isConnected ? (
                         <Badge variant="outline" className="text-success">
                           <CheckCircle2 className="size-3" aria-hidden="true" />

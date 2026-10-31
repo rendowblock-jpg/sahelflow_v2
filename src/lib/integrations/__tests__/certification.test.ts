@@ -29,6 +29,9 @@ describe("app integration registry mirrors marketing/src/claims.mjs", () => {
 
   it("treats an id it does not know as in testing, never as live", () => {
     expect(integrationStatus("not-a-real-integration" as never)).toBe("testing");
+    // Names that exist on every object must not leak through the lookup.
+    expect(integrationStatus("constructor" as never)).toBe("testing");
+    expect(integrationStatus("__proto__" as never)).toBe("testing");
   });
 
   it("agrees with the commerce live-store map: a platform is live in one only if it is live in the other", () => {

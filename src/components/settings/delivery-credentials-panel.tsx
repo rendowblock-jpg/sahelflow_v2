@@ -27,6 +27,12 @@ import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { BrandLogo } from "@/components/brand/brand-icons";
+import { TestingBadge } from "@/components/integrations/testing-badge";
+import {
+  DELIVERY_PROVIDER_TO_INTEGRATION,
+  integrationStatus,
+  type IntegrationStatus,
+} from "@/lib/integrations/certification";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
@@ -56,9 +62,11 @@ type Certification = {
 export function deliveryCredentialBadge(input: {
   connectionStatus: string | undefined;
   bookingStatus: string | undefined;
+  /** What the registry says about this courier; a stored "certified" only shows once the registry says live. */
+  registryStatus: IntegrationStatus;
 }): "certified" | "connection_checked" | null {
-  if (input.bookingStatus === "certified") return "certified";
-  if (input.connectionStatus === "certified") return "connection_checked";
+  if (input.bookingStatus === "certified" && input.registryStatus === "live") return "certified";
+  if (input.bookingStatus === "certified" || input.connectionStatus === "certified") return "connection_checked";
   return null;
 }
 
@@ -313,6 +321,7 @@ export function DeliveryCredentialsPanel() {
             const configured = Object.values(status[provider.id] ?? {}).some(Boolean);
             const capabilities = certifications[provider.id]?.capabilities;
             const certificationBadge = deliveryCredentialBadge({
+              registryStatus: integrationStatus(DELIVERY_PROVIDER_TO_INTEGRATION[provider.id]),
               connectionStatus: capabilities?.connection?.status,
               bookingStatus: capabilities?.booking?.status,
             });
@@ -326,6 +335,7 @@ export function DeliveryCredentialsPanel() {
                   <span className="flex min-w-0 items-center gap-3">
                     <BrandLogo id={provider.id} size="md" />
                     <span className="truncate font-medium">{provider.name}</span>
+                    <TestingBadge integration={DELIVERY_PROVIDER_TO_INTEGRATION[provider.id]} />
                   </span>
                   <div className="flex gap-2">
                     {certificationBadge === "certified" ? <Badge><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.certified")}</Badge> : null}
