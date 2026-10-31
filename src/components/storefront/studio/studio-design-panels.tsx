@@ -14,6 +14,7 @@ import { cn, formatDZD } from "@/lib/utils";
 
 import { ColorField, PanelHeader, SegmentedField, TextAreaField, TextField } from "./studio-controls";
 import { TemplateGallery } from "./template-gallery";
+import { PhotoStateChip } from "./photo-state-chip";
 import { studioImageUrl, type StorefrontStudioProduct } from "./studio-types";
 import { ProductThumb } from "./product-thumb";
 
@@ -207,6 +208,7 @@ export function ProductsPanel({
                     <span className="block text-caption text-muted-foreground">
                       {formatDZD(product.price, locale)} · {t("storefront.studio.stockCount", { count: product.stock })}
                     </span>
+                    <PhotoStateChip productId={product.id} hasImage={image !== null} />
                   </span>
                 </label>
               </li>

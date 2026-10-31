@@ -1,13 +1,16 @@
 "use client";
 
 import {
+  photoFailureRetryable,
   publishStatusView,
   activeWaitsForPublish,
   publishedActiveBaseline,
   saveThenPublish,
+  withPhotoNote,
   type PublishPhase,
   type SaveOutcome,
 } from "@/components/storefront/studio/publish-flow";
+import { photoFailureText, photoPublishNote } from "@/components/storefront/studio/photo-state-chip";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -232,11 +235,17 @@ export function StorefrontStudio({
           });
           const body = (await response.json()) as {
             error?: string;
+            code?: string;
             config?: SerializedConfig;
-            hostedRelease?: { status?: string; releaseId?: string };
+            hostedRelease?: { status?: string; releaseId?: string; photos?: { onlyHere: number; missing?: number } | null };
           };
           if (response.status === 409 && body.config) return { kind: "conflict" as const, config: body.config };
-          if (!response.ok) throw new StudioRequestError(response.status, body.error ?? null);
+          if (!response.ok) {
+            // A photo that could not be hosted stops the publish; the server sends its code in `code`, `error` is English text.
+            const photoText = photoFailureText(body.code, t);
+            if (photoText && body.code) return { kind: "photo-failed" as const, code: body.code, text: photoText };
+            throw new StudioRequestError(response.status, body.error ?? null);
+          }
           return { kind: "ok" as const, hostedRelease: body.hostedRelease };
         },
       });
@@ -260,6 +269,10 @@ export function StorefrontStudio({
         setPublishPhase({ phase: "failed", text: t("storefront.studio.newerDraft") });
         return;
       }
+      if (plan.value.kind === "photo-failed") {
+        setPublishPhase({ phase: "failed", text: plan.value.text, retry: photoFailureRetryable(plan.value.code) });
+        return;
+      }
 
       setSaveReason(null);
       // "Published" only when the hosted service answered with a published release.
@@ -269,9 +282,12 @@ export function StorefrontStudio({
       setPublishPhase({
         phase: "published",
         text: published
-          ? t("storefront.studioStates.publish.published", {
-              version: (plan.value.hostedRelease?.releaseId ?? "—").slice(0, 8),
-            })
+          ? withPhotoNote(
+              t("storefront.studioStates.publish.published", {
+                version: (plan.value.hostedRelease?.releaseId ?? "—").slice(0, 8),
+              }),
+              photoPublishNote(plan.value.hostedRelease?.photos, t),
+            )
           : t("storefront.inactive"),
       });
     } catch (error) {

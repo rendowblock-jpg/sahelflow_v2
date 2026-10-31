@@ -7,6 +7,8 @@ export class ConnectedPlatformHttpError extends Error {
   constructor(
     public readonly status: number,
     public readonly code: string,
+    /** Seconds the Worker asked us to wait (Retry-After on a 503), when it sent one. */
+    public readonly retryAfterSeconds?: number,
   ) {
     super(`Connected platform request failed (${status}: ${code})`);
     this.name = "ConnectedPlatformHttpError";
@@ -125,6 +127,15 @@ async function errorCode(response: Response): Promise<string> {
   return "remote_request_failed";
 }
 
+function retryAfterSeconds(response: Response): number | undefined {
+  const raw = response.headers.get("Retry-After");
+  if (raw === null || !/^\d{1,4}$/.test(raw.trim())) return undefined;
+  return Number(raw.trim());
+}
+
+/** Largest body the storefront Worker accepts per photo width (control-plane/storefront/media.ts). */
+const MEDIA_BODY_LIMIT: Readonly<Record<number, number>> = { 640: 160 * 1024, 1280: 600 * 1024 };
+
 export class ConnectedPlatformClient {
   private readonly endpoints: Record<keyof ConnectedPlatformEndpoints, URL>;
   private readonly timeoutMs: number;
@@ -181,7 +192,7 @@ export class ConnectedPlatformClient {
       throw new ConnectedPlatformHttpError(503, "remote_unavailable");
     }
     if (!response.ok) {
-      throw new ConnectedPlatformHttpError(response.status, await errorCode(response));
+      throw new ConnectedPlatformHttpError(response.status, await errorCode(response), retryAfterSeconds(response));
     }
     try {
       return await response.json() as T;
@@ -264,6 +275,65 @@ export class ConnectedPlatformClient {
       "/v1/desktop/storefronts",
       { method: "POST", body: input },
     );
+  }
+
+  /** Which of these photos (at most 50) the cloud already holds in every size. */
+  checkStorefrontMedia(storefrontId: string, input: { workspaceId: string; hashes: string[] }) {
+    return this.requestJson<{ origin: string; widths: number[]; present: string[] }>(
+      "storefront",
+      `/v1/desktop/storefronts/${encodeURIComponent(storefrontId)}/media/check`,
+      { method: "POST", body: input },
+    );
+  }
+
+  /** Sends one WebP of one photo. 200 (already there) and 201 (stored) both succeed. */
+  async putStorefrontMedia(
+    storefrontId: string,
+    hash: string,
+    width: number,
+    workspaceId: string,
+    bytes: Uint8Array,
+    sha256: string,
+  ): Promise<{ status: "stored" | "exists"; url: string; bytes: number; width: number }> {
+    const limit = MEDIA_BODY_LIMIT[width];
+    if (!/^[0-9a-f]{24}$/.test(hash) || limit === undefined) throw new TypeError("Connected platform media name is invalid");
+    // Refuse an oversized body here: the Worker would only answer 413 after the upload.
+    if (bytes.byteLength < 1 || bytes.byteLength > limit) throw new ConnectedPlatformHttpError(413, "media_too_large");
+    const authorization = await this.options.controlToken();
+    if (authorization.length < 32 || authorization.length > 256) {
+      throw new Error("Connected platform local token authority is invalid");
+    }
+    const body = new Uint8Array(bytes.byteLength);
+    body.set(bytes);
+    let response: Response;
+    try {
+      response = await fetch(
+        pathUrl(this.endpoints.storefront, `/v1/desktop/storefronts/${encodeURIComponent(storefrontId)}/media/${hash}/${width}`, { workspaceId }),
+        {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${authorization}`,
+            "Content-Type": "image/webp",
+            "X-SahelFlow-SHA256": sha256,
+          },
+          body,
+          cache: "no-store",
+          signal: AbortSignal.timeout(this.timeoutMs),
+        },
+      );
+    } catch (error) {
+      if (error instanceof Error && error.name === "TimeoutError") throw new ConnectedPlatformHttpError(504, "remote_timeout");
+      throw new ConnectedPlatformHttpError(503, "remote_unavailable");
+    }
+    if (!response.ok) {
+      throw new ConnectedPlatformHttpError(response.status, await errorCode(response), retryAfterSeconds(response));
+    }
+    try {
+      return await response.json() as { status: "stored" | "exists"; url: string; bytes: number; width: number };
+    } catch {
+      throw new ConnectedPlatformHttpError(502, "invalid_remote_response");
+    }
   }
 
   publishStorefrontRelease(storefrontId: string, input: unknown) {
