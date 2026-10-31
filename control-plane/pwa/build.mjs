@@ -36,6 +36,7 @@ export async function buildPwa({ outDir = join(HERE, "dist"), relayUrl = "https:
 
   let css = await readFile(join(HERE, "src/styles/app.css"), "utf8");
   css += "\n" + await readFile(join(HERE, "src/styles/orders.css"), "utf8"); // W3-F4: orders + notes rules, one line
+  css += "\n" + await readFile(join(HERE, "src/styles/inbox.css"), "utf8"); // W3-F5: inbox + chat rules, one line
   css = css.replace(/__FONT:([\w-]+)__/g, (_m, n) => assets[n] ?? (() => { throw new Error(`font ${n} missing`); })());
   let bars = "";
   for (let i = 0; i <= 20; i += 1) bars += `.b${i}::before{height:${i * 6}px}\n`;

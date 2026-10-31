@@ -48,7 +48,7 @@ describe("lazy screen chunks", () => {
     const src = fileURLToPath(new URL("../src", import.meta.url));
     const dir2 = mkdtempSync(join(tmpdir(), "sfpwa-chunks2-"));
     const entry = join(dir2, "entry.ts");
-    writeFileSync(entry, `import ${JSON.stringify(join(src, "main.ts"))};\nvoid import(${JSON.stringify(join(src, "views/inbox/screen.ts"))});\n`);
+    writeFileSync(entry, `import ${JSON.stringify(join(src, "main.ts"))};\nvoid import(${JSON.stringify(join(src, "views/install/screen.ts"))});\n`);
     const out2 = await buildPwa({ outDir: join(dir2, "dist"), entry });
     const names = Object.entries(out2.assets).filter(([k]) => k.startsWith("chunk-")).map(([, v]) => v);
     expect(names.length).toBe(chunks().length + 1);

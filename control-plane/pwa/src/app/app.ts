@@ -19,7 +19,9 @@ import type { UpdateController } from "../sw/update";
 import { createRelayClient } from "../today/relay-source";
 import { freshness, type Projection, type ProjectionSource } from "../today/projection";
 import { renderApp, type ScreenId, type Theme, type View } from "../views/view";
-import { createCommandStack } from "./commands";
+import { createInboxHost } from "../views/inbox/host";
+import { createCommandStack, type CommandStack } from "./commands";
+import { createInboxMount } from "./inbox-mount";
 import { createOrdersHost, ORDERS_VAULT_KEY, type OrdersHostHandle } from "./orders-host";
 import { applyPreview } from "./preview";
 import { GROUP_OF } from "./registry";
@@ -66,11 +68,15 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   let watcher: Readonly<{ stop(): void }> | null = null;
   // The command stack (outbox on the real transport) exists once the phone is paired; decrypted orders live only in the vault.
   let stack: Awaited<ReturnType<typeof createCommandStack>> = null; let ordersHost: OrdersHostHandle | null = null;
+  let inboxMount: ReturnType<typeof createInboxMount> | null = null; // the chats: loaded on the first visit, fed ONLY from the vault
   const vault = createVault();
   // Lock / hidden >= 5 min / unlock / wipe on the vault: one tested module. `wake`: the orders screen redraws from what is left and reloads if it was emptied.
   const vaultWiring = createVaultWiring({
     vault, key: ORDERS_VAULT_KEY,
-    wake: (emptied) => { const h = ordersHost; if (!h) return; h.notify(); if (emptied && lockState.phase !== "locked") void h.reload().catch(() => undefined); },
+    wake: (emptied) => {
+      // An unlock revisits the inbox (the sealed copy opens without the network); never while locked. On the lock screen the screen to return to counts.
+      if (lockState.phase !== "locked" && GROUP_OF[view.screen === "lock" ? returnTo : view.screen] === "inbox") void inboxMount?.visit("inbox").catch(() => undefined);
+      const h = ordersHost; if (!h) return; h.notify(); if (emptied && lockState.phase !== "locked") void h.reload().catch(() => undefined); },
   });
 
   const derive = (v: View): View => {
@@ -98,6 +104,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     history.pushState(null, "", `/?screen=${screen}`);
     set({ screen, state: screen === "today" ? "empty" : "empty", confirmRemove: false, removed: false, removeError: null, ...patch }, true);
     if (GROUP_OF[screen] === "orders") void attachOrders().catch(() => undefined);
+    if (screen === "inbox" || screen === "conversation") void attachInbox(screen).catch(() => undefined);
     if (screen === "today") void loadToday(); else sync.onScreen();
   };
   function showRevoked(reaction: Extract<PollReaction, { kind: "revoked" }>): void {
@@ -186,7 +193,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     });
   }
   async function wipe(): ReturnType<typeof wipeAll> {
-    watcher?.stop(); watcher = null; vaultWiring.wipe(); stack = null; ordersHost = null;
+    watcher?.stop(); watcher = null; vaultWiring.wipe(); stack = null; ordersHost = null; inboxMount = null;
     const db = await getDb().catch(() => null); dbPromise = null;
     return wipeAll({
       db, factory: indexedDB, caches: typeof caches === "undefined" ? null : caches,
@@ -204,18 +211,36 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     stack = await createCommandStack({ db: await getDb(), relayBase: __RELAY_URL__, fetch: (input, init) => fetch(input, init), now: Date.now });
     return stack;
   }
-  // Mounts the orders screen on a real host (own file, own tests). The inbox is mounted by its own track.
+  // ONE flush wrapper for both hosts: an accepted command goes to the relay at once; the outbox keeps it when that fails.
+  const flushingOutbox = (s: CommandStack) => ({ list: s.outbox.list, enqueue: async (i: EnqueueInput) => { const r = await s.outbox.enqueue(i); if (r.ok) void s.outbox.flush().catch(() => undefined); return r; } });
+  // Mounts the orders screen on a real host (own file, own tests).
   async function attachOrders(): Promise<void> {
     if (ordersHost) return;
     const s = await getStack(); if (!s || ordersHost) return;
     const mod = await import("../views/orders/screen");
-    const outbox = { list: s.outbox.list, enqueue: async (i: EnqueueInput) => { const r = await s.outbox.enqueue(i); if (r.ok) void s.outbox.flush().catch(() => undefined); return r; } };
+    const outbox = flushingOutbox(s);
     const h = createOrdersHost({
       now: Date.now, locale: () => view.locale, online: () => navigator.onLine, pcOff: () => view.pcoff === true,
       fetchOrders: async () => { await relay.poll("orders"); await s.refresh(); }, openOrders: s.openOrders,
       vault, outbox, drafts: s.drafts, authorityExpiresAt: s.authorityExpiresAt, go: (x) => go(x),
     });
     ordersHost = h; mod.attachOrdersHost(h); await h.reload();
+  }
+  // Mounts the inbox (own file inbox-mount.ts, own tests): the screen chunk loads once, the host reads ONLY the vault, a reply goes through the real outbox.
+  async function attachInbox(screen: "inbox" | "conversation"): Promise<void> {
+    const s = await getStack(); if (!s) return;
+    inboxMount ??= createInboxMount({
+      vault, loadScreen: () => import("../views/inbox/screen"),
+      makeHost: (p) => createInboxHost({
+        now: Date.now, locale: () => view.locale, online: () => navigator.onLine, pcOff: () => view.pcoff === true,
+        readConversations: p.read, reload: p.reload, subscribeAll: p.subscribe,
+        outbox: flushingOutbox(s), drafts: s.drafts, authorityExpiresAt: s.authorityExpiresAt, go: (x) => go(x),
+      }),
+      openConversations: s.openConversations,
+      poll: async () => { await relay.poll("conversations"); await s.refresh(); },
+      subscribeAll: () => () => undefined,
+    });
+    await inboxMount.visit(screen);
   }
   // Polling budget: fetch on open/visible/online/Refresh, 30 s on Orders and Inbox, 60 s elsewhere, nothing while hidden, 600 a day.
   const sync = createSync({

@@ -33,3 +33,31 @@ describe("app.ts mounts the tested modules", () => {
     expect(app).not.toMatch(/authorityExpiresAt:\s*\(\)\s*=>/);
   });
 });
+
+// W3-F wave 3 phase B: the inbox is mounted by app.ts through createInboxMount (own file, own tests). These pin the joins.
+const build = readFileSync(fileURLToPath(new URL("../build.mjs", import.meta.url)), "utf8");
+describe("app.ts mounts the inbox", () => {
+  it("one mount over the lazy screen, one host over the real stack: sealed conversations, the 'conversations' poll, the command authority", () => {
+    expect(count(/createInboxMount\(/g)).toBe(1);
+    expect(count(/createInboxHost\(/g)).toBe(1);
+    expect(count(/import\("\.\.\/views\/inbox\/screen"\)/g)).toBe(1);
+    expect(app).toContain("openConversations: s.openConversations");
+    expect(app).toContain('poll: async () => { await relay.poll("conversations"); await s.refresh(); }');
+    expect(count(/authorityExpiresAt: s\.authorityExpiresAt/g)).toBe(2);
+    expect(app).toContain("readConversations: p.read, reload: p.reload, subscribeAll: p.subscribe");
+  });
+  it("orders and inbox send through the SAME flush wrapper: an accepted command is flushed at once", () => {
+    expect(count(/outbox: flushingOutbox\(s\)/g)).toBe(1);
+    expect(count(/const outbox = flushingOutbox\(s\)/g)).toBe(1);
+    expect(count(/void s\.outbox\.flush\(\)/g)).toBe(1);
+  });
+  it("go() attaches the inbox for inbox and conversation; a wipe forgets the mount; an unlock revisits it only when the phone is not locked", () => {
+    expect(app).toContain('if (screen === "inbox" || screen === "conversation") void attachInbox(screen)');
+    expect(app).toContain("stack = null; ordersHost = null; inboxMount = null;");
+    expect(app).toMatch(/lockState\.phase !== "locked" && GROUP_OF\[view\.screen === "lock" \? returnTo : view\.screen\] === "inbox"\) void inboxMount\?\.visit\("inbox"\)/);
+  });
+  it("the inbox rules ship in the css, after the orders rules (one line, like orders.css)", () => {
+    const o = build.indexOf("src/styles/orders.css"); const i = build.indexOf("src/styles/inbox.css");
+    expect(o).toBeGreaterThan(0); expect(i).toBeGreaterThan(o);
+  });
+});
