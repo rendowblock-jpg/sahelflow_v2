@@ -1,5 +1,7 @@
 /** Provider REQUEST counter (not message counter), kept in the settings table. */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { quotaLedger } from "../quota-ledger";
+import { saveQuotaLedger } from "../quota-ledger-store";
 import {
   flushRequestCounts,
   noteProviderRequest,
@@ -125,5 +127,15 @@ describe("readRequestsToday", () => {
     const { context, rows } = fakeContext();
     rows.set("ai_requests_gemini_2026-10-31", "banana");
     expect((await readRequestsToday(context, NOW)).gemini).toBeUndefined();
+  });
+});
+
+describe("saveQuotaLedger", () => {
+  it("also writes the requests the shared ledger counted, and leaves a private test ledger alone", async () => {
+    const { context, rows } = fakeContext();
+    quotaLedger.recordRequest("groq", NOW);
+    quotaLedger.recordRequest("groq", NOW);
+    await saveQuotaLedger(context);
+    expect(rows.get("ai_requests_groq_2026-10-31")).toBe("2");
   });
 });
