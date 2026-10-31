@@ -31,6 +31,7 @@ import {
   judgeKeyboardTour,
   judgePageFacts,
   runKeyboardTour,
+  settlePage,
   waitForWorkSurface,
 } from "./support/page-checks";
 
@@ -203,6 +204,9 @@ test.describe("a11y matrix", () => {
           await page.waitForTimeout(400);
         }
         await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => undefined);
+        // Settle before measuring: the facts (squeezed text among them) must come from the loaded, still page, not from a
+        // placeholder or a dialog that is still opening (a 1 px sr-only box measured under 1 px mid-animation).
+        await settlePage(page);
         checks.push(...judgePageFacts(await collectPageFacts(page, cell.mode), cell));
         if (cell.mode === "keyboard") checks.push(...judgeKeyboardTour(await runKeyboardTour(page)));
         const gate = await gateCell(page, cell, { reportOnly, failures: checks });
