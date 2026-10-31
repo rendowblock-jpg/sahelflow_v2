@@ -468,7 +468,7 @@ export function AnalyticsView({
 
       <section data-analytics-section="rankings" className="card-grid-2">
         <ChartCard
-          title={t("analytics.topProductsByRevenue")}
+          title={t("money.topProductsByOrdersValue")}
           summary={
             topProductsData[0]
               ? `${String(topProductsData[0].label)} · ${String(topProductsData[0].displayValue)}`
@@ -479,9 +479,9 @@ export function AnalyticsView({
           config={{}}
           dataTable={buildChartTable(
             t,
-            t("analytics.topProductsByRevenue"),
+            t("money.topProductsByOrdersValue"),
             topProductsData[0] ? `${String(topProductsData[0].label)} · ${String(topProductsData[0].displayValue)}` : "",
-            [t("charts.colProduct"), t("analytics.revenueLabel")],
+            [t("charts.colProduct"), t(moneyNameKey("ordersValue"))],
             topProductsData.map((datum) => [String(datum.label), String(datum.displayValue)]),
           )}
         >
