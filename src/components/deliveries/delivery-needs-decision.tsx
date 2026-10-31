@@ -21,7 +21,7 @@ interface DeliveryNeedsDecisionProps {
 }
 
 const BADGE =
-  "inline-flex items-center gap-1.5 rounded-control border border-warning/25 bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning";
+  "inline-flex items-center gap-1.5 rounded-control border border-warning/25 bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning-ink";
 
 /** The status cell of a delivery list row whose courier booking is stuck. */
 export function DeliveryNeedsDecision({ deliveryId, orderId, canManage, stuckCreating = false }: DeliveryNeedsDecisionProps) {

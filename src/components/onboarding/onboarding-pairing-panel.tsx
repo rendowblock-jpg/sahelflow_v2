@@ -266,7 +266,7 @@ export function OnboardingPairingPanel({
             data-onboarding-pairing-connected="true"
             className="flex min-h-64 flex-col items-center justify-center text-center"
           >
-            <div className="flex size-14 items-center justify-center rounded-surface bg-success-soft text-success">
+            <div className="flex size-14 items-center justify-center rounded-surface bg-success-soft text-success-ink">
               <CheckCircle2 className="size-7" aria-hidden="true" />
             </div>
             <h3 className="mt-5 text-base font-semibold">
@@ -300,7 +300,7 @@ export function OnboardingPairingPanel({
 
         {phase === "disconnected" ? (
           <div className="flex min-h-64 flex-col items-center justify-center text-center">
-            <div className="flex size-14 items-center justify-center rounded-surface border bg-destructive-soft text-destructive">
+            <div className="flex size-14 items-center justify-center rounded-surface border bg-destructive-soft text-destructive-ink">
               <TriangleAlert className="size-6" aria-hidden="true" />
             </div>
             <h3 className="mt-5 text-base font-semibold">{pairingCopy("disconnectedTitle")}</h3>

@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -901,5 +903,250 @@ describe("carnet identity layer: margin colour and stamp contrast", () => {
     const layers = [stamp, ...carnetCascade(mode)];
     const ratio = contrast(colorToken(layers, "--stamp-ink"), colorToken(layers, "--stamp-tint"));
     expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+/*
+ * Wave 3 accessibility matrix (look carnet, 3 locales x light/dark x phone/desktop): 25 cells failed, all the rule
+ * color-contrast, from four causes. Each test below reads the class that renders the pair from the SOURCE file, so
+ * it fails while that class is wrong and passes once it is fixed. Thresholds are the WCAG AA ones (4.5:1, 14 px text).
+ */
+
+/** The class names of the first string literal that starts with `anchor`. */
+function literalClasses(src: string, anchor: string): string[] {
+  const start = src.indexOf(anchor);
+  if (start < 0) throw new Error(`"${anchor}" not found in the source under test`);
+  const end = src.indexOf('"', start + anchor.length);
+  return src.slice(start, end).split(/\s+/);
+}
+
+/** A colour of Tailwind's own palette (red-300), read from the installed theme.css. */
+function tailwindPalette(name: string): Oklch {
+  const css = source("../../../../node_modules/tailwindcss/theme.css");
+  const match = css.match(new RegExp(`--color-${name}:\\s*oklch\\(([\\d.]+)(%?)\\s+([\\d.]+)\\s+([\\d.]+)`));
+  if (!match) throw new Error(`--color-${name} is not in tailwindcss/theme.css`);
+  return { l: Number(match[1]) / (match[2] === "%" ? 100 : 1), c: Number(match[3]), h: Number(match[4]) };
+}
+
+/** Text drawn at `alpha` over `ground` (text-foreground/60), composited in 8-bit sRGB; the worse of the two conversions. */
+function contrastOfAlphaText(text: Oklch, alpha: number, ground: Oklch): number {
+  const ratioWith = (toChannels: (color: Oklch) => [number, number, number]): number => {
+    const ink = toChannels(text);
+    const behind = toChannels(ground);
+    const shown = ink.map((channel, index) => Math.round(channel * alpha + (behind[index] ?? 0) * (1 - alpha)));
+    return ratioBetweenLuminances(relativeLuminance(shown), relativeLuminance(behind));
+  };
+  return Math.min(ratioWith(naiveSrgbChannels), ratioWith(gamutMappedSrgbChannels));
+}
+
+/** The authored strength of `--color-destructive-soft` / `-subtle` (a color-mix of --destructive), read from globals.css. */
+function destructiveTintAlpha(kind: string): number {
+  for (const block of globalsBlocks) {
+    const value = block.declarations.get(`--color-destructive-${kind}`);
+    if (value === undefined) continue;
+    const match = value.match(/var\(--destructive\)\s+(\d+(?:\.\d+)?)%/);
+    if (!match?.[1]) throw new Error(`--color-destructive-${kind} is not a destructive color-mix: ${value}`);
+    return Number(match[1]) / 100;
+  }
+  throw new Error(`--color-destructive-${kind} is not defined in globals.css.`);
+}
+
+describe("accessibility matrix: the four color-contrast causes (carnet, light and dark)", () => {
+  it("cause 1: an inactive tab label reaches 4.5:1 on the tab list, the page and a card", () => {
+    const tabs = source("../../ui/tabs.tsx");
+    const classes = literalClasses(tabs, "relative inline-flex h-[calc(100%-1px)]");
+    const plain = classes.find((name) => /^text-(foreground|muted-foreground)(\/\d+)?$/.test(name));
+    expect(plain, "tabs.tsx sets one plain light text colour on the tab").toBeDefined();
+    expect(classes, "tabs.tsx sets the dark text colour on the tab").toContain("dark:text-muted-foreground");
+    const parts = (plain ?? "").match(/^text-(foreground|muted-foreground)(?:\/(\d+))?$/);
+    const lightToken = `--${parts?.[1] ?? "foreground"}`;
+    const lightAlpha = parts?.[2] ? Number(parts[2]) / 100 : 1;
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      const token = mode === "light" ? lightToken : "--muted-foreground";
+      const alpha = mode === "light" ? lightAlpha : 1;
+      for (const [surface, ground] of [["the tab list (bg-muted)", "--muted"], ["the page", "--background"], ["a card", "--card"]] as const) {
+        const ratio = contrastOfAlphaText(colorToken(cascade, token), alpha, colorToken(cascade, ground));
+        expect(ratio, `${mode}: inactive tab label (${plain}) on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      }
+    }
+  });
+
+  it("cause 2: the blacklist button's red label reaches 4.5:1 on its dark outline fill, at rest and on hover", () => {
+    const outline = source("../../ui/button.tsx").match(/\boutline:\s*"([^"]*)"/)?.[1]?.split(/\s+/) ?? [];
+    const restFill = outline.find((name) => /^dark:bg-input\/\d+$/.test(name))?.match(/\/(\d+)$/)?.[1];
+    const hoverFill = outline.find((name) => /^dark:hover:bg-input\/\d+$/.test(name))?.match(/\/(\d+)$/)?.[1];
+    expect(restFill, "button.tsx: the outline variant fills with dark:bg-input/N").toBeDefined();
+    expect(hoverFill, "button.tsx: the outline variant hovers with dark:hover:bg-input/N").toBeDefined();
+    const toggle = source("../../customers/blacklist-toggle.tsx");
+    const used = toggle.match(/variant="outline"\s+size="sm"\s+onClick=\{\(\) => setAddOpen\(true\)\}\s+className="([^"]*)"/)?.[1]?.split(/\s+/) ?? [];
+    expect(used.length, "blacklist-toggle.tsx: the outline Add button is found").toBeGreaterThan(0);
+    const dark = carnetCascade("dark");
+    const colourOf = (name: string | undefined, fallback: string): Oklch => {
+      const palette = name?.match(/^dark:(?:hover:)?text-(red-\d+)$/)?.[1];
+      return palette ? tailwindPalette(palette) : colorToken(dark, fallback);
+    };
+    const restText = colourOf(used.find((name) => /^dark:text-/.test(name)), "--destructive");
+    const hoverText = colourOf(used.find((name) => /^dark:hover:text-/.test(name)), "--destructive");
+    for (const [surface, token] of [["the page", "--background"], ["a card", "--card"]] as const) {
+      const base = colorToken(dark, token);
+      const input = colorToken(dark, "--input");
+      expect(contrastOnTint(restText, input, Number(restFill) / 100, base), `dark: label at rest on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      expect(contrastOnTint(hoverText, input, Number(hoverFill) / 100, base), `dark: label on hover on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    }
+  });
+
+  it("cause 3: the issues chip in the automation builder header reaches 4.5:1 on its red tint, on the page and a card", () => {
+    const builder = source("../../automations/automation-builder.tsx");
+    const chip = literalClasses(builder, "flex shrink-0 items-center gap-1 rounded-full bg-destructive-");
+    expect(chip, "the chip text is the destructive ink").toContain("text-destructive-ink");
+    const kind = chip.find((name) => /^bg-destructive-(soft|subtle)$/.test(name))?.replace("bg-destructive-", "");
+    expect(kind, "the chip is filled with a destructive tint").toBeDefined();
+    const alpha = destructiveTintAlpha(kind ?? "soft");
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      const red = colorToken(cascade, "--destructive");
+      const ink = mode === "light" ? feedbackInk(lightFeedbackCascade("carnet"), "destructive") : red;
+      for (const [surface, token] of [["the page", "--background"], ["a card", "--card"]] as const) {
+        const ratio = contrastOnTint(ink, red, alpha, colorToken(cascade, token));
+        expect(ratio, `${mode}: red label on bg-destructive-${kind} over ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      }
+    }
+  });
+
+  it("cause 4: the select placeholder is muted-foreground (no opacity) and that token reaches 4.5:1 on the page, a card and the sunk step in every look", () => {
+    const select = source("../../ui/select.tsx");
+    expect(select, "select.tsx colours the placeholder with muted-foreground").toContain("data-[placeholder]:text-muted-foreground");
+    expect(select, "select.tsx does not fade the placeholder").not.toMatch(/data-\[placeholder\]:text-muted-foreground\/\d+/);
+    for (const look of LOOKS) {
+      for (const [mode, cascade] of [["light", lightCascade(look)], ["dark", darkCascade(look)]] as const) {
+        for (const ground of ["--background", "--card", "--muted"]) {
+          expect(contrast(colorToken(cascade, "--muted-foreground"), colorToken(cascade, ground)), `${look} ${mode}: placeholder on ${ground}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        }
+      }
+    }
+  });
+});
+
+/*
+ * Wave 3b round 2 (w195): "ink on a tint". A feedback colour (text-destructive, text-success, text-warning, text-info)
+ * is tuned to be AA on the page and on a card. Laid on its OWN tint (bg-<kind>-soft, 8%) it loses contrast, and it loses
+ * more on every surface darker than a card: the sunk step, the desk, a hovered row, a selected row. The class is fixed by
+ * one token per colour, --<kind>-ink (a mix toward black, light mode only), used as text-<kind>-ink on those tints.
+ * Surfaces: table.tsx hovers a row with bg-muted/50 and selects it with bg-muted; the data tables sit on the page or on a
+ * card; the selected-row case above is the 4% primary tint over the card; the sidebar is the desk.
+ */
+const FEEDBACK_KINDS = ["destructive", "success", "warning", "info"] as const;
+type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
+const TINT_STEPS = ["subtle", "soft", "strong"] as const;
+type ChipSurface = { name: string; base: string; over?: { token: string; alpha: number } };
+const CHIP_SURFACES: ReadonlyArray<ChipSurface> = [
+  { name: "the desk (sidebar)", base: "--sidebar" },
+  { name: "the sunk step (bg-muted)", base: "--muted" },
+  { name: "the page", base: "--background" },
+  { name: "a card", base: "--card" },
+  { name: "a hovered row on the page", base: "--background", over: { token: "--muted", alpha: 0.5 } },
+  { name: "a hovered row on a card", base: "--card", over: { token: "--muted", alpha: 0.5 } },
+  { name: "a selected row", base: "--card", over: { token: "--primary", alpha: primarySubtleAlpha() } },
+];
+
+/** Light cascade of a look including the feedback colours that live in globals.css. */
+function lightFeedbackCascade(look: LookName): Declarations[] {
+  return [...lightCascade(look), globalsLightRoot];
+}
+
+/** The authored strength of `--color-<kind>-<step>` (a color-mix of --<kind> with transparent), read from globals.css. */
+function feedbackTintAlpha(kind: FeedbackKind, step: string): number {
+  const value = globalsBlocks.map((block) => block.declarations.get(`--color-${kind}-${step}`)).find((found) => found !== undefined);
+  const match = value?.match(new RegExp(`var\\(--${kind}\\)\\s+(\\d+(?:\\.\\d+)?)%`));
+  if (!match?.[1]) throw new Error(`--color-${kind}-${step} is not a ${kind} color-mix in globals.css.`);
+  return Number(match[1]) / 100;
+}
+
+/**
+ * What text-<kind>-ink renders in light mode: the authored mix of the colour toward black (L and chroma scale, the hue
+ * rides the colour, like primaryHoverMix). Until the token exists this is the bare colour, which is what the sites render.
+ */
+function feedbackInk(cascade: Declarations[], kind: FeedbackKind): Oklch {
+  const colour = colorToken(cascade, `--${kind}`);
+  const raw = globalsLightRoot.get(`--${kind}-ink`);
+  if (raw === undefined) return colour;
+  const match = raw.match(new RegExp(`^color-mix\\(in oklch, var\\(--${kind}\\) (\\d+(?:\\.\\d+)?)%, black\\)$`));
+  if (!match?.[1]) throw new Error(`--${kind}-ink is not a mix of --${kind} toward black: ${raw}`);
+  const keep = Number(match[1]) / 100;
+  return { l: colour.l * keep, c: colour.c * keep, h: colour.h };
+}
+
+/** Text on a chip: `tint` at `alpha` over the surface (an optional layer over its base), 8-bit like a browser, worse of both conversions. */
+function inkOnChip(text: Oklch, tint: Oklch, alpha: number, cascade: Declarations[], surface: ChipSurface): number {
+  const over = surface.over;
+  const ratioWith = (toChannels: (color: Oklch) => [number, number, number]): number => {
+    const ground = toChannels(colorToken(cascade, surface.base));
+    const layer = over ? toChannels(colorToken(cascade, over.token)) : undefined;
+    const under = over && layer ? ground.map((channel, index) => Math.round((layer[index] ?? 0) * over.alpha + channel * (1 - over.alpha))) : ground;
+    const chip = toChannels(tint).map((channel, index) => Math.round(channel * alpha + (under[index] ?? 0) * (1 - alpha)));
+    return ratioBetweenLuminances(relativeLuminance(toChannels(text)), relativeLuminance(chip));
+  };
+  return Math.min(ratioWith(naiveSrgbChannels), ratioWith(gamutMappedSrgbChannels));
+}
+
+/** Every .tsx file under src/ that ships (no __tests__ folders, no *.test.tsx). */
+function shippedTsxFiles(dir: string): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name !== "__tests__" && entry.name !== "node_modules") found.push(...shippedTsxFiles(full));
+    } else if (entry.name.endsWith(".tsx") && !entry.name.includes(".test.")) {
+      found.push(full);
+    }
+  }
+  return found;
+}
+
+describe("feedback ink: a feedback colour on its own tint (light, five looks)", () => {
+  it("keeps the ink colour at >= 4.55:1 on every tint step over every surface a chip sits on, in every look", () => {
+    const failing: string[] = [];
+    for (const look of LOOKS) {
+      const cascade = lightFeedbackCascade(look);
+      for (const kind of FEEDBACK_KINDS) {
+        const colour = colorToken(cascade, `--${kind}`);
+        const ink = feedbackInk(cascade, kind);
+        for (const step of TINT_STEPS) {
+          for (const surface of CHIP_SURFACES) {
+            const ratio = inkOnChip(ink, colour, feedbackTintAlpha(kind, step), cascade, surface);
+            if (ratio < AA_PRIMARY_FLOOR) failing.push(`${look} ${kind}-${step} on ${surface.name}: ${ratio.toFixed(2)}`);
+          }
+        }
+      }
+    }
+    expect(failing, `${failing.length} cells under ${AA_PRIMARY_FLOOR}:1, first: ${failing.slice(0, 4).join("; ")}`).toEqual([]);
+  });
+
+  it("defines one ink token per kind (a pinned 80% mix toward black in light, the colour itself in dark) and exposes it to Tailwind", () => {
+    for (const kind of FEEDBACK_KINDS) {
+      expect(globalsLightRoot.get(`--${kind}-ink`), `light --${kind}-ink`).toBe(`color-mix(in oklch, var(--${kind}) 80%, black)`);
+      expect(globalsDark.get(`--${kind}-ink`), `dark --${kind}-ink`).toBe(`var(--${kind})`);
+      expect(globalsBlocks.some((block) => block.declarations.get(`--color-${kind}-ink`) === `var(--${kind}-ink)`), `--color-${kind}-ink`).toBe(true);
+    }
+  });
+
+  it("source scan: no class string pairs a feedback tint (bg-<kind>-subtle|soft|strong or bg-<kind>/N) with the bare text-<kind>", () => {
+    const literal = /"([^"\n]*)"|'([^'\n]*)'|`([^`]*)`/g;
+    const offenders: string[] = [];
+    const srcDir = fileURLToPath(new URL("../../../", import.meta.url));
+    for (const file of shippedTsxFiles(srcDir)) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(literal)) {
+        const tokens = (match[1] ?? match[2] ?? match[3] ?? "").split(/\s+/);
+        for (const kind of FEEDBACK_KINDS) {
+          const tint = new RegExp(`^bg-${kind}(-(subtle|soft|strong)|/\\d+)$`);
+          if (tokens.some((token) => tint.test(token)) && tokens.includes(`text-${kind}`)) {
+            offenders.push(`${file.slice(srcDir.length)}:${text.slice(0, match.index ?? 0).split("\n").length} (${kind})`);
+          }
+        }
+      }
+    }
+    expect(offenders, `${offenders.length} class strings use the bare colour on its tint, use text-<kind>-ink: ${offenders.slice(0, 5).join(", ")}`).toEqual([]);
   });
 });

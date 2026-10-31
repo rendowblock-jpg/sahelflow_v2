@@ -470,7 +470,7 @@ export function DashboardView({
 
               <div className="divide-y divide-border/70 px-3">
                 <div className="flex min-w-0 items-center gap-3 py-3">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-surface border border-destructive/25 bg-destructive-subtle text-destructive">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-surface border border-destructive/25 bg-destructive-subtle text-destructive-ink">
                     <AlertTriangle className="size-3.5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0 flex-1">

@@ -392,7 +392,7 @@ export function DeliveryCredentialsPanel() {
           }) : null}
 
           {result ? (
-            <div role={result.ok ? "status" : "alert"} className={result.ok ? "flex items-center gap-2 rounded-control bg-success-soft p-3 text-sm text-success" : "rounded-control bg-destructive-soft p-3 text-sm text-destructive"}>
+            <div role={result.ok ? "status" : "alert"} className={result.ok ? "flex items-center gap-2 rounded-control bg-success-soft p-3 text-sm text-success-ink" : "rounded-control bg-destructive-soft p-3 text-sm text-destructive-ink"}>
               {result.ok ? <CheckCircle2 className="size-4" aria-hidden="true" /> : null}{result.message}
             </div>
           ) : null}

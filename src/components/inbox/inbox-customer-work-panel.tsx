@@ -84,12 +84,12 @@ function formatMoney(value: number, locale: "ar" | "fr" | "en"): string {
 
 function riskClass(score: number, blacklisted: boolean): string {
   if (blacklisted || score >= 70) {
-    return "border-destructive/25 bg-destructive-soft text-destructive";
+    return "border-destructive/25 bg-destructive-soft text-destructive-ink";
   }
   if (score >= 40) {
-    return "border-warning/25 bg-warning-soft text-warning";
+    return "border-warning/25 bg-warning-soft text-warning-ink";
   }
-  return "border-success/25 bg-success-soft text-success";
+  return "border-success/25 bg-success-soft text-success-ink";
 }
 
 export function InboxCustomerWorkPanel({
@@ -245,7 +245,7 @@ export function InboxCustomerWorkPanel({
                     </div>
                   ) : null}
                   {context.fieldAccess.risk && context.customer.isBlacklisted ? (
-                    <div className="mt-3 rounded-control border border-destructive/20 bg-destructive-soft px-2.5 py-2 text-xs text-destructive">
+                    <div className="mt-3 rounded-control border border-destructive/20 bg-destructive-soft px-2.5 py-2 text-xs text-destructive-ink">
                       <span className="font-semibold">{copy("blacklisted")}</span>
                       {context.customer.blacklistReason ? (
                         <span className="ms-1.5">{context.customer.blacklistReason}</span>

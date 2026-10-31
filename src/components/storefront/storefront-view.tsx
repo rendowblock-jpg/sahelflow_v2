@@ -783,7 +783,7 @@ function StorefrontViewBody({
                 </div>
               ) : null}
               {result && !result.ok ? (
-                <div className="flex items-start gap-2 rounded-control bg-destructive-soft p-2 text-xs text-destructive">
+                <div className="flex items-start gap-2 rounded-control bg-destructive-soft p-2 text-xs text-destructive-ink">
                   <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
                   <span>{result.message}</span>
                 </div>
@@ -1140,7 +1140,7 @@ function OrderReviewForm({
         />
       </div>
       {error ? (
-        <div className="flex items-start gap-2 rounded-control bg-destructive-soft p-2 text-xs text-destructive" role="alert">
+        <div className="flex items-start gap-2 rounded-control bg-destructive-soft p-2 text-xs text-destructive-ink" role="alert">
           <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
           <span>{error}</span>
         </div>

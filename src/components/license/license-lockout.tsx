@@ -146,7 +146,7 @@ export function LicenseLockout() {
         <LockoutDataRescue />
 
         {actions.error ? (
-          <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">
+          <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive-ink" role="alert">
             {actions.error}
           </p>
         ) : null}

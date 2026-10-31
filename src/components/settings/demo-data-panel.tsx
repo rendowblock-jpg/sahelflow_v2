@@ -285,7 +285,7 @@ export function DemoDataPanel() {
           {error ? (
             <div
               role="alert"
-              className="rounded-control border border-destructive/30 bg-destructive-subtle p-3 text-sm text-destructive"
+              className="rounded-control border border-destructive/30 bg-destructive-subtle p-3 text-sm text-destructive-ink"
             >
               <span className="font-medium">{error.primary}</span>
               {error.detail ? (
