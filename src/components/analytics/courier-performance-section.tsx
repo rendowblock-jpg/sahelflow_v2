@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Truck } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildChartTable } from "@/components/charts/chart-table";
 import {
   ChartCard,
   ChartEmpty,
@@ -205,6 +206,21 @@ export async function CourierPerformanceSection({
           icon={<Truck />}
           accent="bg-amber-500/10 dark:bg-amber-500/15"
           config={{}}
+          dataTable={buildChartTable(
+            t,
+            t("analytics.courier.matrix.title"),
+            `${integerFormatter.format(totalShipments)} ${t("analytics.courier.shipments")}`,
+            [t("orders.wilaya"), ...matrix.providers],
+            matrix.wilayas.map((wilaya) => [
+              wilaya,
+              ...matrix.providers.map((provider) => {
+                const cell = cellByWilayaProvider.get(`${wilaya}::${provider}`);
+                return cell
+                  ? `${percentFormatter.format(cell.successRate / 100)} (${integerFormatter.format(cell.delivered)}/${integerFormatter.format(cell.shipments)})`
+                  : "—";
+              }),
+            ]),
+          )}
         >
           <ScrollRegion label={t("analytics.courier.matrix.title")}>
             <table
@@ -297,6 +313,13 @@ export async function CourierPerformanceSection({
           icon={<Truck />}
           accent="bg-amber-500/10 dark:bg-amber-500/15"
           config={{}}
+          dataTable={buildChartTable(
+            t,
+            t("analytics.courier.matrix.title"),
+            `${integerFormatter.format(totalShipments)} ${t("analytics.courier.shipments")}`,
+            [t("analytics.courier.shipments")],
+            [[integerFormatter.format(totalShipments)]],
+          )}
         >
           <ChartEmpty message={t("analytics.courier.empty")} />
         </ChartCard>

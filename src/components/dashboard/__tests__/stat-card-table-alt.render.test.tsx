@@ -40,13 +40,26 @@ const table: StatCardTableAlt = {
   ],
 };
 
+const normalize = (value: string) =>
+  value
+    .replace(/:r[0-9a-z]+:|«r[0-9a-z]+»|radix-[^"\s]+/g, "ID")
+    .replace(/\b(id|for|aria-labelledby|aria-describedby|aria-controls)="[^"]*"/g, '$1="ID"')
+    .replace(/url\(#[^)]*\)/g, "url(#ID)");
+/** "" when equal, else the text around the first difference (so a failure says where). */
+function firstDiff(a: string, b: string) {
+  if (a === b) return "";
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  return `at ${i}: A=${a.slice(Math.max(0, i - 60), i + 80)} | B=${b.slice(Math.max(0, i - 60), i + 80)}`;
+}
+
 function html(extra: Partial<React.ComponentProps<typeof StatCard>>) {
   const { container } = render(
     <TooltipProvider>
       <StatCard label="Orders value" value="184,000 DZD" icon={<Wallet />} spark={spark} sparkFormat="currency" {...extra} />
     </TooltipProvider>,
   );
-  const out = container.innerHTML.replace(/:r[0-9a-z]+:|«r[0-9a-z]+»|radix-[^"\s]+/g, "ID");
+  const out = normalize(container.innerHTML);
   const tables = container.querySelectorAll("table");
   cleanup();
   return { out, tables };
@@ -58,7 +71,7 @@ describe("StatCard tableAlt", () => {
     const explicitUndefined = html({ tableAlt: undefined });
     expect(omitted.tables.length).toBe(0);
     expect(omitted.out).not.toContain("<table");
-    expect(explicitUndefined.out).toBe(omitted.out);
+    expect(firstDiff(explicitUndefined.out, omitted.out)).toBe("");
   });
 
   it("providing it adds exactly one table with the given rows and nothing else", () => {
@@ -80,8 +93,8 @@ describe("StatCard tableAlt", () => {
     expect(only.getAttribute("aria-hidden")).toBeNull();
     // Take the table out again: what is left is the card without the prop.
     only.remove();
-    const rest = container.innerHTML.replace(/:r[0-9a-z]+:|«r[0-9a-z]+»|radix-[^"\s]+/g, "ID");
-    expect(rest).toBe(without.out);
+    const rest = normalize(container.innerHTML);
+    expect(firstDiff(rest, without.out)).toBe("");
   });
 
   it("cells are printed as given: a formatted DZD amount is never re-formatted or drifted", () => {

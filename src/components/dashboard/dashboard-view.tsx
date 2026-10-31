@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { formatPositiveRiskPoints, getRiskWorkspaceCopy } from "@/lib/i18n/risk-workspace";
 import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
-import { greetingPeriod } from "@/lib/time/shop-day-format";
+import { greetingPeriod, shortDayLabel } from "@/lib/time/shop-day-format";
 import { formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 import { displayWilaya } from "@/lib/wilaya-display";
@@ -68,6 +68,22 @@ export function DashboardView({
     value: point.newCustomers,
     date: point.date,
   }));
+  // Text alternative of a card's mini-trend: the same points as a hidden table.
+  const sparkTable = (
+    title: string,
+    points: ReadonlyArray<{ value: number; date: string }>,
+    money: boolean,
+  ) =>
+    points.length > 1
+      ? {
+          caption: t("charts.tableOf", { title }),
+          columns: [t("charts.colDate"), title],
+          rows: points.map((point) => [
+            shortDayLabel(point.date, dateLocale),
+            money ? formatDZD(point.value, locale) : integerFormatter.format(point.value),
+          ]),
+        }
+      : undefined;
 
   const period = greetingPeriod(new Date());
   const greeting =
@@ -174,6 +190,7 @@ export function DashboardView({
           trendDirectionOnly={false}
           trendLabel={t("dashboard.vsYesterday")}
           spark={ordersSpark}
+          tableAlt={sparkTable(t("dashboard.todaysOrders"), ordersSpark, false)}
           href="/orders"
           hrefLabel={t("nav.orders")}
           sparkColor="var(--color-chart-1)"
@@ -201,6 +218,7 @@ export function DashboardView({
           }
           tooltip={t("dashboard.revenueDefinition")}
           spark={revenueSpark}
+          tableAlt={sparkTable(t("dashboard.grossRevenue"), revenueSpark, true)}
           sparkFormat="currency"
           href="/analytics"
           hrefLabel={t("nav.analytics")}
@@ -217,6 +235,7 @@ export function DashboardView({
           }
           icon={<Users />}
           spark={customersSpark}
+          tableAlt={sparkTable(t("dashboard.newCustomersToday"), customersSpark, false)}
           href="/customers"
           hrefLabel={t("nav.customers")}
           sparkColor="var(--color-chart-3)"
