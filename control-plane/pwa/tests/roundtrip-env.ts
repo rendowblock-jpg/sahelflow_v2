@@ -5,11 +5,17 @@
 // environment back and removes the folder.
 import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DatabaseSync } from "node:sqlite";
 import { prepareTestSandbox } from "../../../scripts/test-sandbox";
+
+// Vite resolves a static `import "node:sqlite"` to "sqlite" and fails ("Failed to load url sqlite"): load it the way the relay's D1
+// harness does (control-plane/connected/__tests__/d1-sqlite.ts).
+const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as {
+  DatabaseSync: new (path: string) => { exec(sql: string): void; close(): void };
+};
 
 export const RT_SHOP_ID = "testshop0001";
 const KEYS = ["SF_TEST_ROOT", "SF_DATA_DIR", "DATABASE_URL", "SF_ACTIVE_SHOP_ID"] as const;
