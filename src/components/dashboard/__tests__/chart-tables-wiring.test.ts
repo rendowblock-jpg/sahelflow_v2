@@ -17,7 +17,8 @@ describe("chart text alternatives (buildChartTable) are wired", () => {
   it("courier section: both ChartCards carry a dataTable", () => {
     expect((courier.match(/<ChartCard/g) ?? []).length).toBe(2);
     expect((courier.match(/dataTable=\{buildChartTable\(/g) ?? []).length).toBe(2);
-    expect(courier).toContain("cell.successRate / 100");
+    // The table cell is the same text as the visible cell: rate as a percent, then delivered/shipments.
+    expect(courier).toContain("`${percentFormatter.format(cell.successRate / 100)} (${integerFormatter.format(cell.delivered)}/${integerFormatter.format(cell.shipments)})`");
     expect(courier).toContain('[t("orders.wilaya"), ...matrix.providers]');
   });
   it("dashboard: the three sparkline cards pass tableAlt built from their own series", () => {
