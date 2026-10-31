@@ -140,8 +140,8 @@ describe("analytics charts have a text alternative with a table toggle", () => {
     }
   }
 
-  it("every chart that has numbers offers the toggle (8 on this page: revenue + 7)", () => {
+  it("every chart that has numbers offers the toggle (9 on this page: revenue + 7 + delivery performance)", () => {
     const { container } = render(<TooltipProvider><AnalyticsView {...props("en")} /></TooltipProvider>);
-    expect(container.querySelectorAll("[data-chart-card] button[aria-pressed][aria-controls]")).toHaveLength(8);
+    expect(container.querySelectorAll("[data-chart-card] button[aria-pressed][aria-controls]")).toHaveLength(9);
   });
 });
