@@ -6,7 +6,7 @@ import { renderEmpty } from "../../kit/empty-block";
 import { renderError } from "../../kit/error-block";
 import { renderSkeleton } from "../../kit/skeleton";
 import { renderNotes } from "../notes";
-import { esc } from "../view";
+import { esc, numText } from "../view";
 import { renderFreshness } from "./list";
 import { ageLabel, canAct, changedSinceOpened, isPending, latestCommandFor, openCommandFor, statusLabel, type OrdersModel } from "./model";
 import { renderOrderCommand } from "./outcome";
@@ -17,7 +17,7 @@ function renderFacts(o: OrderProjectionRow, m: OrdersModel): string {
   const L = m.locale; const hidden = `<dd class="hidden">${esc(t(L, "orders.detail.hidden"))}</dd>`;
   const fact = (label: string, value: string | undefined, html: (v: string) => string): string => `<div class="fact"><dt>${esc(label)}</dt>${value === undefined ? hidden : `<dd>${html(value)}</dd>`}</div>`;
   const dial = (p: string): string => { const n = p.replace(/[^\d+]/g, ""); return n === "" ? `<span class="num" dir="ltr">${esc(p)}</span>` : `<a href="tel:${esc(n)}" class="num" dir="ltr">${esc(p)}</a>`; };
-  const items = o.items.map((i) => `<li><bdi>${esc(i.name)}</bdi> <span class="num" dir="ltr">×${i.qty}</span></li>`).join("") + (o.moreCount > 0 ? `<li class="more num" dir="ltr">+${o.moreCount}</li>` : "");
+  const items = o.items.map((i) => `<li><bdi>${esc(i.name)}</bdi> <span class="num" dir="ltr">×${numText(i.qty)}</span></li>`).join("") + (numText(o.moreCount) !== "" && o.moreCount > 0 ? `<li class="more num" dir="ltr">+${numText(o.moreCount)}</li>` : "");
   return `<dl class="facts">${fact(t(L, "orders.detail.customer"), o.customerName, (v) => `<bdi>${esc(v)}</bdi>`)}${fact(t(L, "orders.detail.phone"), o.phone, dial)}${fact(t(L, "orders.detail.address"), o.address, (v) => `<bdi>${esc(v)}</bdi>`)}${fact(t(L, "orders.detail.wilaya"), o.wilaya, (v) => `<bdi>${esc(v)}</bdi>`)}`
     + `<div class="fact"><dt>${esc(t(L, "orders.detail.items"))}</dt><dd><ul class="items">${items}</ul></dd></div><div class="fact"><dt>${esc(t(L, "orders.detail.source"))}</dt><dd>${esc(o.source)}</dd></div>`
     + fact(t(L, "orders.detail.total"), o.totalPrice === undefined ? undefined : formatDzd(o.totalPrice, L), (v) => `<span class="total num" dir="auto">${esc(v)}</span>`) + `</dl>`;

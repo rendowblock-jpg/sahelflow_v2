@@ -7,6 +7,7 @@ import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
 import { getShippingListRuntimeTranslation } from "@/lib/i18n/shipping-list-runtime";
 import { getInboxHealthRuntimeTranslation } from "@/lib/i18n/inbox-health-runtime";
 import { getHeldSendDiscardRuntimeTranslation } from "@/lib/i18n/held-send-discard-runtime";
+import { getPhoneAppTestingRuntimeTranslation } from "@/lib/i18n/phone-app-testing-runtime";
 import { getExtractionTruthRuntimeTranslation } from "@/lib/i18n/extraction-truth-runtime";
 import { getPreUpdateBackupRuntimeTranslation } from "@/lib/i18n/pre-update-backup-runtime";
 import { getStorefrontStudioStatesRuntimeTranslation } from "@/lib/i18n/storefront-studio-states-runtime";
@@ -177,6 +178,7 @@ export function getRuntimeTranslation(
     getHeldSendRuntimeTranslation(locale, key) ??
     getShippingListRuntimeTranslation(locale, key) ??
     getHeldSendDiscardRuntimeTranslation(locale, key) ??
+    getPhoneAppTestingRuntimeTranslation(locale, key) ??
     getInboxHealthRuntimeTranslation(locale, key) ??
     getExtractionTruthRuntimeTranslation(locale, key) ??
     getPreUpdateBackupRuntimeTranslation(locale, key) ??

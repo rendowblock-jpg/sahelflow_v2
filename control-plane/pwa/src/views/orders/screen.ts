@@ -37,7 +37,8 @@ export const screen: ScreenModule = {
     const onKey = (e: KeyboardEvent): void => { if (e.key === "Escape") void run("sheet-cancel", {}); };
     const notes = bindNotes(root, { onDraft: (text) => { void c.act("note-draft", { text }); }, onSend: (text) => { void run("note-send", { text }); } });
     root.addEventListener("click", onClick); root.addEventListener("keydown", onKey);
-    const off = h.subscribe(redraw);
+    // W196: told by the host (a flush, a status poll, a wake): re-read the commands first, so a chip never stays on its first word.
+    const off = h.subscribe(() => { void c.refreshCommands().then(redraw, redraw); });
     void c.refresh().then(redraw);
     return () => { root.removeEventListener("click", onClick); root.removeEventListener("keydown", onKey); notes(); off(); };
   },

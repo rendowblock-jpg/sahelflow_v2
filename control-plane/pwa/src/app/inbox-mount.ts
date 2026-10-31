@@ -63,5 +63,10 @@ export function createInboxMount(d: InboxMountDeps) {
   async function visit(_screen: "inbox" | "conversation"): Promise<boolean> {
     const ok = await ensureScreen(); if (ok) await fill(); return ok;
   }
-  return { visit, reload, read, subscribe, lastReload: (): "ok" | "failed" | null => last };
+  // The app's first visit: the sealed copy first (no network); when nothing is sealed yet (a freshly paired phone) ask the relay ONCE, the way the
+  // orders screen does after it attaches. visit() alone left the screen on its skeleton for good (found in the PWA lab, real Chromium).
+  async function open(screen: "inbox" | "conversation"): Promise<boolean> {
+    const ok = await visit(screen); if (ok && d.vault.get(VAULT_KEY) === null) await reload(); return ok;
+  }
+  return { visit, open, reload, read, subscribe, lastReload: (): "ok" | "failed" | null => last };
 }

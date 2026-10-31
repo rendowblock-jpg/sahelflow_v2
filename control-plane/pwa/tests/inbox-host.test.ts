@@ -41,9 +41,9 @@ describe("the reply the host builds", () => {
     const r = rig(); const res = await r.host.enqueueReply({ ...reply(), force: true } as never);
     expect(phoneReplyPayload.parse(r.sealed[0]?.payload)).not.toHaveProperty("force"); if (res.ok) expect(res.record.extra).not.toHaveProperty("force");
   });
-  it("the label is the contact name, or Customer when the role may not see contact", async () => {
-    const a = await rig().host.enqueueReply(reply()); if (a.ok) expect(a.record.labelForUi).toBe("Amina B.");
-    const b = await rig({ contact: false }).host.enqueueReply(reply()); if (b.ok) expect(b.record.labelForUi).toBe("Customer");
+  it("the stored label of a reply is empty, with or without the contact right: the name never goes to disk (W3b SEC2)", async () => {
+    const a = await rig().host.enqueueReply(reply()); expect(a.ok).toBe(true); if (a.ok) expect(a.record.labelForUi).toBe("");
+    const b = await rig({ contact: false }).host.enqueueReply(reply()); expect(b.ok).toBe(true); if (b.ok) expect(b.record.labelForUi).toBe("");
   });
   it("a second reply on the same conversation is refused as busy; another conversation is not", async () => {
     const r = rig(); expect((await r.host.enqueueReply(reply())).ok).toBe(true);

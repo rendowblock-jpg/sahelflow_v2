@@ -79,6 +79,29 @@ describe("reload", () => {
   });
 });
 
+// LAB finding (31 Oct 2026, real Chromium): a paired phone opened Chats and saw "Loading..." for good. The app only called visit(), which
+// opens the SEALED copy; on a first visit nothing is sealed yet and nothing ever asked the relay (orders does: attachOrders -> reload).
+describe("open (the app's visit: the sealed copy first, one poll when there is none)", () => {
+  it("with nothing sealed yet it polls ONCE, opens, and the vault is full: never a skeleton for good", async () => {
+    let sealed = false; const polls: string[] = [];
+    const r = rig({ open: async () => (sealed ? { data: NEW, asOf: NOW - 5_000 } : null), poll: async (k) => { polls.push(k); sealed = true; } });
+    expect(await r.mount.open("inbox")).toBe(true);
+    expect(polls).toEqual(["conversations"]); expect(r.mount.read()).toEqual({ status: "ready", data: NEW, asOf: NOW - 5_000 });
+  });
+  it("with a sealed copy it never touches the network", async () => {
+    const polls: string[] = []; const r = rig({ poll: async (k) => { polls.push(k); } });
+    expect(await r.mount.open("inbox")).toBe(true); expect(polls).toEqual([]); expect(r.mount.read().data).toBe(NEW);
+  });
+  it("with nothing sealed and no network it ends in the error state (a retry button), not in loading", async () => {
+    const r = rig({ open: async () => null, poll: async () => { throw new Error("offline"); } });
+    expect(await r.mount.open("inbox")).toBe(true); expect(r.mount.read()).toEqual({ status: "error", data: null, asOf: null });
+  });
+  it("a screen that did not load answers false and polls nothing", async () => {
+    const polls: string[] = []; const r = rig({ load: async () => { throw new Error("chunk"); }, poll: async (k) => { polls.push(k); } });
+    expect(await r.mount.open("inbox")).toBe(false); expect(polls).toEqual([]);
+  });
+});
+
 describe("the sync schedule (literal names)", () => {
   it("inbox and conversation fetch the conversations projection, every 30 s, and nothing else", () => {
     expect(kindsFor("inbox")).toEqual(["conversations"]); expect(kindsFor("conversation")).toEqual(["conversations"]);
