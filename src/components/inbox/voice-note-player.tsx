@@ -384,7 +384,7 @@ export function VoiceNotePlayer({ src, label, locale }: VoiceNotePlayerProps) {
           </div>
 
           <span
-            className="shrink-0 text-2xs tabular-nums text-muted-foreground"
+            className="shrink-0 text-caption tabular-nums text-muted-foreground"
             aria-label={copy("inbox.voice.time")}
           >
             {clock}
@@ -395,7 +395,7 @@ export function VoiceNotePlayer({ src, label, locale }: VoiceNotePlayerProps) {
             onClick={cycleSpeed}
             aria-label={copy("inbox.voice.speed")}
             data-inbox-voice-speed="true"
-            className="inline-flex min-h-7 shrink-0 items-center rounded-full border border-border/70 bg-background px-2 text-2xs font-semibold tabular-nums text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-7 shrink-0 items-center rounded-full border border-border/70 bg-background px-2 text-caption font-semibold tabular-nums text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
           >
             {rate}×
           </button>
