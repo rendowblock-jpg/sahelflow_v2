@@ -89,7 +89,7 @@ export function ShippingListSheet({ list }: { list: ShippingListResult }) {
           </tr>
         </tbody>
       </table>
-      <footer className="sf-sl-foot">SahelFlow · {date}</footer>
+      <footer className="sf-sl-foot">SahelFlow{" · "}{date}</footer>
     </section>
   );
 }
