@@ -9,7 +9,7 @@
 
 .h3-in{position:absolute;inset:0;display:grid;grid-template-rows:minmax(0,1fr) auto}
 .h3-stage{position:relative;container-type:size;overflow:clip;min-block-size:0;
-  --gu:70;--tn:6;--a:.9135;--b:-.2034;--c:.4067;--d:.4568;
+  --gu:82;--tn:6;--a:.9135;--b:-.2034;--c:.4067;--d:.4568;
   --s:min(calc(90cqw/485),calc(94cqh/(183 + 3*(var(--gu) + var(--tn)))));
   --lift:calc((var(--gu)*var(--explode) + var(--tn))*var(--s));
   --fr:calc((var(--gu)*var(--explode) + var(--tn))/(var(--gu) + var(--tn)))}
@@ -72,6 +72,6 @@ html[lang=ar] .h3-steps strong{line-height:1.5}
   }
 }
 @media (prefers-reduced-motion:reduce){
-  .h3-stage{--explode:.5}
+  .h3-stage{--explode:.92}
   .h3-rise,.h3-post{animation:none}
 }

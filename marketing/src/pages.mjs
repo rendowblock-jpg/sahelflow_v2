@@ -185,11 +185,11 @@ function featsSection(locale) {
   const t = COPY[locale];
   const tiles = MOSAIC.map(([cls, mod, shot, z, ox, oy], i) => {
     const big = cls === "m64" || cls === "m62";
-    return `<li class="tile t-crop ${cls}" style="--z:${z};--ox:${ox};--oy:${oy}"><span class="crop">${boardImg(shot, locale, { sizes: `(min-width: 760px) ${Math.ceil((big ? 50 : 25) * z)}vw, 100vw`, alt: "" })}</span><span class="cap">${esc(t.modules[mod]?.name ?? mod)}</span></li>`;
+    return `<li class="tile t-crop ${cls}" style="--z:${z};--ox:${ox};--oy:${oy};--i:${i}"><span class="crop">${boardImg(shot, locale, { sizes: `(min-width: 760px) ${Math.ceil((big ? 50 : 25) * z)}vw, 100vw`, alt: "" })}</span><span class="cap">${esc(t.modules[mod]?.name ?? mod)}</span></li>`;
   }).join("");
   return `<section class="band" id="screens" aria-labelledby="h-screens">
 <div class="tile t-head" data-rise><h2 id="h-screens" class="rise" style="--i:0">${esc(f.h2)}</h2><p class="rise" style="--i:1">${esc(f.lead)}</p></div>
-<ul class="mosaic">${tiles}</ul>
+<ul class="mosaic" data-rise>${tiles}</ul>
 </section>`;
 }
 
