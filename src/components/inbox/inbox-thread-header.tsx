@@ -3,6 +3,7 @@
 import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { ArrowLeft, Mail, PanelRight, Search, Sparkles } from "lucide-react";
 
+import { ArabicRuns } from "@/components/inbox/arabic-runs";
 import { StatusControl } from "@/components/inbox/conversation-controls";
 import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
@@ -168,7 +169,7 @@ export function InboxThreadHeader({
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
             <h3 dir="auto" className="truncate text-[13px] font-semibold">
-              {activeChat.name}
+              <ArabicRuns text={activeChat.name} locale={locale} />
             </h3>
             {canUpdateConversation ? (
               <StatusControl

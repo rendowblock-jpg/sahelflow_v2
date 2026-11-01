@@ -57,6 +57,7 @@ export function bubbleDeliveryStatus(
   if (message.outboxState === "held" || message.outboxState === "discarded") return "failed";
   return message.deliveryStatus ?? "sent";
 }
+import { ArabicRuns } from "@/components/inbox/arabic-runs";
 import { Button } from "@/components/ui/button";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { cn, DZ_CLOCK, intlLocale, numberFormatter } from "@/lib/utils";
@@ -78,12 +79,14 @@ function escapeRegExp(value: string): string {
 function HighlightedMessageBody({
   body,
   query,
+  locale,
 }: {
   body: string;
   query: string;
+  locale: "ar" | "fr" | "en";
 }) {
   const trimmed = query.trim();
-  if (trimmed.length < 2) return <>{body}</>;
+  if (trimmed.length < 2) return <ArabicRuns text={body} locale={locale} />;
   const parts = body.split(
     new RegExp(`(${escapeRegExp(trimmed)})`, "ig"),
   );
@@ -95,10 +98,12 @@ function HighlightedMessageBody({
             key={index}
             className="rounded-control bg-warning/30 px-0.5 text-foreground"
           >
-            {part}
+            <ArabicRuns text={part} locale={locale} />
           </mark>
         ) : (
-          <Fragment key={index}>{part}</Fragment>
+          <Fragment key={index}>
+            <ArabicRuns text={part} locale={locale} />
+          </Fragment>
         ),
       )}
     </>
@@ -338,7 +343,7 @@ export const MessageBubble = memo(function MessageBubble({
         className="mt-0.5 line-clamp-2 break-words text-caption leading-4 text-muted-foreground"
         dir="auto"
       >
-        {message.quoted?.preview || "…"}
+        {message.quoted?.preview ? <ArabicRuns text={message.quoted.preview} locale={locale} /> : "…"}
       </p>
     </>
   );
@@ -471,7 +476,7 @@ export const MessageBubble = memo(function MessageBubble({
               dir="auto"
               data-sf-user-content="true"
             >
-              <HighlightedMessageBody body={message.body} query={searchQuery} />
+              <HighlightedMessageBody body={message.body} query={searchQuery} locale={locale} />
             </p>
           ) : null}
 
