@@ -57,7 +57,8 @@
 .site-footer{padding-block-end:6px}
 .foot-brand,.foot-cols{gap:6px}
 .foot-brand{margin-block-end:6px}
-.foot-brand p{padding:12px 14px}
+.foot-brand p{padding:12px 14px;font-size:var(--t-small)}
+.foot-contact a{font-size:1rem}
 .foot-cols{grid-template-columns:1fr}
 .foot-col{padding:10px 14px}
 .foot-col ul{display:flex;flex-wrap:wrap;gap:0 16px}
