@@ -64,7 +64,7 @@ function ActionsCell({
 }
 
 function openMenu() {
-  const trigger = screen.getByRole("button", { name: "orders.actions" });
+  const trigger = screen.getByRole("button", { name: "orders.workspace.actionsFor" });
   fireEvent.keyDown(trigger, { key: "Enter" });
 }
 
