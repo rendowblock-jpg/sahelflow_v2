@@ -51,6 +51,10 @@ async function clean(): Promise<void> {
   await db.whatsAppOutboundEffect.deleteMany();
   await db.message.deleteMany();
   await db.conversation.deleteMany();
+  // Another test file may have left alerts behind in this shared database, and an event cannot be deleted while an
+  // alert still points at it, so the alerts (and their delivery attempts) go first, as in every other test that does this.
+  await db.notificationDeliveryAttempt.deleteMany();
+  await db.operationalNotification.deleteMany();
   await db.notificationEvent.deleteMany();
   await db.projectionInvalidation.deleteMany();
   await db.outboxIntent.deleteMany();
