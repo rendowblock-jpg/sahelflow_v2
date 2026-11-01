@@ -192,6 +192,15 @@ html[lang=ar] .close h2{line-height:1.45;letter-spacing:0}
 @media (max-width:759px){
 .facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
 .hero-copy h1{font-size:clamp(2.125rem,9.4vw,3rem)}
-html[lang=ar] .hero-copy h1{font-size:clamp(1.75rem,7.6vw,2.5rem)}
+html[lang=ar] .hero-copy h1{font-size:clamp(1.5rem,6.9vw,2.5rem);text-wrap:balance}
 .sc-names button{font-size:1.5rem}
+}
+
+/* ── No scripts / reduced motion: nothing may stay hidden ── */
+.no-js .sc-fig:not(.is-on){display:none}
+@media (prefers-reduced-motion:reduce){
+.is-live .st-list{grid-template-areas:none}
+.is-live .st{grid-area:auto}
+.is-live .st:not(.is-on){opacity:1;visibility:visible;pointer-events:auto}
+.is-live .st-ctl{display:none}
 }
