@@ -78,7 +78,8 @@ beforeEach(async () => {
 async function seenBy(context: TrustedActorContext): Promise<string[]> {
   await synchronizeNotifications(context);
   const listed = await listNotifications(context, QUERY);
-  return listed.notifications.map((row) => row.kind).sort();
+  // A row with no kind is written as "(no kind)", never dropped, so it would still fail the comparison below.
+  return listed.notifications.map((row) => row.kind ?? "(no kind)").sort();
 }
 
 const ORDER_KINDS = ["order.new", "orders.toConfirm"];
