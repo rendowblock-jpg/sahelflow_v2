@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Measures the built site in a real browser: contrast failures, tap targets, text cut off,
 // console errors, page height, weights, LCP and CLS. Needs the site served (see tests/marketing-overflow.mjs).
+// The pass/fail gates live in two other scripts: `node marketing/scripts/site-check.mjs` (static: SEO, CSP, headers, links, budgets)
+// and `node marketing/scripts/site-browser-check.mjs` (browser matrix). This one only reports numbers.
 // Usage: node marketing/scripts/measure.mjs [BASE] [OUT.json] [pages=,pricing,download,security] [devices=phone,tablet,desktop]
 import { writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -146,3 +148,4 @@ await browser.close();
 if (out) writeFileSync(out, JSON.stringify(rows, null, 1));
 console.log("loc scheme dev page | height sw/vw h1 | contrast taps cut rtl err fail | lcp cls | noImgKB imgKB jsGz cssGz fontsKB htmlKB");
 for (const r of rows) console.log(`${r.locale} ${r.scheme} ${r.dev} ${r.page} | ${r.height} ${r.sw}/${r.vw} h1=${r.h1} | ${r.contrastFails} ${r.tapsUnder44} ${r.cut.length} ${r.rtlBad.length} ${r.errors.length} ${r.failed.length} | ${r.lcp} ${r.cls} | ${r.kbNoImages} ${r.kbImages} ${r.jsGz} ${r.cssGz} ${r.fontsKb} ${r.htmlKb}`);
+console.log("\nGates: node marketing/scripts/site-check.mjs (static) and node marketing/scripts/site-browser-check.mjs (browser) fail with exit code 1; this report does not.");

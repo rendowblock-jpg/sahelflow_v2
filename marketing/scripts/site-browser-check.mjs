@@ -119,7 +119,7 @@ function inPage(opts) {
       if (s.display === "inline" && parent && parent.textContent.trim().length > el.textContent.trim().length + 8 && !parent.matches("li,nav,.langs,.foot-contact")) continue; // inline link inside a sentence
       if (r.height < 43.5 || r.width < 43.5) bad.push(`${name(el)} ${Math.round(r.width)}x${Math.round(r.height)} "${nameOf(el).slice(0, 16)}"`);
     }
-    out.taps = bad;
+    out.taps = bad; out.tapsTested = seen.size;
   }
 
   // contrast of the first screen: text colour vs the colour it really sits on
@@ -206,6 +206,7 @@ async function visit(ctx, url, { throttle = false, scroll = true } = {}) {
   return { page, problems, status: resp?.status() ?? 0, lcp, cls };
 }
 
+const stat = { maxH1: 0, maxCls: 0, maxLcp: 0, minLcp: 1e9, taps: 0, contrast: 0, texts: 0 };
 const tag = (l, p, w, s) => `${l}/${p || "home"} ${w}px ${s}`;
 let n = 0;
 for (const scheme of SCHEMES) for (const width of WIDTHS) {
@@ -217,6 +218,7 @@ for (const scheme of SCHEMES) for (const width of WIDTHS) {
     n++;
     note("http-200", v.status === 200, where, `status ${v.status}`);
     const m = await v.page.evaluate(inPage, { taps: width === 360 });
+    stat.maxH1 = Math.max(stat.maxH1, m.h1Lines); stat.maxCls = Math.max(stat.maxCls, v.cls); stat.maxLcp = Math.max(stat.maxLcp, v.lcp); stat.minLcp = Math.min(stat.minLcp, v.lcp); stat.taps += m.tapsTested ?? 0; stat.contrast += m.contrastTested;
     note("h1<=2 lines", m.h1Lines >= 1 && m.h1Lines <= 2, where, `${m.h1Lines} lines`);
     note("no sideways scroll", m.overflowX === 0, where, `${m.overflowX}px wider than the screen`);
     note("0 console errors", !v.problems.console.length, where, v.problems.console[0] ?? "");
@@ -274,5 +276,6 @@ for (const [id, r] of results) {
   const shown = (ALL ? r.fails : r.fails.slice(0, 3)).map(([w, why]) => `${w}: ${why}`).join(" | ");
   console.log(`${r.fails.length ? "FAIL " : "PASS "}${id.padEnd(27)}${String(r.ok).padStart(5)}${String(r.fails.length).padStart(6)}  ${shown.slice(0, ALL ? 4000 : 330)}`);
 }
-console.log(`\n${results.size - failed} of ${results.size} checks pass, ${failed} fail`);
+console.log(`\nmeasured: h1 lines max ${stat.maxH1}; CLS max ${stat.maxCls.toFixed(3)}; LCP ${Math.round(stat.minLcp)}-${Math.round(stat.maxLcp)} ms at 4x CPU; ${stat.taps} tap targets and ${stat.contrast} first-screen text colours tested`);
+console.log(`${results.size - failed} of ${results.size} checks pass, ${failed} fail`);
 process.exit(failed ? 1 : 0);

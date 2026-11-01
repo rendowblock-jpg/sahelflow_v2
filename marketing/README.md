@@ -44,10 +44,23 @@ download, help centre, contact and the two legal pages.
 - `budget.json`: the limits the tests read (home phone height, home weight, first-load JS, CSS size, and `pageHeightPx` per page class at 360x732) with the numbers measured by `scripts/heights.mjs`.
 
 ## Checks
+Three scripts, all without dependencies beyond node (the browser one needs Playwright, found through `wt-rel47`), none touches the network.
+Each prints PASS or FAIL per check with the page and the reason, and exits with code 1 when anything fails.
+
+| command | what it protects |
+|---|---|
+| `node marketing/scripts/site-check.mjs [dist]` | the built files: one h1, lang/dir per locale, title 30-65 and description 70-160 characters (both unique), canonical, hreflang en/fr/ar + x-default reciprocal, Open Graph + Twitter card + og:image file (1200x630), JSON-LD (Organization + WebSite on home, BreadcrumbList inside, FAQPage only where the FAQ is visible), sitemap (every page once, alternates, nothing 404/redirected/noindex), robots, noindex 404, wrangler 404 handling, skip link, landmarks, heading order, img alt + width/height, labels, **no external URL** (own domains and `ALLOWED_OUTBOUND` in `src/config.mjs` only), every internal link/src/srcset resolves, `_redirects` targets, **CSP**: every inline script and speculation-rules block has its sha256 in script-src, no stale hash, no unsafe-inline/eval, object-src none, frame-ancestors none, security headers (nosniff, Referrer-Policy, Permissions-Policy, COOP, HSTS), cache headers (1 year immutable for css/js/fonts/images, none for html), budgets from `budget.json`, fonts (woff2, swap, no unused face, two preloads), dead CSS list. Without an argument it builds into a temp folder. `--all` prints every problem, `--only=id,id` runs some. |
+| `node marketing/scripts/site-browser-check.mjs [baseUrl]` | what a visitor gets in Chromium: home, product, pricing, download, help x en/fr/ar x 360/768/1440 x dark/light on a 4x slower CPU: h1 at most 2 lines, no sideways scroll, 0 console errors (this is where a CSP violation shows), 0 failed or foreign requests, no broken image, no text under 13 px, tap targets of 44 px (phone: header, hero, footer), names for buttons/links/fields, contrast AA of the first screen, CLS < 0.02, LCP < 2 s; plus reduced-motion and scripts-off runs that must show all content, the 404 status and `/get/windows`. Without a URL it builds and serves the site with the real `_headers` (`scripts/serve-dist.mjs`). Takes the browser lock `/tmp/eyes.lock` itself. About 2 minutes; `--quick` about 20 s. |
+| `node marketing/scripts/site-check-selftest.mjs` | the checks themselves: breaks a copy of the build in 35 ways (alt removed, second h1, external script, changed hash, ...) and fails if one of them goes unnoticed. |
+
+`scripts/measure.mjs` only reports numbers (contrast, taps, weights, LCP, CLS per page); the gates are the two scripts above.
+After a change to an inline script (`HEAD_SCRIPT`, the speculation rules, the root redirect page) run `node marketing/build.mjs --sync-headers`: the build always writes the right hashes into `dist/_headers`, and this command copies them into `static/_headers`, which `tests/marketing-carnet.test.ts` reads.
+
+Caching: `build.mjs` appends `?v=<content hash>` to every `/assets`, `/fonts` and `/img` URL it writes, so `static/_headers` can serve them for a year as `immutable`; pages are revalidated on every visit. Never reference a font or picture without going through the build.
+
+Other checks:
 - `flock /tmp/vt.lock sf vt <worktree> tests/marketing-site.test.ts tests/marketing-carnet.test.ts`
-- Browser audits (serve `marketing/dist` first, e.g. `python3 -m http.server 4411 --directory marketing/dist`):
-  `node tests/marketing-overflow.mjs http://127.0.0.1:4411` (every page, five widths, tap targets) and
-  `node marketing/scripts/measure.mjs http://127.0.0.1:4411 out.json` (contrast, taps, errors, weights, height).
+- Layout audits against a served build: `node tests/marketing-overflow.mjs http://127.0.0.1:4411` and `node marketing/scripts/measure.mjs http://127.0.0.1:4411 out.json`.
 - `budget.json` records the phone height budget of the home (360x732) and what was last measured.
 
 Arabic numbers: inside copy, digit groups are joined with a no-break space (`4 800`), never a
