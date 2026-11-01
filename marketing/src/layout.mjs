@@ -9,7 +9,7 @@ import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
 export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{if(window.IntersectionObserver&&!matchMedia("(prefers-reduced-motion: reduce)").matches)d.classList.add("js-motion")}catch(e){}})()`;
 import { esc, href, phoneDisplay, whatsappHref } from "./ui.mjs";
 
-const FONT_PRELOAD = { ar: ["plex-ar-600", "plex-ar-400"], fr: ["plex-lat-600", "plex-lat-400"], en: ["plex-lat-600", "plex-lat-400"] };
+const FONT_PRELOAD = { ar: ["cairo-arabic", "cairo-latin"], fr: ["cairo-latin"], en: ["cairo-latin"] };
 const OG_LOCALE = { ar: "ar_DZ", fr: "fr_DZ", en: "en_US" };
 
 function head({ locale, path, title, description, preload, jsonLd = [] }) {
@@ -104,10 +104,9 @@ ${link("product", t.nav.product)}${link("integrations", t.nav.integrations)}${li
 </header>`;
 }
 
-const LETTERS = [["S", 0.62, 1], ["a", 0.56, 0], ["h", 0.62, 1], ["e", 0.58, 0], ["l", 0.3, 1], ["F", 0.56, 1, 1], ["l", 0.3, 1, 1], ["o", 0.6, 0, 1], ["w", 0.8, 0, 1]];
-/** The wordmark built from solid blocks: each letter knocked out of its own rectangle, bottoms aligned. */
+/** The name returns at full width, set as type. */
 function wordmark(locale) {
-  return `<a class="foot-word" href="${href(locale)}" aria-label="SahelFlow" dir="ltr"><span class="fw" aria-hidden="true">${LETTERS.map(([c, w, tall, alt]) => `<i class="${tall ? "t" : "s"}${alt ? " a" : ""}" style="--w:${w}">${c}</i>`).join("")}</span></a>`;
+  return `<a class="foot-word" href="${href(locale)}" aria-label="SahelFlow" dir="ltr"><span class="fw" aria-hidden="true">SahelFlow</span></a>`;
 }
 
 function footer(locale) {
