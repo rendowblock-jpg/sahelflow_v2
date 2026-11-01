@@ -9,7 +9,7 @@ export default {
   whatsappMessage: "Bonjour, je voudrais en savoir plus sur SahelFlow",
 
   meta: {
-    home: ["SahelFlow — Le e-commerce en paiement à la livraison, de WhatsApp jusqu'au dinar", "Une application Windows pour les vendeurs algériens : le message WhatsApp devient une commande, vous savez qui appeler avant d'expédier, et vous voyez ce que chaque livreur vous doit. Essai gratuit de 7 jours."],
+    home: ["SahelFlow — Paiement à la livraison, de WhatsApp au dinar", "Appli Windows pour vendeurs algériens : WhatsApp devient commande, qui appeler avant d'expédier, ce que chaque livreur vous doit. Essai gratuit 7 jours."],
     product: ["La plateforme — SahelFlow", "Neuf modules qui partagent la même commande, le même client et le même stock : messagerie, commandes, livraison, risque, comptabilité, automatisations, boutique, assistant et équipe."],
     integrations: ["Intégrations — SahelFlow", "WhatsApp, Yalidine, ZR Express, EcoTrack, Maystro, Google Sheets, Shopify, YouCan, WooCommerce, Meta et Gemini : les connexions de SahelFlow, chacune marquée Disponible, En test ou Prévu."],
     pricing: ["Tarifs — SahelFlow", "Gratuit pendant 7 jours, puis un seul paiement : une licence permanente avec cinq boutiques, dix membres d'équipe et cinq ans de mises à jour."],

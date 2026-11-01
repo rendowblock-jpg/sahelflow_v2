@@ -68,7 +68,7 @@ ${FONT_PRELOAD[locale].map((f) => `<link rel="preload" href="/fonts/${f}.woff2" 
 ${preload ? `<link rel="preload" as="image" href="${preload}" imagesrcset="${[480, 800, 1200].map((w) => `${preload.replace("-800.webp", `-${w}.webp`)} ${w}w`).join(", ")}" imagesizes="(min-width: 1100px) 840px, (min-width: 760px) 60vw, 100vw" fetchpriority="high">` : ""}
 <link rel="stylesheet" href="/assets/site.css?v=${SITE.asset}">
 <script>${HEAD_SCRIPT}</script>
-${[app, org, ...jsonLd].map((ld) => `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`).join("\n")}
+${[app, org, ...(path === "" ? [{ "@context": "https://schema.org", "@type": "WebSite", name: "SahelFlow", url: SITE.origin, inLanguage: SITE.locales }] : []), ...jsonLd].map((ld) => `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`).join("\n")}
 <script defer src="/assets/site.js?v=${SITE.asset}"></script>
 </head>`;
 }

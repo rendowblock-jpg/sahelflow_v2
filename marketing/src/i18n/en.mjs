@@ -9,7 +9,7 @@ export default {
   whatsappMessage: "Hello, I'd like to know more about SahelFlow",
 
   meta: {
-    home: ["SahelFlow — Cash-on-delivery commerce, from WhatsApp to the dinar", "A Windows app for Algerian sellers: WhatsApp messages become orders, you know who to call before you ship, and you see what each courier owes you. 7-day free trial."],
+    home: ["SahelFlow — Cash-on-delivery commerce, from WhatsApp to the dinar", "A Windows app for Algerian sellers: WhatsApp messages become orders, you know who to call before shipping and what each courier owes you. 7-day free trial."],
     product: ["The platform — SahelFlow", "Nine modules that share one order, one customer and one stock: inbox, orders, delivery, risk, accounting, automations, storefront, assistant and team."],
     integrations: ["Integrations — SahelFlow", "WhatsApp, Yalidine, ZR Express, EcoTrack, Maystro, Google Sheets, Shopify, YouCan, WooCommerce, Meta and Gemini: the connections SahelFlow offers, each marked Available, In testing or Planned."],
     pricing: ["Pricing — SahelFlow", "Free for 7 days, then one payment: a permanent licence with five shops, ten team members and five years of updates."],
