@@ -9,7 +9,7 @@ export const H2 = {
     stageNames: ["Arrives", "Call first", "You approve", "Shipped"],
     band: {
       sentence: "Cash in hand is one of the oldest ways to trade. SahelFlow keeps the count.",
-      caption: "Market at Biskra, about 1899. Detroit Publishing Co., Library of Congress, public domain.",
+      caption: "Market at Biskra, 1899. Photochrom Print Collection, Library of Congress, public domain.",
       alt: "An old photograph of the open market at Biskra, with traders and buyers",
     },
     screensLabel: "The screens of the app",
@@ -21,7 +21,7 @@ export const H2 = {
     stageNames: ["Arrive", "Appeler d'abord", "Vous validez", "Expédié"],
     band: {
       sentence: "Payer de la main à la main est l'une des plus vieilles façons de commercer. SahelFlow en tient le compte.",
-      caption: "Marché de Biskra, vers 1899. Detroit Publishing Co., Library of Congress, domaine public.",
+      caption: "Marché de Biskra, 1899. Photochrom Print Collection, Library of Congress, domaine public.",
       alt: "Une ancienne photographie du marché en plein air de Biskra, avec des marchands et des acheteurs",
     },
     screensLabel: "Les écrans du logiciel",
@@ -33,7 +33,7 @@ export const H2 = {
     stageNames: ["تصل", "اتصل أولاً", "توافق", "تُشحن"],
     band: {
       sentence: "الدفع من اليد إلى اليد من أقدم طرق التجارة. و SahelFlow يعدّ لك ما يُدفع.",
-      caption: "سوق بسكرة، نحو 1899. Detroit Publishing Co.، مكتبة الكونغرس، ملك عام.",
+      caption: "سوق بسكرة، 1899. Photochrom Print Collection، مكتبة الكونغرس، ملك عام.",
       alt: "صورة قديمة للسوق المفتوح في بسكرة، فيها باعة ومشترون",
     },
     screensLabel: "شاشات التطبيق",

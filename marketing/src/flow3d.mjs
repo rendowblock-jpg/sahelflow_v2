@@ -107,8 +107,8 @@ export function flowScene(locale) {
   const flag = (i) => {
     const [cx, cy] = A(ST[i], 0, 4.6);
     const [, top] = A(ST[i], 0, 3.55);
-    const w = clamp(names[i].length * 15 + 44, 120, 240);
-    return `<rect x="${r1(cx - 2)}" y="${r1(cy + 20)}" width="4" height="${r1(top - cy - 20)}" fill="${lintel[i]}"/><rect x="${r1(cx - w / 2)}" y="${r1(cy - 22)}" width="${w}" height="44" fill="${lintel[i]}"/><text class="fl-t" x="${r1(cx)}" y="${r1(cy + 8)}" text-anchor="middle" fill="${ink[i]}">${esc(names[i])}</text>`;
+    const w = clamp(names[i].length * 17 + 48, 132, 260);
+    return `<rect x="${r1(cx - 2)}" y="${r1(cy + 20)}" width="4" height="${r1(top - cy - 20)}" fill="${lintel[i]}"/><rect x="${r1(cx - w / 2)}" y="${r1(cy - 24)}" width="${w}" height="48" fill="${lintel[i]}"/><text class="fl-t" x="${r1(cx)}" y="${r1(cy + 10)}" text-anchor="middle" fill="${ink[i]}">${esc(names[i])}</text>`;
   };
 
   // items, at the build-time positions of the loop
@@ -135,11 +135,11 @@ export function flowScene(locale) {
 
   const [chx, chy] = A(STACK_X, 0, 3.7);
   const [flx, fly] = A(STACK_X, 0, 4.9);
-  const doneW = clamp(h.status.delivered.length * 15 + 44, 120, 240);
+  const doneW = clamp(h.status.delivered.length * 17 + 48, 132, 260);
   const firstAmt = amts[0];
   const beam = box(d, [ST[3] - 0.04, -1.4, 0.5], [ST[3] + 0.04, 1.4, 2.9], C.red, true);
 
-  return `<div class="flow"><svg class="flow-svg" data-flow viewBox="0 0 760 840" role="img" aria-label="${esc(t.flowAlt)}" data-d="${d}" data-s="${S}" data-ax="${AX}" data-ay="${AY}" data-ox="${OX}" data-oy="${OY}" data-speed="${GEO.SPEED}" data-xend="${GEO.XEND}" data-cycle="${CYCLE}" data-st="${ST.join(",")}" data-amts="${amts.join(",")}" data-unit="${unit}" data-shown="${SHOWN0}" data-cx="${r1(chx)}" data-cy="${r1(chy)}">
+  return `<div class="flow"><svg class="flow-svg" data-flow viewBox="${d < 0 ? -126 : -14} -102 830 955" role="img" aria-label="${esc(t.flowAlt)}" data-d="${d}" data-s="${S}" data-ax="${AX}" data-ay="${AY}" data-ox="${OX}" data-oy="${OY}" data-speed="${GEO.SPEED}" data-xend="${GEO.XEND}" data-cycle="${CYCLE}" data-st="${ST.join(",")}" data-amts="${amts.join(",")}" data-unit="${unit}" data-shown="${SHOWN0}" data-cx="${r1(chx)}" data-cy="${r1(chy)}">
 <defs><clipPath id="flc"><polygon points="${clip}"/></clipPath></defs>
 <g class="fl-floor">${floor}</g>
 <g class="fl-belt">${belt}<g clip-path="url(#flc)"><g class="belt-s" fill="#27352f" style="--bx:${bx}px;--by:${by}px;animation-duration:${(1.2 / GEO.SPEED).toFixed(3)}s">${stripes}</g></g></g>
@@ -151,7 +151,7 @@ export function flowScene(locale) {
 <g class="fl-front">${front}</g>
 <g class="fl-stack">${platform}${notes}</g>
 <g class="fl-lintels">${lintels}</g>
-<g class="fl-flags">${[0, 1, 2, 3].map(flag).join("")}<rect x="${r1(flx - doneW / 2)}" y="${r1(fly - 22)}" width="${doneW}" height="44" fill="${C.paper}"/><text class="fl-t" x="${r1(flx)}" y="${r1(fly + 8)}" text-anchor="middle" fill="${C.ink}">${esc(h.status.delivered)}</text></g>
+<g class="fl-flags">${[0, 1, 2, 3].map(flag).join("")}<rect x="${r1(flx - doneW / 2)}" y="${r1(fly - 24)}" width="${doneW}" height="48" fill="${C.paper}"/><text class="fl-t" x="${r1(flx)}" y="${r1(fly + 10)}" text-anchor="middle" fill="${C.ink}">${esc(h.status.delivered)}</text></g>
 <g data-chip transform="translate(${r1(chx)} ${r1(chy)})"><rect x="-78" y="-26" width="156" height="52" fill="${C.red}"/><text class="fl-s" x="0" y="10" text-anchor="middle" fill="#fff" direction="ltr">+${fmt(firstAmt)} ${unit}</text></g>
 </svg></div>`;
 }

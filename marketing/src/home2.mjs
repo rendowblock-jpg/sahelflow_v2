@@ -103,7 +103,7 @@ function screens(locale) {
   ).join("");
   const figs = SCREENS.map(([, shot], i) => {
     const set = [480, 800, 1200].map((w) => `${shotUrl(shot, locale, w)} ${w}w`).join(", ");
-    return `<figure class="sc-fig${i === 0 ? " is-on" : ""}" data-fig="${i}"><img src="${shotUrl(shot, locale, 1200)}" srcset="${set}" sizes="(min-width: 900px) 56vw, 92vw" width="1200" height="750" alt="${esc(t.modules[SCREENS[i][0]].short)}"${i === 0 ? "" : ' loading="lazy"'} decoding="async"></figure>`;
+    return `<figure class="sc-fig${i === 0 ? " is-on" : ""}" data-fig="${i}"><img src="${shotUrl(shot, locale, 1200)}" srcset="${set}" sizes="(min-width: 900px) 72vw, 100vw" width="1200" height="750" alt="${esc(t.modules[SCREENS[i][0]].short)}"${i === 0 ? "" : ' loading="lazy"'} decoding="async"></figure>`;
   }).join("");
   return `<section class="screens" id="screens" aria-labelledby="h-screens" data-screens>
 <div class="sc-list">
@@ -119,7 +119,7 @@ function screens(locale) {
 function archive(locale) {
   const b = H2[locale].band;
   return `<section class="archive" aria-label="${esc(b.alt)}">
-<figure class="ar-pic"><img src="/img/photo/biskra-market-1600.jpg" srcset="/img/photo/biskra-market-900.jpg 900w, /img/photo/biskra-market-1600.jpg 1600w" sizes="(min-width: 900px) 58vw, 100vw" width="1600" height="1180" alt="${esc(b.alt)}" loading="lazy" decoding="async"></figure>
+<figure class="ar-pic"><img src="/img/photo/biskra-market-1600.jpg" srcset="/img/photo/biskra-market-900.jpg 900w, /img/photo/biskra-market-1600.jpg 1600w" sizes="(min-width: 900px) 72vw, 100vw" width="1600" height="1180" alt="${esc(b.alt)}" loading="lazy" decoding="async"></figure>
 <div class="ar-text" data-rise><p class="ar-line rise" style="--i:0">${esc(b.sentence)}</p><p class="ar-cap rise" style="--i:1">${esc(b.caption)}</p></div>
 </section>`;
 }
@@ -131,7 +131,7 @@ function pricing(locale) {
   const lp = licencePricing(locale);
   const H = HOME[locale].price;
   const row = (name, price, text) =>
-    `<li class="mrow rise"><div class="mrow-top"><h4>${esc(name)}</h4><span class="mrow-price">${price}</span></div><p>${esc(text)}</p></li>`;
+    `<li class="pm rise"><div class="pm-top"><h4>${esc(name)}</h4><span class="pm-price">${price}</span></div><p>${esc(text)}</p></li>`;
   const trial = row(p.trial.name, esc(t.common.free), `${p.trial.per(SITE.trialDays)}. ${p.trial.points.slice(0, 3).join(". ")}.`);
   const licence = row(
     p.licence.name,

@@ -1,6 +1,6 @@
 biskra-market-*.jpg
   Title:   Market, Biskra, Algeria (LCCN 2001697852)
-  Creator: Detroit Publishing Co., about 1899
-  Source:  Library of Congress via Wikimedia Commons, https://commons.wikimedia.org/wiki/File:Market,_Biskra,_Algeria-LCCN2001697852.jpg
+  Creator: Photochrom Print Collection (as recorded on Wikimedia Commons), 1899
+  Source:  Library of Congress via Wikimedia Commons, file "Market, Biskra, Algeria-LCCN2001697852.jpg" (LCCN 2001697852)
   Licence: Public domain
   Changes: resized and recompressed only.

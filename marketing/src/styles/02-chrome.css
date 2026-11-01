@@ -46,7 +46,7 @@
 .foot-col a{font-size:1rem;color:#d4d9d2;text-decoration:none}
 .foot-col a:hover{color:#fff;text-decoration:underline}
 .foot-word{display:block;container-type:inline-size;text-decoration:none;padding-block:8px 0;overflow:hidden}
-.fw{display:block;font:900 calc((100cqw - 4px)/4.3)/.92 var(--f);letter-spacing:-.05em;color:var(--bg);white-space:nowrap}
+.fw{display:block;font:900 calc((100cqw - 4px)/4.75)/.92 var(--f);letter-spacing:-.05em;color:var(--bg);white-space:nowrap}
 .foot-bottom{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:0 16px;padding-block:20px 28px;color:#b9bfb8;font-size:var(--t-small)}
 .foot-bottom .langs a{background:none;color:#b9bfb8;padding:0 10px}
 .foot-bottom .langs a[aria-current]{color:#fff;background:none}
