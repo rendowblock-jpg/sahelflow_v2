@@ -131,7 +131,7 @@ export default {
     risk: {
       name: "Risque et retours",
       short: "Sachez quelle commande reviendra avant de l'expédier",
-      title: "Quelle commande reviendra ? Sachez-le avant.",
+      title: "Avant l'envoi, sachez ce qui reviendra.",
       lead: "Avant l'expédition, SahelFlow vous dit quelles commandes méritent un appel de confirmation de plus, et pourquoi. Puis il vous montre où vous perdez vraiment : par wilaya, par produit et par canal.",
       points: ["Une liste « à vérifier avant d'expédier »", "Les pertes de retours en dinars", "Une liste noire des clients qui refusent"],
       sections: [
@@ -253,7 +253,7 @@ export default {
     teams: {
       name: "Équipes de confirmation",
       short: "Agents, files et droits pour un vrai centre d'appels",
-      title: "Pilotez un centre de confirmation, pas un groupe WhatsApp.",
+      title: "Confirmez en équipe, pas en groupe WhatsApp.",
       lead: "Quand plusieurs personnes confirment, expédient et répondent aux clients, il faut une file, des rôles clairs et l'historique de qui a fait quoi. SahelFlow donne à chacun son identifiant et seulement les écrans dont il a besoin.",
       pains: [
         ["Deux agents appellent le même client", "Personne ne sait qui a déjà confirmé."],
@@ -287,7 +287,7 @@ export default {
     online: {
       name: "Boutiques en ligne",
       short: "Shopify, YouCan, WooCommerce, landing pages et feuilles",
-      title: "Commandes web et WhatsApp, dans une seule file.",
+      title: "Commandes web et WhatsApp, une seule file.",
       lead: "Votre boutique SahelFlow, vos fichiers Excel et vos commandes WhatsApp arrivent dans la même file de confirmation. Les connexions Shopify, YouCan, WooCommerce et Google Sheets sont en test.",
       pains: [
         ["Trois tableaux de bord par jour", "Shopify ici, la feuille là, WhatsApp sur le téléphone."],
