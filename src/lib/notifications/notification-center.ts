@@ -17,6 +17,7 @@ import type {
   NotificationQuery,
 } from "./contracts";
 import { sanitizeNativePreview } from "./preview-safety";
+import { eventAllowedFor, eventTypesBlockedFor, visibleEventFilter } from "./kind-access";
 import { isInQuietHours } from "./quiet-hours";
 import { KIND_SPECS, asSeverity, kindOfEventType } from "./event-kinds";
 import { resolveLiveEventState, type LiveEventState } from "./live-state";
@@ -169,6 +170,7 @@ export async function synchronizeNotifications(
     trustedActionAllowed(context, action, resource),
   );
   if (allowedActions.length === 0) return { projected: 0 };
+  const blockedEventTypes = eventTypesBlockedFor(context, resource);
   if (allowedActions.includes("orders.read")) {
     try {
       const window = preference ?? { quietStartMinute: null, quietEndMinute: null };
@@ -186,6 +188,7 @@ export async function synchronizeNotifications(
       where: {
         category: "inbox",
         requiredAction: { in: allowedActions }, occurredAt: { gte: retentionFloor },
+        ...(blockedEventTypes.length > 0 ? { eventType: { notIn: blockedEventTypes } } : {}),
         expiresAt: { gt: now },
         notifications: { none: { recipientMemberId } },
       },
@@ -198,11 +201,7 @@ export async function synchronizeNotifications(
       if (!ALLOWED_EVENT_ACTIONS.has(event.requiredAction as Phase2Action)) {
         return false;
       }
-      return trustedActionAllowed(
-        context,
-        event.requiredAction as Phase2Action,
-        resource,
-      );
+      return eventAllowedFor(context, event, resource);
     });
     if (eligible.length === 0) break;
 
@@ -286,8 +285,10 @@ export async function listNotifications(
         ],
       }
     : {};
+  const visibleEvent = visibleEventFilter(context, { shopId: context.shop.shopId });
   const where: Prisma.OperationalNotificationWhereInput = {
     recipientMemberId,
+    event: visibleEvent,
     ...stateWhere,
     ...cursorWhere,
     ...(query.category ? { category: query.category } : {}),
@@ -308,7 +309,7 @@ export async function listNotifications(
   const page = rows.slice(0, query.limit);
   const last = page.at(-1);
   const unreadCount = await db.operationalNotification.count({
-    where: { recipientMemberId, readAt: null, archivedAt: null },
+    where: { recipientMemberId, readAt: null, archivedAt: null, event: visibleEvent },
   });
   const preference = await getNotificationPreference(context);
   const now = new Date();
@@ -391,7 +392,7 @@ async function ownedNotification(context: TrustedActorContext, id: string) {
   if (!ALLOWED_EVENT_ACTIONS.has(requiredAction)) {
     throw new SahelFlowError("Notification authority is unavailable", "NOTIFICATION_AUTHORITY_INVALID", 503);
   }
-  if (!trustedActionAllowed(context, requiredAction, { shopId: context.shop.shopId })) {
+  if (!eventAllowedFor(context, notification.event, { shopId: context.shop.shopId })) {
     throw new SahelFlowError("Notification not found", "NOT_FOUND", 404);
   }
   return notification;
