@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { ApprovalText } from "@/components/ai/approval-text";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 
@@ -100,24 +101,24 @@ export function AiApprovalOrderArgs({
       <h3 className="text-xs font-semibold text-foreground">{t("ai.approvalArgs.title")}</h3>
       <dl className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
         <Row label={t("ai.approvalArgs.customer")}>
-          <span dir="auto">{args.customerName}</span>
+          <ApprovalText value={args.customerName} t={t} />
         </Row>
         <Row label={t("ai.approvalArgs.phone")}>
           <TechnicalValue data-ai-order-phone="true">{args.customerPhone}</TechnicalValue>
         </Row>
         {place ? (
           <Row label={t("ai.approvalArgs.wilayaCommune")}>
-            <span dir="auto">{place}</span>
+            <ApprovalText value={place} t={t} />
           </Row>
         ) : null}
         {args.address ? (
           <Row label={t("ai.approvalArgs.address")}>
-            <span dir="auto">{args.address}</span>
+            <ApprovalText value={args.address} t={t} />
           </Row>
         ) : null}
         {args.notes ? (
           <Row label={t("ai.approvalArgs.notes")}>
-            <span dir="auto">{args.notes}</span>
+            <ApprovalText value={args.notes} t={t} />
           </Row>
         ) : null}
       </dl>
@@ -131,11 +132,11 @@ export function AiApprovalOrderArgs({
               className="rounded-control border border-border/50 bg-card px-3 py-2"
             >
               <p className="text-sm font-medium">
-                <bdi>{line.name}</bdi>
+                <ApprovalText value={line.name} t={t} />
                 {line.variantName ? (
                   <>
                     {" "}
-                    (<bdi>{line.variantName}</bdi>)
+                    (<ApprovalText value={line.variantName} t={t} />)
                   </>
                 ) : null}
               </p>
