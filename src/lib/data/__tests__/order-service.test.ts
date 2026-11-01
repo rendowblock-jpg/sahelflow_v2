@@ -349,6 +349,51 @@ describe("orderService.update", () => {
     expect(updated.totalPrice).toBe(2500); // existing items (2×1000) + 500
   });
 
+  describe("the order total ceiling (MAX_MONEY_DZD) on the legacy edit", () => {
+    async function seedPending(unitPrice: number, quantity: number, deliveryCost: number) {
+      const customer = await seedCustomer(db);
+      return db.order.create({
+        data: {
+          orderNumber: "ORD-0001", status: "pending", customerId: customer.id,
+          totalPrice: unitPrice * quantity + deliveryCost, deliveryCost,
+          wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+          items: { create: [{ productName: "Test", quantity, unitPrice, total: unitPrice * quantity }] },
+        },
+        include: { items: true },
+      });
+    }
+
+    it("refuses new items whose total is above the ceiling and keeps the stored order", async () => {
+      const order = await seedPending(1000, 2, 500);
+      await expect(
+        orderService.update({ prisma: db as never }, order.id, {
+          items: [{ id: order.items[0]!.id, productName: "Test", quantity: 2, unitPrice: 600_000_000, total: 1_200_000_000 }],
+        }),
+      ).rejects.toMatchObject({ code: "VALIDATION_ERROR", message: "The order total is too large" });
+
+      const stored = await db.order.findUnique({ where: { id: order.id }, include: { items: true } });
+      expect(stored?.totalPrice).toBe(2500);
+      expect(stored?.items[0]?.unitPrice).toBe(1000);
+    });
+
+    it("refuses a delivery cost that pushes the existing items over the ceiling", async () => {
+      const order = await seedPending(999_999_000, 1, 0);
+      await expect(
+        orderService.update({ prisma: db as never }, order.id, { deliveryCost: 1000 }),
+      ).rejects.toMatchObject({ code: "VALIDATION_ERROR", message: "The order total is too large" });
+
+      const stored = await db.order.findUnique({ where: { id: order.id } });
+      expect(stored?.totalPrice).toBe(999_999_000);
+      expect(stored?.deliveryCost).toBe(0);
+    });
+
+    it("still accepts a total of exactly the ceiling", async () => {
+      const order = await seedPending(999_999_000, 1, 0);
+      const updated = await orderService.update({ prisma: db as never }, order.id, { deliveryCost: 999 });
+      expect(updated.totalPrice).toBe(999_999_999);
+    });
+  });
+
   it("does not rewrite totalPrice on contact-only edits", async () => {
     const customer = await seedCustomer(db);
     const order = await db.order.create({
