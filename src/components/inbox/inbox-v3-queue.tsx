@@ -52,6 +52,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ArabicRuns } from "@/components/inbox/arabic-runs";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -299,7 +300,7 @@ const ConversationRow = memo(function ConversationRow({
                 chat.unread > 0 ? "font-semibold text-foreground" : "font-medium",
               )}
             >
-              {chat.name}
+              <ArabicRuns text={chat.name} locale={locale} />
             </bdi>
           </span>
           {chat.pinned ? (
@@ -350,7 +351,11 @@ const ConversationRow = memo(function ConversationRow({
                     : "text-muted-foreground",
                 )}
               >
-                {chat.lastMessageText || copy("savedHistory")}
+                {chat.lastMessageText ? (
+                  <ArabicRuns text={chat.lastMessageText} locale={locale} />
+                ) : (
+                  copy("savedHistory")
+                )}
               </bdi>
             </>
           )}
