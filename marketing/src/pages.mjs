@@ -39,7 +39,6 @@ export function pageHero({ locale, before = "", eyebrow, eyebrowIcon, title, lea
   <div class="container sheet-in">
     <div class="sheet-copy">
       ${before}
-      ${eyebrow ? `<p class="eyebrow">${eyebrowIcon ? icon(eyebrowIcon) : ""}${esc(eyebrow)}</p>` : ""}
       <h1 class="page-title">${esc(title)}</h1>
       ${lead ? `<p class="page-lead">${esc(lead)}</p>` : ""}
       ${actions}
@@ -106,111 +105,107 @@ function statusIcon(kind) {
 
 /* ───────────────────────────── home ───────────────────────────── */
 
-const rich = (s) => esc(s).replace(/Windows/g, '<span class="lat">Windows</span>');
 const unitOf = (locale) => (locale === "ar" ? "دج" : "DA");
 const cash = (amount, locale) => `<span class="money"><span class="num">${num(amount)}</span>&nbsp;<span class="unit">${unitOf(locale)}</span></span>`;
+const latin = (text) => esc(text).replace(/Windows/g, '<span class="lat">Windows</span>');
 
-/** The hero ledger: a message becomes a pencilled draft, the seller approves, the line is inked and stamped (CSS only). */
-function ledgerFigure(locale) {
-  const L = HOME[locale].ledger;
-  const ln = (mg, tx) => `<div class="ln"><span class="mg">${mg}</span><span class="tx">${tx}</span></div>`;
-  return `<figure class="lg go" data-ledger aria-labelledby="lgc">
-<div class="lg-h"><span>${esc(L.page)}</span><span>${esc(L.date)}</span></div>
-<div class="lg-m"><span class="lab">${esc(L.wa)} · <span class="num">14:02</span></span><p class="slip">${esc(L.msg)}</p></div>
-<div class="lg-rows"><div class="dr" aria-hidden="true">
-${ln("—", `<b>${esc(L.draftNote)}</b>`)}
-${ln("", `<span>${esc(L.item)}</span><span>${esc(L.place)}</span>`)}
-${ln("", `${cash(4800, locale)}<span class="ghost">${esc(L.approve)}</span>`)}
-</div><div class="fin">
-${ln(`<span class="num">${L.id}</span>`, `<b>${esc(L.name)}</b><span class="ph"><span class="num">${L.phone}</span></span>`)}
-${ln("", `<span>${esc(L.item)}</span><span>${esc(L.place2)}</span>`)}
-${ln("", `${cash(4800, locale)}<span class="stamp sp-toCall">${esc(L.stamp)}</span><span class="hn">${esc(L.hint)}</span>`)}
-</div></div>
-<figcaption class="cap" id="lgc"><span>${esc(L.caption)}</span><button class="lnk" data-replay type="button">${esc(L.replay)}</button></figcaption>
-</figure>`;
+/** A real screenshot at 480 / 800 / 1200 px. Tiles crop it with object-fit; --z / --ox / --oy zoom into a close-up. */
+function boardImg(key, locale, { sizes, alt = "", eager = false, cls = "" }) {
+  const set = [480, 800, 1200].map((w) => `${shotUrl(key, locale, w)} ${w}w`).join(", ");
+  return `<img${cls ? ` class="${cls}"` : ""} src="${shotUrl(key, locale, 800)}" srcset="${set}" sizes="${sizes}" width="1200" height="750" alt="${esc(alt)}"${eager ? ' fetchpriority="high"' : ' loading="lazy"'} decoding="async">`;
 }
 
 function homeHero(locale) {
   const h = HOME[locale].hero;
   const t = COPY[locale];
-  return `<section class="sec hero" aria-labelledby="h1">
-<div>
-<h1 id="h1">${esc(h.h1)}</h1>
-<p class="lead">${rich(h.lead)}</p>
-<div class="cta">${button(href(locale, "download"), t.home.hero.primary, { kind: "primary", size: "lg" })}<span class="fine">${esc(t.home.hero.note(SITE.trialDays))}</span></div>
-<p class="tag">${esc(h.tag)}</p>
-</div>
-${ledgerFigure(locale)}
-</section>`;
-}
-
-function callSection(locale) {
-  const c = HOME[locale].call;
-  const rows = c.rows
-    .map((r) => `<div class="mrow${r.mg ? " is-risk" : ""}"><span class="mg">${esc(r.mg) || "&nbsp;"}</span><span class="tx"><b>${esc(r.who)}</b><span>${esc(r.what)}</span>${cash(r.amount, locale)}<span class="stamp sp-${r.stamp}">${esc(r.label)}</span></span></div>`)
+  const facts = h.facts
+    .map(([v, l], i) => `<li class="tile t-fact rise" style="--i:${i + 3}"><b class="fv">${latin(v)}</b><span>${latin(l)}</span></li>`)
     .join("");
-  return `<section class="sec" id="call" aria-labelledby="h-call">
-<h2 id="h-call">${esc(c.h2)}</h2>
-<p class="lead">${esc(c.p)}</p>
-<div class="callbook">${rows}</div>
-<p class="note">${esc(c.note)}</p>
+  return `<section class="board hero" aria-labelledby="h1" data-rise>
+<div class="tile t-name rise" style="--i:0"><p class="name" dir="ltr">SahelFlow</p></div>
+<div class="tile t-line rise" style="--i:1"><h1 id="h1">${esc(h.h1)}</h1><p>${esc(h.sub)}</p></div>
+<div class="tile t-act rise" style="--i:2">${button(href(locale, "download"), t.home.hero.primary, { kind: "primary", size: "lg" })}<a class="text-link" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${esc(t.home.hero.secondary)}</a></div>
+<figure class="tile t-shot shutter"><span class="crop">${boardImg("inbox", locale, { sizes: "(min-width: 1100px) 50vw, 100vw", alt: h.alt, eager: true })}</span></figure>
+<ul class="facts-row">${facts}</ul>
 </section>`;
 }
 
-const STEP_STAMP = ["sp-new", "sp-toCall", "sp-confirmed", "sp-shipped", "sp-delivered"];
-function daySection(locale) {
-  const d = HOME[locale].day;
-  return `<section class="sec" id="day" aria-labelledby="h-day">
-<h2 id="h-day">${esc(d.h2)}</h2>
-<ol class="day">${d.steps.map((s, i) => `<li><span class="stamp ${STEP_STAMP[i]}">${esc(s.stamp)}</span><div><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></div></li>`).join("")}</ol>
-</section>`;
-}
-
-function shotsSection(locale) {
-  const h = HOME[locale].shots;
-  const t = COPY[locale];
-  const figs = ["inbox", "orders", "delivery"]
-    .map((key, i) => {
-      const m = t.modules[key];
-      return `<figure class="shot">${shotImg(key, locale, { alt: `${m.name}: ${m.short}`, lazy: i !== 0 })}<figcaption>${esc(m.name)}</figcaption></figure>`;
+function boardSection(locale) {
+  const b = HOME[locale].board;
+  const st = HOME[locale].status;
+  const total = b.rows.reduce((n, r) => n + r[3], 0);
+  const rows = b.rows
+    .map(([who, place, item, amount, status], i) => {
+      const row = `<li class="orow is-${status}" style="--i:${i}"><b class="o-who">${esc(who)}</b><span class="o-place">${esc(place)}</span><span class="o-item">${esc(item)}</span><span class="o-sum">${cash(amount, locale)}</span><span class="stamp sp-${status}">${esc(st[status])}</span></li>`;
+      return i === 0
+        ? `${row}<li class="oreason" aria-label="${esc(b.reasonTitle)}"><b>${esc(b.reasonTitle)}</b><span>${esc(b.reason)}</span></li>`
+        : row;
     })
     .join("");
-  return `<section class="sec" id="screens" aria-labelledby="h-screens">
-<h2 id="h-screens">${esc(h.h2)}</h2>
-<p class="lead">${esc(h.lead)}</p>
-<div class="shots">${figs}</div>
+  return `<section class="band" id="orders" aria-labelledby="h-orders">
+<div class="tile t-head rise-wrap" data-rise><h2 id="h-orders" class="rise" style="--i:0">${esc(b.h2)}</h2><p class="rise" style="--i:1">${esc(b.lead)}</p></div>
+<ul class="orders" data-ui="orders-board" data-rise>${rows}</ul>
+<p class="tile t-sum"><span>${esc(b.sum(b.rows.length, `${num(total)} ${unitOf(locale)}`))}</span><span class="muted">${esc(b.sample)}</span></p>
 </section>`;
 }
 
-function intSection(locale) {
+function howSection(locale) {
+  const h = HOME[locale].how;
+  const st = HOME[locale].status;
+  const fields = h.steps
+    .map((s, i) => {
+      const [who, place, item, amount] = h.card;
+      const extra = i === 0 ? `<p class="bubble">${esc(h.msg)}</p>` : `<p class="cnote">${esc(s.note)}</p>`;
+      return `<li class="field f${i + 1}" data-rise><h3 class="rise" style="--i:0">${esc(s.title)}</h3><p class="rise" style="--i:1">${esc(s.text)}</p>
+<div class="ocard rise" style="--i:2" data-ui="order-card">${extra}<b>${esc(who)}</b><span>${esc(place)}</span><span>${esc(item)}</span><span class="ocard-foot">${cash(amount, locale)}<span class="stamp sp-${s.chip}">${esc(st[s.chip])}</span></span></div></li>`;
+    })
+    .join("");
+  return `<section class="band" id="how" aria-labelledby="h-how">
+<div class="tile t-head" data-rise><h2 id="h-how" class="rise" style="--i:0">${esc(h.h2)}</h2></div>
+<ol class="fields">${fields}</ol>
+</section>`;
+}
+
+/* The mosaic: size class, module key, screenshot key, zoom and origin of the close-up. */
+const MOSAIC = [
+  ["m64", "delivery", "delivery", 1, "0%", "0%"],
+  ["m62", "accounting", "accounting", 1.35, "0%", "0%"],
+  ["m32", "risk", "risk", 1.7, "30%", "20%"],
+  ["m32", "automations", "flow", 1.7, "70%", "30%"],
+  ["m32", "orders", "orders", 1.7, "20%", "40%"],
+  ["m32", "storefront", "studio", 1.7, "50%", "10%"],
+  ["m32", "agents", "team", 1.7, "60%", "50%"],
+  ["m32", "inbox", "inbox", 1.7, "10%", "80%"],
+];
+function featsSection(locale) {
+  const f = HOME[locale].feats;
   const t = COPY[locale];
-  return `<section class="sec" id="int" aria-labelledby="h-int">
-<h2 id="h-int">${esc(t.nav.integrations)}</h2>
-<p class="lead">${esc(HOME[locale].int.p)}</p>
-${marquee(locale)}
-<p class="more">${button(href(locale, "integrations"), t.nav.integrations, { kind: "ghost", iconName: "arrow" })}</p>
+  const tiles = MOSAIC.map(([cls, mod, shot, z, ox, oy], i) => {
+    const big = cls === "m64" || cls === "m62";
+    return `<li class="tile t-crop ${cls}" style="--z:${z};--ox:${ox};--oy:${oy}"><span class="crop">${boardImg(shot, locale, { sizes: big ? "(min-width: 760px) 50vw, 100vw" : "(min-width: 760px) 40vw, 100vw", alt: "" })}</span><span class="cap">${esc(t.modules[mod]?.name ?? mod)}</span></li>`;
+  }).join("");
+  return `<section class="band" id="screens" aria-labelledby="h-screens">
+<div class="tile t-head" data-rise><h2 id="h-screens" class="rise" style="--i:0">${esc(f.h2)}</h2><p class="rise" style="--i:1">${esc(f.lead)}</p></div>
+<ul class="mosaic">${tiles}</ul>
 </section>`;
 }
 
 function priceSection(locale) {
   const t = COPY[locale];
-  const p = t.pricingPage.licence;
+  const p = t.pricingPage;
   const lp = licencePricing(locale);
   const amount = lp.amount ?? PACKAGE.priceDzd;
-  const points = p.points(PACKAGE);
-  return `<section class="sec" id="price" aria-labelledby="h-price">
-<h2 id="h-price">${esc(t.home.pricing.title)}</h2>
-<p class="lead">${esc(t.home.pricing.text)}</p>
-<div class="pgrid">
-<div class="plate">
-${lp.offer ? `<span class="pc">${esc(lp.offer.label)}</span>` : ""}
-<div class="pn2"><span class="num" data-count-to="${amount}">${num(amount)}</span><span class="pu">${unitOf(locale)}</span></div>
-<span class="pc">${esc(p.per)}${lp.offer ? ` · ${esc(lp.offer.then)}` : ""}</span>
+  const H = HOME[locale].price;
+  const rows = p.compareRows.map((row, i) => `<div class="cmp-row"><h3>${esc(row)}</h3><p>${esc(p.compareSahel[i])}</p><p class="muted-tile">${esc(p.compareSaas[i])}</p></div>`).join("");
+  return `<section class="band" id="price" aria-labelledby="h-price">
+<div class="tile t-head" data-rise><h2 id="h-price" class="rise" style="--i:0">${esc(H.h2)}</h2><p class="rise" style="--i:1">${esc(t.home.pricing.text)}</p></div>
+<div class="plans" data-rise>
+<div class="tile plan rise" style="--i:0"><h3>${esc(p.trial.name)}</h3><p class="pnum"><span class="num">${num(0)}</span> ${unitOf(locale)}</p><p>${esc(p.trial.per(SITE.trialDays))}</p><ul class="check-list">${p.trial.points.map((x) => `<li>${icon("check")}<span>${esc(x)}</span></li>`).join("")}</ul>${button(href(locale, "download"), p.trial.cta, { kind: "ghost", iconName: "download" })}</div>
+<div class="tile plan plan-main rise" style="--i:1"><h3>${esc(p.licence.name)}</h3>${lp.offer ? `<p>${esc(lp.offer.label)}</p>` : ""}<p class="pnum"><span class="num" data-count-to="${amount}">${num(amount)}</span> ${unitOf(locale)}</p><p>${esc(p.licence.per)}${lp.offer ? ` · ${esc(lp.offer.then)}` : ""}</p><ul class="check-list">${p.licence.points(PACKAGE).map((x) => `<li>${icon("check")}<span>${esc(x)}</span></li>`).join("")}</ul>${button(href(locale, "pricing"), t.home.pricing.cta, { kind: "ghost", iconName: "arrow" })}</div>
 </div>
-<div>
-<ul class="incl">${points.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-${button(href(locale, "pricing"), t.home.pricing.cta, { kind: "primary", iconName: "arrow" })}
-</div>
+<div class="cmp-table" role="group" aria-label="${esc(H.compare)}" data-rise>
+<div class="cmp-row cmp-head"><h3>${esc(H.compare)}</h3><p>${esc(p.compareSahelName)}</p><p>${esc(p.compareSaasName)}</p></div>
+${rows}
 </div>
 </section>`;
 }
@@ -222,18 +217,29 @@ function faqSection(locale) {
     t.helpPage.topics.start[2][1],
     t.helpPage.topics.licence[2][0],
     t.helpPage.topics.whatsapp[2][1],
-    t.helpPage.topics.team[2][0],
   ];
-  return `<section class="sec" id="faq" aria-labelledby="h-faq">
-<h2 id="h-faq">${esc(t.home.faqTitle)}</h2>
-${faqList(items, { name: "home-faq" })}
+  const bands = items
+    .map(([q, a], i) => `<div class="fband ${i % 2 ? "b2" : "b1"}"><h3>${esc(q)}</h3><p>${esc(a)}</p></div>`)
+    .join("");
+  return `<section class="band faqs" id="faq" aria-labelledby="h-faq">
+<div class="tile t-head" data-rise><h2 id="h-faq" class="rise" style="--i:0">${esc(t.home.faqTitle)}</h2></div>
+<div class="fbands">${bands}</div>
+</section>`;
+}
+
+function closeSection(locale) {
+  const t = COPY[locale];
+  return `<section class="band close" aria-labelledby="h-close">
+<div class="tile t-crop c-side" style="--z:1.8;--ox:20%;--oy:30%"><span class="crop">${boardImg("parcel", locale, { sizes: "(min-width: 760px) 40vw, 100vw" })}</span></div>
+<div class="tile t-go" data-rise><h2 id="h-close" class="rise" style="--i:0">${esc(HOME[locale].close.h2)}</h2><p class="rise" style="--i:1">${esc(t.home.final.text)}</p><div class="rise" style="--i:2">${button(href(locale, "download"), t.home.hero.primary, { kind: "ghost", size: "lg" })}</div></div>
+<div class="tile t-crop c-side" style="--z:1.8;--ox:80%;--oy:60%"><span class="crop">${boardImg("queue", locale, { sizes: "(min-width: 760px) 40vw, 100vw" })}</span></div>
 </section>`;
 }
 
 export function homePage(locale) {
   const [title, description] = meta(locale, "home");
-  const sections = [homeHero, callSection, daySection, shotsSection, intSection, priceSection, faqSection].map((f) => f(locale)).join("\n");
-  return shell({ locale, pageId: "home", path: "", title, description }, `<div class="page">\n${sections}\n</div>\n${finalCta(locale)}`);
+  const sections = [homeHero, boardSection, howSection, featsSection, priceSection, faqSection, closeSection].map((f) => f(locale)).join("\n");
+  return shell({ locale, pageId: "home", path: "", title, description }, `<div class="page">\n${sections}\n</div>`);
 }
 
 /* ───────────────────────────── pricing ───────────────────────────── */

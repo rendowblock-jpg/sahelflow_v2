@@ -1,61 +1,29 @@
-/* Motion of sahelflow.com: ONE language, five verbs (REVEAL, STAMP, MARGIN, FIGURE, PRESS) and one swap.
-   Content is complete and in its final place without JavaScript and without animation support: every hidden
-   start state lives under .js-motion, which the inline boot script sets only when motion is wanted. */
-:root{--sf-ease-ledger:cubic-bezier(.2,.7,.2,1);--sf-rise:8px;--sf-dur-reveal:420ms;--sf-dur-stamp:280ms;--sf-dur-margin:700ms;--sf-dur-figure:600ms;--sf-dur-press:120ms;--sf-dur-swap:160ms;--sf-delay-failsafe:2400ms}
-/* Resting shapes (no motion): the double rule under the hero title, a reserved width for counted figures, the margin of a notice drawn by a pseudo-element. */
-.hero h1::after{content:"";display:block;inline-size:72px;margin-block-start:16px;border-block-end:3px double var(--ink)}
-.num[data-count-to]{display:inline-block;min-inline-size:6ch;font-variant-numeric:tabular-nums}
-.js-motion .notice{position:relative;border-inline-start-color:transparent}
-.js-motion .notice::before{content:"";position:absolute;inset-block:0;inset-inline-start:-3px;border-inline-start:3px double var(--red);transform-origin:top}
+/* Motion of sahelflow.com. Everything is in its final place without JavaScript and without animation support:
+   hidden start states live under .js-motion, which the inline boot script sets only when motion is wanted.
+   transform and opacity only, except the one shutter on the hero screenshot (clip-path, once). */
+:root{--rise:24px;--dur:520ms}
 @media (prefers-reduced-motion:no-preference){
-  @keyframes btn-thunk{from{transform:scale(1.04)}to{transform:scale(1)}}
-  @keyframes ink-in{from{color:var(--ink3)}to{color:var(--ink)}}
-  @keyframes sf-rise{from{opacity:0;transform:translateY(var(--sf-rise))}to{opacity:1;transform:none}}
-  @keyframes sf-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-  @keyframes sf-stamp{0%{opacity:0;transform:rotate(calc(var(--rot,0deg) + 2deg)) scale(1.08)}60%{opacity:1}100%{opacity:1;transform:rotate(var(--rot,0deg)) scale(1)}}
-  @keyframes sf-margin{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-  @keyframes sf-tick{from{opacity:.4}to{opacity:1}}
   @keyframes sf-show{to{opacity:1;transform:none}}
-  /* PRESS: the stamp thunk on hover (a mouse only), then 2 px down with a 1 px inset shadow while pressed. */
-  @media (hover:hover){
-    .btn:hover,.btn:active{animation:btn-thunk 180ms var(--sf-ease-ledger) both}
-  }
-  .btn:active{animation:none;transform:translateY(2px);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ink) 30%,transparent)}
-  /* HERO: decorations only, 80 to 660 ms. The title and the lead are never hidden, so the LCP is painted at once. */
-  .js-motion .hero h1::after{transform-origin:0 50%;animation:sf-draw var(--sf-dur-reveal) var(--sf-ease-ledger) 80ms both}
-  .js-motion[dir=rtl] .hero h1::after{transform-origin:100% 50%}
-  .js-motion .hero .fine{animation:sf-rise var(--sf-dur-reveal) var(--sf-ease-ledger) 160ms both}
-  .js-motion .hero .tag{animation:sf-rise var(--sf-dur-reveal) var(--sf-ease-ledger) 240ms both}
-  /* Scroll-driven path (Chromium, Safari): no JavaScript needed. */
-  @supports (animation-timeline:view()){
-    .dayline{animation:ink-in linear both;animation-timeline:view();animation-range:entry 10% cover 40%}
-    .js-motion :is(.sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl){animation:sf-rise linear both;animation-timeline:view();animation-range:entry 0px entry 160px}
-    .js-motion .plate{animation:sf-stamp linear both;animation-timeline:view();animation-range:entry 10% entry 60%}
-    .js-motion .notice::before{animation:sf-margin linear both;animation-timeline:view();animation-range:entry 10% entry 90%}
-    .js-motion .num[data-count-to]{animation:sf-tick linear both;animation-timeline:view();animation-range:entry 20% entry 100%}
-  }
-  /* Fallback path (Firefox): site.js adds the class "in" once; if the script never runs, everything shows after 2.4 s. */
-  @supports not (animation-timeline:view()){
-    .js-motion :is(.sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl){transition:opacity var(--sf-dur-reveal) var(--sf-ease-ledger),transform var(--sf-dur-reveal) var(--sf-ease-ledger)}
-    .js-motion :is(.sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl):not(.in){opacity:0;transform:translateY(var(--sf-rise));animation:sf-show 1ms linear var(--sf-delay-failsafe) both}
-    .js-motion .plate:not(.in){opacity:0;animation:sf-show 1ms linear var(--sf-delay-failsafe) both}
-    .js-motion .plate.in{animation:sf-stamp var(--sf-dur-stamp) var(--sf-ease-ledger) both}
-    .js-motion .notice:not(.in)::before{transform:scaleY(0);animation:sf-show 1ms linear var(--sf-delay-failsafe) both}
-    .js-motion .notice.in::before{animation:sf-margin var(--sf-dur-margin) var(--sf-ease-ledger) both}
-  }
-  /* FAQ: the answer opens with grid-template-rows 0fr to 1fr where ::details-content exists; elsewhere a plain toggle. */
-  @supports selector(::details-content){
-    .faq-item:not(.htopic)::details-content{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--sf-dur-reveal) var(--sf-ease-ledger),content-visibility var(--sf-dur-reveal) allow-discrete}
-    .faq-item[open]:not(.htopic)::details-content{grid-template-rows:1fr}
-    .faq-item:not(.htopic) .faq-answer{overflow:hidden;min-block-size:0;padding-block-end:0}
-    .faq-item:not(.htopic) .faq-answer p{padding-block-end:16px}
-  }
-  /* SWAP: language and theme cross-fade in 160 ms; the header keeps its place. */
-  ::view-transition-old(root),::view-transition-new(root){animation-duration:var(--sf-dur-swap);animation-timing-function:var(--sf-ease-ledger)}
-  ::view-transition-group(*){animation-duration:var(--sf-dur-swap)}
+  @keyframes sf-shutter{from{clip-path:inset(0 0 100% 0 round 8px)}to{clip-path:inset(0 0 0 0 round 8px)}}
+  @keyframes sf-settle{from{transform:scale(1.12)}to{transform:scale(1)}}
+  /* Tile contents rise 16-24px, 60-90ms apart, once. If the script never runs, the failsafe shows them after 2.4 s. */
+  .js-motion [data-rise]:not(.in) .rise,.js-motion .rise[data-rise]:not(.in),.js-motion .t-fact.rise{opacity:0;transform:translateY(var(--rise))}
+  .js-motion [data-rise]:not(.in) .rise,.js-motion .t-fact.rise{animation:sf-show 1ms linear 2.4s both}
+  .js-motion [data-rise].in .rise,.js-motion .hero.in .t-fact.rise{opacity:1;transform:none;transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease);transition-delay:calc(var(--i,0)*75ms)}
+  .js-motion .orders:not(.in) .orow{opacity:0;transform:translateY(16px);animation:sf-show 1ms linear 2.4s both}
+  .js-motion .orders.in .orow{opacity:1;transform:none;transition:opacity 420ms var(--ease),transform 420ms var(--ease);transition-delay:calc(var(--i,0)*60ms)}
+  /* The shutter: the screenshot opens in about 1.1 s while the picture settles from 1.12 scale. */
+  .js-motion .shutter{animation:sf-shutter 1.1s var(--ease) .15s both}
+  .js-motion .shutter img{animation:sf-settle 1.3s var(--ease) .15s both}
+  /* Press, hover and focus feedback on every control. */
+  .text-link,.nav-links a,.langs a,.foot-col a{transition:background-color .12s,color .12s}
+  .text-link:active,.nav-links a:active,.menu>summary:active{transform:scale(.97)}
+  .text-link:hover{text-decoration:underline}
+  .t-crop img{transition:transform .5s var(--ease)}
+  @media (hover:hover){.t-crop:hover img{transform:scale(calc(var(--z,1)*1.05))}}
+  ::view-transition-old(root),::view-transition-new(root){animation-duration:160ms}
 }
 @media (prefers-reduced-motion:reduce){
-  .btn:hover,.btn:active,.dayline,.js-motion .hero h1::after,.js-motion .hero .fine,.js-motion .hero .tag,.js-motion :is(.sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl),.js-motion .plate,.js-motion .notice::before,.js-motion .num[data-count-to],.js-motion :is(.sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl):not(.in),.js-motion .plate:not(.in),.js-motion .plate.in,.js-motion .notice:not(.in)::before,.js-motion .notice.in::before{animation:none}
-  .btn,.faq-icon,.reason,.js-motion :is(.sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl),.faq-item:not(.htopic)::details-content{transition:none}
+  .js-motion .rise,.js-motion .orow,.js-motion .shutter,.js-motion .shutter img{opacity:1!important;transform:none!important;animation:none!important;clip-path:none!important}
   ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
 }

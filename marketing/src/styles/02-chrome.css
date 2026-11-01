@@ -54,6 +54,12 @@
 .foot-bottom .langs a{background:none;color:var(--muted);padding:0 10px}
 .foot-bottom .langs a[aria-current]{color:var(--ink)}
 @media (max-width:759px){
-.foot-cols{grid-template-columns:1fr 1fr}
-.foot-col ul{display:grid}
+.site-footer{padding-block-end:6px}
+.foot-brand,.foot-cols{gap:6px}
+.foot-brand{margin-block-end:6px}
+.foot-brand p{padding:12px 14px}
+.foot-cols{grid-template-columns:1fr}
+.foot-col{padding:10px 14px}
+.foot-col ul{display:flex;flex-wrap:wrap;gap:0 16px}
+.foot-col h2{margin-block-end:0}
 }
