@@ -16,7 +16,7 @@
 html[dir=rtl] .h3-stage{--b:.2034;--c:-.4067}
 .h3-scene{position:absolute;inset:0}
 .h3-layer{position:absolute;left:calc(50% - 220*var(--s));top:calc(50% - 102*var(--s));width:calc(440*var(--s));height:calc(204*var(--s));
-  transform:translate(calc(var(--mx,0)*(var(--k) - 1.5)*8px),calc((1.5 - var(--k))*var(--lift) + var(--my,0)*(var(--k) - 1.5)*4px));
+  transform:translateY(calc((1.5 - var(--k))*var(--lift)));
   will-change:transform;--p:var(--h3-pl);--t:var(--ink);--m:var(--muted);--ai:var(--accent-ink)}
 .h3-layer.k2{--p:var(--ink);--t:var(--bg);--m:var(--h3-lm)}
 .h3-layer.k0{--p:var(--accent);--t:var(--accent-ink);--m:var(--accent-ink)}

@@ -93,11 +93,12 @@
     }
     if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
       const host = fig.closest("[data-hero3d]");
+      const layers = $$(".h3-layer", fig);
       let x = 0, y = 0, cx = 0, cy = 0, raf = 0;
       const go = () => {
         cx += (x - cx) * 0.14; cy += (y - cy) * 0.14;
-        fig.style.setProperty("--mx", cx.toFixed(3));
-        fig.style.setProperty("--my", cy.toFixed(3));
+        /* the individual `translate` property, written on the four plates only: no style recalculation of the figure */
+        for (const l of layers) { const k = Number(l.style.getPropertyValue("--k")) - 1.5; l.style.translate = `${(cx * k * 8).toFixed(2)}px ${(cy * k * 4).toFixed(2)}px`; }
         raf = Math.abs(x - cx) + Math.abs(y - cy) > 0.004 ? requestAnimationFrame(go) : 0;
       };
       host.addEventListener("pointermove", (e) => {
