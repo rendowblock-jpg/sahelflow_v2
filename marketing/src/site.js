@@ -1,5 +1,5 @@
 // sahelflow.com progressive enhancement. Every page works without this file;
-// it adds the theme switch, the phone menu, the ledger replay, the price
+// it adds the phone menu, the tile entrance, the price
 // count-up and the help search.
 (() => {
   "use strict";
@@ -22,26 +22,6 @@
   for (const link of $$("[data-set-lang]")) link.addEventListener("click", () => store.set("sf-lang", link.dataset.setLang));
   store.set("sf-lang", locale);
 
-  /* ── theme: auto (follow the system) → light → night ── */
-  const themeBtn = $("[data-theme-toggle]");
-  if (themeBtn) {
-    const states = ["auto", "light", "dark"];
-    const names = JSON.parse(themeBtn.dataset.names || "[]");
-    const current = () => (root.dataset.theme === "light" || root.dataset.theme === "dark" ? root.dataset.theme : "auto");
-    const paint = () => {
-      const name = names[states.indexOf(current())] || "";
-      $("[data-theme-state]", themeBtn).textContent = name;
-      themeBtn.setAttribute("aria-label", `${themeBtn.dataset.group}: ${name}`);
-    };
-    const swap = () => {
-      const next = states[(states.indexOf(current()) + 1) % states.length];
-      if (next === "auto") { delete root.dataset.theme; store.del("sf-theme"); } else { root.dataset.theme = next; store.set("sf-theme", next); }
-      paint();
-    };
-    themeBtn.addEventListener("click", () => (!reduced && doc.startViewTransition ? doc.startViewTransition(swap) : swap()));
-    paint();
-  }
-
   /* ── menu: open on desktop, Escape closes it on a phone and returns focus ── */
   const menu = $("[data-menu]");
   if (menu) {
@@ -56,14 +36,6 @@
     });
     menu.addEventListener("click", (e) => { if (!wide.matches && e.target.closest("a")) menu.open = false; });
   }
-
-  /* ── hero ledger: replay the CSS sequence ── */
-  const ledger = $("[data-ledger]");
-  $("[data-replay]")?.addEventListener("click", () => {
-    ledger.classList.remove("go");
-    void ledger.offsetWidth;
-    ledger.classList.add("go");
-  });
 
   /* ── price count-up: 600 ms, once, when it scrolls into view ── */
   const counts = $$("[data-count-to]");
@@ -87,17 +59,16 @@
   }
 
   /* motion:start */
-  /* Without native scroll timelines (Firefox): show each block once by adding a class. */
-  if ("IntersectionObserver" in window && root.classList.contains("js-motion") && !CSS.supports("animation-timeline", "view()")) {
-    const RV = ".sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl,.plate,.notice";
+  /* Tiles rise once as they enter the screen (60-90 ms apart inside a tile). Without JavaScript nothing is hidden. */
+  if ("IntersectionObserver" in window && root.classList.contains("js-motion")) {
     const seen = new IntersectionObserver((entries) => {
       for (const e of entries) {
         if (!e.isIntersecting) continue;
         e.target.classList.add("in");
         seen.unobserve(e.target);
       }
-    }, { rootMargin: "0px 0px -8% 0px" });
-    $$(RV).forEach((el) => seen.observe(el));
+    }, { rootMargin: "0px 0px -6% 0px" });
+    $$("[data-rise]").forEach((el) => seen.observe(el));
   }
   /* motion:end */
 

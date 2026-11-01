@@ -5,11 +5,11 @@ import { SITE } from "./config.mjs";
 import { COPY } from "./i18n/index.mjs";
 import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
 
-/** The one inline script: no-js flag + the saved theme before first paint (its CSP hash is in static/_headers). */
-export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{var t=localStorage.getItem("sf-theme");if(t==="dark"||t==="light")d.dataset.theme=t}catch(e){}try{if(window.IntersectionObserver&&!matchMedia("(prefers-reduced-motion: reduce)").matches)d.classList.add("js-motion")}catch(e){}})()`;
+/** The one inline script: no-js flag + motion flag before first paint (its CSP hash is in static/_headers). */
+export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{if(window.IntersectionObserver&&!matchMedia("(prefers-reduced-motion: reduce)").matches)d.classList.add("js-motion")}catch(e){}})()`;
 import { esc, href, phoneDisplay, whatsappHref } from "./ui.mjs";
 
-const FONT_PRELOAD = { ar: ["plex-ar-400", "naskh-ar"], fr: ["plex-lat-400"], en: ["plex-lat-400"] };
+const FONT_PRELOAD = { ar: ["plex-ar-600", "plex-ar-400"], fr: ["plex-lat-600", "plex-lat-400"], en: ["plex-lat-600", "plex-lat-400"] };
 const OG_LOCALE = { ar: "ar_DZ", fr: "fr_DZ", en: "en_US" };
 
 function head({ locale, path, title, description, preload, jsonLd = [] }) {
@@ -48,8 +48,8 @@ function head({ locale, path, title, description, preload, jsonLd = [] }) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<meta name="theme-color" content="#F3EEE4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#14161A" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f1f1ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
 <link rel="canonical" href="${canonical}">
 ${alternates}
@@ -65,10 +65,9 @@ ${alternates}
 <link rel="icon" href="/img/mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/img/icon-180.png">
 ${FONT_PRELOAD[locale].map((f) => `<link rel="preload" href="/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>`).join("\n")}
-${preload ? `<link rel="preload" as="image" href="${preload}" imagesrcset="${[480, 800, 1200].map((w) => `${preload.replace("-800.webp", `-${w}.webp`)} ${w}w`).join(", ")}" imagesizes="(min-width: 1180px) 560px, (min-width: 760px) 50vw, 92vw" fetchpriority="high">` : ""}
+${preload ? `<link rel="preload" as="image" href="${preload}" imagesrcset="${[480, 800, 1200].map((w) => `${preload.replace("-800.webp", `-${w}.webp`)} ${w}w`).join(", ")}" imagesizes="(min-width: 1100px) 840px, (min-width: 760px) 60vw, 100vw" fetchpriority="high">` : ""}
 <link rel="stylesheet" href="/assets/site.css?v=${SITE.asset}">
 <script>${HEAD_SCRIPT}</script>
-<script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/${locale}/*"},"eagerness":"moderate"}]}</script>
 ${[app, org, ...jsonLd].map((ld) => `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`).join("\n")}
 <script defer src="/assets/site.js?v=${SITE.asset}"></script>
 </head>`;
@@ -76,17 +75,10 @@ ${[app, org, ...jsonLd].map((ld) => `<script type="application/ld+json">${JSON.s
 
 /* ───────────────────────────── chrome ───────────────────────────── */
 
-const THEME = {
-  ar: ["المظهر", "تلقائي", "فاتح", "ليلي"],
-  fr: ["Thème", "auto", "clair", "nuit"],
-  en: ["Theme", "auto", "light", "night"],
-};
-
-const MARK = `<svg class="mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><rect x="2.5" y="2.5" width="27" height="27" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 3v26M25 3v26" stroke="var(--red)" stroke-width="1.2" fill="none"/><path d="M5.5 20c2.5-5.4 5-5.4 7.5 0s5 5.4 7.6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const MARK = `<svg class="mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><rect x="7" y="8" width="18" height="6" rx="2" fill="var(--accent-ink)"/><rect x="7" y="18" width="11" height="6" rx="2" fill="var(--accent-ink)"/></svg>`;
 
 function header({ locale, pageId, path }) {
   const t = COPY[locale];
-  const th = THEME[locale];
   const on = (id) => pageId === id || (id === "product" && pageId.startsWith("module:"));
   const link = (id, label) => `<li><a href="${href(locale, id)}"${on(id) ? ' aria-current="page"' : ""}>${esc(label)}</a></li>`;
   const langs = SITE.locales
@@ -104,13 +96,18 @@ ${link("product", t.nav.product)}${link("integrations", t.nav.integrations)}${li
 </ul></nav>
 <div class="nav-tools">
 <p class="langs">${langs}</p>
-<button class="theme-btn" type="button" data-theme-toggle data-group="${esc(th[0])}" data-names='${JSON.stringify(th.slice(1))}' aria-label="${esc(th[0])}: ${esc(th[1])}"><span class="theme-k" aria-hidden="true">${esc(th[0])}</span><span class="theme-v" data-theme-state>${esc(th[1])}</span></button>
 <a class="btn btn-primary" href="${href(locale, "download")}">${esc(t.nav.resourceLinks.download[0])}</a>
 </div>
 </div>
 </details>
 </div>
 </header>`;
+}
+
+const LETTERS = [["S", 0.62, 1], ["a", 0.56, 0], ["h", 0.62, 1], ["e", 0.58, 0], ["l", 0.3, 1], ["F", 0.56, 1, 1], ["l", 0.3, 1, 1], ["o", 0.6, 0, 1], ["w", 0.8, 0, 1]];
+/** The wordmark built from solid blocks: each letter knocked out of its own rectangle, bottoms aligned. */
+function wordmark(locale) {
+  return `<a class="foot-word" href="${href(locale)}" aria-label="SahelFlow" dir="ltr"><span class="fw" aria-hidden="true">${LETTERS.map(([c, w, tall, alt]) => `<i class="${tall ? "t" : "s"}${alt ? " a" : ""}" style="--w:${w}">${c}</i>`).join("")}</span></a>`;
 }
 
 function footer(locale) {
@@ -120,8 +117,8 @@ function footer(locale) {
     `<div class="foot-col"><h2>${esc(title)}</h2><ul>${links.map(([url, label]) => `<li><a href="${url}">${esc(label)}</a></li>`).join("")}</ul></div>`;
   return `<footer class="site-footer">
 <div class="foot-in">
+${wordmark(locale)}
 <div class="foot-brand">
-<a class="brand" href="${href(locale)}">${MARK}<span class="wm">SahelFlow</span></a>
 <p>${esc(t.footer.tagline)}</p>
 <p class="foot-note">${esc(t.common.whatsappNote)}</p>
 <p class="foot-contact"><a href="${whatsappHref(t.whatsappMessage)}" rel="noopener"><span dir="ltr">${esc(phoneDisplay())}</span></a> <a href="mailto:${SITE.email}"><span dir="ltr">${esc(SITE.email)}</span></a></p>
