@@ -16,6 +16,9 @@ export const SITE = {
   licencePrice: 35000,
   launchOfferPrice: 17000,
   launchOfferSeats: 20,
+  // Contact for vulnerability reports (published as /.well-known/security.txt). null = none configured, no file is written.
+  // Do not invent one: set it only when the Founder has chosen the mailbox.
+  securityEmail: null,
   locales: ["ar", "fr", "en"],
   defaultLocale: "ar",
   // Bump when CSS or JS changes so phones do not keep yesterday's stylesheet.
@@ -27,3 +30,13 @@ export function whatsappHref(message) {
   const text = message ? `?text=${encodeURIComponent(message)}` : "";
   return `https://wa.me/${SITE.whatsapp}${text}`;
 }
+
+// The site's own hostnames (canonical, hreflang, og:url, sitemap point here).
+export const OWN_HOSTS = ["sahelflow.com", "www.sahelflow.com"];
+
+// The ONLY places a page may link to outside the site (plain <a href>, never a script, image, font or stylesheet:
+// the CSP is 'self' only). scripts/site-check.mjs fails on any other external URL.
+export const ALLOWED_OUTBOUND = [
+  { host: "wa.me", pathPrefix: "/", why: "WhatsApp chat with the seller's number (whatsappHref)" },
+  { host: "github.com", pathPrefix: "/rendowblock-jpg/sahelflow_v2/releases", why: "installer and release notes (also the /get/windows fallback)" },
+];
