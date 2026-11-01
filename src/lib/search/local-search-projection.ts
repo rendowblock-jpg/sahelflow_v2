@@ -14,6 +14,7 @@ import {
   rankUniversalSearchCandidates,
   type UniversalSearchCandidate,
 } from "@/lib/search/universal-search";
+import { setWarmCapped } from "@/lib/search/warm-cap-state";
 import { deliveryProviderConfig } from "@/lib/shared";
 
 const DEFAULT_CANDIDATE_LIMIT = 48;
@@ -810,7 +811,10 @@ export async function drainDirtyRows(
   let failures = 0;
   for (let batch = 0; batch < batchLimit; ) {
     try {
-      if (await refresh()) return;
+      if (await refresh()) {
+        setWarmCapped(family, false);
+        return;
+      }
       batch += 1;
       failures = 0;
     } catch (error) {
@@ -820,6 +824,7 @@ export async function drainDirtyRows(
   }
   // The cap is a stop, not a finish: the rest stays dirty (searches refresh a few rows each) and the log says so.
   logger.warn("search.projection.warm-capped", { family, batches: batchLimit });
+  setWarmCapped(family, true);
 }
 
 async function warmCustomerProjection(): Promise<void> {
