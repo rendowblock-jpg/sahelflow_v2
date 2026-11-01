@@ -74,11 +74,7 @@
   const frame = () => {
     ticking = false;
     const y = scrollY;
-    if (header && motion) {
-      const menuOpen = menu && menu.open && !wide.matches;
-      if (!menuOpen && y > 160 && y > lastY + 6) header.classList.add("is-hidden");
-      else if (y < lastY - 6 || y <= 160 || menuOpen) header.classList.remove("is-hidden");
-    }
+    if (header) header.classList.toggle("is-stuck", y > 8);
     lastY = y;
     if (hero) hero.style.setProperty("--hy", clamp(y / Math.max(1, hero.offsetHeight), 0, 1).toFixed(3));
     storyUpdate();

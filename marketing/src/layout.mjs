@@ -49,9 +49,9 @@ function head({ locale, path, title, description, preload, jsonLd = [], scripts 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<meta name="theme-color" content="#060a09" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#060a09" media="(prefers-color-scheme: dark)">
-<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light">
 <link rel="canonical" href="${canonical}">
 ${alternates}
 <link rel="alternate" hreflang="x-default" href="${SITE.origin}${href(SITE.defaultLocale, path)}">

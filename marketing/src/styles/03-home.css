@@ -94,7 +94,7 @@ html[dir=rtl] .okbar::before{transform-origin:100% 50%}
 .lab .bars{inline-size:68%;block-size:2.6em}
 .lab .num{font-size:.85em;letter-spacing:.08em}
 .lab small{font-size:.8em;color:var(--muted)}
-.stamp{position:absolute;inset-inline-end:1.1em;inset-block-start:5.4em;padding:.12em .55em;background:var(--red);color:#fff;font:900 1.7em/1.25 var(--f);pointer-events:none;opacity:calc(clamp(0,var(--st),1)*(1 - var(--ap)));transform:rotate(calc(-9deg*var(--flip))) scale(calc(1 + (1 - var(--st))*1.5))}
+div.stamp{position:absolute;inset-inline-end:1.1em;inset-block-start:5.4em;padding:.12em .55em;background:var(--red);color:#fff;font:900 1.7em/1.25 var(--f);pointer-events:none;opacity:calc(clamp(0,var(--st),1)*(1 - var(--ap)));transform:rotate(calc(-9deg*var(--flip))) scale(calc(1 + (1 - var(--st))*1.5))}
 .cashchip{position:absolute;inset-block-start:-1.75em;inset-inline-start:1.2em;padding:.3em .7em;background:var(--kraft);color:var(--ink);font:900 1.45em/1.2 var(--f);opacity:clamp(0,var(--ca),1);transform:translateY(calc((1 - var(--ca))*1.8em)) scale(calc(.8 + var(--ca)*.2))}
 .cashchip .money{font-weight:900}
 
