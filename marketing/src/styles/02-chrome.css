@@ -35,7 +35,7 @@
 /* Footer: the wordmark from solid blocks, then the link tiles. */
 .site-footer{margin-block-start:var(--gap);padding-block-end:var(--m)}
 .foot-in{max-inline-size:var(--container);margin-inline:auto;padding-inline:var(--pad)}
-.foot-word{display:block;container-type:inline-size;text-decoration:none;margin-block-end:var(--gap)}
+.foot-word{display:block;min-block-size:var(--hit);container-type:inline-size;text-decoration:none;margin-block-end:var(--gap)}
 .fw{display:flex;align-items:flex-end;gap:4px;font-size:calc((100cqw - 32px)/4.94);line-height:1;direction:ltr}
 .fw i{display:flex;align-items:flex-end;justify-content:center;inline-size:calc(var(--w)*1em);padding-block-end:.04em;border-radius:var(--r);background:var(--ink);color:var(--bg);font:600 .78em/.8 var(--f);font-style:normal;letter-spacing:-.04em}
 .fw i.t{block-size:.9em}

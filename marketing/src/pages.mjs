@@ -381,7 +381,7 @@ export function downloadPage(locale) {
   <div class="container two">
     <div>
       <h2>${esc(d.stepsTitle)}</h2>
-      <ol class="ruled nn-list">${d.steps.map(([k, v], i) => `<li><span class="nn">${i + 1}</span><div><h3>${esc(k)}</h3><p>${esc(v)}</p></div></li>`).join("")}</ol>
+      <ol class="ruled nn-list">${d.steps.map(([k, v], i) => `<li><span class="nn" aria-hidden="true">${icon("check")}</span><div><h3>${esc(k)}</h3><p>${esc(v)}</p></div></li>`).join("")}</ol>
     </div>
     <div>
       <h2>${esc(S.dlSmartTitle)}</h2>
