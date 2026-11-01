@@ -8,7 +8,7 @@ import { COPY } from "./i18n/index.mjs";
 import { shell } from "./layout.mjs";
 import { LEGAL_UPDATED, PRIVACY, TERMS } from "./legal.mjs";
 import { BRAND_NAMES, HELP_TOPICS, INTEGRATIONS, MODULES, PACKAGE, SOLUTIONS, monthlyOverUpdateYears } from "./model.mjs";
-import { assistantScene, coreDiagram, flowDiagram, screenStack, specPanel } from "./scenes.mjs";
+import { assistantScene, coreDiagram, flowDiagram, heroStack, screenStack, specPanel } from "./scenes.mjs";
 import { HOME } from "./i18n/home.mjs";
 import {
   appWindow,
@@ -121,12 +121,15 @@ function homeHero(locale) {
   const facts = h.facts
     .map(([v, l], i) => `<li class="tile t-fact rise" style="--i:${i + 3}"><b class="fv">${latin(v)}</b><span>${latin(l)}</span></li>`)
     .join("");
+  /* The headline tile is never animated in or out: the h1 is painted in the first frame. The stage carries the motion. */
   return `<section class="board hero" aria-labelledby="h1" data-rise>
-<div class="tile t-name rise" style="--i:0"><p class="name" dir="ltr">SahelFlow</p></div>
-<div class="tile t-line rise" style="--i:1"><h1 id="h1">${esc(h.h1)}</h1><p>${esc(h.sub)}</p></div>
-<div class="tile t-act rise" style="--i:2">${button(href(locale, "download"), t.home.hero.primary, { kind: "primary", size: "lg" })}<a class="text-link" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${esc(t.home.hero.secondary)}</a></div>
-<div class="tile t-shot shutter"><div class="hero-stage" data-hero3d><span class="crop">${boardImg("inbox", locale, { sizes: "(min-width: 1100px) 50vw, 100vw", alt: h.alt, eager: true })}</span></div></div>
+<div class="hero-copy">
+<div class="tile t-name"><p class="name" dir="ltr">SahelFlow</p></div>
+<div class="tile t-line"><h1 id="h1">${esc(h.h1)}</h1><p>${esc(h.sub)}</p></div>
+<div class="tile t-act">${button(href(locale, "download"), t.home.hero.primary, { kind: "primary", size: "lg" })}<a class="text-link" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${esc(t.home.hero.secondary)}</a></div>
 <ul class="facts-row">${facts}</ul>
+</div>
+<div class="tile t-shot"><div class="hero-stage" data-hero3d>${heroStack(locale)}<noscript><span class="crop">${boardImg("inbox", locale, { sizes: "(min-width: 1100px) 50vw, 100vw", alt: h.alt, eager: true })}</span></noscript></div></div>
 </section>`;
 }
 

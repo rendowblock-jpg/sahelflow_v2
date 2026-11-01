@@ -9,6 +9,47 @@ import { appWindow, esc, icon, money } from "./ui.mjs";
 
 /* ───────────────────────────── hero stage ───────────────────────────── */
 
+// The signature figure: the seller's order as four flat plates, exploded along the vertical axis (isometric-like,
+// plain 2D affine transforms, no preserve-3d). Layers k = 0 (cash line, bottom) .. 3 (WhatsApp message, top).
+import { HERO3D } from "./i18n/hero3d.mjs";
+const H3W = 440, H3H = 204;
+function h3t(L, x, y, str, o = {}) {
+  const rtl = L.dir === "rtl";
+  const px = rtl ? H3W - x : x;
+  return `<text x="${px}" y="${y}" font-size="${o.s || 20}"${o.w ? ` font-weight="${o.w}"` : ""} class="${o.c || "t"}"${o.a === "end" ? ' text-anchor="end"' : ""}${rtl ? ' direction="rtl"' : ""}>${esc(str)}</text>`;
+}
+function h3bars() {
+  const w = [3, 6, 3, 9, 3, 3, 6, 3, 12, 3, 6, 3, 3, 9, 3, 6, 3, 12, 3, 6, 3, 9];
+  let x = 270, out = "";
+  w.forEach((b, i) => { if (i % 2 === 0) out += `<rect x="${x}" y="58" width="${b}" height="64"/>`; x += b + 2; });
+  return `<g class="bars">${out}</g>`;
+}
+function h3plates(L) {
+  const m = (s) => `<g class="m">${s}</g>`;
+  const open = `<svg viewBox="0 0 ${H3W} ${H3H}" aria-hidden="true" focusable="false"><rect class="pl" width="${H3W}" height="${H3H}" rx="8"/>`;
+  const wa = open + m(`<polygon class="bub" points="14,44 40,44 40,66"/><rect class="bub" x="24" y="44" width="392" height="${L.msg.length === 3 ? 124 : 100}" rx="12"/>`) +
+    h3t(L, 24, 32, L.titles[0], { s: 19, w: 600, c: "mu" }) + L.msg.map((s, i) => h3t(L, 44, 82 + i * 28, s, { s: 20, c: "ai" })).join("") + `</svg>`;
+  const card = open + m(`<rect class="chip" x="24" y="152" width="392" height="36" rx="8"/>`) +
+    h3t(L, 24, 32, L.titles[1], { s: 19, w: 600, c: "mu" }) + h3t(L, 24, 84, L.name, { s: 26, w: 600 }) + h3t(L, 24, 112, L.place, { s: 20 }) +
+    h3t(L, 24, 138, L.item, { s: 20 }) + h3t(L, 416, 138, L.total, { s: 28, w: 600, a: "end" }) + h3t(L, 42, 177, L.chip, { s: 19, w: 600, c: "ai" }) + `</svg>`;
+  const label = open + m(h3bars() + `<rect class="track" x="24" y="172" width="392" height="4" rx="2"/><rect class="prog" x="24" y="172" width="236" height="4" rx="2"/><circle class="prog" cx="30" cy="174" r="8"/><circle class="prog" cx="260" cy="174" r="8"/><circle class="track" cx="410" cy="174" r="8"/>`) +
+    h3t(L, 24, 32, L.titles[2], { s: 19, w: 600, c: "mu" }) + h3t(L, 24, 92, L.wil, { s: 40, w: 600 }) + h3t(L, 24, 122, L.com, { s: 22 }) + h3t(L, 24, 152, L.name, { s: 19, c: "mu" }) + `</svg>`;
+  const cashp = open + m(`<circle class="disc" cx="58" cy="118" r="32"/><path class="tick" d="M42 118l11 11 21-23"/>`) +
+    h3t(L, 24, 32, L.titles[3], { s: 19, w: 600, c: "ai" }) + h3t(L, 108, 116, L.done, { s: 32, w: 600, c: "ai" }) + h3t(L, 108, 150, L.coll, { s: 22, c: "ai" }) + `</svg>`;
+  return [wa, card, label, cashp]; // index = top .. bottom
+}
+
+/** The figure plus its plain list of four steps, for `.hero-stage[data-hero3d]`. Stylesheet: 09-hero3d.css. */
+export function heroStack(locale) {
+  const L = HERO3D[locale];
+  const plates = h3plates(L); // [0]=top (k3) .. [3]=bottom (k0)
+  const layers = [0, 1, 2, 3]
+    .map((k) => `<div class="h3-layer k${k}" style="--k:${k}">${k > 0 ? '<i class="h3-post pa"></i><i class="h3-post pb"></i>' : ""}<div class="h3-rise"><div class="h3-face">${plates[3 - k]}</div></div></div>`)
+    .join("");
+  const steps = L.steps.map((s) => `<li><strong>${esc(s[0])}</strong> <span class="tx">${esc(s[1])}</span></li>`).join("");
+  return `<div class="h3-in"><div class="h3-stage" role="img" aria-label="${esc(L.aria)}"><div class="h3-scene" aria-hidden="true">${layers}</div></div><ol class="h3-steps">${steps}</ol></div>`;
+}
+
 
 /* ───────────────────────────── flow story ───────────────────────────── */
 

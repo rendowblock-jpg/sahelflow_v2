@@ -70,6 +70,45 @@
     }, { rootMargin: "0px 0px -6% 0px" });
     $$("[data-rise]").forEach((el) => seen.observe(el));
   }
+
+  /* ── hero figure: the scroll fallback (browsers without animation-timeline) and the pointer tilt (mouse only) ── */
+  const fig = $("[data-hero3d] .h3-stage");
+  if (fig && !reduced) {
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+    if (!CSS.supports("animation-timeline", "view()")) {
+      let on = false, queued = false;
+      const sync = () => {
+        queued = false;
+        const b = fig.getBoundingClientRect();
+        const p = (innerHeight - b.top) / (innerHeight + b.height);
+        fig.style.setProperty("--explode", (p < 0.25 ? p / 0.25 : p < 0.66 ? 1 : (1 - p) / 0.34).toFixed(3));
+      };
+      const ask = () => { if (!queued) { queued = true; requestAnimationFrame(sync); } };
+      new IntersectionObserver((es) => {
+        const vis = es[0].isIntersecting;
+        if (vis && !on) { addEventListener("scroll", ask, { passive: true }); ask(); }
+        else if (!vis && on) removeEventListener("scroll", ask);
+        on = vis;
+      }).observe(fig);
+    }
+    if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      const host = fig.closest("[data-hero3d]");
+      let x = 0, y = 0, cx = 0, cy = 0, raf = 0;
+      const go = () => {
+        cx += (x - cx) * 0.14; cy += (y - cy) * 0.14;
+        fig.style.setProperty("--mx", cx.toFixed(3));
+        fig.style.setProperty("--my", cy.toFixed(3));
+        raf = Math.abs(x - cx) + Math.abs(y - cy) > 0.004 ? requestAnimationFrame(go) : 0;
+      };
+      host.addEventListener("pointermove", (e) => {
+        const b = host.getBoundingClientRect();
+        x = clamp01((e.clientX - b.left) / b.width) * 2 - 1;
+        y = clamp01((e.clientY - b.top) / b.height) * 2 - 1;
+        raf ||= requestAnimationFrame(go);
+      });
+      host.addEventListener("pointerleave", () => { x = y = 0; raf ||= requestAnimationFrame(go); });
+    }
+  }
   /* motion:end */
 
   /* ── help centre search ── */

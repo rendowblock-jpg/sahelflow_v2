@@ -3,7 +3,7 @@
 export const HOME = {
   en: {
     hero: {
-      h1: "Your cash-on-delivery orders, in one inbox",
+      h1: "Your COD orders, in one inbox",
       sub: "From WhatsApp, your storefront or typed by hand.",
       facts: [["7 days", "free, no card"], ["Once", "pay once, it stays yours"], ["3 languages", "Arabic, French, English"], ["Windows", "on your PC, even offline"]],
       alt: "The SahelFlow inbox: WhatsApp chats and the order extracted from them",
@@ -44,7 +44,7 @@ export const HOME = {
   },
   fr: {
     hero: {
-      h1: "Vos commandes COD, réunies dans une seule boîte",
+      h1: "Vos commandes COD en une seule boîte",
       sub: "De WhatsApp, de la boutique ou saisies à la main.",
       facts: [["7 jours", "gratuits, sans carte"], ["Une fois", "on l'achète une fois, il reste à vous"], ["3 langues", "arabe, français, anglais"], ["Windows", "sur votre PC, même hors ligne"]],
       alt: "La boîte SahelFlow : les chats WhatsApp et la commande qui en est extraite",

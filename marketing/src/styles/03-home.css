@@ -7,23 +7,27 @@
 .muted{color:var(--muted)}
 .facts-row{display:contents}
 
-/* First screen. */
-.hero{grid-auto-rows:90px}
-.t-line{grid-column:1/7;grid-row:1/3;display:flex;flex-direction:column;justify-content:center;gap:8px;background:var(--surface-2)}
-.t-line h1{font-size:clamp(1.5rem,.8rem + 2.1vw,2.75rem);font-weight:600;line-height:1.05;letter-spacing:-.04em}
-html[lang=ar] .t-line h1{line-height:1.3}
-.t-name{grid-column:1/4;grid-row:3/5;container-type:inline-size;display:flex;align-items:flex-end;padding:16px;background:var(--ink);color:var(--bg)}
+/* First screen. Desktop: the copy column (5 of 12) and the picture stage (7 of 12) that fills the screen height. */
+.hero{--hero-h:clamp(600px,calc(100svh - var(--header-h) - 20px),880px);grid-template-rows:minmax(0,1fr);block-size:var(--hero-h)}
+.hero-copy{grid-column:1/6;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto minmax(0,1fr) auto auto;gap:var(--gap);min-inline-size:0;min-block-size:0}
+.hero-copy>.t-name,.hero-copy>.t-line,.hero-copy>.t-act{grid-column:1/-1}
+.t-line{container-type:inline-size;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:20px 24px;background:var(--surface-2)}
+.t-line h1{font-size:clamp(2rem,11.2cqi,4.25rem);font-weight:600;line-height:1.04;letter-spacing:-.03em;text-wrap:balance}
+html[lang=ar] .t-line h1{line-height:1.3;letter-spacing:0;font-size:clamp(1.875rem,9.9cqi,4rem)}
+html[lang=fr] .t-line h1{font-size:clamp(2rem,10.2cqi,4.25rem)}
+.t-line p{font-size:var(--t-lead);line-height:1.25;color:var(--ink)}
+.t-name{container-type:inline-size;display:flex;align-items:flex-end;padding:16px;background:var(--ink);color:var(--bg)}
 .name{font-size:calc((100cqw - 4px)/5.1);font-weight:600;line-height:.9;letter-spacing:-.045em;white-space:nowrap}
 .t-name .name{color:var(--bg)}
-.t-act{grid-column:4/7;grid-row:3/5;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:4px;background:var(--accent)}
+.t-act{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:6px;background:var(--accent)}
 .t-act .btn-primary{background:var(--bg);color:var(--ink);inline-size:100%}
 .t-act .btn-primary:hover{background:var(--ink);color:var(--bg)}
 .t-act .text-link{color:var(--accent-ink)}
-.t-shot{grid-column:7/13;grid-row:1/5;position:relative;margin:0;padding:0;background:var(--surface-2)}
+.t-shot{grid-column:6/13;position:relative;margin:0;padding:0;background:var(--surface);min-block-size:0;overflow:hidden}
 .hero-stage{position:absolute;inset:0;border-radius:var(--r);overflow:hidden}
 .t-shot .crop img{object-position:0 0}
-.t-fact{grid-row:5/7;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:12px 18px;background:var(--surface)}
-.t-fact:nth-child(1){grid-column:1/4}.t-fact:nth-child(2){grid-column:4/7}.t-fact:nth-child(3){grid-column:7/10}.t-fact:nth-child(4){grid-column:10/13}
+.facts-row{display:contents}
+.t-fact{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:12px 18px;background:var(--surface)}
 .fv{font-size:var(--t-lead);font-weight:600;line-height:1.1;letter-spacing:-.03em}
 html[lang=ar] .fv{letter-spacing:0}
 .t-fact span{font-size:var(--t-small);color:var(--muted)}
@@ -108,16 +112,19 @@ html[lang=ar] .pnum{letter-spacing:0;line-height:1.3}
 .t-go .btn{background:var(--bg);color:var(--ink)}
 .t-go .btn:hover{background:var(--ink);color:var(--bg)}
 
-/* Tablet: shorter grid, tiles go full width where the sentence would not fit two lines. */
+/* Tablet: the copy and the stage stack; the headline tile goes first and spans the board. */
 @media (max-width:1099px){
-.hero{grid-auto-rows:auto}
-.t-line{grid-column:1/-1;grid-row:auto}
-.t-name{grid-column:1/7;grid-row:auto;min-block-size:150px}
-.t-act{grid-column:7/13;grid-row:auto}
-.t-shot{grid-column:1/-1;grid-row:auto;aspect-ratio:16/9}
+.hero{block-size:auto;grid-template-rows:none}
+.hero-copy{display:contents}
+.t-line{grid-column:1/-1;order:1}
+.t-name{grid-column:1/7;order:2;min-block-size:150px}
+.t-act{grid-column:7/13;order:3}
+.t-shot{grid-column:1/-1;order:4}
+.hero-stage{position:relative;inset:auto;block-size:auto}
+.no-js .hero-stage{aspect-ratio:16/10}
+.t-fact:nth-child(n){grid-column:span 6;order:5}
 .t-go{grid-column:1/-1;order:-1}
 .c-side{grid-column:span 6}
-.t-fact:nth-child(n){grid-row:auto;grid-column:span 6}
 .fields{grid-template-columns:1fr 1fr}
 .orow{grid-template-columns:1fr 1.4fr 1.6fr 1fr 1.2fr}
 }
@@ -128,9 +135,11 @@ html[lang=ar] .pnum{letter-spacing:0;line-height:1.3}
 .board,.band{grid-template-columns:repeat(2,minmax(0,1fr))}
 .tile{padding:14px 16px}
 .t-line,.t-name,.t-act,.t-shot{grid-column:1/-1}
-.t-name{min-block-size:0;padding:10px 14px}
+.t-line{padding:16px;gap:8px}
+.t-line p{font-size:var(--t-body)}
+.t-name{order:4;min-block-size:0;padding:10px 14px}
 .t-act{padding:14px 16px}
-.t-shot{aspect-ratio:16/10}
+.t-shot{order:3;padding:0}
 .t-fact:nth-child(n){grid-column:span 1;padding:10px 14px}
 .t-head{padding:16px}
 .t-head p{font-size:var(--t-body)}
