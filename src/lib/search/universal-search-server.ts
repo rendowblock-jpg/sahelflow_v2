@@ -20,6 +20,7 @@ import {
   searchProjectedReturns,
   warmLocalSearchProjection,
 } from "@/lib/search/local-search-projection";
+import { addWarmCappedFamilies } from "@/lib/search/warm-cap-state";
 import {
   compactSearchText,
   messageExcerpt,
@@ -512,6 +513,11 @@ async function searchUniversalRecordsStrict(
     limit,
   );
 
+  // A warm-up that stopped at its cap leaves rows only partly searchable: say so.
+  addWarmCappedFamilies(degraded, {
+    customer: canCustomers && canReadContact,
+    order: canOrders && canOpenProtectedOperationalDetail,
+  });
   return {
     query,
     results,

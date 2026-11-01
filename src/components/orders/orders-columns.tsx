@@ -279,7 +279,7 @@ export function useOrdersColumns(
                       target="_blank"
                       rel="noopener noreferrer"
                       data-no-row-click
-                      aria-label={t("orders.whatsapp.confirm")}
+                      aria-label={t("orders.workspace.whatsappFor", { number: order.orderNumber })}
                       data-testid="orders-row-whatsapp"
                     >
                       <MessageCircle className="size-4" aria-hidden="true" />
@@ -294,7 +294,7 @@ export function useOrdersColumns(
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon-sm" className="size-8">
                     <MoreVertical className="size-4" aria-hidden="true" />
-                    <span className="sr-only">{t("orders.actions")}</span>
+                    <span className="sr-only">{t("orders.workspace.actionsFor", { number: order.orderNumber })}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="shadow-dropdown">

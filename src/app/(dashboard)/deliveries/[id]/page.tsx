@@ -17,6 +17,7 @@ import { getI18n } from "@/lib/i18n-server";
 import { RECONCILIATION_STATUS, isStuckCreatingNow } from "@/lib/delivery/delivery-reconcile";
 import { assertTrustedAction, requireTrustedAction, trustedActionAllowed } from "@/lib/identity/authorization";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { CourierTestingChip } from "@/components/deliveries/courier-testing-note";
 import { deliveryProviderConfig, orderStatusStyles } from "@/lib/shared";
 import { deliveryStatusI18nKey, statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD, formatDate } from "@/lib/utils";
@@ -92,6 +93,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
             <span className="inline-flex items-center gap-1">
               <Truck className="size-3.5" aria-hidden="true" />
               {provider.label}
+              <CourierTestingChip provider={delivery.provider} />
             </span>
             <span className="inline-flex items-center gap-1">
               <Hash className="size-3.5" aria-hidden="true" />
