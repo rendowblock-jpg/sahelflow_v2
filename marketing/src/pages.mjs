@@ -52,7 +52,7 @@ export function finalCta(locale, { title, text } = {}) {
   const t = COPY[locale];
   return `<section class="end">
 <div class="in">
-<h2>${esc(title ?? t.home.final.title)}</h2>
+<h2>${esc(title ?? HOME[locale].close.h2)}</h2>
 <p>${esc(text ?? t.home.final.text)}</p>
 ${ctas(locale)}
 <p class="fine">${esc(t.home.hero.note(SITE.trialDays))}</p>

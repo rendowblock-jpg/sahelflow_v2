@@ -446,7 +446,7 @@ export default {
 
   productPage: {
     eyebrow: "La plateforme",
-    title: "Une seule app pour tout le commerce en paiement à la livraison.",
+    title: "Une seule app pour le paiement à la livraison.",
     lead: "Neuf modules qui partagent la même commande, le même client et le même stock. Rien n'est saisi deux fois, rien ne se perd entre WhatsApp, le livreur et votre cahier.",
     coreTitle: "Une commande. Un seul enregistrement. Tous les modules.",
     coreText: "Une commande est écrite une fois et chaque module lit le même enregistrement : la boîte qui l'a créée, le stock qu'elle réserve, le colis qui la transporte et les dinars qui la paient. C'est pour ça que les chiffres sont toujours d'accord.",
@@ -487,7 +487,7 @@ export default {
 
   pricingPage: {
     eyebrow: "Tarifs",
-    title: "Des tarifs simples. Payez une fois, c'est à vous.",
+    title: "Tarifs simples. Payez une fois, c'est à vous.",
     lead: "Essayez tout gratuitement pendant 7 jours. Ensuite, achetez une licence permanente pour votre PC — un seul paiement, avec cinq ans de mises à jour et de support, comptés à partir de la sortie stable officielle.",
     trial: {
       name: "Essai gratuit",
@@ -564,7 +564,7 @@ export default {
 
   securityPage: {
     eyebrow: "Sécurité et données",
-    title: "Les données de votre boutique vivent sur votre PC. Pas chez nous.",
+    title: "Vos données restent sur votre PC, pas chez nous.",
     lead: "SahelFlow garde votre base sur votre ordinateur, chiffre ce qui est sensible et demande avant tout changement important. Voici exactement comment.",
     items: [
       ["Local d'abord", "Commandes, clients, stock et argent sont stockés dans un fichier de base de données sur votre PC. Vous pouvez en faire une copie vous-même."],

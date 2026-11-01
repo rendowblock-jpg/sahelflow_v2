@@ -564,7 +564,7 @@ export default {
 
   securityPage: {
     eyebrow: "Security & data",
-    title: "Your shop's data lives on your PC. Not with us.",
+    title: "Your data lives on your PC. Not with us.",
     lead: "SahelFlow keeps your database on your computer, encrypts what is sensitive and asks before any important change. Here is exactly how.",
     items: [
       ["Local first", "Orders, customers, stock and money are stored in a database file on your PC. You can back it up yourself."],

@@ -27,7 +27,7 @@
 /* Closing tile on inner pages. */
 .end{max-inline-size:var(--container);margin:var(--gap) auto 0;padding-inline:var(--pad)}
 .end .in{padding:clamp(24px,4vw,48px);border-radius:var(--r);background:var(--accent);color:var(--accent-ink)}
-.end h2{font-size:clamp(1.5rem,1rem + 2vw,2.5rem);max-inline-size:24ch}
+.end h2{font-size:clamp(1.4375rem,.9rem + 2.2vw,2.5rem)}
 .end p{color:var(--accent-ink);margin-block-start:10px;max-inline-size:56ch}
 .end .fine{color:var(--accent-ink)}
 .end .cta-row{margin-block-start:16px}
