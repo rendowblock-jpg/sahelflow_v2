@@ -1,12 +1,12 @@
-// The home page, rebuilt. One order is the subject of the page: it is the object in the first screen, the thing you drag through
-// four moments, and the screens it lives in. Flat fields, one family, no outlines, no shadows, no gradients.
-// Every promise is reused from the copy files that claims.mjs already guards; the few new words are in i18n/home2.mjs.
+// The home page. The first screen is Algeria itself in motion (src/map.js): orders arrive from the towns, parcels fly out, the cash
+// comes back. Then one order is followed from WhatsApp message to parcel as you scroll (src/stage.js). The promises are reused from
+// the copy files that claims.mjs already guards; the few new words are in i18n/home2.mjs.
 import { COPY } from "./i18n/index.mjs";
 import { HOME } from "./i18n/home.mjs";
 import { H2 } from "./i18n/home2.mjs";
 import { SITE } from "./config.mjs";
 import { PACKAGE } from "./model.mjs";
-import { flowScene } from "./flow3d.mjs";
+import { CITIES, MAP_HEIGHT, MAP_WIDTH, mapDots, project } from "./algeria.mjs";
 import { button, esc, href, licencePricing, money, num, shotUrl, whatsappHref } from "./ui.mjs";
 
 const unitOf = (locale) => (locale === "ar" ? "دج" : "DA");
@@ -29,63 +29,104 @@ function bars(seed) {
   return `<svg class="bars" viewBox="0 0 120 34" aria-hidden="true" focusable="false" preserveAspectRatio="none">${rects.join("")}</svg>`;
 }
 
-/* ───────── 1. first screen: the headline, and the route of one order ───────── */
+/* ───────── 1. first screen: Algeria in motion ───────── */
+const TOWNS = ["algiers", "oran", "constantine", "annaba", "setif", "bejaia", "tlemcen", "biskra", "ghardaia", "ouargla", "bechar", "adrar", "tamanrasset", "eloued"];
+
+function mapCfg(locale) {
+  const names = H2[locale].cities;
+  return {
+    w: MAP_WIDTH,
+    h: MAP_HEIGHT,
+    d: mapDots(0.42).map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join(","),
+    c: TOWNS.map((k) => {
+      const [x, y] = project(CITIES[k]);
+      return [k, Math.round(x), Math.round(y), names[k]];
+    }),
+    amt: HOME[locale].board.rows.map((r) => r[3]),
+    u: unitOf(locale),
+    call: HOME[locale].status.toCall,
+  };
+}
+
 function hero(locale) {
-  const h = HOME[locale].hero;
+  const x = H2[locale];
   const t = COPY[locale];
-  const facts = h.facts.map(([v, l]) => `<li><b>${latin(v)}</b><span>${latin(l)}</span></li>`).join("");
+  const facts = HOME[locale].hero.facts.map(([v, l]) => `<li><b>${latin(v)}</b><span>${latin(l)}</span></li>`).join("");
+  const words = x.hero.h1
+    .split(" ")
+    .map((w, i) => `<span class="w"><i style="--i:${i}">${esc(w)}</i></span>`)
+    .join(" ");
   return `<section class="hero" aria-labelledby="h1">
+<canvas class="map" data-map="${esc(JSON.stringify(mapCfg(locale)))}" aria-hidden="true"></canvas>
 <div class="hero-copy">
-<h1 id="h1">${esc(h.h1)}</h1>
-<p class="lead">${esc(h.sub)}</p>
+<h1 id="h1">${words}</h1>
+<p class="lead">${esc(x.hero.sub)}</p>
 <div class="hero-act">${button(href(locale, "download"), t.home.hero.primary, { kind: "primary", size: "lg" })}<a class="text-link" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${esc(t.home.hero.secondary)}</a></div>
 <ul class="facts">${facts}</ul>
 </div>
-<div class="hero-stage">${flowScene(locale)}</div>
+<div class="tally" aria-hidden="true"><div class="tally-row"><b class="tally-n" data-tally>18${"\u00a0"}400</b><span class="tally-u">${unitOf(locale)}</span></div><small>${esc(x.mapCaption)}</small></div>
+<p class="sr-only">${esc(x.mapAlt)}</p>
 </section>`;
 }
 
-/* ───────── 2. the live thing: drag one order through four moments ───────── */
-const FIELD = ["green", "red", "ink", "kraft"];
-
-function orderCard(locale, i) {
-  const h = HOME[locale];
-  const step = h.how.steps[i];
-  const [who, place, item, amount] = h.how.card;
-  const chipOf = { new: "new", toCall: "call", confirmed: "ok", shipped: "ship" }[step.chip];
-  const head = `<div class="oc-head"><b>${esc(who)}</b><span class="chip chip-${chipOf}">${esc(h.status[step.chip])}</span></div>`;
-  const body = `<p class="oc-place">${esc(place)}</p><p class="oc-item">${esc(item)}</p><p class="oc-sum">${cash(amount, locale)}</p>`;
-  if (i === 0) return `<div class="oc" data-ui="order-card"><p class="oc-msg">${esc(h.how.msg)}</p>${head}${body}</div>`;
-  if (i === 1) return `<div class="oc" data-ui="order-card">${head}${body}<p class="oc-note"><b>${esc(h.board.reasonTitle)}</b><span>${esc(h.board.reason)}</span></p></div>`;
-  if (i === 2) return `<div class="oc" data-ui="order-card">${head}${body}<p class="oc-ok">${esc(step.note)}</p></div>`;
-  return `<div class="oc" data-ui="order-card">${head}${body}<div class="oc-label">${bars("DZ48210097")}<span class="num" dir="ltr">DZ 4821 0097</span></div><p class="oc-ok">${esc(step.note)}</p></div>`;
-}
-
-function stages(locale) {
+/* ───────── 2. one order, followed by the scroll ───────── */
+function story(locale) {
   const h = HOME[locale];
   const x = H2[locale];
-  const items = h.how.steps
-    .map(
-      (s, i) => `<li class="st f-${FIELD[i]}${i === 0 ? " is-on" : ""}" data-i="${i}">
-<div class="st-clause"><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></div>
-<div class="st-field">${orderCard(locale, i)}</div>
-</li>`,
-    )
+  const [who, place, item, amount] = h.how.card;
+  const steps = h.how.steps;
+  const list = steps
+    .map((s, i) => `<li${i === 0 ? ' class="on"' : ""} data-i="${i}"><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></li>`)
     .join("");
-  const names = x.stageNames
-    .map((n, i) => `<li><button type="button" data-go="${i}"${i === 0 ? ' aria-current="true"' : ""}>${esc(n)}</button></li>`)
-    .join("");
-  return `<section class="stages" id="how" aria-labelledby="h-how" data-stages>
-<div class="sec-head" data-rise><h2 id="h-how" class="rise" style="--i:0">${esc(h.how.h2)}</h2><p class="rise" style="--i:1">${esc(x.stagesLead)}</p></div>
-<ol class="st-list" aria-live="polite">${items}</ol>
-<div class="st-ctl">
-<div class="rail" style="--p:0"><span class="rail-fill"></span><input type="range" min="0" max="3" step="1" value="0" aria-label="${esc(x.sliderLabel)}"></div>
-<ol class="st-names">${names}</ol>
+  const labels = [h.status.new, h.status.toCall, h.status.confirmed, h.status.shipped];
+  return `<section class="story" id="how" aria-labelledby="h-how" data-story>
+<div class="story-pin">
+<div class="story-rail" aria-hidden="true"><i></i></div>
+<div class="story-text">
+<h2 id="h-how">${esc(h.how.h2)}</h2>
+<p class="story-lead">${esc(x.storyLead)}</p>
+<ol class="story-steps">${list}</ol>
+</div>
+<div class="scene" aria-hidden="true">
+<div class="wa">
+<div class="wa-bar"><i class="wa-av">${esc([...who][0])}</i><b>${esc(who)}</b><span>WhatsApp</span></div>
+<div class="wa-body"><p class="wa-msg"><span class="wa-ghost">${esc(h.how.msg)}</span><span class="wa-typed">${esc(h.how.msg)}</span></p></div>
+</div>
+<div class="ocard">
+<div class="r oc-head" style="--n:0"><b>${esc(who)}</b><span class="chip chip-ship" data-chip data-labels="${esc(JSON.stringify(labels))}">${esc(h.status.shipped)}</span></div>
+<p class="r oc-place" style="--n:1">${esc(place)}</p>
+<p class="r oc-item" style="--n:2">${esc(item)}</p>
+<p class="r oc-sum" style="--n:3">${cash(amount, locale)}</p>
+<div class="verdict"><p class="note"><b>${esc(h.board.reasonTitle)}</b><span>${esc(h.board.reason)}</span></p><p class="okbar"><span>${esc(steps[2].note)}</span></p></div>
+<div class="lab">${bars("DZ48210097")}<span class="num" dir="ltr">DZ 4821 0097</span><small>${esc(steps[3].note)}</small></div>
+<div class="stamp">${esc(h.status.toCall)}</div>
+<div class="cashchip">+${cash(amount, locale)}</div>
+</div>
+</div>
 </div>
 </section>`;
 }
 
-/* ───────── 3. the screens: an index of the real app ───────── */
+/* ───────── 2b. a live strip of orders ───────── */
+function ticker(locale) {
+  const h = HOME[locale];
+  const kind = { toCall: "call", confirmed: "ok", shipped: "ship", delivered: "new" };
+  const one = h.board.rows
+    .map(([who, place, item, amount, st]) => `<span class="tk"><b>${esc(who)}</b><i>${esc(place)}</i><em>${esc(item)}</em><u>${cash(amount, locale)}</u><span class="chip chip-${kind[st]}">${esc(h.status[st])}</span></span>`)
+    .join("");
+  const rev = h.board.rows
+    .slice()
+    .reverse()
+    .map(([who, place, item, amount, st]) => `<span class="tk"><b>${esc(who)}</b><i>${esc(place)}</i><em>${esc(item)}</em><u>${cash(amount, locale)}</u><span class="chip chip-${kind[st]}">${esc(h.status[st])}</span></span>`)
+    .join("");
+  return `<section class="ticker" aria-hidden="true">
+<div class="tk-row">${one}${one}</div>
+<div class="tk-row rev">${rev}${rev}</div>
+<p class="tk-cap">${esc(h.board.sample)}</p>
+</section>`;
+}
+
+/* ───────── 3. the screens: the real app, playing ───────── */
 const SCREENS = [
   ["orders", "orders"],
   ["inbox", "inbox"],
@@ -99,7 +140,7 @@ function screens(locale) {
   const f = HOME[locale].feats;
   const names = SCREENS.map(
     ([mod], i) =>
-      `<li><button type="button" data-sc="${i}"${i === 0 ? ' aria-current="true"' : ""}>${esc(t.modules[mod].name)}</button><p>${esc(t.modules[mod].short)}</p></li>`,
+      `<li><button type="button" data-sc="${i}"${i === 0 ? ' aria-current="true"' : ""}>${esc(t.modules[mod].name)}</button><i class="bar" aria-hidden="true"></i><p>${esc(t.modules[mod].short)}</p></li>`,
   ).join("");
   const figs = SCREENS.map(([, shot], i) => {
     const set = [480, 800, 1200].map((w) => `${shotUrl(shot, locale, w)} ${w}w`).join(", ");
@@ -175,8 +216,8 @@ function close(locale) {
 
 export function homeBody(locale) {
   return `<div class="home">
-${[hero, stages, screens, archive, pricing, faq, close].map((f) => f(locale)).join("\n")}
+${[hero, story, ticker, screens, archive, pricing, faq, close].map((f) => f(locale)).join("\n")}
 </div>
-<script src="/assets/stage.js?v=${SITE.asset}" defer></script>
-<script src="/assets/flow.js?v=${SITE.asset}" defer></script>`;
+<script src="/assets/map.js?v=${SITE.asset}" defer></script>
+<script src="/assets/stage.js?v=${SITE.asset}" defer></script>`;
 }
