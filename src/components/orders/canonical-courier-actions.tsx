@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useI18n } from "@/hooks/use-i18n";
+import { CourierTestingChip, CourierTestingHint } from "@/components/deliveries/courier-testing-note";
 import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { deliveryProviderLabel } from "@/lib/shared";
 import { mutatePrefix } from "@/lib/swr/mutate";
@@ -316,7 +317,10 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
       {canBook ? (
         <div className="grid gap-3 rounded-surface border p-3 sm:grid-cols-[1fr_auto] sm:items-end">
           <div className="space-y-1.5">
-            <Label htmlFor={`courier-provider-${orderId}`}>{copy.provider}</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Label htmlFor={`courier-provider-${orderId}`}>{copy.provider}</Label>
+              <CourierTestingChip provider={provider} />
+            </div>
             <Select value={provider} onValueChange={(value) => setProvider(value as Provider)}>
               <SelectTrigger id={`courier-provider-${orderId}`}>
                 <SelectValue />
@@ -329,6 +333,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
                 ))}
               </SelectContent>
             </Select>
+            <CourierTestingHint provider={provider} />
           </div>
           <Button onClick={() => void book()} disabled={loadingAction !== null}>
             {loadingAction === "book" ? (
@@ -347,6 +352,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
             <dt className="text-xs text-muted-foreground">{copy.provider}</dt>
             <dd className="font-medium" dir="auto">
               {deliveryProviderLabel(delivery.provider, t)}
+              <CourierTestingChip provider={delivery.provider} className="ms-2" />
             </dd>
           </div>
           <div>

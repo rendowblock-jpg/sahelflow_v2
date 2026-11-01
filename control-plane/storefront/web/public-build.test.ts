@@ -63,7 +63,8 @@ describe("generated page files", () => {
     console.warn(`[weight] css ${css.length} bytes, ${gzipSync(css).length} gzip`);
     // Was 8,000 (7,950 used). The forced-colors block in shop.css costs about 150 bytes gzip, so the ceiling moved to 8,300.
     // The notice pages' exit link and the missing-photo slot cost about 70 bytes more: 8,400.
-    expect(gzipSync(css).length).toBeLessThan(8_400);
+    // The system-colour pairs for badges, buttons and language links in the forced-colors block cost about 120 bytes more (8,468 used): 8,600.
+    expect(gzipSync(css).length).toBeLessThan(8_600);
     for (const needle of [".sf-cta", ".sf-sticky", ".sf-gal-track", "scroll-snap-type", "prefers-reduced-motion", "@supports", ":focus-visible", "env(safe-area-inset-bottom", ".sf-notice", "inset-inline"]) {
       expect(css, needle).toContain(needle);
     }

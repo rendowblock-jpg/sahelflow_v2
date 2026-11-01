@@ -356,7 +356,7 @@ export default async function OrdersPage({
           compactOnPhone
         />
         <StatCard
-          label={t("orders.todayRevenue")}
+          label={t("money.revenueDeliveredToday")}
           value={todayRevenue === null ? "—" : formatDZD(todayRevenue, locale)}
           icon={<TrendingUp />}
           href="/analytics"

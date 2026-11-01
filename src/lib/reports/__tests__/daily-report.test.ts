@@ -271,3 +271,24 @@ describe("generateDailyReport — excludes soft-deleted records (AUDIT Pattern 5
     expect(report!.returnedCount).toBe(0);
   });
 });
+
+// ── The revenue line names its basis ────────────────────────────────────────
+
+describe("generateDailyReport — the revenue line carries the money name", () => {
+  const NAMES = {
+    ar: "الإيراد المسلَّم",
+    fr: "Revenu livré",
+    en: "Revenue delivered",
+  } as const;
+  for (const locale of ["ar", "fr", "en"] as const) {
+    it(`labels the figure "${NAMES[locale]}" in ${locale} and keeps the number`, async () => {
+      await seedOrderWithItems({ totalPrice: 5000, status: "delivered" });
+      const report = await generateDailyReport(locale);
+      expect(report).not.toBeNull();
+      expect(report?.revenue).toBe(5000);
+      const line = report?.message.split("\n").find((row) => row.startsWith("💰"));
+      expect(line).toBe(`💰 *${NAMES[locale]}:* 5\u202F000 DZD`);
+      expect(report?.message).not.toContain("Gross Revenue");
+    });
+  }
+});

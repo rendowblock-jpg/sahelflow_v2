@@ -29,8 +29,15 @@ import {
   getWhatsAppIngressRecoveryTranslation,
   type WhatsAppIngressRecoveryKey,
 } from "@/lib/i18n/whatsapp-ingress-recovery";
+import {
+  afterFailedCheck,
+  checkFailed,
+  RECOVERY_REQUEST_PATH,
+  RECOVERY_STATUSES,
+} from "@/lib/inbox/recovery-load";
 import { toast } from "@/lib/toast";
 import { WhatsAppIngressHealthNotices } from "./whatsapp-ingress-health-notices";
+import { WhatsAppRecoveryCheckNotice } from "./whatsapp-recovery-check-notice";
 import { cn } from "@/lib/utils";
 
 interface IngressAttempt {
@@ -52,7 +59,7 @@ interface IngressEvent {
   attempts: IngressAttempt[];
 }
 
-const RECOVERY_STATES = new Set(["retrying", "quarantined", "dead_letter"]);
+const RECOVERY_STATES = new Set<string>(RECOVERY_STATUSES);
 const RECOVERY_POLL_MS = 15_000;
 
 function contactFromJid(sourceId: string): string {
@@ -90,25 +97,29 @@ export function WhatsAppIngressRecoveryDock({
   const [open, setOpen] = useState(false);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [failedChecks, setFailedChecks] = useState(0);
   const healthNotices = useInboxIngressHealth(linkConnected);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch("/api/whatsapp/inbound?limit=50", {
+      const response = await fetch(RECOVERY_REQUEST_PATH, {
         cache: "no-store",
         signal,
       });
       if (response.status === 401 || response.status === 403) {
         setAuthorized(false);
+        setFailedChecks(0);
         return;
       }
       if (!response.ok) throw new Error("Inbound recovery load failed");
       const data = (await response.json()) as { events?: IngressEvent[] };
       setEvents(Array.isArray(data.events) ? data.events : []);
       setAuthorized(true);
+      setFailedChecks(0);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      // Recovery health is secondary to the usable canonical inbox.
+      // The inbox stays usable, but a check that did not work must not look like "all clear".
+      setFailedChecks(afterFailedCheck);
     } finally {
       setLoading(false);
     }
@@ -170,15 +181,27 @@ export function WhatsAppIngressRecoveryDock({
     }
   };
 
-  if (!authorized) return null;
+  // Not allowed to list events is not "nothing to report": the reception counts come from the status
+  // answer, which needs less permission, so they stay.
   const noticeBlock = (
-    <WhatsAppIngressHealthNotices
-      notices={healthNotices}
-      locale={locale}
-      embedded={embedded}
-      onReconnect={onReconnect}
-    />
+    <>
+      <WhatsAppIngressHealthNotices
+        notices={healthNotices}
+        locale={locale}
+        embedded={embedded}
+        onReconnect={onReconnect}
+      />
+      {checkFailed(failedChecks) ? (
+        <WhatsAppRecoveryCheckNotice
+          locale={locale}
+          embedded={embedded}
+          busy={loading}
+          onRetry={() => void refresh()}
+        />
+      ) : null}
+    </>
   );
+  if (!authorized) return noticeBlock;
   if (loading && events.length === 0) return noticeBlock;
   if (recoveryEvents.length === 0) return noticeBlock;
 

@@ -8,7 +8,9 @@ import { getOrdersPhoneHintRuntimeTranslation } from "@/lib/i18n/orders-phone-hi
 import { getShippingListRuntimeTranslation } from "@/lib/i18n/shipping-list-runtime";
 import { getInboxHealthRuntimeTranslation } from "@/lib/i18n/inbox-health-runtime";
 import { getInboxHealthViewRuntimeTranslation } from "@/lib/i18n/inbox-health-view-runtime";
+import { getInboxRecoveryCheckRuntimeTranslation } from "@/lib/i18n/inbox-recovery-check-runtime";
 import { getAiApprovalArgsRuntimeTranslation } from "@/lib/i18n/ai-approval-args-runtime";
+import { getAiApprovalToolArgsRuntimeTranslation } from "@/lib/i18n/ai-approval-tool-args-runtime";
 import { getHeldSendDiscardRuntimeTranslation } from "@/lib/i18n/held-send-discard-runtime";
 import { getPhoneAppTestingRuntimeTranslation } from "@/lib/i18n/phone-app-testing-runtime";
 import { getExtractionTruthRuntimeTranslation } from "@/lib/i18n/extraction-truth-runtime";
@@ -20,6 +22,9 @@ import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
 import { getDashboardStatesRuntimeTranslation } from "@/lib/i18n/dashboard-states-runtime";
 import { getMoneyNamesRuntimeTranslation } from "@/lib/i18n/money-names-runtime";
+import { getOrdersRowLabelsRuntimeTranslation } from "@/lib/i18n/orders-row-labels-runtime";
+import { getNumbersLabelsRuntimeTranslation } from "@/lib/i18n/numbers-labels-runtime";
+import { getRuntimeHealthRuntimeTranslation } from "@/lib/i18n/runtime-health-runtime";
 import { getAiQuotaRuntimeTranslation } from "@/lib/i18n/ai-quota-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
@@ -183,10 +188,12 @@ export function getRuntimeTranslation(
     getOrdersPhoneHintRuntimeTranslation(locale, key) ??
     getShippingListRuntimeTranslation(locale, key) ??
     getAiApprovalArgsRuntimeTranslation(locale, key) ??
+    getAiApprovalToolArgsRuntimeTranslation(locale, key) ??
     getHeldSendDiscardRuntimeTranslation(locale, key) ??
     getPhoneAppTestingRuntimeTranslation(locale, key) ??
     getInboxHealthRuntimeTranslation(locale, key) ??
     getInboxHealthViewRuntimeTranslation(locale, key) ??
+    getInboxRecoveryCheckRuntimeTranslation(locale, key) ??
     getExtractionTruthRuntimeTranslation(locale, key) ??
     getPreUpdateBackupRuntimeTranslation(locale, key) ??
     getStorefrontStudioStatesRuntimeTranslation(locale, key) ??
@@ -198,6 +205,9 @@ export function getRuntimeTranslation(
     getConfirmationQueueRuntimeTranslation(locale, key) ??
     getDashboardStatesRuntimeTranslation(locale, key) ??
     getMoneyNamesRuntimeTranslation(locale, key) ??
+    getOrdersRowLabelsRuntimeTranslation(locale, key) ??
+    getNumbersLabelsRuntimeTranslation(locale, key) ??
+    getRuntimeHealthRuntimeTranslation(locale, key) ??
     getAiQuotaRuntimeTranslation(locale, key) ??
     getDataTableRuntimeTranslation(locale, key) ??
     getCustomersProductsStatesRuntimeTranslation(locale, key) ??

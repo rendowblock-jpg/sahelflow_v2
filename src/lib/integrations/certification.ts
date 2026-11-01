@@ -53,3 +53,15 @@ export const DELIVERY_PROVIDER_TO_INTEGRATION = {
 export function integrationStatus(id: IntegrationId): IntegrationStatus {
   return Object.prototype.hasOwnProperty.call(STATUS, id) ? STATUS[id] : "testing";
 }
+
+/**
+ * The registry id of a courier as stored on a delivery. "zr_express" and the old "noest" name still exist in saved
+ * rows. Anything else is not one of the four couriers, so it gets no chip: null.
+ */
+export function deliveryIntegrationId(provider: string): IntegrationId | null {
+  if (provider === "zr_express") return "zr";
+  if (provider === "noest") return "ecotrack";
+  return Object.prototype.hasOwnProperty.call(DELIVERY_PROVIDER_TO_INTEGRATION, provider)
+    ? DELIVERY_PROVIDER_TO_INTEGRATION[provider as keyof typeof DELIVERY_PROVIDER_TO_INTEGRATION]
+    : null;
+}

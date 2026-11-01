@@ -2,6 +2,7 @@ import "server-only";
 
 import type { ServiceContext } from "@/lib/data/service-base";
 import { normalizePhone } from "@/lib/import/fields";
+import { exactArgumentFields } from "./summary-arguments";
 import { SahelFlowError } from "@/types/errors";
 
 export interface AiActionTargetSnapshot {
@@ -205,6 +206,7 @@ export async function buildAiActionTargetSnapshot(
           fromStatus: order.status,
           toStatus: "cancelled",
           reasonProvided: Boolean(args.reason),
+          ...exactArgumentFields(toolName, args),
         },
       };
     }
@@ -255,6 +257,7 @@ export async function buildAiActionTargetSnapshot(
           toStock: args.newStock,
           variantName: variant?.name ?? null,
           reasonProvided: Boolean(args.reason),
+          ...exactArgumentFields(toolName, args),
         },
       };
     }
@@ -348,6 +351,7 @@ export async function buildAiActionTargetSnapshot(
           stock: args.stock,
           sku,
           categoryName: category?.name ?? null,
+          ...exactArgumentFields(toolName, args),
         },
       };
     }
@@ -373,6 +377,7 @@ export async function buildAiActionTargetSnapshot(
           customerName: args.name,
           phoneLast4: phone.slice(-4),
           wilaya: args.wilaya ?? null,
+          ...exactArgumentFields(toolName, { ...args, phone }),
         },
       };
     }
@@ -393,6 +398,7 @@ export async function buildAiActionTargetSnapshot(
           customerName: customer.name,
           mode: args.mode,
           noteLength: String(args.notes).length,
+          ...exactArgumentFields(toolName, args),
         },
       };
     }

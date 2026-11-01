@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db, shopContext } from "@/lib/db";
@@ -8,6 +7,7 @@ import {
   requireTrustedAction,
 } from "@/lib/identity/authorization";
 import { persistWhatsAppInbound } from "@/lib/whatsapp/inbound-ingress";
+import { parseIngressStatusFilter } from "@/lib/whatsapp/ingress-status-filter";
 import { processWhatsAppInbound } from "@/lib/whatsapp/inbound-processor";
 import {
   isWhatsAppPhoneOutboundEnvelope,
@@ -16,18 +16,6 @@ import {
 import { authenticateWhatsAppSidecar } from "@/lib/whatsapp/sidecar-rest-auth";
 
 export const dynamic = "force-dynamic";
-
-const ingressStatusSchema = z.enum([
-  "received",
-  "processing",
-  "retrying",
-  "applied",
-  "quarantined",
-  "dead_letter",
-  // Terminal tombstone written by permanent chat deletion; kept queryable so
-  // operators can audit why an event will never apply.
-  "chat_deleted",
-]);
 
 /** Operator-visible ingress history. Encrypted raw payloads are never returned. */
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -42,10 +30,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const limit = Number.isFinite(requested)
     ? Math.max(1, Math.min(requested, 200))
     : 50;
-  const statusParameter = request.nextUrl.searchParams.get("status");
-  const status = statusParameter
-    ? ingressStatusSchema.parse(statusParameter)
-    : undefined;
+  // One state or a comma list: the recovery dock asks for the problem states only.
+  const status = parseIngressStatusFilter(request.nextUrl.searchParams.get("status"));
 
   const events = await db.providerIngressEvent.findMany({
     where: { provider: "whatsapp", ...(status ? { status } : {}) },

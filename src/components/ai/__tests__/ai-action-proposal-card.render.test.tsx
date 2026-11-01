@@ -64,7 +64,8 @@ const SUMMARY = {
 function makeProposal() {
   return {
     id: "prop_0001",
-    toolName: "update_order_status",
+    // create_order keeps the generic field list; the other actions show an exact-details block instead.
+    toolName: "create_order",
     status: "pending",
     summary: SUMMARY,
     proposalDigestPrefix: "a1b2c3d4",

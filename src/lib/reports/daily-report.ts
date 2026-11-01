@@ -23,6 +23,8 @@ import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import { formatDZDBare as formatDZD } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n";
 import { loadTranslationsSync } from "@/lib/i18n-server";
+import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
+import { moneyNameKey } from "@/lib/analytics/money-names";
 import { intlLocale } from "@/lib/utils";
 import { addShopDays, SHOP_TIME_ZONE, startOfShopDay } from "@/lib/time/shop-day";
 
@@ -64,7 +66,7 @@ function formatDateLocalized(date: Date, locale: Locale): string {
 function makeT(locale: Locale) {
   const translations = loadTranslationsSync(locale);
   return (key: string, params?: Record<string, string | number>): string => {
-    let value = translations[key] ?? key;
+    let value = translations[key] ?? getRuntimeTranslation(locale, key) ?? key;
     if (params) {
       for (const [param, val] of Object.entries(params)) {
         value = value.replace(new RegExp(`\\{\\{${param}\\}\\}`, "g"), String(val));
@@ -177,7 +179,9 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
   lines.push(`📊 *${t("dailyReport.title")} — ${formatDateLocalized(startOfYesterday, locale)}*`);
   lines.push("");
   lines.push(`🛒 *${t("dailyReport.orders")}:* ${orders.length}`);
-  lines.push(`💰 *${t("dailyReport.revenue")}:* ${formatDZD(revenue)} DZD`);
+  // The figure is the delivered revenue before refunds (grossRevenue of the
+  // profitability projection), so it carries that name, not the bare word.
+  lines.push(`💰 *${t(moneyNameKey("revenueDelivered"))}:* ${formatDZD(revenue)} DZD`);
   if (newCustomers > 0) {
     lines.push(`👤 *${t("dailyReport.newCustomers")}:* ${newCustomers}`);
   }
