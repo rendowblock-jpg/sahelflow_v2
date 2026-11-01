@@ -23,8 +23,8 @@ html[lang=fr] .t-line h1{font-size:clamp(2rem,10.2cqi,4.25rem)}
 .t-act .btn-primary{background:var(--bg);color:var(--ink);inline-size:100%}
 .t-act .btn-primary:hover{background:var(--ink);color:var(--bg)}
 .t-act .text-link{color:var(--accent-ink)}
-.t-shot{grid-column:6/13;position:relative;margin:0;padding:0;background:var(--surface);min-block-size:0;overflow:hidden}
-.hero-stage{position:absolute;inset:0;border-radius:var(--r);overflow:hidden}
+.t-shot{grid-column:6/13;position:relative;margin:0;padding:0;background:var(--surface);min-block-size:0;overflow:clip}
+.hero-stage{position:absolute;inset:0;border-radius:var(--r);overflow:clip}
 .t-shot .crop img{object-position:0 0}
 .facts-row{display:contents}
 .t-fact{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:12px 18px;background:var(--surface)}

@@ -5,24 +5,28 @@
    never hidden: the h1 is painted in the first frame; the picture stage (09-hero3d.css) carries the first-screen motion. */
 :root{--rise:24px;--dur:520ms;--ease-x:cubic-bezier(.16,1,.3,1)}
 @media (prefers-reduced-motion:no-preference){
-  @keyframes sf-show{to{opacity:1;transform:none}}
-  @keyframes sf-open{to{clip-path:inset(0 0 0 0 round 8px)}}
-  /* Tile contents rise 16-24px, 60-90ms apart, once. */
+  @keyframes sf-show{to{opacity:1;transform:none;clip-path:inset(0 0 0 0 round 8px)}}
+  @keyframes sf-up{from{opacity:0;transform:translateY(var(--rise))}to{opacity:1;transform:none}}
+  @keyframes sf-row{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  @keyframes sf-fill{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes sf-shutter{from{clip-path:inset(0 0 100% 0 round 8px)}to{clip-path:inset(0 0 0 0 round 8px)}}
+  /* Hidden start states exist only under .js-motion and only until the element is seen (.in, set by site.js); each also carries a
+     1 ms animation that shows it after 2.4 s, should the script never run. The entrances are CSS animations (not transitions):
+     they start when .in is added, whatever the failsafe was doing. */
   .t-head{--rise:16px}
-  .js-motion [data-rise]:not(.in) .rise,.js-motion .t-fact.rise{opacity:0;transform:translateY(var(--rise))}
-  .js-motion [data-rise]:not(.in) .rise,.js-motion .t-fact.rise{animation:sf-show 1ms linear 2.4s both}
-  .js-motion [data-rise].in .rise,.js-motion .hero.in .t-fact.rise{opacity:1;transform:none;transition:opacity var(--dur) var(--ease-x),transform var(--dur) var(--ease-x);transition-delay:calc(var(--i,0)*75ms)}
-  .js-motion .t-head.in .rise{transition-duration:420ms}
+  .js-motion [data-rise]:not(.in) .rise,.js-motion .hero:not(.in) .t-fact.rise{opacity:0;transform:translateY(var(--rise));animation:sf-show 1ms linear 2.4s both}
+  .js-motion [data-rise].in .rise,.js-motion .hero.in .t-fact.rise{animation:sf-up var(--dur) var(--ease-x) backwards;animation-delay:calc(var(--i,0)*75ms)}
+  .js-motion .t-head.in .rise{animation-duration:420ms}
   /* (a) The departure board: the eight rows roll in 50 ms apart. */
   .js-motion .orders:not(.in) .orow{opacity:0;transform:translateY(20px);animation:sf-show 1ms linear 2.4s both}
-  .js-motion .orders.in .orow{opacity:1;transform:none;transition:opacity 420ms var(--ease-x),transform 420ms var(--ease-x);transition-delay:calc(var(--i,0)*50ms)}
+  .js-motion .orders.in .orow{animation:sf-row 420ms var(--ease-x) backwards;animation-delay:calc(var(--i,0)*50ms)}
   /* (b) The order card of "from message to parcel" fills field by field, after its column has risen. */
   .js-motion .field:not(.in) .ocard>*{opacity:0;transform:translateY(10px);animation:sf-show 1ms linear 2.4s both}
-  .js-motion .field.in .ocard>*{opacity:1;transform:none;transition:opacity 360ms var(--ease-x),transform 360ms var(--ease-x);transition-delay:calc(260ms + var(--j,0)*80ms)}
+  .js-motion .field.in .ocard>*{animation:sf-fill 360ms var(--ease-x) backwards;animation-delay:calc(260ms + var(--j,0)*80ms)}
   .ocard>:nth-child(2){--j:1}.ocard>:nth-child(3){--j:2}.ocard>:nth-child(4){--j:3}.ocard>:nth-child(5){--j:4}
   /* (c) The close-up mosaic opens with a clip-path shutter, tile after tile. */
-  .js-motion .mosaic:not(.in) .t-crop{clip-path:inset(0 0 100% 0 round 8px);animation:sf-open 1ms linear 2.4s both}
-  .js-motion .mosaic.in .t-crop{clip-path:inset(0 0 0 0 round 8px);transition:clip-path 560ms var(--ease-x);transition-delay:calc(var(--i,0)*60ms)}
+  .js-motion .mosaic:not(.in) .t-crop{clip-path:inset(0 0 100% 0 round 8px);animation:sf-show 1ms linear 2.4s both}
+  .js-motion .mosaic.in .t-crop{animation:sf-shutter 560ms var(--ease-x) backwards;animation-delay:calc(var(--i,0)*60ms)}
   /* Press, hover and focus feedback on every control. */
   .text-link,.nav-links a,.langs a,.foot-col a{transition:background-color .12s,color .12s}
   .text-link:active,.nav-links a:active,.menu>summary:active{transform:scale(.97)}
