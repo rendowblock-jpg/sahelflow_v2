@@ -31,6 +31,7 @@ import { mutatePrefix } from "@/lib/swr/mutate";
 import { useI18n } from "@/hooks/use-i18n";
 import { getBrandIcon } from "@/components/brand/brand-icons";
 import { useDeliveryFeeQuote } from "@/components/deliveries/use-delivery-fee-quote";
+import { CourierTestingChip, CourierTestingHint } from "@/components/deliveries/courier-testing-note";
 import { deliveryProviderConfig, deliveryProviderLabel } from "@/lib/shared";
 // Registry-driven provider list (R3-d): DELIVERY_PROVIDERS is the canonical
 // union that keys the server-side adapter REGISTRY. The registry index module
@@ -148,7 +149,10 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
             {canCreate ? (
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="provider">{t("orders.shipment.carrier")}</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Label htmlFor="provider">{t("orders.shipment.carrier")}</Label>
+                    <CourierTestingChip provider={provider} />
+                  </div>
                   <Select value={provider} onValueChange={setProvider}>
                     <SelectTrigger id="provider">
                       <SelectValue />
@@ -173,6 +177,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                       })}
                     </SelectContent>
                   </Select>
+                  <CourierTestingHint provider={provider} />
                   <p className="text-xs text-muted-foreground">
                     {t("orders.shipment.configureCredentialsHint")}
                   </p>
@@ -220,8 +225,9 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
             <div className="rounded-surface border p-3 space-y-1.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("orders.shipment.carrier")}</span>
-                <span className="font-medium">
+                <span className="inline-flex flex-wrap items-center justify-end gap-2 font-medium">
                   {deliveryProviderLabel(delivery.provider, t)}
+                  <CourierTestingChip provider={delivery.provider} />
                 </span>
               </div>
               <div className="flex justify-between">
