@@ -7,12 +7,13 @@ import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
 
 /** The one inline script: no-js flag + motion flag before first paint (its CSP hash is in static/_headers). */
 export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{if(window.IntersectionObserver&&!matchMedia("(prefers-reduced-motion: reduce)").matches)d.classList.add("js-motion")}catch(e){}})()`;
-import { esc, href, phoneDisplay, whatsappHref } from "./ui.mjs";
+import { esc, href, icon, phoneDisplay, whatsappHref } from "./ui.mjs";
+import { HOME3_COPY } from "./home3.mjs";
 
 const FONT_PRELOAD = { ar: ["cairo-arabic", "cairo-latin"], fr: ["cairo-latin"], en: ["cairo-latin"] };
 const OG_LOCALE = { ar: "ar_DZ", fr: "fr_DZ", en: "en_US" };
 
-function head({ locale, path, title, description, preload, jsonLd = [] }) {
+function head({ locale, path, title, description, preload, jsonLd = [], scripts = [] }) {
   const t = COPY[locale];
   const canonical = `${SITE.origin}${href(locale, path)}`;
   const alternates = SITE.locales
@@ -48,8 +49,8 @@ function head({ locale, path, title, description, preload, jsonLd = [] }) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<meta name="theme-color" content="#f1f1ef" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ecebe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b3b2a" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
 <link rel="canonical" href="${canonical}">
 ${alternates}
@@ -70,6 +71,7 @@ ${preload ? `<link rel="preload" as="image" href="${preload}" imagesrcset="${[48
 <script>${HEAD_SCRIPT}</script>
 ${[app, org, ...(path === "" ? [{ "@context": "https://schema.org", "@type": "WebSite", name: "SahelFlow", url: SITE.origin, inLanguage: SITE.locales }] : []), ...jsonLd].map((ld) => `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`).join("\n")}
 <script defer src="/assets/site.js?v=${SITE.asset}"></script>
+${scripts.map((f) => `<script defer src="/assets/${f}?v=${SITE.asset}"></script>`).join("\n")}
 </head>`;
 }
 
@@ -85,7 +87,7 @@ function header({ locale, pageId, path }) {
     .map((l) => `<a href="${href(l, path)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}>${esc(COPY[l].name)}</a>`)
     .join("");
   return `<a class="skip-link" href="#main">${esc(t.common.skip)}</a>
-<header class="top" data-header>
+<header class="top" data-header data-tone="bone">
 <div class="top-in">
 <a class="brand" href="${href(locale)}" aria-label="SahelFlow">${MARK}<span class="wm">SahelFlow</span></a>
 <details class="menu" data-menu>
@@ -104,23 +106,30 @@ ${link("product", t.nav.product)}${link("integrations", t.nav.integrations)}${li
 </header>`;
 }
 
-/** The name returns at full width, set as type. */
+/** The name returns at full width, cropped by the bottom edge. */
 function wordmark(locale) {
   return `<a class="foot-word" href="${href(locale)}" aria-label="SahelFlow" dir="ltr"><span class="fw" aria-hidden="true">SahelFlow</span></a>`;
 }
 
 function footer(locale) {
   const t = COPY[locale];
+  const f = HOME3_COPY[locale].foot;
   const year = new Date().getFullYear();
   const col = (title, links) =>
     `<div class="foot-col"><h2>${esc(title)}</h2><ul>${links.map(([url, label]) => `<li><a href="${url}">${esc(label)}</a></li>`).join("")}</ul></div>`;
-  return `<footer class="site-footer">
-<div class="foot-in">
-${wordmark(locale)}
-<div class="foot-brand">
-<p>${esc(t.footer.tagline)}</p>
-<p class="foot-note">${esc(t.common.whatsappNote)}</p>
-<p class="foot-contact"><a href="${whatsappHref(t.whatsappMessage)}" rel="noopener"><span dir="ltr">${esc(phoneDisplay())}</span></a> <a href="mailto:${SITE.email}"><span dir="ltr">${esc(SITE.email)}</span></a></p>
+  return `<footer class="site-footer" data-tone="green">
+<div class="foot-top">
+<div class="foot-inv">
+<p class="foot-h" role="heading" aria-level="2"><span>${esc(f.a)}</span> <span>${esc(f.b)}</span></p>
+<a class="v-btn v-btn-on" href="${href(locale, "download")}">${icon("download")}<span>${esc(t.downloadPage.button)}</span></a>
+<p class="foot-meta">${esc(f.meta)}</p>
+</div>
+<ul class="foot-contact">
+<li><a href="${whatsappHref(t.whatsappMessage)}" rel="noopener"><span dir="ltr">${esc(phoneDisplay())}</span></a></li>
+<li><a href="mailto:${SITE.email}"><span dir="ltr">${esc(SITE.email)}</span></a></li>
+<li><a href="${href(locale, "contact")}">${esc(f.contact)}</a></li>
+<li><a href="${href(locale, "help")}">${esc(t.nav.resourceLinks.help[0])}</a></li>
+</ul>
 </div>
 <div class="foot-cols">
 ${col(t.footer.product, [[href(locale, "product"), t.nav.platformOverview], ...MODULES.map((m) => [href(locale, `product/${m.key}`), t.modules[m.key].name])])}
@@ -135,11 +144,12 @@ ${col(t.footer.company, [
   ])}
 ${col(t.footer.legal, [[href(locale, "privacy"), t.footer.privacy], [href(locale, "terms"), t.footer.terms]])}
 </div>
-</div>
-<div class="foot-in foot-bottom">
+<p class="foot-note">${esc(t.common.whatsappNote)}</p>
+<div class="foot-bottom">
 <p>© ${year} SahelFlow. ${esc(t.footer.rights)} ${esc(t.footer.made)}</p>
 <p class="langs">${SITE.locales.map((l) => `<a href="${href(l)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}>${esc(COPY[l].name)}</a>`).join("")}</p>
 </div>
+${wordmark(locale)}
 </footer>`;
 }
 

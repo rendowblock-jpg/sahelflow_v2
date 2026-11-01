@@ -1,0 +1,284 @@
+/* sahelflow.com v3: the sentence is the layout.
+   One ground (bone), one ink (the deep green of the flag), one action colour (the stamp red), two flat fields (green, sage).
+   Square corners, flat fills, no gradients, no shadows at rest. Cairo only. Logical properties only, so RTL and LTR share every rule.
+   Loaded last: it re-tints the shared tokens, so the inner pages change with the home page. */
+
+:root{
+--bg:#ecebe7;--surface:#e1dfd9;--surface-2:#d3d1ca;--paper:#f6f5f1;
+--ink:#0b3b2a;--muted:#40574b;
+--accent:#0b3b2a;--accent-ink:#ecebe7;
+--act:#d8362b;--act-ink:#ffffff;--red:#d8362b;
+--field:#0b3b2a;--field-ink:#ecebe7;--field-soft:#b4cabd;
+--sage:#d5e3d8;
+--ok-bg:#cfe3d5;--ok-ink:#0b3b2a}
+html{
+--m:clamp(16px,2.4vw,40px);--col:clamp(12px,1.8vw,28px);
+--s-xxl:clamp(2.75rem,12vw,12rem);
+--s-xl:clamp(2.25rem,5.2vw,5.5rem);
+--s-l:clamp(1.5rem,2.6vw,2.5rem);
+--s-b:clamp(1.0625rem,1rem + .3vw,1.25rem);
+--s-s:.9375rem;
+--gap-s:clamp(88px,11vw,200px);
+--ease:cubic-bezier(.23,1,.32,1)}
+@media (min-width:760px){html{--s-xxl:clamp(5rem,14.2vw,14rem)}}
+body{background:var(--bg);color:var(--ink)}
+main{display:block}
+
+/* ───────── actions ───────── */
+.btn-primary{background:var(--act);color:var(--act-ink)}
+.btn-primary:hover{background:var(--ink);color:var(--bg)}
+.v-btn{display:inline-flex;align-items:center;justify-content:center;gap:.6em;min-block-size:56px;padding:0 28px;border:0;background:var(--act);color:var(--act-ink);font:700 var(--s-b)/1.2 var(--f);text-decoration:none;cursor:pointer;transition:transform .2s var(--ease),background-color .2s,color .2s}
+.v-btn svg{inline-size:20px;block-size:20px;flex:none}
+.v-btn:hover{background:var(--ink);color:var(--bg)}
+.v-btn:active{transform:scale(.97)}
+.v-btn-on{background:var(--field-ink);color:var(--field)}
+.v-btn-on:hover{background:#fff;color:var(--field)}
+.v-text{display:inline-flex;align-items:center;gap:8px;min-block-size:44px;font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:.28em}
+.v-text svg{inline-size:16px;block-size:16px;transition:transform .2s var(--ease)}
+.v-text:hover svg{transform:translateX(4px)}
+html[dir=rtl] .v-text:hover svg{transform:scaleX(-1) translateX(4px)}
+
+/* ───────── header: plain bar, takes the colour of the field under it ───────── */
+.top{background:var(--bg);color:var(--ink);transition:background-color .3s,color .3s}
+.top[data-tone=green]{background:var(--field);color:var(--field-ink)}
+.top[data-tone=sage]{background:var(--sage)}
+.top[data-tone=surface]{background:var(--surface)}
+.top-in{max-inline-size:none;padding-inline:var(--m)}
+.top[data-tone=green] .menu>summary{background:var(--field-ink);color:var(--field)}
+@media (max-width:899px){.menu[open] .menu-panel{background:var(--bg);color:var(--ink)}}
+@media (min-width:900px){
+.top[data-tone=green] .nav-links a:hover{background:rgba(236,235,231,.14)}
+.top[data-tone=green] .nav-links a[aria-current=page]{color:var(--field-ink)}
+.top[data-tone=green] .langs a{color:var(--field-soft)}
+.top[data-tone=green] .langs a:hover,.top[data-tone=green] .langs a[aria-current]{color:var(--field-ink)}
+.top[data-tone=green] .nav-tools .btn-primary{background:var(--field-ink);color:var(--field)}
+.top[data-tone=green] .nav-tools .btn-primary:hover{background:#fff}
+}
+
+/* ───────── the fields ───────── */
+[data-tone=green]{background:var(--field);color:var(--field-ink)}
+[data-tone=sage]{background:var(--sage)}
+[data-tone=bone]{background:var(--bg)}
+
+/* entrances: hidden only when the script runs and motion is allowed */
+.js-motion .v-r{opacity:0;transform:translateY(28px);transition:opacity .8s var(--ease),transform .8s var(--ease);transition-delay:calc(var(--i,0)*80ms)}
+.js-motion .v-r.in{opacity:1;transform:none}
+@keyframes v-up{from{opacity:0;transform:translateY(.28em)}to{opacity:1;transform:none}}
+.js-motion .v-up{animation:v-up 1s var(--ease) both;animation-delay:calc(var(--i,0)*90ms + 100ms)}
+
+/* ───────── type steps ───────── */
+.v-h2{font-size:var(--s-xl);font-weight:800;line-height:1.02;letter-spacing:-.04em;max-inline-size:15ch;text-wrap:balance}
+.v-h3{font-size:var(--s-l);font-weight:800;line-height:1.15;letter-spacing:-.02em}
+html[lang=ar] .v-h2{line-height:1.3}
+html[lang=ar] .v-h3{line-height:1.4}
+
+/* ───────── 1. hero: the sentence is the layout ───────── */
+.v-hero{display:grid;grid-template-rows:1fr auto;min-block-size:calc(100vh - var(--header-h));min-block-size:calc(100svh - var(--header-h))}
+.v-hero-top{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--col);align-content:center;padding:clamp(20px,4vh,56px) var(--m)}
+.v-sentence{grid-column:1/-1;grid-row:1/3;margin:0;font-size:var(--s-xxl);font-weight:800;line-height:1.1;letter-spacing:-.045em}
+html[lang=ar] .v-sentence{line-height:1.12}
+.v-line{display:flex;align-items:center;gap:.2em;white-space:nowrap}
+.v-w{display:block}
+.v-slot{display:block;flex:none;inline-size:2.7em;block-size:.92em;overflow:hidden;background:#bcd4c4;color:var(--ink);letter-spacing:0;font-weight:500;line-height:1.3}
+.v-chat{display:grid;grid-template-rows:auto 1fr;gap:.03em;block-size:100%;padding:.05em .06em;font-size:clamp(.8rem,1.5vw,1.6rem);white-space:normal;position:relative}
+.v-chat-bar{display:flex;align-items:center;gap:.5em;font-weight:700;font-size:.8em;padding-inline:.4em;line-height:1.2}
+.v-dot{display:inline-block;inline-size:.62em;block-size:.62em;border-radius:50%;background:var(--field);flex:none}
+.v-bubble{align-self:start;max-inline-size:94%;padding:.4em .7em .3em;background:#fff;color:var(--ink);font-weight:500;line-height:1.3}
+.v-bubble small{display:block;text-align:end;font-size:.72em;line-height:1.2;color:var(--muted)}
+.v-chip{position:absolute;inset-block-end:.35em;inset-inline-end:.4em;padding:.22em .8em;background:var(--act);color:#fff;font-weight:700;font-size:.85em;line-height:1.3;opacity:0;transform:translateY(8px);transition:opacity .4s var(--ease),transform .5s var(--ease)}
+.is-done .v-chip{opacity:1;transform:none}
+.v-typed{display:inline}
+.v-intro{grid-column:8/-1;grid-row:2;align-self:end;display:grid;gap:18px;z-index:1}
+.v-lead{font-size:var(--s-b);line-height:1.5;max-inline-size:44ch}
+.v-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px 24px}
+.v-hero-low{padding:clamp(18px,3vh,32px) var(--m)}
+.v-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px var(--col);font-size:clamp(1.0625rem,1.75vw,1.75rem);font-weight:800;line-height:1.25}
+html[lang=ar] .v-facts{line-height:1.45}
+@media (max-width:1099px){.v-intro{grid-column:7/-1}}
+@media (max-width:759px){
+.v-hero-top{align-content:start;row-gap:28px;padding-block:clamp(20px,4vh,40px) clamp(28px,5vh,44px)}
+.v-sentence{grid-row:1;font-size:clamp(2.6rem,13vw,4.5rem);display:flex;flex-wrap:wrap;gap:.04em .16em}
+.v-line{display:contents}
+.v-slot{flex:0 0 100%;inline-size:100%;block-size:auto;min-block-size:7.4rem}
+.v-chat{font-size:1rem;padding:.4rem}
+.v-intro{grid-column:1/-1;grid-row:2}
+.v-facts{grid-template-columns:1fr;font-size:1.125rem;gap:8px}
+}
+
+/* ───────── fragments of the product (data-ui: the product's own borders are fine here) ───────── */
+.v-frag{inline-size:min(100%,460px);padding:20px;background:var(--paper);color:var(--ink);border:1px solid #cfccc4;font-size:1rem;line-height:1.4}
+.v-frag-chat{background:#bcd4c4;border-color:#a8c2b0}
+.v-frag-chat .v-bubble{max-inline-size:36ch;font-size:1.0625rem;padding:.7em .9em .5em}
+.v-chat-who{display:flex;align-items:center;gap:8px;margin-block-end:12px;font-weight:700}
+.v-card{inline-size:100%;background:var(--paper);color:var(--ink);font-size:1rem;line-height:1.4}
+.v-card-h{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-block-end:10px}
+.v-card-h h3{font-size:1.25rem;font-weight:800;letter-spacing:0}
+.v-stamp{display:inline-flex;align-items:center;min-block-size:28px;padding:2px 12px;font-size:.875rem;font-weight:700;background:var(--surface-2);color:var(--ink);white-space:nowrap}
+.v-stamp-call{background:var(--act);color:#fff}
+.v-stamp-ok{background:var(--ok-bg);color:var(--ok-ink)}
+.v-stamp-new{background:var(--ink);color:var(--bg)}
+.v-card-l>div{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:9px 0;border-block-start:1px solid #e0ddd5}
+.v-card-l dt{color:var(--muted);flex:none}
+.v-card-l dd{font-weight:600;text-align:end}
+.v-card-t{font-weight:800;font-size:1.125rem}
+.v-card-t dt{color:var(--ink)}
+.v-miss{color:var(--act);font-weight:700}
+.tick{animation:v-tick .5s var(--ease)}
+@keyframes v-tick{from{opacity:.2;transform:translateY(6px)}to{opacity:1;transform:none}}
+.v-q h3{font-size:1.125rem;font-weight:800;margin-block-end:8px;letter-spacing:0}
+.v-q li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-block-start:1px solid #e0ddd5}
+.v-q li b{display:block;font-weight:700}
+.v-q li span:not(.v-stamp){display:block;color:var(--muted);font-size:.9375rem}
+.v-q-parcel{margin-block-start:12px;padding:12px;background:var(--surface)}
+.v-bal li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-block-start:1px solid #e0ddd5}
+.v-bal-t{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-block-start:10px;padding:12px;background:var(--ink);color:var(--bg);font-weight:700}
+.v-bal-t b{font-size:1.25rem}
+
+/* ───────── 2. message to money: a slider drives both fields ───────── */
+.v-how-main{display:grid;grid-template-columns:1fr 1fr;min-block-size:min(78svh,820px)}
+.v-how-l{display:flex;flex-direction:column;justify-content:space-between;gap:48px;padding:clamp(40px,7vw,104px) var(--m)}
+.v-how-r{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:clamp(32px,5vw,72px) var(--m);background:var(--surface)}
+.v-stack{display:grid}
+.v-stack>*{grid-area:1/1;opacity:0;visibility:hidden;transform:translateY(14px);transition:opacity .28s,transform .5s var(--ease),visibility 0s .28s}
+.v-stack>[data-on]{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+.v-st-t h3{font-size:var(--s-l);font-weight:800;line-height:1.15;letter-spacing:-.02em}
+html[lang=ar] .v-st-t h3{line-height:1.4}
+.v-st-t p{margin-block-start:14px;max-inline-size:46ch;font-size:var(--s-b);line-height:1.55}
+.v-how-frags .v-st-f{display:flex;justify-content:center;align-items:center}
+.v-sample{font-size:var(--s-s);color:var(--muted);text-align:center}
+.v-how-ctl{padding:28px var(--m) 36px;display:grid;gap:16px}
+.v-range-wrap{position:relative;block-size:32px}
+.v-track{position:absolute;inset-inline:0;inset-block-start:12px;block-size:8px;background:var(--surface-2)}
+.v-track i{display:block;block-size:100%;inline-size:calc(16px + var(--t,0)*(100% - 32px));background:var(--ink);transition:inline-size .3s var(--ease)}
+.v-range{position:absolute;inset:0;inline-size:100%;block-size:32px;margin:0;background:transparent;appearance:none;-webkit-appearance:none;cursor:pointer}
+.v-range::-webkit-slider-runnable-track{block-size:32px;background:transparent}
+.v-range::-moz-range-track{block-size:32px;background:transparent}
+.v-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;inline-size:32px;block-size:32px;border:0;border-radius:0;background:var(--act)}
+.v-range::-moz-range-thumb{inline-size:32px;block-size:32px;border:0;border-radius:0;background:var(--act)}
+.v-names{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.v-names button{min-block-size:44px;padding:0;border:0;background:none;color:var(--muted);font:600 1rem/1.2 var(--f);text-align:start;cursor:pointer}
+.v-names button[aria-current]{color:var(--ink);font-weight:800}
+.v-names button:hover{color:var(--ink)}
+.no-js .v-how-main{grid-template-columns:1fr}
+.no-js .v-stack>*{grid-area:auto;opacity:1;visibility:visible;transform:none;margin-block-end:28px}
+.no-js .v-how-ctl{display:none}
+@media (max-width:759px){
+.v-how-main{grid-template-columns:1fr}
+.v-how-r{order:-1;min-block-size:46svh}
+.v-names{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ───────── 3. write it like your customer ───────── */
+.v-type{padding:var(--gap-s) var(--m)}
+.v-type .v-h3{font-weight:700}
+.v-input-row{margin-block-start:clamp(16px,2vw,28px)}
+.v-big-input{display:block;inline-size:100%;margin:0;padding:0 0 .08em;border:0;border-block-end:.1em solid var(--ink);border-radius:0;background:transparent;color:var(--ink);font:800 clamp(1.5rem,5.4vw,6rem)/1.3 var(--f);letter-spacing:-.04em;text-overflow:clip}
+html[lang=ar] .v-big-input{letter-spacing:0}
+.v-big-input:focus-visible{outline:3px solid var(--act);outline-offset:8px}
+.v-type-out{display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:40px clamp(32px,6vw,120px);margin-block-start:clamp(36px,4vw,64px);align-items:start}
+.v-type-out .v-card{padding:24px;border:1px solid #cfccc4;background:var(--paper)}
+.v-try{font-weight:700;margin-block-end:4px}
+.v-ex button{display:block;inline-size:100%;min-block-size:48px;padding:10px 0;border:0;background:none;color:var(--ink);font:600 var(--s-b)/1.4 var(--f);text-align:start;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:.25em;cursor:pointer}
+.v-ex button:hover{color:var(--act)}
+.v-note{margin-block-start:20px;max-inline-size:46ch;color:var(--muted);font-size:var(--s-s);line-height:1.55}
+@media (max-width:899px){.v-type-out{grid-template-columns:1fr}}
+
+/* ───────── 4. five jobs, one window: rows on one axis, a real picture in the margin ───────── */
+.v-feat{padding:var(--gap-s) var(--m)}
+.v-feat .v-h2{margin-inline-start:calc((100% + var(--col)) / 12 * 3);min-block-size:32svh;display:flex;align-items:center;max-inline-size:none}
+.v-rows{display:grid;gap:clamp(72px,9vw,140px);margin-block-start:clamp(32px,4vw,64px)}
+.v-row{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--col);align-items:start}
+.v-row-t{grid-column:4/span 4;display:grid;gap:14px;justify-items:start}
+.v-row-t h3{font-size:var(--s-l);font-weight:800;line-height:1.1;letter-spacing:-.025em}
+html[lang=ar] .v-row-t h3{line-height:1.35}
+.v-row-t p{max-inline-size:36ch;font-size:var(--s-b);line-height:1.55}
+.v-row-t .v-badges{margin:0}
+.v-pic{grid-column:8/span 5;display:grid;gap:10px;justify-items:end}
+.v-frame{display:block;inline-size:var(--w,100%);overflow:hidden;background:var(--paper)}
+.v-frame img{inline-size:100%;block-size:auto}
+.v-pic figcaption{inline-size:var(--w,100%);font-size:var(--s-s);color:var(--muted)}
+@supports (animation-timeline:view()){
+@media (prefers-reduced-motion:no-preference){
+.v-frame img{animation:v-drift linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
+}}
+@keyframes v-drift{from{transform:translateY(-5%) scale(1.1)}to{transform:translateY(5%) scale(1.1)}}
+@media (max-width:899px){
+.v-feat .v-h2{margin-inline-start:0;min-block-size:0;padding-block-end:24px}
+.v-row{grid-template-columns:1fr;row-gap:24px}
+.v-row-t,.v-pic{grid-column:1/-1}
+.v-pic{justify-items:start}
+.v-row:nth-child(even) .v-pic{justify-items:end}
+}
+
+/* ───────── 5. connections as one sentence ───────── */
+.v-proof{padding:var(--gap-s) var(--m)}
+.v-proof-s{font-size:clamp(1.5rem,2.7vw,2.25rem);font-weight:800;line-height:1.3;letter-spacing:-.02em}
+html[lang=ar] .v-proof-s{line-height:1.6}
+.v-proof-h{display:inline;font:inherit;letter-spacing:inherit;line-height:inherit}
+.v-n{display:inline-block;transition:color .45s}
+.is-cycling .v-n{color:#5f7e72}
+.is-cycling .v-n.is-lit{color:var(--ink)}
+.v-proof-note{margin-block-start:28px;font-size:var(--s-b);color:var(--muted);max-inline-size:60ch}
+.v-proof-note .v-text{color:var(--ink)}
+
+/* ───────── 6. one plan as a sentence ───────── */
+.v-price-s{padding:var(--gap-s) var(--m);min-block-size:80svh;display:flex;flex-direction:column;justify-content:space-between;gap:64px}
+.v-sentence-m{font-size:clamp(2.25rem,7.8vw,8.5rem);font-weight:800;line-height:1.04;letter-spacing:-.04em;text-wrap:balance}
+html[lang=ar] .v-sentence-m{line-height:1.35}
+.v-price{display:inline-block;padding:0 .14em;background:var(--field-ink);color:var(--field);line-height:1.04;white-space:nowrap}
+.v-price .num{display:inline-block;line-height:1.04}
+.v-price-row{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--col);row-gap:28px;align-items:end}
+.v-price-sup{grid-column:1/span 6;font-size:var(--s-b);line-height:1.55;max-inline-size:52ch}
+.v-price-act{grid-column:9/span 4;display:grid;gap:12px;justify-items:start}
+.v-price-s .v-text{color:var(--field-ink)}
+@media (max-width:899px){.v-price-sup,.v-price-act{grid-column:1/-1}}
+
+/* ───────── 7. questions, all open ───────── */
+.v-faq{padding:var(--gap-s) var(--m)}
+.v-faq-rows{display:grid;gap:clamp(44px,5vw,80px);margin-block-start:clamp(36px,5vw,72px)}
+.v-qa{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--col);row-gap:14px;align-items:start}
+.v-qa h3{grid-column:1/span 6;font-size:var(--s-l);font-weight:700;line-height:1.15;letter-spacing:-.02em;text-wrap:balance}
+html[lang=ar] .v-qa h3{line-height:1.4}
+.v-qa p{grid-column:8/span 5;font-size:var(--s-b);line-height:1.6;max-inline-size:46ch}
+@media (max-width:899px){.v-qa h3,.v-qa p{grid-column:1/-1}.v-qa h3{font-size:1.5rem}}
+
+/* ───────── 8. a sentence with a blank ───────── */
+.v-cta{padding:var(--gap-s) var(--m)}
+.v-cta-s{font-size:clamp(2.1rem,5.6vw,6.25rem);max-inline-size:none}
+.v-cta-s label{cursor:text}
+.v-cta-in{display:inline-block;vertical-align:baseline;inline-size:6.4em;max-inline-size:100%;block-size:1.14em;margin:0;padding:0 .22em;border:0;border-radius:0;background:var(--bg);color:var(--ink);font:inherit;letter-spacing:inherit;line-height:1}
+.v-cta-in::placeholder{color:var(--muted);opacity:1}
+.v-cta-in:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
+.v-cta-s .v-btn{display:inline-flex;vertical-align:baseline;min-block-size:0;block-size:1.14em;padding:0 .4em;font-size:inherit;font-weight:800;letter-spacing:inherit}
+.v-cta-after{margin-block-start:28px;font-size:var(--s-b);color:var(--muted)}
+@media (max-width:759px){.v-cta-in{inline-size:100%;display:block;margin-block:.12em}}
+
+/* ───────── footer: an invitation over a cropped name ───────── */
+.site-footer{position:relative;overflow:hidden;background:var(--field);color:var(--field-ink)}
+.foot-top{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--col);row-gap:40px;padding:clamp(72px,10vw,150px) var(--m) clamp(40px,5vw,72px)}
+.foot-inv{grid-column:1/span 7;display:grid;gap:24px;justify-items:start}
+.foot-h{font-size:clamp(2.25rem,5.2vw,5.75rem);font-weight:800;line-height:1.05;letter-spacing:-.04em;text-wrap:balance}
+html[lang=ar] .foot-h{line-height:1.3}
+.foot-h span{display:block}
+.foot-meta{color:var(--field-soft);font-size:var(--s-s)}
+.foot-contact{grid-column:10/span 3;display:grid;align-content:start;gap:2px;font-size:var(--s-b);font-weight:600}
+.foot-contact a{display:inline-flex;align-items:center;min-block-size:44px;color:var(--field-ink);text-decoration:none}
+.foot-contact a:hover{text-decoration:underline}
+.site-footer .foot-cols{padding:24px var(--m) 40px}
+.site-footer .foot-col h2{font-size:1.0625rem}
+.foot-note{padding:0 var(--m) 32px;max-inline-size:96ch;color:var(--field-soft);font-size:var(--s-s);line-height:1.55}
+.site-footer .foot-bottom{max-inline-size:none;padding:0 var(--m) 20px;color:var(--field-soft);font-size:var(--s-s)}
+.site-footer .langs a{color:var(--field-soft);background:none}
+.site-footer .langs a[aria-current]{color:var(--field-ink);background:none;text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:.5em;text-decoration-color:var(--act)}
+.site-footer .foot-word{display:block;container-type:inline-size;overflow:hidden;padding:0;line-height:0}
+.site-footer .fw{display:block;font-weight:900;font-size:calc((100cqw - 2px)/4.55);line-height:.74;letter-spacing:-.05em;color:var(--field-ink);white-space:nowrap;transform:translateY(24%)}
+@media (max-width:899px){.foot-inv,.foot-contact{grid-column:1/-1}}
+
+/* ───────── inner pages inherit the tokens; these keep them from looking like the old paper ───────── */
+.page-title{font-weight:800}
+.stamp,.badge{font-weight:700}
+
+@media (prefers-reduced-motion:reduce){
+.js-motion .v-r,.js-motion .v-up{opacity:1;transform:none;animation:none;transition:none}
+.v-stack>*{transition:none}
+}
