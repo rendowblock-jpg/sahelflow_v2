@@ -6,7 +6,7 @@
 // Matrix: home, product, pricing, download, help  x  en/fr/ar  x  360/768/1440  x  dark/light (CPU throttled 4x),
 // plus reduced-motion and scripts-off runs. Exit code 1 when any check fails.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -15,8 +15,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 if (!process.env.SF_LOCKED) {
-  // One browser at a time on this machine: re-run ourselves under the shared lock.
-  const r = spawnSync("flock", ["/tmp/eyes.lock", process.execPath, fileURLToPath(import.meta.url), ...args], { stdio: "inherit", env: { ...process.env, SF_LOCKED: "1", PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH ?? "/opt/agent-sandbox/tools/playwright-browsers" } });
+  // One browser at a time on this machine: re-run ourselves under the shared lock (skipped where flock does not exist, e.g. CI on macOS).
+  const env = { ...process.env, SF_LOCKED: "1" };
+  const sandboxBrowsers = "/opt/agent-sandbox/tools/playwright-browsers";
+  if (!env.PLAYWRIGHT_BROWSERS_PATH && existsSync(sandboxBrowsers)) env.PLAYWRIGHT_BROWSERS_PATH = sandboxBrowsers;
+  const self = [process.execPath, fileURLToPath(import.meta.url), ...args];
+  let r = spawnSync("flock", ["/tmp/eyes.lock", ...self], { stdio: "inherit", env });
+  if (r.error) r = spawnSync(self[0], self.slice(1), { stdio: "inherit", env });
   process.exit(r.status ?? 1);
 }
 const QUICK = args.includes("--quick");
@@ -24,8 +29,15 @@ const ALL = args.includes("--all");
 const given = args.find((a) => !a.startsWith("--"));
 const started = Date.now();
 
-const require = createRequire("/opt/agent-sandbox/workspace/wt-rel47/package.json");
-const { chromium } = require(require.resolve("@playwright/test"));
+// Playwright: the sandbox copy first, then the repository's own node_modules (CI), then $SF_PLAYWRIGHT.
+function loadPlaywright() {
+  for (const from of ["/opt/agent-sandbox/workspace/wt-rel47/package.json", join(here, "..", "..", "package.json"), import.meta.url]) {
+    try { const req = createRequire(from); return req(req.resolve("@playwright/test")); } catch { /* next */ }
+  }
+  if (process.env.SF_PLAYWRIGHT) return createRequire(import.meta.url)(process.env.SF_PLAYWRIGHT);
+  throw new Error("@playwright/test not found: run bun install, or set SF_PLAYWRIGHT to its path");
+}
+const { chromium } = loadPlaywright();
 
 let base = given?.replace(/\/$/, "");
 let server = null, temp = null;
