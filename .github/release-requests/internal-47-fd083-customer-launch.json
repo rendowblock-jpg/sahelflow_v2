@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.47 FD-083 customer launch publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.47",
+  "windowsMsiVersion": "1.0.0.47",
+  "channel": "internal",
+  "releaseMode": "customer-online",
+  "ownedHostSuffix": "sahelflow.com",
+  "authorityDecision": "FD-083",
+  "licenseServiceUrl": "https://license.sahelflow.com|https://activate.sahelflow.com",
+  "certification": {
+    "productSha": "8e0f98f4040d4bc9a48ab09c47bde2852d9a6318",
+    "phase5RunId": 41269727803,
+    "phase67RunId": 41269727853,
+    "ciRunId": 41269727805
+  },
+  "reason": "ADOPTED release authority — FD-083 (documentation/product/DECISIONS.md). One signed customer launch successor, app 1.0.0-internal.47 / MSI 1.0.0.47, mode customer-online, owned host sahelflow.com, built from the exact protected main tip after the Founder's directive of 2026-11-01 to finish the rest of the work that can be done and then make the release (Internal.47). Certification is recorded at the last product pull request's reviewed head 8e0f98f4040d4bc9a48ab09c47bde2852d9a6318: CI 41269727805, Phase 5 41269727803, Phase 6-7 41269727853. Paid licences stay offline-signed. This is a Founder-authorized launch release, not a Stable claim; it converts no ledger row. Published is not installed."
+}
