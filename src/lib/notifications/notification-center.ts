@@ -285,6 +285,7 @@ export async function listNotifications(
         ],
       }
     : {};
+  // Checked again at read time: a permission taken away later hides rows already copied to this member.
   const visibleEvent = visibleEventFilter(context, { shopId: context.shop.shopId });
   const where: Prisma.OperationalNotificationWhereInput = {
     recipientMemberId,
