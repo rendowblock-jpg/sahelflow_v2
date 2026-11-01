@@ -1,13 +1,33 @@
+# Cloudflare Workers static assets. Rules below ADD to each other (same header name = joined with ", "),
+# so a header is set in exactly one rule. The sha256 list of the CSP is rewritten by build.mjs (dist) and by
+# `node marketing/build.mjs --sync-headers` (this file); scripts/site-check.mjs fails when they differ.
+# 'inline-speculation-rules' stays for older Chromium builds; current Chromium needs the block's own hash (listed).
+
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-+piviWQyPu5FLdTsLVUaMlyagHaKttwGkneUuGBT5xg=' 'sha256-RWhmPLwAsLnkXoAlutlolD+CB8CqT//IV3DVfGhiudo='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-+piviWQyPu5FLdTsLVUaMlyagHaKttwGkneUuGBT5xg=' 'sha256-6SXC4bBUdzKRaOKoVSVC5Pkby9Xycm2KdRrN9sXwC8c=' 'sha256-MvvH2g4wCmQRLuFSjU3SdDcFeE+x6wucMfEdMB+g7Zw=' 'sha256-NaKtLXxWRk7HJt6/8VG6/Sz4obNgiZI+tvQfhcFVlb4=' 'sha256-RWhmPLwAsLnkXoAlutlolD+CB8CqT//IV3DVfGhiudo=' 'inline-speculation-rules'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 
+# Fingerprinted: every reference carries ?v=<content hash> (build.mjs), so a changed file is a new URL.
 /assets/*
-  Cache-Control: public, max-age=300, must-revalidate
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
 
 /img/*
-  Cache-Control: public, max-age=604800
+  Cache-Control: public, max-age=31536000, immutable
+
+# Pages, sitemap and robots are revalidated on every visit (the URL does not change when the content does).
+/ar/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/fr/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/en/*
+  Cache-Control: public, max-age=0, must-revalidate

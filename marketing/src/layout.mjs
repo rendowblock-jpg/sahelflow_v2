@@ -10,10 +10,16 @@ export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classLi
 import { esc, href, phoneDisplay, whatsappHref } from "./ui.mjs";
 
 const FONT_PRELOAD = { ar: ["plex-ar-600", "plex-ar-400"], fr: ["plex-lat-600", "plex-lat-400"], en: ["plex-lat-600", "plex-lat-400"] };
-const OG_LOCALE = { ar: "ar_DZ", fr: "fr_DZ", en: "en_US" };
+const OG_LOCALE = { ar: "ar_DZ", fr: "fr_FR", en: "en_US" };
 
-function head({ locale, path, title, description, preload, jsonLd = [] }) {
+/** Same-locale pages are prefetched when the visitor hovers a link (moderate). Chromium only applies inline rules when
+ *  the block's own sha256 is in script-src: with other hashes present it ignores 'inline-speculation-rules'. build.mjs adds the hash. */
+export const speculationRules = (locale) => JSON.stringify({ prefetch: [{ where: { href_matches: `/${locale}/*` }, eagerness: "moderate" }] });
+
+function head({ locale, pageId = "", path, title, description, preload, jsonLd = [] }) {
   const t = COPY[locale];
+  const missing = pageId === "404";
+  const isHome = pageId === "home";
   const canonical = `${SITE.origin}${href(locale, path)}`;
   const alternates = SITE.locales
     .map((l) => `<link rel="alternate" hreflang="${l}" href="${SITE.origin}${href(l, path)}">`)
@@ -41,7 +47,17 @@ function head({ locale, path, title, description, preload, jsonLd = [] }) {
     email: SITE.email,
     contactPoint: { "@type": "ContactPoint", contactType: "customer support", telephone: phoneDisplay().replace(/ /g, ""), availableLanguage: ["Arabic", "French", "English"] },
   };
-    return `<!doctype html>
+  const site = { "@context": "https://schema.org", "@type": "WebSite", name: "SahelFlow", url: `${SITE.origin}/`, inLanguage: locale };
+  const label = title.replace(/\s+[—|-]\s+SahelFlow$/, "");
+  const crumbItems = [{ name: "SahelFlow", item: `${SITE.origin}${href(locale)}` }];
+  if (path.startsWith("product/")) crumbItems.push({ name: t.nav.product, item: `${SITE.origin}${href(locale, "product")}` });
+  crumbItems.push({ name: label, item: canonical });
+  const crumbs = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: crumbItems.map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c.name, item: c.item })) };
+  const hasCrumbs = jsonLd.some((x) => x["@type"] === "BreadcrumbList");
+  // Home carries the site-wide entities once; inner pages carry their breadcrumb (plus their own FAQ). The 404 page carries none.
+  const blocks = missing ? [] : isHome ? [org, site, app, ...jsonLd] : [...(hasCrumbs ? [] : [crumbs]), ...jsonLd];
+  const speculation = speculationRules(locale);
+  return `<!doctype html>
 <html lang="${t.lang}" dir="${t.dir}" class="no-js">
 <head>
 <meta charset="utf-8">
@@ -51,6 +67,7 @@ function head({ locale, path, title, description, preload, jsonLd = [] }) {
 <meta name="theme-color" content="#f1f1ef" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
+${missing ? '<meta name="robots" content="noindex">' : `<meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="${canonical}">
 ${alternates}
 <link rel="alternate" hreflang="x-default" href="${SITE.origin}${href(SITE.defaultLocale, path)}">
@@ -60,15 +77,20 @@ ${alternates}
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${canonical}">
 <meta property="og:image" content="${SITE.origin}/img/og-${locale}.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(t.meta.home[0])}">
 <meta property="og:locale" content="${OG_LOCALE[locale]}">
-<meta name="twitter:card" content="summary_large_image">
+${SITE.locales.filter((l) => l !== locale).map((l) => `<meta property="og:locale:alternate" content="${OG_LOCALE[l]}">`).join("\n")}
+<meta name="twitter:card" content="summary_large_image">`}
 <link rel="icon" href="/img/mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/img/icon-180.png">
 ${FONT_PRELOAD[locale].map((f) => `<link rel="preload" href="/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>`).join("\n")}
 ${preload ? `<link rel="preload" as="image" href="${preload}" imagesrcset="${[480, 800, 1200].map((w) => `${preload.replace("-800.webp", `-${w}.webp`)} ${w}w`).join(", ")}" imagesizes="(min-width: 1100px) 840px, (min-width: 760px) 60vw, 100vw" fetchpriority="high">` : ""}
 <link rel="stylesheet" href="/assets/site.css?v=${SITE.asset}">
 <script>${HEAD_SCRIPT}</script>
-${[app, org, ...jsonLd].map((ld) => `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`).join("\n")}
+${missing ? "" : `<script type="speculationrules">${speculation}</script>`}
+${blocks.map((ld) => `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`).join("\n")}
 <script defer src="/assets/site.js?v=${SITE.asset}"></script>
 </head>`;
 }
