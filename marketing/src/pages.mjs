@@ -125,7 +125,7 @@ function homeHero(locale) {
 <div class="tile t-name rise" style="--i:0"><p class="name" dir="ltr">SahelFlow</p></div>
 <div class="tile t-line rise" style="--i:1"><h1 id="h1">${esc(h.h1)}</h1><p>${esc(h.sub)}</p></div>
 <div class="tile t-act rise" style="--i:2">${button(href(locale, "download"), t.home.hero.primary, { kind: "primary", size: "lg" })}<a class="text-link" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${esc(t.home.hero.secondary)}</a></div>
-<figure class="tile t-shot shutter"><span class="crop">${boardImg("inbox", locale, { sizes: "(min-width: 1100px) 50vw, 100vw", alt: h.alt, eager: true })}</span></figure>
+<div class="tile t-shot shutter"><div class="hero-stage" data-hero3d><span class="crop">${boardImg("inbox", locale, { sizes: "(min-width: 1100px) 50vw, 100vw", alt: h.alt, eager: true })}</span></div></div>
 <ul class="facts-row">${facts}</ul>
 </section>`;
 }
