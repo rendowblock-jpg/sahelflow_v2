@@ -64,6 +64,9 @@
     "documentation/security/PHASE4_THREAT_MODEL.md": {
       "maxBytes": 15200
     },
+    "documentation/security/RELAY_PHONE_THREAT_MODEL.md": {
+      "maxBytes": 22000
+    },
     "documentation/system/ARCHITECTURE.md": {
       "maxBytes": 51400
     },
