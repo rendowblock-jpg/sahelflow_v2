@@ -10,7 +10,7 @@ export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classLi
 import { esc, href, icon, phoneDisplay, whatsappHref } from "./ui.mjs";
 import { HOME3_COPY } from "./home3.mjs";
 
-const FONT_PRELOAD = { ar: ["cairo-arabic", "cairo-latin"], fr: ["cairo-latin"], en: ["cairo-latin"] };
+const FONT_PRELOAD = { ar: ["readex-arabic", "readex-latin"], fr: ["readex-latin"], en: ["readex-latin"] };
 const OG_LOCALE = { ar: "ar_DZ", fr: "fr_DZ", en: "en_US" };
 
 function head({ locale, path, title, description, preload, jsonLd = [], scripts = [] }) {
@@ -49,9 +49,9 @@ function head({ locale, path, title, description, preload, jsonLd = [], scripts 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<meta name="theme-color" content="#ecebe7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0b3b2a" media="(prefers-color-scheme: dark)">
-<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#060a09" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#060a09" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="dark">
 <link rel="canonical" href="${canonical}">
 ${alternates}
 <link rel="alternate" hreflang="x-default" href="${SITE.origin}${href(SITE.defaultLocale, path)}">
@@ -87,7 +87,7 @@ function header({ locale, pageId, path }) {
     .map((l) => `<a href="${href(l, path)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}>${esc(COPY[l].name)}</a>`)
     .join("");
   return `<a class="skip-link" href="#main">${esc(t.common.skip)}</a>
-<header class="top" data-header data-tone="bone">
+<header class="top" data-header>
 <div class="top-in">
 <a class="brand" href="${href(locale)}" aria-label="SahelFlow">${MARK}<span class="wm">SahelFlow</span></a>
 <details class="menu" data-menu>

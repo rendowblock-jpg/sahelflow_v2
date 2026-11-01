@@ -66,7 +66,7 @@ export function build(outDir = join(root, "dist")) {
   cpSync(join(root, "src", "site.js"), join(dist, "assets", "site.js"));
   cpSync(join(root, "src", "stage.js"), join(dist, "assets", "stage.js"));
   cpSync(join(root, "src", "map.js"), join(dist, "assets", "map.js"));
-  cpSync(join(root, "src", "home3.js"), join(dist, "assets", "home3.js"));
+  cpSync(join(root, "src", "home4.js"), join(dist, "assets", "home4.js"));
   cpSync(join(root, "src", "orderparse.mjs"), join(dist, "assets", "orderparse.js"));
 
   const urls = [];

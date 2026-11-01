@@ -176,7 +176,7 @@ const NB = "\u00a0";
 
 /* ───────────── fragments of the product (built in HTML from sample data; each root carries data-ui) ───────────── */
 
-function orderCard(c, data, { state = "call", id = "1042", live = false } = {}) {
+export function orderCard(c, data, { state = "call", id = "1042", live = false } = {}) {
   const k = c.card;
   const r = data;
   const productLine = r.product ? [`${r.qty} ×`, r.product.label, r.color?.label, r.size ? `· ${r.size}` : ""].filter(Boolean).join(" ") : "";
