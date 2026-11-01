@@ -199,7 +199,7 @@ async function visit(ctx, url, { throttle = false, scroll = true } = {}) {
   await page.waitForTimeout(250);
   const lcp = await page.evaluate(() => window.__lcp ?? 0).catch(() => 0);
   if (scroll) {
-    await page.evaluate(async () => { const h = document.documentElement.scrollHeight; for (let y = 0; y < h; y += innerHeight * 0.8) { scrollTo(0, y); await new Promise((r) => setTimeout(r, 40)); } scrollTo(0, h); const t0 = Date.now(); while (Date.now() - t0 < 2500 && [...document.images].some((i) => !i.complete)) await new Promise((r) => setTimeout(r, 60)); scrollTo(0, 0); });
+    await page.evaluate(async () => { const h = document.documentElement.scrollHeight; for (let y = 0; y < h; y += innerHeight * 0.8) { scrollTo({ top: y, behavior: "instant" }); await new Promise((r) => setTimeout(r, 40)); } scrollTo({ top: h, behavior: "instant" }); const t0 = Date.now(); while (Date.now() - t0 < 2500 && [...document.images].some((i) => !i.complete)) await new Promise((r) => setTimeout(r, 60)); scrollTo({ top: 0, behavior: "instant" }); });
     await page.waitForTimeout(100);
   }
   const cls = await page.evaluate(() => window.__cls ?? 0).catch(() => 0);
