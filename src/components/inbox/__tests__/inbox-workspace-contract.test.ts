@@ -220,7 +220,11 @@ describe("Inbox Class-AAA operations desk contract", () => {
 
   it("keeps inbound recovery visible but bounded away from normal conversation work", () => {
     const recovery = read("src/components/inbox/whatsapp-ingress-recovery-dock.tsx");
-    expect(recovery).toContain('new Set(["retrying", "quarantined", "dead_letter"])');
+    // The three states now live in one list the server is also asked for (see recovery-load).
+    expect(recovery).toContain("new Set<string>(RECOVERY_STATUSES)");
+    expect(read("src/lib/inbox/recovery-load.ts")).toContain(
+      '["retrying", "quarantined", "dead_letter"] as const',
+    );
     expect(recovery).toContain("RECOVERY_POLL_MS");
     expect(recovery).toContain('document.visibilityState === "visible"');
     expect(recovery).toContain('fetch("/api/whatsapp/inbound/recovery"');
