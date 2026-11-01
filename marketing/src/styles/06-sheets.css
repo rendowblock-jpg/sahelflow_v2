@@ -1,50 +1,60 @@
-/* Inner pages: the same board, one tile per block. No rules, no outlines. */
-.sheet-head{padding:var(--gap) var(--pad) 0;max-inline-size:var(--container);margin-inline:auto}
-.sheet-in{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--gap);padding:0!important}
-.sheet-copy{padding:clamp(16px,3vw,40px);border-radius:var(--r);background:var(--surface-2)}
-.sheet-head .page-lead{max-inline-size:60ch}
-.sheet-head .cta,.sheet-sec .cta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-block-start:20px}
-.sheet-art{min-inline-size:0}
-.page-title{font-size:clamp(1.4375rem,.9rem + 2.4vw,3rem);line-height:1;letter-spacing:-.04em}
-html[lang=ar] .page-title{line-height:1.3;letter-spacing:0}
-.sheet-sec{padding-block:var(--gap) 0}
-.sheet-sec>.container{padding:clamp(20px,3vw,32px) clamp(16px,3vw,32px);border-radius:var(--r);background:var(--surface)}
-.sheet-sec h2{margin-block-end:12px;font-size:clamp(1.5rem,1rem + 2vw,2.5rem)}
-.sheet-sec .lead{max-inline-size:62ch;margin-block-end:14px}
-.sheet-sec .pgrid{display:grid;gap:var(--gap);margin-block-end:var(--gap)}
-.two{display:grid;gap:var(--gap)}
-.ruled{display:grid;gap:4px}
-.ruled>li{display:grid;grid-template-columns:minmax(0,1fr);gap:4px 14px;padding:16px 18px;border-radius:var(--r);background:var(--surface-2)}
-.ruled h3{font-size:var(--t-lead)}
-.ruled .btn{justify-self:start;margin-block-start:6px}
-.nn-list>li,.facts>li{grid-template-columns:auto minmax(0,1fr)}
-.nn{display:inline-grid;place-items:center;inline-size:28px;block-size:28px;color:var(--ink)}
-.nn svg{inline-size:24px;block-size:24px}
-.facts .stamp{align-self:start;justify-self:start}
-.cmp{display:grid;gap:4px}
-.cmp-h,.cmp-r{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;padding:12px 16px;border-radius:var(--r);background:var(--surface-2)}
-.cmp-h{font-weight:600}
-.cmp-r h3{grid-column:1/-1;font:600 1rem/1.4 var(--f);color:var(--muted)}
-.cmp-r p{display:flex;gap:8px;align-items:flex-start}
-.cmp-r svg{inline-size:18px;block-size:18px;flex:none;margin-block-start:.35em}
-.crumbs{display:flex;flex-wrap:wrap;gap:4px 8px;margin-block-end:12px;font-size:var(--t-small);color:var(--muted)}
-.crumbs a{display:inline-flex;align-items:center;justify-content:center;min-block-size:var(--hit);min-inline-size:var(--hit);padding-inline:6px}
-.crumb-sep{inline-size:12px;block-size:12px;align-self:center}
-.mark-yes,.mark-no,.mark-partial{display:inline-grid;place-items:center;inline-size:22px;block-size:22px;border-radius:var(--r);flex:none;margin-block-start:.2em}
-.mark-yes{background:var(--ok-bg);color:var(--ok-ink)}
-.mark-no{background:var(--surface);color:var(--muted)}
-.mark-partial{background:var(--info-bg);color:var(--info-ink)}
-.mark svg{inline-size:14px;block-size:14px}
-.callbook{display:grid;gap:4px}
-.mrow{display:grid;grid-template-columns:minmax(72px,auto) 1fr;gap:0 16px;padding:14px 18px;border-radius:var(--r);background:var(--surface-2)}
-.mrow>.mg{font-weight:600;color:var(--accent)}
-.mrow .tx{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
-@media (min-width:760px){
-.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-.sheet-sec .pgrid{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+/* Inner pages, part 1: the board. 12 columns, 8 px gaps, flat tiles, one radius. Prefix i = inner (ib board, it tile). */
+.ib{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--gap);max-inline-size:var(--container);margin-inline:auto;padding:var(--gap) var(--pad) 0}
+.ib [hidden]{display:none!important}
+.it{grid-column:1/-1;min-inline-size:0;padding:clamp(16px,2.2vw,32px);border-radius:var(--r);background:var(--surface)}
+.it-2{background:var(--surface-2)}
+.it-acc{background:var(--accent);color:var(--accent-ink)}
+.it-acc .btn{background:var(--bg);color:var(--ink)}
+.it-acc .btn:hover{background:var(--ink);color:var(--bg)}
+.it h3{font-size:var(--t-lead);line-height:1.15}
+.it p+p{margin-block-start:10px}
+.it p{max-inline-size:68ch}
+
+/* Column spans: one column on phones, two from 600 px (a lone last tile takes the row), the real spans from 900 px. */
+@media (min-width:600px){
+.ic3,.ic4,.ic5,.ic6{grid-column:span 6}
+.ic3:last-child:nth-child(even),.ic4:last-child:nth-child(even){grid-column:1/-1}
 }
-@media (min-width:1100px){
-.sheet-head.has-art .sheet-in{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
-.sheet-art{display:flex}
-.sheet-art .app-window{flex:1}
+@media (min-width:900px){
+.ic3{grid-column:span 3}.ic4{grid-column:span 4}.ic5{grid-column:span 5}.ic6{grid-column:span 6}.ic7{grid-column:span 7}.ic8{grid-column:span 8}
+.ic3:last-child:nth-child(even),.ic4:last-child:nth-child(even){grid-column:auto}
+.ic4:last-child:nth-child(even){grid-column:span 4}
+}
+.ic12{grid-column:1/-1!important}
+
+/* Heading between boards: sits on the ground, no fill. */
+.ih{grid-column:1/-1;padding:clamp(32px,5vw,72px) 4px 8px}
+.ih h2{font-size:clamp(1.75rem,1.2rem + 2.2vw,3rem);line-height:1}
+.ih p{max-inline-size:62ch;margin-block-start:12px}
+
+/* Opening tile: h1 sized by its own tile width, so it holds two lines in every language. */
+.icopy{container-type:inline-size;display:flex;flex-direction:column;gap:16px;background:var(--surface-2);padding:clamp(20px,3vw,40px)}
+.ih1{font-size:clamp(1.75rem,7.2cqi,4rem);line-height:.98;letter-spacing:-.04em;font-weight:600;text-wrap:balance}
+.ilede{font-size:var(--t-lead);line-height:1.3;max-inline-size:42ch}
+html[lang=ar] .ilede{line-height:1.55}
+.iact{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-block-start:auto;padding-block-start:8px}
+.ifine{font-size:var(--t-small)}
+.ishot{display:flex;flex-direction:column;padding:0;overflow:hidden;margin:0}
+.ishot img{inline-size:100%;block-size:auto}
+.icap{margin:0;padding:8px 12px;color:var(--muted);font-size:var(--t-small);line-height:1.4}
+@media (min-width:900px){
+.has-art .icopy{grid-column:span 6}
+.has-art .ishot{grid-column:span 6}
+.idl.has-art .icopy{grid-column:span 7}
+.idl.has-art .ishot{grid-column:span 5}
+}
+
+/* Close tile: the one bronze tile of a page. */
+.iclose{display:grid;gap:24px;align-items:end;padding:clamp(24px,4vw,56px)}
+.iclose h2{font-size:clamp(1.75rem,1.1rem + 2.6vw,3.5rem);line-height:1;max-inline-size:20ch}
+.iclose p{margin-block-start:12px;max-inline-size:52ch}
+.iclose-act{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.iclose-act .ifine{flex-basis:100%;margin:0}
+@media (min-width:900px){.iclose{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}.iclose-act{justify-content:flex-end}}
+.iend{padding-block-end:var(--gap)}
+
+/* Motion: tiles in the first screens rise 16 px once, 50 ms apart. CSS only; transform and opacity. */
+@media (prefers-reduced-motion:no-preference){
+@keyframes ib-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.in-rise{animation:ib-rise 480ms cubic-bezier(.16,1,.3,1) both;animation-delay:calc(var(--i,0)*50ms)}
 }
