@@ -140,7 +140,7 @@ html[lang=ar] .pnum{letter-spacing:0;line-height:1.3}
 .t-name{order:4;min-block-size:0;padding:10px 14px}
 .t-act{padding:14px 16px}
 .t-shot{order:3;padding:0}
-.t-fact:nth-child(n){grid-column:span 1;padding:10px 14px}
+.t-fact:nth-child(n){grid-column:span 1;padding:8px 14px}
 .t-head{padding:16px}
 .t-head p{font-size:var(--t-body)}
 .orow{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"who item sum" "place place status";align-items:center;gap:2px 10px;min-block-size:64px;padding:6px 14px}

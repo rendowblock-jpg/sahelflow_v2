@@ -52,8 +52,8 @@ html[lang=ar] .h3-steps strong{line-height:1.5}
   .h3-steps{padding:4px 20px 20px}
 }
 @media (max-width:759px){
-  .h3-stage{aspect-ratio:1/.74;--s:min(calc(94cqw/485),calc(96cqh/(183 + 3*(var(--gu) + var(--tn)))))}
-  .h3-steps{grid-template-columns:repeat(2,minmax(0,1fr));padding:2px 14px 14px;gap:8px 14px}
+  .h3-stage{aspect-ratio:1/.7;--s:min(calc(94cqw/485),calc(96cqh/(183 + 3*(var(--gu) + var(--tn)))))}
+  .h3-steps{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 14px 10px;gap:6px 14px}
   .h3-steps li{font-size:.875rem}
   .h3-steps strong{font-size:.9375rem}
   /* On a phone the sentence of each step stays in the page for screen readers; the sighted list shows the four titles. */
