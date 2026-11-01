@@ -224,5 +224,5 @@ html[dir=rtl] .sc-names .bar{transform-origin:100% 50%}
 .sc-names button[aria-current]~.bar{animation:barfill var(--dwell,3800ms) linear forwards}
 .screens.sc-still .sc-names button[aria-current]~.bar{animation:none}
 }
-.no-js .sc-fig:not(.is-on){display:none}
-@media (prefers-reduced-motion:reduce){.sc-fig:not(.is-on){display:none}}
+.no-js .sc-fig:not(.is-on){display:none;opacity:1}
+@media (prefers-reduced-motion:reduce){.sc-fig:not(.is-on){display:none;opacity:1}}
