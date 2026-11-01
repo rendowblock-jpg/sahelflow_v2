@@ -11,7 +11,7 @@ import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 
 const ROOT = resolve(__dirname, "../../../..");
 const read = (file: string) => readFileSync(resolve(ROOT, file), "utf8");
-const LOCALES = ["ar", "fr", "en"] as const;
+type Lang = "ar" | "fr" | "en";
 
 describe("Orders page card label", () => {
   it("says what the card counts in each language", () => {
@@ -21,7 +21,7 @@ describe("Orders page card label", () => {
   });
 
   it("has the same keys in ar, fr and en", () => {
-    const keys = (locale: (typeof LOCALES)[number]) => Object.keys(NUMBERS_LABELS_RUNTIME[locale]).sort();
+    const keys = (locale: Lang) => Object.keys(NUMBERS_LABELS_RUNTIME[locale]).sort();
     expect(keys("fr")).toEqual(keys("en"));
     expect(keys("ar")).toEqual(keys("en"));
   });
