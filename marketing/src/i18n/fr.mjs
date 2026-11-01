@@ -80,7 +80,7 @@ export default {
     inbox: {
       name: "Boîte WhatsApp",
       short: "Tous vos chats dans une boîte d'équipe, commandes extraites par l'IA",
-      title: "Votre WhatsApp, transformé en bureau des commandes.",
+      title: "WhatsApp devient votre bureau des commandes.",
       lead: "Chaque conversation arrive dans une boîte que toute l'équipe partage. Sélectionnez un message ou cinq, et l'IA prépare la commande — nom, téléphone, wilaya, produits — prête à être vérifiée.",
       points: ["Commande préparée à partir de plusieurs messages", "Photos, vidéos, fichiers et vocaux", "Conversations réparties dans l'équipe"],
       sections: [
@@ -97,7 +97,7 @@ export default {
     orders: {
       name: "Commandes et confirmation",
       short: "La file de confirmation vous dit qui appeler d'abord",
-      title: "Chaque commande sur un seul parcours — de nouvelle à livrée.",
+      title: "Chaque commande, de nouvelle à livrée.",
       lead: "Nouvelle, confirmée, préparée, expédiée, livrée : chaque commande suit un seul parcours, avec tout son historique. La file de confirmation classe qui appeler d'abord, et le stock se réserve et se libère tout seul.",
       points: ["Stock réservé à la confirmation", "Historique complet de chaque changement", "Recherche instantanée partout"],
       sections: [
@@ -114,7 +114,7 @@ export default {
     delivery: {
       name: "Livraison",
       short: "Expédiez et suivez vos colis, livreur par livreur",
-      title: "Expédiez avec les livreurs algériens sans quitter la commande.",
+      title: "Expédiez sans quitter la commande.",
       lead: "Créez le colis et suivez-le depuis SahelFlow. Les connexions Yalidine, ZR Express, EcoTrack et Maystro sont en test. Les tarifs par wilaya (les 11 nouvelles wilayas prennent pour l'instant le tarif de leur ancienne wilaya), à domicile ou au bureau.",
       points: ["Le statut se met à jour seul", "Tarifs par wilaya · domicile et bureau", "Bordereaux exportés en un clic"],
       sections: [
@@ -131,7 +131,7 @@ export default {
     risk: {
       name: "Risque et retours",
       short: "Sachez quelle commande reviendra avant de l'expédier",
-      title: "Sachez quelle commande reviendra — avant de l'expédier.",
+      title: "Quelle commande reviendra ? Sachez-le avant.",
       lead: "Avant l'expédition, SahelFlow vous dit quelles commandes méritent un appel de confirmation de plus, et pourquoi. Puis il vous montre où vous perdez vraiment : par wilaya, par produit et par canal.",
       points: ["Une liste « à vérifier avant d'expédier »", "Les pertes de retours en dinars", "Une liste noire des clients qui refusent"],
       sections: [
@@ -165,7 +165,7 @@ export default {
     automations: {
       name: "Automatisations",
       short: "Messages et relances qui tournent pendant que vous dormez",
-      title: "Des automatisations qui travaillent pendant que vous dormez.",
+      title: "Des automatisations qui travaillent la nuit.",
       lead: "« Quand une commande arrive, envoie un message de confirmation au bout de dix minutes — et si le client ne répond pas, rappelle-le-moi. » Construisez vos scénarios visuellement ou partez d'un modèle.",
       points: ["Modèles pensés pour le vendeur algérien", "Attente et revérification avant chaque étape", "Un journal clair de chaque exécution"],
       sections: [
@@ -199,7 +199,7 @@ export default {
     agents: {
       name: "Assistant IA",
       short: "Interrogez votre boutique ; validez chaque changement",
-      title: "Un assistant qui connaît votre boutique — et demande avant d'agir.",
+      title: "Un assistant qui demande avant d'agir.",
       lead: "Demandez « Quels produits vont bientôt manquer ? » ou « Annule la commande ORD-0003 ». L'assistant travaille sur vos vraies données, et chaque changement sensible attend votre accord.",
       points: ["Des réponses tirées de vos vraies données", "Aucun changement sans votre accord", "Comprend images et captures d'écran"],
       sections: [
@@ -216,7 +216,7 @@ export default {
     team: {
       name: "Équipe et rôles",
       short: "Propriétaire, manager, opérateur, lecteur — ou les droits exacts que vous choisissez",
-      title: "Faites venir toute l'équipe. Décidez exactement ce que chacun peut faire.",
+      title: "Toute l'équipe, chacun avec ses droits.",
       lead: "Invitez jusqu'à dix membres, chacun avec son identifiant et son PIN. Choisissez un rôle — manager, opérateur, lecteur — ou cochez les droits exacts. Modifiez ou retirez un accès en un clic, effet immédiat.",
       points: ["Jusqu'à 10 membres avec la licence", "Rôles ou droits sur mesure", "Chaque action porte le nom de son auteur"],
       sections: [
@@ -236,7 +236,7 @@ export default {
     starting: {
       name: "Vendre seul",
       short: "D'une page Facebook et d'un téléphone à une boutique organisée",
-      title: "D'un téléphone plein de chats à une boutique qui tourne seule.",
+      title: "Des chats en vrac à une boutique qui tourne.",
       lead: "Vous vendez sur Facebook, Instagram et WhatsApp, et chaque commande vit dans votre tête, vos chats et un cahier. SahelFlow réunit tout au même endroit, sur votre PC — en un après-midi.",
       pains: [
         ["Des commandes éparpillées dans les chats", "Le nom dans un message, la wilaya dans un autre, la taille dans un vocal."],
@@ -270,7 +270,7 @@ export default {
     brands: {
       name: "Plusieurs boutiques",
       short: "Des marques séparées, des données séparées, une installation",
-      title: "Plusieurs marques. Une installation. Rien de mélangé.",
+      title: "Plusieurs marques. Une installation. Zéro mélange.",
       lead: "Gérez jusqu'à cinq boutiques avec la licence — et jusqu'à dix avec les boutiques supplémentaires — chacune avec ses commandes, son stock, sa vitrine et ses chiffres, depuis le même PC.",
       pains: [
         ["Des marques mélangées dans une feuille", "Le stock et l'argent de deux boutiques dans les mêmes colonnes."],
@@ -287,7 +287,7 @@ export default {
     online: {
       name: "Boutiques en ligne",
       short: "Shopify, YouCan, WooCommerce, landing pages et feuilles",
-      title: "Vos commandes web et WhatsApp, dans une seule file.",
+      title: "Commandes web et WhatsApp, dans une seule file.",
       lead: "Votre boutique SahelFlow, vos fichiers Excel et vos commandes WhatsApp arrivent dans la même file de confirmation. Les connexions Shopify, YouCan, WooCommerce et Google Sheets sont en test.",
       pains: [
         ["Trois tableaux de bord par jour", "Shopify ici, la feuille là, WhatsApp sur le téléphone."],

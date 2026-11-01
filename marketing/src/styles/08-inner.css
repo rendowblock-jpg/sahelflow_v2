@@ -144,3 +144,25 @@ html[lang=ar] .idoc p{line-height:1.9}
 .itoc a{display:flex;align-items:center;min-block-size:var(--hit);padding-block:4px;font-size:1rem;line-height:1.3;text-decoration:none}
 .itoc a:hover{text-decoration:underline}
 }
+
+/* Phones: shorter pages (bullets of the how-it-works rows and the short line of a related-module tile stay on tablets and up). */
+@media (max-width:599px){
+.irow .ichecks{display:none}
+.ilink-s .ilink-t p{display:none}
+.ih{padding-block-start:24px}
+.ih h2{font-size:1.625rem}
+.icopy{gap:12px}
+.ilede{font-size:1.125rem}
+.iq>summary{min-block-size:52px;padding-block:10px}
+.icontact{min-block-size:0}
+.iday .dayline{font-size:1.25rem}
+.ibenefit{margin:0;font-size:1.125rem}
+.iint p{display:none}
+.iint p.iaside{display:block}
+.iclose{gap:16px;padding:20px 16px}
+.iclose h2{font-size:1.75rem}
+.iprice{margin-block:8px 0}
+}
+@media (max-width:599px){
+.ic3:has(>.ibullet:not(.ibullet-l)),.ic4:has(>.ibullet:not(.ibullet-l)){display:flex;gap:12px;align-items:flex-start}
+}

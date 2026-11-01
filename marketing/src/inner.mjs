@@ -218,7 +218,7 @@ ${board(`${head(y.how)}${c.sections.map(([k, v, bullets], i) => tile(`ic12 irow$
 ${key === "inbox" ? noteBoard(locale) : ""}
 ${nope ? board(`${head(x.nopeTitle)}${tile("ic12 it-2", nope)}`) : ""}
 ${board(`${head(t.common.questions)}${faqItems(c.faq, `faq-${key}`)}`)}
-${board(`${head(t.common.related)}${related.map((k) => modTile(locale, k, null, "ic4")).join("")}`)}
+${board(`${head(t.common.related)}${related.map((k) => modTile(locale, k, null, "ic4 ilink-s")).join("")}`)}
 ${close(locale)}`;
   return shell({ locale, pageId: `module:${key}`, path: `product/${key}`, title: `${c.name} — SahelFlow`, description: c.lead, preload: null, jsonLd: [crumbs, faqJsonLd(c.faq)] }, body);
 }
@@ -235,7 +235,7 @@ export function solutionPage(locale, key) {
 ${board(`${head(y.pains)}${s.pains.map(([k, v], i) => tile(spans(s.pains.length)[i], `<h3>${esc(k)}</h3><p>${esc(v)}</p>`)).join("")}`)}
 ${board(`${head(y.steps)}${s.steps.map(([k, v], i) => tile(`ic12 irow${i % 2 ? " it-2" : ""}`, `<h3>${esc(k)}</h3><div><p>${esc(v)}</p></div>`)).join("")}`)}
 ${s.modules.includes("inbox") ? noteBoard(locale) : ""}
-${board(`${head(t.common.allModules)}${s.modules.map((k, i) => modTile(locale, k, null, i < s.modules.length ? spans(s.modules.length)[i] : "ic4")).join("")}`)}
+${board(`${head(t.common.allModules)}${s.modules.map((k, i) => modTile(locale, k, null, `${spans(s.modules.length)[i]} ilink-s`)).join("")}`)}
 ${close(locale)}`;
   return shell({ locale, pageId: `solution:${key}`, path: `solutions/${key}`, title: `${s.name} — SahelFlow`, description: s.lead }, body);
 }

@@ -97,7 +97,7 @@ export default {
     orders: {
       name: "Orders & confirmation",
       short: "A confirmation queue that tells you who to call first",
-      title: "Every order on one clear track — from new to delivered.",
+      title: "Every order on one track, new to delivered.",
       lead: "New, confirmed, prepared, shipped, delivered: every order follows one path with a full history. The confirmation queue ranks who to call first, and stock is reserved and released for you.",
       points: ["Stock reserved on confirmation", "A full history of every change", "Instant search across everything"],
       sections: [
@@ -131,7 +131,7 @@ export default {
     risk: {
       name: "Risk & returns",
       short: "Know which order will come back before you ship it",
-      title: "Know which order will come back — before you ship it.",
+      title: "Know which order comes back before it ships.",
       lead: "Before you ship, SahelFlow tells you which orders deserve an extra confirmation call, and why. Then it shows you where you really lose: by wilaya, by product and by channel.",
       points: ["A “check before shipping” list", "Return losses in dinars", "A blocklist for refusing customers"],
       sections: [
@@ -199,7 +199,7 @@ export default {
     agents: {
       name: "AI assistant",
       short: "Ask your shop anything; approve every change",
-      title: "An assistant that knows your shop — and asks before acting.",
+      title: "A shop assistant that asks before it acts.",
       lead: "Ask “Which products are about to run out?” or “Cancel order ORD-0003”. The assistant works on your real data, and every sensitive change waits for your approval.",
       points: ["Answers from your real data", "No change without your approval", "Understands images and screenshots"],
       sections: [
@@ -216,7 +216,7 @@ export default {
     team: {
       name: "Team & roles",
       short: "Owner, manager, operator, viewer — or exactly the rights you choose",
-      title: "Bring your whole team. Decide exactly what each person can do.",
+      title: "Bring your team. Set what each person can do.",
       lead: "Invite up to ten team members, each with their own login and PIN. Pick a role — manager, operator, viewer — or tick the exact permissions. Change or remove access in one click, effective immediately.",
       points: ["Up to 10 members with the licence", "Roles or exact permissions", "Every action carries its author's name"],
       sections: [
@@ -270,7 +270,7 @@ export default {
     brands: {
       name: "Several shops",
       short: "Separate brands, separate data, one installation",
-      title: "Several brands. One installation. Nothing mixed up.",
+      title: "Several brands, one install, nothing mixed up.",
       lead: "Run up to five shops with the licence — and up to ten with extra shops — each with its own orders, stock, storefront and numbers, from the same PC.",
       pains: [
         ["Brands mixed in one sheet", "Stock and money from two shops in the same columns."],
@@ -287,7 +287,7 @@ export default {
     online: {
       name: "Online stores",
       short: "Shopify, YouCan, WooCommerce, landing pages and sheets",
-      title: "Your web orders and your WhatsApp orders, in one queue.",
+      title: "Web and WhatsApp orders, in one queue.",
       lead: "Your SahelFlow store, Excel files and WhatsApp orders arrive in one confirmation queue. The Shopify, YouCan, WooCommerce and Google Sheets connections are in testing.",
       pains: [
         ["Three dashboards a day", "Shopify here, the sheet there, WhatsApp on the phone."],

@@ -29,7 +29,7 @@
 
 /* Opening tile: h1 sized by its own tile width, so it holds two lines in every language. */
 .icopy{container-type:inline-size;display:flex;flex-direction:column;gap:16px;background:var(--surface-2);padding:clamp(20px,3vw,40px)}
-.ih1{font-size:clamp(1.75rem,7.2cqi,4rem);line-height:.98;letter-spacing:-.04em;font-weight:600;text-wrap:balance}
+.ih1{font-size:clamp(1.75rem,6.8cqi,4rem);line-height:.98;letter-spacing:-.04em;font-weight:600;text-wrap:balance}
 .ilede{font-size:var(--t-lead);line-height:1.3;max-inline-size:42ch}
 html[lang=ar] .ilede{line-height:1.55}
 .iact{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-block-start:auto;padding-block-start:8px}
