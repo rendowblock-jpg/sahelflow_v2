@@ -419,6 +419,10 @@ body[data-voice] .sf-sticky .sf-cta--bar{min-width:max-content;padding-inline:14
 body .sf-pill input:checked+span{border:3px solid Highlight;padding-inline:18.5px}
 body .sf-mode input:checked+.sf-mode-in{border:3px solid Highlight;padding:10.5px 12.5px}
 .sf-cta::after{display:none}
+.sf-badge,.sf-badge--dark{color:CanvasText!important;border:1px solid CanvasText}
+.sf-btn,.sf-cta,.sf-notice-link,.px-cta,.px-cta>span{background-color:ButtonFace!important;color:ButtonText!important}
+.sf-lang-i{color:LinkText!important}
+.sf-lang-i[aria-current]{color:CanvasText!important;text-decoration:underline}
 }
 
 /* A photo that fails to load shows its alt text on a plain surface, not the browser's broken-image icon. */
