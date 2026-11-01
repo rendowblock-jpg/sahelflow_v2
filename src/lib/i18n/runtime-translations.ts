@@ -9,6 +9,7 @@ import { getShippingListRuntimeTranslation } from "@/lib/i18n/shipping-list-runt
 import { getInboxHealthRuntimeTranslation } from "@/lib/i18n/inbox-health-runtime";
 import { getInboxHealthViewRuntimeTranslation } from "@/lib/i18n/inbox-health-view-runtime";
 import { getAiApprovalArgsRuntimeTranslation } from "@/lib/i18n/ai-approval-args-runtime";
+import { getAiApprovalToolArgsRuntimeTranslation } from "@/lib/i18n/ai-approval-tool-args-runtime";
 import { getHeldSendDiscardRuntimeTranslation } from "@/lib/i18n/held-send-discard-runtime";
 import { getPhoneAppTestingRuntimeTranslation } from "@/lib/i18n/phone-app-testing-runtime";
 import { getExtractionTruthRuntimeTranslation } from "@/lib/i18n/extraction-truth-runtime";
@@ -183,6 +184,7 @@ export function getRuntimeTranslation(
     getOrdersPhoneHintRuntimeTranslation(locale, key) ??
     getShippingListRuntimeTranslation(locale, key) ??
     getAiApprovalArgsRuntimeTranslation(locale, key) ??
+    getAiApprovalToolArgsRuntimeTranslation(locale, key) ??
     getHeldSendDiscardRuntimeTranslation(locale, key) ??
     getPhoneAppTestingRuntimeTranslation(locale, key) ??
     getInboxHealthRuntimeTranslation(locale, key) ??

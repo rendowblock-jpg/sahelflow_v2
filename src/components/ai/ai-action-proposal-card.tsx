@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 
 import { AiApprovalOrderArgs } from "@/components/ai/ai-approval-order-args";
+import { AiApprovalToolArgs, readToolArguments } from "@/components/ai/ai-approval-tool-args";
+import { sanitizeApprovalText } from "@/components/ai/approval-display-text";
 import type { AiActionProposalHandle } from "@/components/ai/ai-workspace-types";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +122,8 @@ function summaryValue(
   if (typeof value === "string" && ORDER_STATUS_SUMMARY_FIELDS.has(key)) {
     return localizeOrderStatus(value, translate);
   }
-  if (typeof value === "string") return value;
+  // Hidden and direction-changing characters are written out, not obeyed.
+  if (typeof value === "string") return sanitizeApprovalText(value).text;
   return null;
 }
 
@@ -198,7 +201,10 @@ export function AiActionProposalCard({
       "expired",
       "rejected",
     ].includes(effectiveStatus);
-  const summary = Object.entries(proposal.summary).flatMap(([key, value]) => {
+  // The exact arguments of every action but create_order; when they are all
+  // there, the shorter generic list below would only repeat them.
+  const exactRows = readToolArguments(proposal.toolName, proposal.summary);
+  const summary = exactRows !== null ? [] : Object.entries(proposal.summary).flatMap(([key, value]) => {
     if (!SUMMARY_LABELS[key]) return [];
     const formatted = summaryValue(key, value, locale, t);
     return formatted === null ? [] : [{ key, value: formatted }];
@@ -253,6 +259,9 @@ export function AiActionProposalCard({
 
       <div className="space-y-3.5 p-4">
         <AiApprovalOrderArgs summary={proposal.summary} locale={locale} t={t} />
+        {exactRows !== null ? (
+          <AiApprovalToolArgs rows={exactRows} toolName={proposal.toolName} locale={locale} t={t} />
+        ) : null}
         {summary.length > 0 ? (
           <dl className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
             {(fieldsExpanded ? summary : summary.slice(0, 8)).map((field) => (
