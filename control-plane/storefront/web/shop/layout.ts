@@ -43,7 +43,8 @@ export function renderAnnouncement(ctx: Ctx): string {
   // Three copies per set and two sets: the track slides by half its width, so the loop never shows a gap.
   // Only the first copy is read by assistive technology; with reduced motion only the first copy is shown.
   const first = `<span${dir}>${text}</span><span${dir} aria-hidden="true">${text}</span><span${dir} aria-hidden="true">${text}</span>`;
-  return `<div class="sf-ann" role="note"><div class="sf-ann-track"><div class="sf-ann-set">${first}</div><div class="sf-ann-set" aria-hidden="true">${first}</div></div></div>`;
+  // A named region, so the strip is inside a landmark; the name is the Studio's own word for this section.
+  return `<div class="sf-ann" role="region" aria-label="${esc(t("storefront.studio.section.announcement"))}"><div class="sf-ann-track"><div class="sf-ann-set">${first}</div><div class="sf-ann-set" aria-hidden="true">${first}</div></div></div>`;
 }
 
 /** "store name · SahelFlow". When the name is Arabic on a page that is not, only the name carries the tag, not the words next to it. */
