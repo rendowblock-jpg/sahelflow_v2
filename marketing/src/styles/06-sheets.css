@@ -1,6 +1,6 @@
 /* Inner pages: the same board, one tile per block. No rules, no outlines. */
 .sheet-head{padding:var(--gap) var(--pad) 0;max-inline-size:var(--container);margin-inline:auto}
-.sheet-in{display:grid;gap:var(--gap);padding:0!important}
+.sheet-in{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--gap);padding:0!important}
 .sheet-copy{padding:clamp(16px,3vw,40px);border-radius:var(--r);background:var(--surface-2)}
 .sheet-head .page-lead{max-inline-size:60ch}
 .sheet-head .cta,.sheet-sec .cta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-block-start:20px}
