@@ -23,6 +23,7 @@ import { getDashboardStatesRuntimeTranslation } from "@/lib/i18n/dashboard-state
 import { getMoneyNamesRuntimeTranslation } from "@/lib/i18n/money-names-runtime";
 import { getOrdersRowLabelsRuntimeTranslation } from "@/lib/i18n/orders-row-labels-runtime";
 import { getNumbersLabelsRuntimeTranslation } from "@/lib/i18n/numbers-labels-runtime";
+import { getRuntimeHealthRuntimeTranslation } from "@/lib/i18n/runtime-health-runtime";
 import { getAiQuotaRuntimeTranslation } from "@/lib/i18n/ai-quota-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
@@ -204,6 +205,7 @@ export function getRuntimeTranslation(
     getMoneyNamesRuntimeTranslation(locale, key) ??
     getOrdersRowLabelsRuntimeTranslation(locale, key) ??
     getNumbersLabelsRuntimeTranslation(locale, key) ??
+    getRuntimeHealthRuntimeTranslation(locale, key) ??
     getAiQuotaRuntimeTranslation(locale, key) ??
     getDataTableRuntimeTranslation(locale, key) ??
     getCustomersProductsStatesRuntimeTranslation(locale, key) ??

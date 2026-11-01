@@ -22,11 +22,14 @@ export const NOTIFICATION_KINDS = [
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 export type NotificationSeverity = "info" | "warning" | "critical";
 export type NotificationAction = "orders.read" | "conversations.read" | "settings.read";
+/** A second permission a kind needs on top of requiredAction (the stored column holds one action only). */
+export type NotificationExtraAction = "deliveries.read";
 
 export interface KindSpec {
   readonly kind: NotificationKind;
   readonly eventType: string;
   readonly requiredAction: NotificationAction;
+  readonly alsoRequires?: NotificationExtraAction;
   /** Fixed in-app destination. whatsapp.received adds the conversation id. */
   readonly link: string;
   readonly severity: NotificationSeverity;
@@ -70,7 +73,7 @@ export const KIND_SPECS: Record<NotificationKind, KindSpec> = {
     sentence: "You have {count} orders to confirm.",
   }),
   "delivery.failed": mk("delivery.failed", {
-    requiredAction: "orders.read", link: "/deliveries", severity: "warning",
+    requiredAction: "orders.read", alsoRequires: "deliveries.read", link: "/deliveries", severity: "warning",
     bucketMinutes: null, counted: true, groupable: true, expiresDays: 90,
     sentence: "A delivery could not be completed. Open SahelFlow to see which.",
   }),
