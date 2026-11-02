@@ -418,9 +418,9 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             faint: 0x5C665D,
             border: (0x446F47, 18),
             edge: (0xFFFFFF, 90),
-            sky: (0x61C649, 0x02942E),
+            sky: (0x319212, 0x02942E),
             deep: (0x03773B, 0x014D2B),
-            ghost: (0x014D2B, 10),
+            ghost: (0x014D2B, 48),
             dot: 0x02942E,
             accent: 0x02942E,
         },
@@ -433,9 +433,9 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             faint: 0x62626E,
             border: (0x5F5C8F, 18),
             edge: (0xFFFFFF, 90),
-            sky: (0x9BA0FF, 0x7661E3),
+            sky: (0x7275CF, 0x7661E3),
             deep: (0x684BB6, 0x472F74),
-            ghost: (0x472F74, 10),
+            ghost: (0x472F74, 47),
             dot: 0x7661E3,
             accent: 0x7661E3,
         },
@@ -448,9 +448,9 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             faint: 0x57676A,
             border: (0x186F7D, 18),
             edge: (0xFFFFFF, 90),
-            sky: (0x41BECB, 0x018A9C),
+            sky: (0x0A8B97, 0x018A9C),
             deep: (0x046F84, 0x064758),
-            ghost: (0x064758, 10),
+            ghost: (0x064758, 48),
             dot: 0x018A9C,
             accent: 0x018A9C,
         },
@@ -463,9 +463,9 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             faint: 0x6C6158,
             border: (0x865733, 18),
             edge: (0xFFFFFF, 90),
-            sky: (0xEE922C, 0xB66001),
+            sky: (0xB76C10, 0xB66001),
             deep: (0x9B4800, 0x662D0B),
-            ghost: (0x662D0B, 10),
+            ghost: (0x662D0B, 47),
             dot: 0xB66001,
             accent: 0xB66001,
         },
@@ -479,8 +479,8 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             border: (0xA3C9AA, 14),
             edge: (0xC8E8CD, 10),
             sky: (0x7AEC7B, 0x22BD5C),
-            deep: (0x049255, 0x025636),
-            ghost: (0x7AEC7B, 10),
+            deep: (0x15AD67, 0x00935F),
+            ghost: (0x7AEC7B, 34),
             dot: 0x7AEC7B,
             accent: 0x22BD5C,
         },
@@ -494,8 +494,8 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             border: (0xB9B9E4, 14),
             edge: (0xDADAFF, 10),
             sky: (0xC3C9FF, 0x968DFE),
-            deep: (0x7C67C9, 0x4D397A),
-            ghost: (0xC3C9FF, 10),
+            deep: (0x9985EA, 0x886FC6),
+            ghost: (0xC3C9FF, 35),
             dot: 0xC3C9FF,
             accent: 0x968DFE,
         },
@@ -509,8 +509,8 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             border: (0x91CBC6, 14),
             edge: (0xB9E9E5, 10),
             sky: (0x2FECD8, 0x00B6AF),
-            deep: (0x088C8D, 0x045256),
-            ghost: (0x2FECD8, 10),
+            deep: (0x2BA6A7, 0x128D94),
+            ghost: (0x2FECD8, 34),
             dot: 0x2FECD8,
             accent: 0x00B6AF,
         },
@@ -524,8 +524,8 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             border: (0xD7B894, 14),
             edge: (0xF4D9BB, 10),
             sky: (0xFFC165, 0xD78C1D),
-            deep: (0xAC6818, 0x6A3A07),
-            ghost: (0xFFC165, 10),
+            deep: (0xCB853C, 0xB26E2F),
+            ghost: (0xFFC165, 35),
             dot: 0xFFC165,
             accent: 0xD78C1D,
         },
@@ -3781,6 +3781,96 @@ mod handoff_tests {
 mod tests {
     use super::*;
     use std::fs;
+
+    // F-0004 (Founder's lab run 41407479045): the mark was the dimmest thing on
+    // the card (2.4:1 empty, 2.9:1 filled, against 18:1 for the name), and in the
+    // light theme the empty upper arc was 1.1:1, i.e. not there. These tests pin
+    // what the S must achieve against what is really behind it: the card's own
+    // gradient plus the glow, mixed in plain sRGB the way `blend_glow` mixes it.
+
+    /// The colour behind the S at `progress`, `fraction` of the glow's radius away from its centre.
+    fn behind_the_mark(p: Palette, progress: f32, fraction: f32) -> u32 {
+        let t = MARK_CENTER_Y / CARD_HEIGHT;
+        let channel_at = |shift: u32| {
+            let top = ((p.card_top >> shift) & 0xFF) as f32;
+            let bottom = ((p.card_bottom >> shift) & 0xFF) as f32;
+            (top + (bottom - top) * t).round() as u32
+        };
+        let card = 0xFF00_0000 | (channel_at(16) << 16) | (channel_at(8) << 8) | channel_at(0);
+        let strength = glow_alpha(progress, p.dark) * glow_profile(fraction);
+        over(with_alpha(p.glow, strength), card)
+    }
+
+    /// Every place the S can be seen against: no glow yet, half, full; at the
+    /// glow's centre and at the edge of the S (about a quarter of its radius).
+    fn backdrops(p: Palette) -> Vec<u32> {
+        let mut all = Vec::new();
+        for progress in [0.0_f32, 0.5, 1.0] {
+            for fraction in [0.0_f32, 0.25] {
+                all.push(behind_the_mark(p, progress, fraction));
+            }
+        }
+        all
+    }
+
+    /// WCAG asks 3:1 for a graphic that carries meaning; the unfilled S carries
+    /// "this is where it will fill", so it gets a little less.
+    const UNFILLED_MIN: f32 = 2.0;
+    const FILLED_MIN: f32 = 3.0;
+
+    #[test]
+    fn the_unfilled_s_can_be_seen_in_every_look() {
+        for appearance in looks() {
+            let p = palette(appearance);
+            for backdrop in backdrops(p) {
+                let seen = contrast(over(p.ghost, backdrop), backdrop);
+                assert!(
+                    seen >= UNFILLED_MIN,
+                    "{appearance:?}: the unfilled S is {seen:.2}:1 on {backdrop:06X}, under {UNFILLED_MIN}:1"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_filled_s_clears_three_to_one_in_every_look() {
+        for appearance in looks() {
+            let p = palette(appearance);
+            for backdrop in backdrops(p) {
+                for (name, color) in [
+                    ("sky start", p.sky.0),
+                    ("sky end", p.sky.1),
+                    ("deep start", p.deep.0),
+                    ("deep end", p.deep.1),
+                ] {
+                    let seen = contrast(color, backdrop);
+                    assert!(
+                        seen >= FILLED_MIN,
+                        "{appearance:?}: the {name} of the filled S is {seen:.2}:1 on {backdrop:06X}, under {FILLED_MIN}:1"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_filled_s_is_clearly_brighter_than_the_unfilled_s() {
+        // Otherwise the fill (the progress) cannot be read.
+        for appearance in looks() {
+            let p = palette(appearance);
+            for backdrop in backdrops(p) {
+                let empty = contrast(over(p.ghost, backdrop), backdrop);
+                let full = [p.sky.0, p.sky.1, p.deep.0, p.deep.1]
+                    .into_iter()
+                    .map(|color| contrast(color, backdrop))
+                    .fold(f32::MAX, f32::min);
+                assert!(
+                    full >= empty * 1.25,
+                    "{appearance:?}: filled {full:.2}:1 is not clearly above unfilled {empty:.2}:1 on {backdrop:06X}"
+                );
+            }
+        }
+    }
 
     // F-0003 (Founder's lab run 41407479045): every curve of the mark was a
     // staircase, because GDI+ regions and clips ignore the anti-aliasing mode.
