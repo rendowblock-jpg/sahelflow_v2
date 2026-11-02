@@ -887,12 +887,30 @@ fn sqlite_runtime_facts(connection: &Connection) -> rusqlite::Result<(String, St
     Ok((sqlite_version, journal_mode))
 }
 
+/// Lab finding F-0001 (clean Windows install of Internal.47: 42-62 s inside the migration step). A fresh
+/// install migrates two EMPTY databases, the first shop and the shop template, and SQLite's defaults
+/// synced every one of the ~830 statements. A database that holds nothing yet has nothing to lose, and
+/// an interrupted run is covered by the verified pre-migration snapshot plus journal (or, for the staged
+/// template, by discarding the staged file). The callers sync the finished file once
+/// (`sync_sqlite_database`) before they record it as migrated, so the end state is as durable as before.
+/// Returns whether the relaxed mode was applied; a database with any table keeps full durability.
+fn relax_durability_for_empty_database(connection: &Connection) -> rusqlite::Result<bool> {
+    let objects: i64 =
+        connection.query_row("SELECT COUNT(*) FROM sqlite_master", [], |row| row.get(0))?;
+    if objects > 0 {
+        return Ok(false);
+    }
+    connection.execute_batch("PRAGMA synchronous = OFF; PRAGMA journal_mode = MEMORY;")?;
+    Ok(true)
+}
+
 fn migrate_database(
     database_path: &Path,
     migrations: &[Migration],
 ) -> Result<(), Box<dyn std::error::Error>> {
     let connection = Connection::open(database_path)?;
     connection.busy_timeout(std::time::Duration::from_secs(10))?;
+    relax_durability_for_empty_database(&connection)?;
     ensure_migration_table(&connection)?;
     let mut applied = applied_migrations(&connection)?;
     if applied.is_empty() && database_has_business_schema(&connection)? {
@@ -2606,6 +2624,80 @@ mod tests {
         assert_eq!(tables, 1, "the rebuilt template has no schema");
         // Windows refuses to delete a database file that is still open.
         drop(connection);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    // F-0001: a clean install migrated two empty databases one synced statement at a time (42-62 s).
+    // An EMPTY database holds nothing that could be lost, so it is built without per-statement syncs.
+    #[test]
+    fn empty_database_is_built_without_per_statement_syncs() {
+        let root = test_root("empty-relaxed");
+        fs::create_dir_all(&root).expect("create test root");
+        let connection = Connection::open(root.join("empty.db")).expect("open empty database");
+        assert!(relax_durability_for_empty_database(&connection).expect("relax"));
+        let synchronous: i64 = connection
+            .query_row("PRAGMA synchronous", [], |row| row.get(0))
+            .expect("synchronous");
+        let journal: String = connection
+            .query_row("PRAGMA journal_mode", [], |row| row.get(0))
+            .expect("journal mode");
+        assert_eq!(synchronous, 0, "an empty database must not sync every statement");
+        assert_eq!(journal, "memory");
+        drop(connection);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    // The other side of the rule: a database that already holds a table keeps full durability.
+    #[test]
+    fn database_that_holds_data_keeps_full_durability() {
+        let root = test_root("data-strict");
+        fs::create_dir_all(&root).expect("create test root");
+        let connection = Connection::open(root.join("data.db")).expect("open database");
+        connection
+            .execute_batch(
+                "CREATE TABLE \"Customer\" (id TEXT PRIMARY KEY); INSERT INTO \"Customer\" VALUES ('c1');",
+            )
+            .expect("seed");
+        assert!(!relax_durability_for_empty_database(&connection).expect("relax"));
+        let synchronous: i64 = connection
+            .query_row("PRAGMA synchronous", [], |row| row.get(0))
+            .expect("synchronous");
+        assert_ne!(synchronous, 0, "a database with data must keep synchronous writes");
+        drop(connection);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    // Characterization over the REAL packaged migrations: the faster build must produce exactly the
+    // schema a statement-by-statement migration produces, an intact file, and the normal journal mode.
+    #[test]
+    fn template_built_without_syncs_has_the_same_schema_as_a_strict_migration() {
+        let root = test_root("template-equivalence");
+        let migrations =
+            load_migrations(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../prisma/migrations"))
+                .expect("real migrations");
+        assert!(migrations.len() >= 47, "expected the real migration set");
+        create_shop_template(&root, &migrations, &"c".repeat(64)).expect("template");
+        let template = Connection::open(root.join("system/shop-template.db")).expect("open template");
+        let strict = Connection::open(root.join("strict.db")).expect("open strict reference");
+        ensure_migration_table(&strict).expect("migration table");
+        for migration in &migrations {
+            strict.execute_batch(&migration.sql).expect("strict apply");
+        }
+        assert!(
+            schema_signature(&template).expect("template schema")
+                == schema_signature(&strict).expect("strict schema"),
+            "the template schema differs from a statement-by-statement migration"
+        );
+        let integrity: String = template
+            .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+            .expect("integrity");
+        assert_eq!(integrity, "ok");
+        let journal: String = template
+            .query_row("PRAGMA journal_mode", [], |row| row.get(0))
+            .expect("journal mode");
+        assert_eq!(journal, "delete", "the persisted template must not keep the build-time journal mode");
+        drop(template);
+        drop(strict);
         fs::remove_dir_all(root).expect("remove test root");
     }
 
