@@ -77,7 +77,7 @@ ${scripts.map((f) => `<script defer src="/assets/${f}?v=${SITE.asset}"></script>
 
 /* ───────────────────────────── chrome ───────────────────────────── */
 
-const MARK = `<svg class="mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><rect x="7" y="8" width="18" height="6" rx="2" fill="var(--accent-ink)"/><rect x="7" y="18" width="11" height="6" rx="2" fill="var(--accent-ink)"/></svg>`;
+const MARK = `<img class="mark" src="/img/logo-96.png" srcset="/img/logo-48.png 1x, /img/logo-96.png 2x, /img/logo-192.png 3x" width="29" height="40" alt="" decoding="async">`;
 
 function header({ locale, pageId, path }) {
   const t = COPY[locale];
@@ -120,6 +120,7 @@ function footer(locale) {
   return `<footer class="site-footer" data-tone="green">
 <div class="foot-top">
 <div class="foot-inv">
+<img class="foot-logo" src="/img/logo-192.png" srcset="/img/logo-96.png 1x, /img/logo-192.png 2x, /img/logo-384.png 3x" width="52" height="72" alt="" decoding="async">
 <p class="foot-h" role="heading" aria-level="2"><span>${esc(f.a)}</span> <span>${esc(f.b)}</span></p>
 <a class="v-btn v-btn-on" href="${href(locale, "download")}">${icon("download")}<span>${esc(t.downloadPage.button)}</span></a>
 <p class="foot-meta">${esc(f.meta)}</p>

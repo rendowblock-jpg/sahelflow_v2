@@ -60,7 +60,7 @@ export function build(outDir = join(root, "dist")) {
   mkdirSync(join(dist, "assets"), { recursive: true });
   cpSync(join(root, "static"), dist, { recursive: true });
   // The 1600 px originals only feed marketing/scripts/make-screens.mjs; pages use the 480/800/1200 copies.
-  for (const f of readdirSync(join(dist, "img", "screens"))) if (/^[a-z]+-(ar|fr|en)\.webp$/.test(f)) rmSync(join(dist, "img", "screens", f));
+  for (const f of readdirSync(join(dist, "img", "screens"))) if (/^[a-z]+-(ar|fr|en)\.webp$/.test(f) && !/^(inbox|queue|risk|delivery|analytics)-/.test(f)) rmSync(join(dist, "img", "screens", f)); // the 1600 px originals of the five screens on the home page stay: the zoom viewer shows them at full size
   const styles = join(root, "src", "styles");
   write("assets/site.css", readdirSync(styles).filter((f) => f.endsWith(".css")).sort().map((f) => readFileSync(join(styles, f), "utf8")).join("\n"));
   cpSync(join(root, "src", "site.js"), join(dist, "assets", "site.js"));

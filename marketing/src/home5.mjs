@@ -1,0 +1,382 @@
+// The home page, v4 "Signal": dark, luminous, in motion.
+// A 3D isometric lane that carries one order (message > order > parcel > cash), a pinned story over the real screens,
+// five jobs as a lit grid, a live order reader, one price, and a closing sentence with a blank in it.
+// Facts come from claims.mjs / model.mjs / config.mjs and the vetted copy in home3.mjs; only the connective words are new here.
+import { COPY } from "./i18n/index.mjs";
+import { integrationStatus } from "./claims.mjs";
+import { BRAND_NAMES, INTEGRATIONS, PACKAGE } from "./model.mjs";
+import { SITE } from "./config.mjs";
+import { fmtMoney, readOrder } from "./orderparse.mjs";
+import { HOME3_COPY as V, homeFaq, orderCard } from "./home3.mjs";
+import { ARRIVE, TAGS, heroScene } from "./scene4.mjs";
+import { esc, href, icon, licencePricing, money, screenImg, shotUrl, statusBadge, whatsappHref } from "./ui.mjs";
+
+const NB = "\u00a0";
+
+const N = {
+  ar: {
+    zoom: "كبّر", close: "إغلاق",
+    hero: {
+      l1: "من رسالة واتساب", l2: "إلى آخر دينار.", alt: "رسالة واتساب تتحول إلى طلبية ثم طرد ثم مال على مسار مضيء",
+      lead: "كل طلبية تبدأ برسالة، وتنتهي بمال عند شركة توصيل. SahelFlow يربط الطرفين: يحوّل الرسائل إلى طلبيات، يقول لك بمن تتصل قبل أن تشحن، ويحسب ما حصّلته كل شركة وما بقي لك عندها.",
+    },
+    pain: {
+      h2: "تبيع بالدفع عند الاستلام؟ تعرف هذه اللحظات.",
+      items: [
+        ["الطلبية التي ضاعت", "كتبها الزبون في واتساب، ثم غرقت بين مئة رسالة أخرى."],
+        ["الطرد الذي عاد", "شحنتَ دون مكالمة تأكيد، فعاد الطرد وبقيت رسوم التوصيل عليك."],
+        ["المال الذي لا تعرف أين هو", "تسأل شركة التوصيل: كم لي عندكم؟ فلا أحد يملك الرقم بالضبط."],
+      ],
+      close: "SahelFlow صُنع لهذه اللحظات الثلاث.",
+    },
+    story: {
+      h2: "طلبية واحدة، من الرسالة إلى المال",
+      steps: [
+        ["الرسالة", "الزبون يكتب، وأنت لا تعيد الكتابة", "زبائنك يكتبون بالدارجة أو الفرنسية أو العربية. تختار المحادثة فيصوغ SahelFlow الطلبية: الاسم والهاتف والولاية والمنتجات. وتراجعها قبل أن تعتمدها."],
+        ["الطلبية", "كل شيء في بطاقة واحدة", "المنتج والمقاس واللون، الهاتف والولاية، سعر التوصيل والمبلغ المطلوب عند الاستلام. وما ينقص يُعلَّم لك لتسأل عنه الزبون."],
+        ["الطرد", "اتصل أولاً، ثم اشحن", "طابور التأكيد يرتّب لك بمن تتصل أولاً، ولماذا. وبعد التأكيد تُنشئ الطرد لشركة التوصيل من داخل التطبيق (الربط مع الشركات قيد الاختبار)."],
+        ["المال", "اعرف أين مالك", "ما حصّلته كل شركة توصيل، وما اقتطعته، وما بقي لك عندها. وربحك الحقيقي بعد رسوم التوصيل والمرتجعات."],
+      ],
+    },
+    feat: {
+      h2: "كل ما بين الرسالة والمال، في نافذة واحدة.",
+      rows: {
+        inbox: ["رسائل واتساب تصير طلبيات", "كل المحادثات في صندوق واحد يعمل منه فريقك كله. اختر رسالة أو خمساً، فيصوغ الذكاء الاصطناعي الطلبية لتراجعها. وأي ردّ يقترحه لا يُرسَل إلا بعد موافقتك."],
+        orders: ["اعرف بمن تتصل أولاً", "كل طلبية تمرّ بمسار واحد واضح: جديدة، مؤكدة، مجهّزة، مشحونة، مسلَّمة، مع سجلّ كامل. طابور التأكيد يرتّب الزبائن حسب الأولوية، والمخزون يُحجز ويُحرَّر عنك."],
+        risk: ["شاهد الخسارة قبل أن تشحن", "قبل الشحن ينبّهك SahelFlow إلى الطلبيات التي تستحق مكالمة تأكيد إضافية، ويقول لك السبب. وبعدها يريك أين تخسر فعلاً: بالولاية، وبالمنتج، وبالقناة."],
+        delivery: ["طرودك من داخل التطبيق", "أنشئ الطرد وتابعه دون أن تغادر SahelFlow. الربط مع Yalidine وZR Express وEcoTrack وMaystro قيد الاختبار. وأسعار الولايات للباب أو للمكتب جاهزة (الولايات الإحدى عشرة الجديدة تستعمل مؤقتاً سعر ولايتها القديمة)."],
+        accounting: ["اعرف ما لك عند كل شركة توصيل", "ما حصّلته كل شركة، وما اقتطعته، وما يجب أن يصلك. ربحك الحقيقي بعد رسوم التوصيل والمرتجعات، لا تقديراً."],
+      },
+    },
+    nums: { h: "ما يشمله الترخيص", labels: ["متاجر مشمولة", "أعضاء فريق", "سنوات من التحديثات", "أيام تجربة مجانية"] },
+    price: {
+      h2: "ادفع مرة واحدة.", sub: "بلا اشتراك شهري. الترخيص لك.",
+      incl: (P) => [`${P.shops} متاجر`, `${P.team} أعضاء فريق`, `${P.years} سنوات من التحديثات`, "كل الوحدات التسع", `تجربة مجانية ${P.trial} أيام`],
+    },
+  },
+  fr: {
+    zoom: "Agrandir", close: "Fermer",
+    hero: {
+      l1: "Du message WhatsApp", l2: "au dernier dinar.", alt: "Un message WhatsApp devient commande, colis puis argent sur une voie lumineuse",
+      lead: "Chaque commande commence par un message et finit par de l'argent chez un livreur. SahelFlow relie les deux : il transforme les messages en commandes, vous dit qui appeler avant d'expédier, et calcule ce que chaque livreur a encaissé et vous doit encore.",
+    },
+    pain: {
+      h2: "Vous vendez en paiement à la livraison ? Vous connaissez ces moments.",
+      items: [
+        ["La commande perdue", "Le client l'a écrite sur WhatsApp, puis elle s'est noyée parmi cent autres messages."],
+        ["Le colis revenu", "Vous avez expédié sans appeler : le colis est revenu et les frais de livraison restent pour vous."],
+        ["L'argent introuvable", "Vous demandez au livreur combien il vous doit, et personne n'a le chiffre exact."],
+      ],
+      close: "SahelFlow est fait pour ces trois moments.",
+    },
+    story: {
+      h2: "Une commande, du message à l'argent",
+      steps: [
+        ["Message", "Le client écrit, vous ne retapez rien", "Vos clients écrivent en darija, en français ou en arabe. Vous choisissez la conversation et SahelFlow prépare la commande : nom, téléphone, wilaya, produits. Vous la vérifiez avant de la valider."],
+        ["Commande", "Tout tient dans une seule fiche", "Produit, taille, couleur, téléphone, wilaya, frais de livraison et montant à encaisser. Ce qui manque est signalé pour que vous le demandiez au client."],
+        ["Colis", "Appelez d'abord, expédiez ensuite", "La file de confirmation classe qui appeler en premier, et pourquoi. Une fois confirmée, vous créez le colis pour votre livreur depuis l'appli (les connexions livreurs sont en test)."],
+        ["Argent", "Sachez où est votre argent", "Ce que chaque livreur a encaissé, ce qu'il a retenu et ce qu'il vous doit encore. Et votre vrai bénéfice, après frais de livraison et retours."],
+      ],
+    },
+    feat: {
+      h2: "Tout ce qu'il y a entre le message et l'argent, dans une seule fenêtre.",
+      rows: {
+        inbox: ["Les messages WhatsApp deviennent des commandes", "Toutes les conversations dans une seule boîte, partagée par votre équipe. Choisissez un message ou cinq : l'IA prépare la commande pour que vous la vérifiiez. Et aucune réponse qu'elle propose ne part sans votre accord."],
+        orders: ["Sachez qui appeler en premier", "Chaque commande suit un chemin clair : nouvelle, confirmée, préparée, expédiée, livrée, avec tout l'historique. La file de confirmation classe vos clients par priorité, et le stock est réservé et libéré pour vous."],
+        risk: ["Voyez la perte avant d'expédier", "Avant l'envoi, SahelFlow signale les commandes qui méritent un appel de confirmation de plus, et dit pourquoi. Ensuite il vous montre où vous perdez vraiment : par wilaya, par produit, par canal."],
+        delivery: ["Vos colis, depuis l'appli", "Créez le colis et suivez-le sans quitter SahelFlow. Les connexions Yalidine, ZR Express, EcoTrack et Maystro sont en test. Les tarifs par wilaya, à domicile ou au bureau, sont prêts (les 11 nouvelles wilayas utilisent pour l'instant le tarif de leur ancienne wilaya)."],
+        accounting: ["Sachez ce que chaque livreur vous doit", "Ce que chaque livreur a encaissé, ce qu'il a retenu et ce qui doit vous revenir. Le vrai bénéfice après livraison et retours, pas une estimation."],
+      },
+    },
+    nums: { h: "Ce que comprend la licence", labels: ["boutiques incluses", "membres d'équipe", "ans de mises à jour", "jours d'essai gratuit"] },
+    price: {
+      h2: "Payez une fois.", sub: "Pas d'abonnement mensuel. La licence est à vous.",
+      incl: (P) => [`${P.shops} boutiques`, `${P.team} membres d'équipe`, `${P.years} ans de mises à jour`, "Les neuf modules", `${P.trial} jours d'essai gratuit`],
+    },
+  },
+  en: {
+    zoom: "Enlarge", close: "Close",
+    hero: {
+      l1: "From a WhatsApp message", l2: "to the last dinar.", alt: "A WhatsApp message becomes an order, a parcel and then cash along a lit lane",
+      lead: "Every order starts as a message and ends as cash sitting with a courier. SahelFlow connects the two: it turns messages into orders, tells you who to call before you ship, and shows what each courier collected and still owes you.",
+    },
+    pain: {
+      h2: "Selling cash on delivery? You know these moments.",
+      items: [
+        ["The order that got lost", "The customer wrote it on WhatsApp, then it sank under a hundred other messages."],
+        ["The parcel that came back", "You shipped without a call, it returned, and the delivery fee is still yours."],
+        ["The money nobody can find", "You ask the courier how much they owe you, and nobody has the exact number."],
+      ],
+      close: "SahelFlow is built for those three moments.",
+    },
+    story: {
+      h2: "One order, from message to money",
+      steps: [
+        ["Message", "The customer writes. You retype nothing.", "Your customers write in Darija, French or Arabic. Pick the conversation and SahelFlow drafts the order: name, phone, wilaya, products. You check it before you approve it."],
+        ["Order", "Everything on one card", "Product, size, colour, phone, wilaya, delivery fee and the amount to collect. Anything missing is flagged so you can ask the customer."],
+        ["Parcel", "Call first, then ship", "The confirmation queue ranks who to call first, and why. Once confirmed, you create the parcel for your courier from inside the app (courier connections are in testing)."],
+        ["Cash", "Know where your money is", "What each courier collected, what they kept and what still reaches you. And your real profit after delivery fees and returns."],
+      ],
+    },
+    feat: {
+      h2: "Everything between the message and the money, in one window.",
+      rows: {
+        inbox: ["WhatsApp messages become orders", "Every conversation in one inbox your whole team works from. Pick one message or five and the AI drafts the order for you to review. Any reply it suggests is only sent after you approve it."],
+        orders: ["Know who to call first", "Every order follows one clear path: new, confirmed, prepared, shipped, delivered, with a full history. The confirmation queue ranks customers by priority, and stock is reserved and released for you."],
+        risk: ["See the loss before you ship", "Before you ship, SahelFlow flags the orders worth one more confirmation call and tells you why. Then it shows where you really lose: by wilaya, by product, by channel."],
+        delivery: ["Your parcels, from inside the app", "Create the parcel and follow it without leaving SahelFlow. The Yalidine, ZR Express, EcoTrack and Maystro connections are in testing. Rates by wilaya, to the door or to the desk, are ready (the 11 new wilayas use their old wilaya's rate for now)."],
+        accounting: ["Know what each courier owes you", "What each courier collected, what they kept and what should reach you. Real profit after delivery fees and returns, not an estimate."],
+      },
+    },
+    nums: { h: "What the licence includes", labels: ["shops included", "team members", "years of updates", "free trial days"] },
+    price: {
+      h2: "Pay once.", sub: "No monthly subscription. The licence is yours.",
+      incl: (P) => [`${P.shops} shops`, `${P.team} team members`, `${P.years} years of updates`, "All nine modules", `${P.trial}-day free trial`],
+    },
+  },
+};
+
+const words = (text, start = 0) =>
+  text.split(" ").map((w, k) => `<span class="w"><span style="--i:${start + k}">${esc(w)}</span></span>`).join(" ");
+
+function heroSection(n, t, locale) {
+  const v = V[locale];
+  const names = v.how.names;
+  const first = readOrder(v.hero.chat.text, locale);
+  const count = n.hero.l1.split(" ").length;
+  const tags = TAGS.map(
+    (p, i) => `<span class="h4-tag" style="--l:${p.left}%;--t:${p.top}%;--at:${ARRIVE[i]}s"><i></i>${esc(names[i])}</span>`,
+  ).join("");
+  return `<section class="h4-hero" aria-labelledby="h-hero" data-hero>
+<div class="h4-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="h4-grid" aria-hidden="true"></div>
+<div class="h4-hero-in">
+<div class="h4-copy">
+<h1 id="h-hero" class="h4-h1"><span class="ln">${words(n.hero.l1)}</span> <span class="ln ln-g">${words(n.hero.l2, count)}</span></h1>
+<p class="h4-lead rv" style="--i:3">${esc(n.hero.lead)}</p>
+<div class="h4-cta rv" style="--i:4">
+<a class="v-btn" href="${href(locale, "download")}">${icon("download")}<span>${esc(t.home.hero.primary)}</span></a>
+<a class="v-text" href="${esc(whatsappHref(t.whatsappMessage))}" rel="noopener">${esc(t.home.hero.secondary)}</a>
+</div>
+<ul class="h4-chips rv" style="--i:5">${v.hero.facts.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
+</div>
+<div class="h4-stage" data-stage>
+${heroScene({ label: esc(n.hero.alt) })}
+${tags}
+<span class="h4-money" style="--l:${TAGS[3].left}%;--t:${TAGS[3].top}%;--at:${ARRIVE[3]}s" aria-hidden="true">+${esc(fmtMoney(first.total, locale))}</span>
+</div>
+</div>
+</section>`;
+}
+
+function winBar() {
+  return `<div class="h4-dev-bar" aria-hidden="true"><i></i><i></i><i></i><img class="h5-barlogo" src="/img/logo-48.png" alt="" width="14" height="19"><b>SahelFlow</b></div>`;
+}
+
+function zoomLink(shot, locale, t, n, sizes, lazy = true) {
+  return `<a class="h5-zoomlink" href="/img/screens/${shot}-${locale}.webp" data-zoom data-close="${esc(n.close)}">${screenImg(shot, locale, { alt: t.common.realScreenshot, sizes, lazy })}<span class="h5-hint" aria-hidden="true">${esc(n.zoom)}</span></a>`;
+}
+
+function painSection(n) {
+  const P = n.pain;
+  const ic = ["inbox", "risk", "accounting"];
+  return `<section class="h5-pain" aria-labelledby="h-pain">
+<div class="h5-wrap">
+<h2 id="h-pain" class="h4-h2 rv">${esc(P.h2)}</h2>
+<ul class="h5-pain-grid">
+${P.items.map(([title, text], i) => `<li class="h5-pain-card rv" style="--i:${i}"><span class="h5-pain-ic">${icon(ic[i])}</span><h3>${esc(title)}</h3><p>${esc(text)}</p></li>`).join("\n")}
+</ul>
+<p class="h5-pain-close rv">${esc(P.close)}</p>
+</div>
+</section>`;
+}
+
+function storySection(n, t, locale) {
+  const S = n.story;
+  const shots = ["inbox", "queue", "delivery", "analytics"];
+  const on = (i) => (i === 0 ? ' data-on=""' : "");
+  return `<section class="h4-story" id="story" aria-labelledby="h-story" data-story style="--n:4">
+<header class="h4-story-head"><div class="h5-wrap"><h2 id="h-story" class="h4-h2 rv">${esc(S.h2)}</h2></div></header>
+<div class="h4-story-track">
+<div class="h4-story-pin">
+<div class="h4-story-in">
+<div class="h4-story-l">
+<ol class="h4-steps" data-steps>
+${S.steps.map(([name, title, text], i) => `<li${on(i)}><span class="h4-step-name">${esc(name)}</span><h3>${esc(title)}</h3><p>${esc(text)}</p></li>`).join("\n")}
+</ol>
+<div class="h4-rail" role="group" aria-label="${esc(V[locale].how.slider)}">
+<i class="h4-rail-fill" aria-hidden="true"></i>
+${S.steps.map(([name], i) => `<button type="button" data-go="${i}"${i === 0 ? ' aria-current="step"' : ""}>${esc(name)}</button>`).join("")}
+</div>
+</div>
+<div class="h4-story-r">
+<div class="h4-device" data-device>
+${winBar()}
+<div class="h4-shots">
+${shots.map((s, i) => `<figure class="h4-shot"${on(i)}>${zoomLink(s, locale, t, n, "(min-width: 900px) 62vw, 92vw", i > 0)}</figure>`).join("\n")}
+</div>
+</div>
+<p class="h4-sample">${esc(V[locale].how.sample)}</p>
+</div>
+</div>
+</div>
+</div>
+</section>`;
+}
+
+const FEATS = [
+  ["inbox", "inbox"],
+  ["orders", "queue"],
+  ["risk", "risk"],
+  ["delivery", "delivery"],
+  ["accounting", "analytics"],
+];
+
+function featSection(n, t, locale) {
+  const rows = FEATS.map(([key, shot], i) => {
+    const [title, text] = n.feat.rows[key];
+    return `<article class="h5-row${i % 2 ? " is-flip" : ""} rv">
+<div class="h5-row-t">
+<h3>${esc(title)}</h3>
+<p>${esc(text)}</p>
+${key === "delivery" ? `<p class="h4-badge">${statusBadge("testing", locale)}</p>` : ""}
+<a class="v-text" href="${href(locale, `product/${key}`)}">${esc(t.common.seeModule)}${icon("arrow", "flip")}</a>
+</div>
+<div class="h5-row-s">
+<div class="h5-win">
+${winBar()}
+${zoomLink(shot, locale, t, n, "(min-width: 1100px) 760px, (min-width: 900px) 58vw, 92vw")}
+</div>
+<p class="h5-cap">${esc(t.common.demoData)}</p>
+</div>
+</article>`;
+  }).join("\n");
+  return `<section class="h4-feat" aria-labelledby="h-feat">
+<div class="h5-wrap">
+<h2 id="h-feat" class="h4-h2 rv">${esc(n.feat.h2)}</h2>
+<div class="h5-rows">
+${rows}
+</div>
+</div>
+</section>`;
+}
+
+function demoSection(locale) {
+  const v = V[locale];
+  const T = v.type;
+  const first = readOrder(v.hero.chat.text, locale);
+  return `<section class="h4-demo" aria-labelledby="h-demo" data-type data-locale="${locale}">
+<div class="h4-demo-in">
+<div class="h4-demo-l">
+<h2 id="h-demo" class="h4-h2 rv">${esc(T.h2)}</h2>
+<label class="h4-compose rv" for="msg"><span class="sr-only">${esc(T.label)}</span><input id="msg" type="text" value="${esc(v.hero.chat.text)}" autocomplete="off" spellcheck="false" data-msg></label>
+<p class="h4-try rv">${esc(T.try)}</p>
+<ul class="h4-ex rv">${T.examples.map((e) => `<li><button type="button" data-ex="${esc(e)}">${esc(e)}</button></li>`).join("")}</ul>
+<p class="h4-note rv">${esc(T.note)}</p>
+</div>
+<div class="h4-demo-r rv">${orderCard({ ...v, lang: locale }, first, { state: "call", live: true })}</div>
+</div>
+</section>`;
+}
+
+function numsSection(n) {
+  const items = [
+    [PACKAGE.includedShops, n.nums.labels[0]],
+    [PACKAGE.teamMembers, n.nums.labels[1]],
+    [PACKAGE.updateYears, n.nums.labels[2]],
+    [PACKAGE.trialDays, n.nums.labels[3]],
+  ];
+  return `<section class="h4-nums" aria-labelledby="h-nums">
+<h2 id="h-nums" class="sr-only">${esc(n.nums.h)}</h2>
+<ul>${items.map(([num, label], i) => `<li class="rv" style="--i:${i}"><b class="num" data-count-to="${num}">${num}</b><span>${esc(label)}</span></li>`).join("")}</ul>
+</section>`;
+}
+
+function intSection(t, locale) {
+  const v = V[locale];
+  const names = INTEGRATIONS.flatMap((g) => g.items).filter((k) => k !== "storefront");
+  const allTesting = names.every((k) => integrationStatus(k) === "testing");
+  const list = names.map((k) => `<span class="h4-n" dir="ltr">${esc(BRAND_NAMES[k])}</span>`).join("");
+  return `<section class="h4-int" aria-labelledby="h-int">
+<h2 id="h-int" class="h4-h3 rv">${esc(allTesting ? v.proof.all : v.proof.some)}</h2>
+<ul class="sr-only">${names.map((k) => `<li>${esc(BRAND_NAMES[k])}</li>`).join("")}</ul>
+<div class="h4-marq" aria-hidden="true"><div class="h4-marq-track">${list}${list}</div></div>
+<p class="h4-int-note rv">${esc(v.proof.note)} <a class="v-text" href="${href(locale, "integrations")}">${esc(v.proof.link)}${icon("arrow", "flip")}</a></p>
+</section>`;
+}
+
+function priceSection(n, t, locale) {
+  const v = V[locale];
+  const p = licencePricing(locale);
+  const P = {
+    seats: PACKAGE.launchOfferSeats,
+    regular: money(PACKAGE.priceDzd, locale),
+    shops: PACKAGE.includedShops,
+    team: PACKAGE.teamMembers,
+    years: PACKAGE.updateYears,
+    trial: PACKAGE.trialDays,
+  };
+  const unit = locale === "ar" ? "دج" : "DA";
+  const amount = p.ask
+    ? `<p class="h4-amount"><span>${esc(p.price)}</span></p>`
+    : `<p class="h4-amount"><span class="num" data-count-to="${p.amount}">${esc(new Intl.NumberFormat("fr-FR").format(p.amount).replace(/[\u202f\u00a0\s]/g, NB))}</span><small>${unit}</small></p>`;
+  return `<section class="h4-price" aria-labelledby="h-price">
+<div class="h4-price-card rv">
+<div class="h4-price-l">
+<h2 id="h-price" class="h4-h2">${esc(n.price.h2)}</h2>
+<p class="h4-price-sub">${esc(n.price.sub)}</p>
+<ul class="h4-incl">${n.price.incl(P).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+</div>
+<div class="h4-price-r">
+${p.offer ? `<span class="h4-offer">${esc(p.offer.label)}</span>` : ""}
+${amount}
+${p.offer ? `<p class="h4-was"><s>${esc(p.offer.regular)}</s> <em>${esc(p.offer.save)}</em></p>` : ""}
+<p class="h4-price-sup">${esc(p.offer ? v.price.offer(P) : v.price.plain(P))}</p>
+<div class="h4-price-act">
+<a class="v-btn" href="${href(locale, "download")}">${icon("download")}<span>${esc(t.home.hero.primary)}</span></a>
+<a class="v-text" href="${href(locale, "pricing")}">${esc(v.price.more)}${icon("arrow", "flip")}</a>
+</div>
+</div>
+</div>
+</section>`;
+}
+
+function faqSection(locale) {
+  const v = V[locale];
+  const items = homeFaq(locale);
+  return `<section class="h4-faq" aria-labelledby="h-faq">
+<div class="h4-faq-in">
+<h2 id="h-faq" class="h4-h2 rv">${esc(v.faq.h2)}</h2>
+<div class="h4-qas">
+${items.map(([q, a], i) => `<details class="h4-qa rv" name="home-faq"${i === 0 ? " open" : ""}><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("\n")}
+</div>
+</div>
+</section>`;
+}
+
+function ctaSection(t, locale) {
+  const k = V[locale].cta;
+  return `<section class="h4-final" aria-labelledby="h-cta">
+<div class="h4-final-glow" aria-hidden="true"></div>
+<form class="h4-final-form rv" action="#" data-wa="${esc(SITE.whatsapp)}" data-wa-msg="${esc(k.msg("{shop}"))}">
+<h2 id="h-cta" class="h4-final-s"><label for="shop">${esc(k.pre)}</label> <input class="h4-final-in" id="shop" name="shop" type="text" placeholder="${esc(k.ph)}" autocomplete="organization" maxlength="60"> <span>${esc(k.post)}</span> <a class="v-btn" href="${esc(whatsappHref(t.whatsappMessage))}" rel="noopener" data-wa-go>${esc(k.btn)}</a></h2>
+</form>
+<p class="h4-final-after rv" style="--i:1">${esc(k.after)}</p>
+</section>`;
+}
+
+/** The home page body (the shell, header and footer are added by layout.mjs). */
+export function homeBody5(locale) {
+  const n = N[locale];
+  const t = COPY[locale];
+  return `${heroSection(n, t, locale)}
+${painSection(n)}
+${storySection(n, t, locale)}
+${featSection(n, t, locale)}
+${demoSection(locale)}
+${numsSection(n)}
+${intSection(t, locale)}
+${priceSection(n, t, locale)}
+${faqSection(locale)}
+${ctaSection(t, locale)}`;
+}

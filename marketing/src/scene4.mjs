@@ -21,8 +21,8 @@ const pt = (x, y, z = 0) => P(x, y, z).map(r1).join(",");
 const pts = (list) => list.map(([x, y, z]) => pt(x, y, z)).join(" ");
 const poly = (list, fill, extra = "") => `<polygon points="${pts(list)}" fill="${fill}"${extra ? " " + extra : ""}/>`;
 
-const MINT = "#ff4a1c";
-const CORAL = "#ff4a1c";
+const MINT = "#0ea5e9";
+const CORAL = "#0ea5e9";
 const GOLD = "#ffb81f";
 const INK = "#0c0f14";
 const FACE = { top: "#ffffff", left: "#e1e5eb", right: "#c7cdd7" };
@@ -64,7 +64,7 @@ function shadow(x, rx = 40, ry = 22) {
 function pad(i) {
   const x = NODE_X[i];
   const ring = P(x, 0, 0);
-  return `<polygon points="${pts([[x - 44, -26, 0], [x + 44, -26, 0], [x + 44, 26, 0], [x - 44, 26, 0]])}" fill="rgba(255,74,28,.07)" stroke="rgba(255,74,28,.45)" stroke-width="1.2" stroke-linejoin="round"/>
+  return `<polygon points="${pts([[x - 44, -26, 0], [x + 44, -26, 0], [x + 44, 26, 0], [x - 44, 26, 0]])}" fill="rgba(14,165,233,.07)" stroke="rgba(14,165,233,.45)" stroke-width="1.2" stroke-linejoin="round"/>
 <ellipse class="h4-ring" style="--at:${ARRIVE[i]}s" cx="${r1(ring[0])}" cy="${r1(ring[1])}" rx="62" ry="36" fill="none" stroke="${MINT}" stroke-width="2"/>`;
 }
 
@@ -91,7 +91,7 @@ function orderDock() {
 ${bar(4, 5, 62, 12, "#eef0f4", 4)}${bar(9, 9, 24, 4, "#2a303a")}
 ${rows}
 ${bar(4, 76, 62, 12, "#eef0f4", 4)}${bar(9, 80, 14, 3.4, "#aab2c0")}${bar(40, 79.6, 22, 4.2, INK)}
-<g transform="translate(46 62) rotate(-10)"><g class="h4-stamp" style="--at:${(ARRIVE[1] + 0.25).toFixed(2)}s"><rect x="-19" y="-9" width="38" height="18" rx="4" fill="rgba(255,74,28,.14)" stroke="${CORAL}" stroke-width="1.8"/><rect x="-12" y="-2" width="24" height="4" rx="2" fill="${CORAL}"/></g></g>
+<g transform="translate(46 62) rotate(-10)"><g class="h4-stamp" style="--at:${(ARRIVE[1] + 0.25).toFixed(2)}s"><rect x="-19" y="-9" width="38" height="18" rx="4" fill="rgba(14,165,233,.14)" stroke="${CORAL}" stroke-width="1.8"/><rect x="-12" y="-2" width="24" height="4" rx="2" fill="${CORAL}"/></g></g>
 </g>`;
   return shadow(NODE_X[1], 36, 20) + dock(1, body + ui, { depth: 1, bobS: 5, bobDelay: -1.7 });
 }
@@ -101,9 +101,9 @@ function parcelDock() {
   const body = box({ x: x0, y: y0, z: z0, w, d, h, top: "#ecc998", left: "#cba26b", right: "#9f7a4c", edge: "rgba(255,255,255,.35)" });
   const tx = x0 + w / 2;
   const tapeTop = poly([[tx - 7, y0, z0 + h], [tx + 7, y0, z0 + h], [tx + 7, y0 + d, z0 + h], [tx - 7, y0 + d, z0 + h]], MINT, 'opacity=".95"');
-  const tapeY = poly([[tx - 7, y0 + d, z0], [tx + 7, y0 + d, z0], [tx + 7, y0 + d, z0 + h], [tx - 7, y0 + d, z0 + h]], "#e33d12");
+  const tapeY = poly([[tx - 7, y0 + d, z0], [tx + 7, y0 + d, z0], [tx + 7, y0 + d, z0 + h], [tx - 7, y0 + d, z0 + h]], "#0284c7");
   const mid = y0 + d / 2;
-  const tapeX = poly([[x0 + w, mid - 7, z0], [x0 + w, mid + 7, z0], [x0 + w, mid + 7, z0 + h], [x0 + w, mid - 7, z0 + h]], "#b32e0b");
+  const tapeX = poly([[x0 + w, mid - 7, z0], [x0 + w, mid + 7, z0], [x0 + w, mid + 7, z0 + h], [x0 + w, mid - 7, z0 + h]], "#0369a1");
   const barcode = [0, 2.4, 4.2, 6.8, 8.6, 11].map((o, k) => `<rect x="${3.5 + o}" y="29" width="${k % 2 ? 1 : 1.6}" height="8" fill="#1a1a1a"/>`).join("");
   const label = `<g transform="${onFaceY(x0, y0 + d, z0, h)} scale(${r3(w / 62)} ${r3(h / 52)})">${bar(2, 22, 19, 17, "#fbfaf6", 2)}${barcode}<rect x="14.5" y="24.5" width="4" height="4" fill="${CORAL}"/></g>`;
   const glow = `<ellipse cx="${r1(P(NODE_X[2], 0, 0)[0])}" cy="${r1(P(NODE_X[2], 0, 0)[1])}" rx="64" ry="34" fill="url(#h4glow)" opacity=".7"/>`;
@@ -147,7 +147,7 @@ function floor() {
 ${poly(sideY, "#d3d8e0", 'stroke="rgba(12,15,20,.1)" stroke-width="1"')}${poly(sideX, "#bfc6d1", 'stroke="rgba(12,15,20,.1)" stroke-width="1"')}
 ${poly(top, "url(#h4floor)", 'stroke="rgba(12,15,20,.12)" stroke-width="1.2" stroke-linejoin="round"')}
 <path d="${grid}" stroke="rgba(12,15,20,.06)" stroke-width="1" fill="none"/>
-${poly(lane, "rgba(255,74,28,.08)", 'stroke="rgba(255,74,28,.3)" stroke-width="1"')}
+${poly(lane, "rgba(14,165,233,.08)", 'stroke="rgba(14,165,233,.3)" stroke-width="1"')}
 <path d="M${a} L${b}" stroke="${MINT}" stroke-width="11" opacity=".3" filter="url(#h4blur)" fill="none"/>
 <path class="h4-flow" d="M${a} L${b}" stroke="${MINT}" stroke-width="3.2" stroke-dasharray="2 10" stroke-linecap="round" fill="none"/>
 ${[0, 1, 2, 3].map(pad).join("\n")}`;

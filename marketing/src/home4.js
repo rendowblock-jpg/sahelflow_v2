@@ -42,6 +42,7 @@
 
   let storyUpdate = () => {};
   if (story && motion) {
+    const track = $(".h4-story-track", story);
     const steps = $$("[data-steps] > li", story);
     const shots = $$(".h4-shot", story);
     const btns = $$("[data-go]", story);
@@ -54,7 +55,7 @@
       btns.forEach((b, k) => (k === i ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
     };
     storyUpdate = () => {
-      const r = story.getBoundingClientRect();
+      const r = track.getBoundingClientRect();
       const span = Math.max(1, r.height - innerHeight);
       const p = clamp(-r.top / span, 0, 1);
       story.style.setProperty("--p", p.toFixed(4));
@@ -64,7 +65,7 @@
     btns.forEach((b) =>
       b.addEventListener("click", () => {
         const i = Number(b.dataset.go);
-        const r = story.getBoundingClientRect();
+        const r = track.getBoundingClientRect();
         const span = Math.max(1, r.height - innerHeight);
         scrollTo({ top: scrollY + r.top + span * ((i + 0.5) / N), behavior: "smooth" });
       }),
@@ -129,9 +130,6 @@
   /* ── 5. numbers count up once ── */
   const counts = $$("[data-count-to]");
   if (counts.length && hasIO && !reduced) {
-    counts.forEach((el) => {
-      if (el.getBoundingClientRect().top > innerHeight) el.textContent = "0";
-    });
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -204,6 +202,37 @@
         render();
       })
       .catch(() => { /* the server-rendered card stays */ });
+  }
+
+
+  /* ── screenshots open large; on a phone the picture is shown at reading size and can be panned ── */
+  const zoomLinks = $$("[data-zoom]");
+  if (zoomLinks.length && "HTMLDialogElement" in window) {
+    let dlg = null;
+    const build = () => {
+      dlg = doc.createElement("dialog");
+      dlg.className = "h5-lb";
+      dlg.innerHTML = '<button type="button" class="h5-lb-x">\u00d7</button><div class="h5-lb-in"><img alt="" decoding="async"></div>';
+      doc.body.append(dlg);
+      dlg.addEventListener("click", (e) => { if (e.target === dlg || e.target.classList.contains("h5-lb-in")) dlg.close(); });
+      $(".h5-lb-x", dlg).addEventListener("click", () => dlg.close());
+      dlg.addEventListener("close", () => root.classList.remove("lb-open"));
+    };
+    zoomLinks.forEach((a) =>
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (!dlg) build();
+        const small = $("img", a);
+        const big = $(".h5-lb-in img", dlg);
+        big.src = a.getAttribute("href");
+        big.alt = small ? small.alt : "";
+        $(".h5-lb-x", dlg).setAttribute("aria-label", a.dataset.close || "Close");
+        root.classList.add("lb-open");
+        dlg.showModal();
+        const box = $(".h5-lb-in", dlg);
+        box.scrollTop = 0;
+      }),
+    );
   }
 
   /* ── 7. the shop-name sentence opens WhatsApp with the name in the message ── */

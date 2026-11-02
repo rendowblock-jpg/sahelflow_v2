@@ -1,0 +1,110 @@
+/* sahelflow.com v6: the logo's own sky blue, the real logo in the chrome, big app screenshots with tap-to-zoom,
+   a pain section, features as large rows, a story that fits short screens. Loaded after 11-v5.css, so it wins ties. */
+
+:root{--accent:#0ea5e9;--accent-strong:#0284c7;--accent-text:#0369a1;--navy:#0c4a6e;--red:#0ea5e9;--coral:#0ea5e9}
+.h5-wrap{max-inline-size:var(--maxw);margin-inline:auto}
+
+/* ───────── the logo ───────── */
+.brand{gap:12px}
+.brand .mark{inline-size:auto;block-size:40px;aspect-ratio:318/440;object-fit:contain;flex:none}
+.brand .wm{font-size:1.5rem;font-weight:700;color:var(--navy);letter-spacing:-.03em}
+@media (max-width:759px){.brand .mark{block-size:34px}.brand .wm{font-size:1.35rem}}
+.foot-logo{inline-size:auto;block-size:72px;aspect-ratio:318/440}
+.site-footer .fw{color:var(--navy)}
+.ln-g .w>span{color:var(--accent-strong)}
+.h5-barlogo{inline-size:auto;block-size:16px;margin-inline-start:10px}
+.h4-dev-bar{align-items:center}
+.h4-dev-bar b{margin-inline-start:6px;font-size:.8125rem;font-weight:600;color:var(--soft);letter-spacing:-.01em}
+
+/* ───────── screenshots: window frame, tap to zoom ───────── */
+.h4-device,.h5-win{position:relative;padding:10px 10px 12px;border-radius:24px;background:#fff;border:1px solid var(--line);box-shadow:0 60px 120px -50px rgba(12,15,20,.4),0 18px 40px -24px rgba(12,15,20,.25)}
+.h5-win{inline-size:100%}
+.h5-zoomlink{position:relative;display:block;cursor:zoom-in;border-radius:13px;overflow:hidden;background:var(--surface);color:inherit;text-decoration:none}
+.h5-zoomlink img{inline-size:100%;block-size:auto}
+.h5-hint{position:absolute;inset-block-end:12px;inset-inline-end:12px;display:inline-flex;align-items:center;min-block-size:34px;padding:0 14px;border-radius:999px;background:rgba(12,15,20,.86);color:#fff;font-size:.8125rem;font-weight:600;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s var(--ease)}
+.h5-zoomlink:hover .h5-hint,.h5-zoomlink:focus-visible .h5-hint{opacity:1;transform:none}
+@media (hover:none){.h5-hint{opacity:1;transform:none}}
+.h5-cap{margin-block-start:12px;font-size:.875rem;color:var(--soft)}
+
+/* the lightbox */
+.h5-lb{inline-size:100vw;max-inline-size:100vw;block-size:100svh;max-block-size:100svh;margin:0;padding:0;border:0;background:rgba(12,15,20,.92);color:#fff}
+.h5-lb::backdrop{background:rgba(12,15,20,.92)}
+.h5-lb-in{inline-size:100%;block-size:100%;overflow:auto;display:grid;place-items:center;padding:clamp(56px,7vh,72px) clamp(10px,3vw,40px) 24px;overscroll-behavior:contain}
+.h5-lb-in img{display:block;inline-size:min(1600px,100%);max-inline-size:none;block-size:auto;border-radius:12px;background:#fff}
+@media (max-width:759px){.h5-lb-in{place-items:start start}.h5-lb-in img{inline-size:max(1100px,230vw);border-radius:8px}}
+.h5-lb-x{position:fixed;inset-block-start:12px;inset-inline-end:12px;z-index:2;inline-size:48px;block-size:48px;border:0;border-radius:50%;background:#fff;color:var(--ink);font:400 2rem/1 var(--f);cursor:pointer;display:grid;place-items:center}
+.h5-lb-x:hover{background:var(--accent)}
+html.lb-open{overflow:hidden}
+
+/* ───────── the pain section ───────── */
+.h5-pain{padding:var(--gap-s) var(--pad-x) clamp(24px,4vw,64px);background:#fff}
+.h5-pain-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,1.8vw,24px);margin-block-start:clamp(28px,4vw,56px)}
+.h5-pain-card{display:grid;align-content:start;gap:12px;padding:clamp(22px,2.6vw,36px);border-radius:28px;background:var(--surface)}
+.h5-pain-ic{display:grid;place-items:center;inline-size:56px;block-size:56px;border-radius:50%;background:var(--accent);color:var(--ink);margin-block-end:8px}
+.h5-pain-ic svg{inline-size:26px;block-size:26px}
+.h5-pain-card h3{font-size:clamp(1.3rem,1.8vw,1.75rem);font-weight:630;line-height:1.25;letter-spacing:-.02em}
+html[lang=ar] .h5-pain-card h3{line-height:1.45}
+.h5-pain-card p{color:var(--muted);line-height:1.75;font-size:1.0625rem}
+.h5-pain-close{margin-block-start:clamp(28px,4vw,56px);max-inline-size:26ch;font-size:clamp(1.7rem,3.2vw,3.2rem);font-weight:640;line-height:1.2;letter-spacing:-.025em;padding-inline-start:22px;border-inline-start:6px solid var(--accent)}
+html[lang=ar] .h5-pain-close{line-height:1.45}
+@media (max-width:899px){.h5-pain-grid{grid-template-columns:1fr}}
+
+/* ───────── the story: heading on its own, then a pinned track that always fits the screen ───────── */
+.h4-story-head{padding:clamp(48px,7vw,110px) var(--pad-x) clamp(8px,2vw,28px)}
+.h4-story{padding:0 0 clamp(24px,4vw,64px)}
+.js-motion .h4-story{padding:0;block-size:auto}
+.js-motion .h4-story-track{block-size:calc(var(--n,4)*90svh + 100svh)}
+.h4-story-in{grid-template-columns:minmax(0,.62fr) minmax(0,1.38fr);gap:clamp(24px,4vw,72px)}
+.h4-story-r{display:grid;justify-items:center}
+.h4-device{inline-size:min(100%,1000px)}
+.js-motion .h4-story .h4-device{inline-size:min(100%,calc((100svh - var(--header-h) - 150px) * 1.6),1000px)}
+.js-motion .h4-story-pin{padding:calc(var(--header-h) + 14px) var(--pad-x) 16px;overflow:hidden}
+/* old and new step never show together: the old one leaves quickly, the new one arrives after it */
+.js-motion .h4-steps li{transition:opacity .14s linear,transform .14s linear,visibility 0s .14s}
+.js-motion .h4-steps li[data-on]{transition:opacity .3s linear .16s,transform .6s var(--ease) .16s,visibility 0s .16s}
+.h4-shot{pointer-events:none}
+.h4-shot[data-on]{pointer-events:auto}
+.js-motion .h4-story .h4-shot{background:var(--surface)}
+@media (max-width:899px){
+.h4-story-in{grid-template-columns:1fr}
+.js-motion .h4-story .h4-device{inline-size:100%}
+.js-motion .h4-story-pin{padding-block-start:calc(var(--header-h) + 8px)}
+}
+@media (max-height:700px){
+.h4-steps h3{font-size:1.2rem;margin-block:8px 4px}
+.h4-steps p{font-size:.9375rem;line-height:1.55}
+.h4-rail{margin-block-start:6px}
+}
+
+/* ───────── five jobs: one large row each, the screenshot at real size ───────── */
+.h4-feat{padding:var(--gap-s) var(--pad-x);background:var(--surface)}
+.h5-rows{display:grid;gap:clamp(16px,2.4vw,32px);margin-block-start:clamp(28px,4vw,56px)}
+.h5-row{display:grid;grid-template-columns:minmax(0,.66fr) minmax(0,1.34fr);gap:clamp(24px,4vw,72px);align-items:center;padding:clamp(20px,3vw,52px);border-radius:36px;background:#fff}
+.h5-row.is-flip{grid-template-columns:minmax(0,1.34fr) minmax(0,.66fr)}
+.h5-row.is-flip .h5-row-t{order:2}
+.h5-row-t{display:grid;gap:14px;justify-items:start;align-content:center}
+.h5-row-t h3{font-size:clamp(1.6rem,2.4vw,2.6rem);font-weight:630;line-height:1.15;letter-spacing:-.025em}
+html[lang=ar] .h5-row-t h3{line-height:1.4}
+.h5-row-t p{color:var(--muted);font-size:clamp(1.02rem,.4vw + .92rem,1.2rem);line-height:1.75;max-inline-size:46ch}
+.h5-row-t .h4-badge{margin:0}
+@media (max-width:899px){
+.h5-row,.h5-row.is-flip{grid-template-columns:1fr;border-radius:28px}
+.h5-row.is-flip .h5-row-t{order:0}
+}
+
+/* ───────── small corrections ───────── */
+.h4-final-s .v-btn{color:#fff}
+.h4-final-s .v-btn:hover{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.js-motion .h4-steps li,.js-motion .h4-steps li[data-on]{transition:none}}
+
+/* ───────── scene labels never touch each other or the headline ───────── */
+.h4-money{inset-block-start:calc(var(--t) + 10px);translate:calc(-50% * var(--dir)) 0}
+@keyframes h4money{0%{opacity:0;transform:translateY(-8px)}4%{opacity:1;transform:none}22%{opacity:1;transform:translateY(10px)}32%,100%{opacity:0;transform:translateY(16px)}}
+@media (max-width:899px){
+.h4-stage{margin-block:30px -2%}
+}
+@media (max-width:759px){
+.h4-feat{padding-inline:12px}
+.h5-row{padding:16px 12px 20px}
+.h4-device,.h5-win{padding:6px 6px 8px;border-radius:16px}
+}
