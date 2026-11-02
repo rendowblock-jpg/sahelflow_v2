@@ -85,8 +85,8 @@ export default {
       points: ["Orders drafted from several messages", "Photos, video, files and voice notes", "Conversations assigned across the team"],
       sections: [
         ["Built to read Darja, French and Arabic", "Customers send their name in one message, the address in the next and the size in a voice note. Extraction is built for the way Algerian customers write, in any mix of the three. We have not measured its accuracy on real orders yet, so check each draft.", ["Select one message or a whole thread", "Every field shown before anything is saved", "Your own Gemini key"]],
-        ["One number, the whole team", "Link your business number once by scanning a QR code. Conversations are assigned, unread counts stay honest, and each reply carries the name of the person who sent it.", ["Assign and reassign conversations", "Search every chat instantly", "Send photos, video, documents and voice"]],
-        ["Messages that never vanish", "When the connection drops, outgoing messages wait in a queue and are sent when WhatsApp is back.", ["Clear sending status on every message", "Retry without duplicates", "Works alongside your phone"]],
+        ["One number, the whole team", "Link your business number once by scanning a QR code. Conversations are assigned, unread counts stay honest, and each reply carries the name of the person who sent it.", ["Assign and reassign conversations", "Search across every chat", "Send photos, video, documents and voice"]],
+        ["Messages wait for the connection", "When the connection drops, outgoing messages wait in a queue and are sent when WhatsApp is back.", ["Clear sending status on every message", "Retry without duplicates", "Works alongside your phone"]],
       ],
       faq: [
         ["Do I need the WhatsApp Business API?", "No. You link your existing number by scanning a QR code, like WhatsApp Web. It is an unofficial connection, not the WhatsApp Business API."],
@@ -99,11 +99,11 @@ export default {
       short: "A confirmation queue that tells you who to call first",
       title: "Every order on one clear track — from new to delivered.",
       lead: "New, confirmed, prepared, shipped, delivered: every order follows one path with a full history. The confirmation queue ranks who to call first, and stock is reserved and released for you.",
-      points: ["Stock reserved on confirmation", "A full history of every change", "Instant search across everything"],
+      points: ["Stock reserved on confirmation", "A full history of every change", "Search across everything"],
       sections: [
         ["A queue that knows who to call", "Orders waiting longest and orders most at risk rise to the top. Call, confirm, postpone or cancel in one keystroke — the next order is already open.", ["Call attempts and callbacks tracked", "Stale confirmations flagged", "Keyboard-first for confirmation agents"]],
-        ["Stock that is always true", "Confirming reserves the stock, cancelling releases it, a return puts it back. Every movement is written once and never overwritten, so the count can always be explained.", ["Variants, sizes and colours", "Low-stock alerts", "Append-only stock and money history"]],
-        ["Nothing typed twice", "The same order flows to the courier, the accounting and the customer's history. Duplicate orders are caught before they cost you a parcel.", ["Duplicate detection", "Bulk actions and exports", "Import from Excel or CSV"]],
+        ["Stock you can trace", "Confirming reserves the stock, cancelling releases it, a return puts it back. Every movement is written once and never overwritten, so the count can always be explained.", ["Variants, sizes and colours", "Low-stock alerts", "Append-only stock and money history"]],
+        ["Typed once, used everywhere", "The same order flows to the courier, the accounting and the customer's history. Duplicate orders are flagged before they cost you a parcel.", ["Duplicate detection", "Bulk actions and exports", "Import from Excel or CSV"]],
       ],
       faq: [
         ["Can I customise the statuses?", "The core path stays the same so money and stock stay correct, but you can filter, tag and assign orders however your team works."],
@@ -120,7 +120,7 @@ export default {
       sections: [
         ["The right price before you promise it", "Home and desk rates by wilaya, per courier, so the total you quote the customer is the total you charge.", ["Rates per wilaya and commune", "Home or stop-desk", "Delivery fees saved on the order"]],
         ["Tracking you don't have to chase", "Statuses update themselves and the order moves with them. Parcels stuck too long are surfaced before they turn into returns.", ["Automatic status updates", "Stuck-parcel alerts", "Full timeline on every order"]],
-        ["Returns handled properly", "A returned parcel puts its stock back and records its cost, so you know exactly what each return took from you.", ["Return reasons recorded", "Stock restocked on return", "Return cost in dinars"]],
+        ["Returns handled properly", "A returned parcel puts its stock back and records its cost, so you can see what each return cost you.", ["Return reasons recorded", "Stock restocked on return", "Return cost in dinars"]],
       ],
       faq: [
         ["Which couriers are supported?", "Yalidine, ZR Express, EcoTrack (and the couriers running on it) and Maystro Delivery, all in testing. Tell us which one you need first."],
@@ -130,8 +130,8 @@ export default {
     },
     risk: {
       name: "Risk & returns",
-      short: "Know which order will come back before you ship it",
-      title: "Know which order will come back — before you ship it.",
+      short: "See which orders deserve a second call before you ship",
+      title: "See which orders deserve a second call — before you ship them.",
       lead: "Before you ship, SahelFlow tells you which orders deserve an extra confirmation call, and why. Then it shows you where you really lose: by wilaya, by product and by channel.",
       points: ["A “check before shipping” list", "Return losses in dinars", "A blocklist for refusing customers"],
       sections: [
@@ -148,17 +148,17 @@ export default {
     accounting: {
       name: "COD accounting",
       short: "What the courier collected, kept and still owes you",
-      title: "Know exactly where your cash-on-delivery money is.",
-      lead: "See what each courier collected, what they kept and what should reach you. Real profit after delivery fees and returns — not an estimate.",
+      title: "See where your cash-on-delivery money is.",
+      lead: "See what each courier collected, what they kept and what should reach you. Profit worked out from your own figures, after delivery fees and returns.",
       points: ["Transfers reconciled", "Cost and fees per parcel", "Reports you can export"],
       sections: [
         ["Reconciliation without the notebook", "Match each courier transfer to the parcels it pays for. Missing amounts stand out instead of hiding in a spreadsheet.", ["Collected vs. received", "Outstanding balance per courier", "Every amount traceable to an order"]],
-        ["Profit you can trust", "Product cost, delivery fees, return costs and expenses come together into one real net profit per day, product and channel.", ["Expenses and ad spend", "Margin per product", "Daily, weekly and monthly views"]],
+        ["Profit you can follow", "Product cost, delivery fees, return costs and expenses come together into one net profit per day, product and channel, from the costs you enter.", ["Expenses and ad spend", "Margin per product", "Daily, weekly and monthly views"]],
         ["Ready for your accountant", "Export clean reports to Excel whenever you need them. Money history is append-only: corrections are new entries, never silent edits.", ["Excel exports", "Append-only money history", "Daily report on your phone"]],
       ],
       faq: [
         ["Does it replace my accountant?", "It gives your accountant clean, complete numbers; it does not file taxes for you."],
-        ["Can I record expenses?", "Yes — advertising, packaging, salaries or anything else, so profit is real."],
+        ["Can I record expenses?", "Yes — advertising, packaging, salaries or anything else, so profit counts every cost you enter."],
         ["Are amounts in dinars?", "Everything is in Algerian dinars, as you count it."],
       ],
     },
@@ -170,7 +170,7 @@ export default {
       points: ["Templates made for Algerian sellers", "Wait and re-check before each step", "A clear log of every run"],
       sections: [
         ["Start from what already works", "Ready templates for confirmation messages, follow-ups, stuck parcels and low stock. Turn one on, adjust the wording, done.", ["Confirmation and follow-up", "Stuck-parcel nudges", "Low-stock alerts"]],
-        ["Safe by design", "Every step re-checks the order before it acts, so a customer who already confirmed never gets a reminder.", ["Waits and conditions", "Re-check before acting", "Pause any flow instantly"]],
+        ["Safe by design", "Every step re-checks the order before it acts, so a customer who already confirmed is not reminded.", ["Waits and conditions", "Re-check before acting", "Pause any flow with one switch"]],
         ["Know what happened", "Each run is logged with what it did and why, so you can trust the flows you leave running.", ["Run history", "Clear failure reasons", "Test before you switch it on"]],
       ],
       faq: [
@@ -182,11 +182,11 @@ export default {
     storefront: {
       name: "Storefront",
       short: "A store in four steps, orders straight into SahelFlow",
-      title: "Your online store, live in minutes.",
+      title: "Your online store, in four steps.",
       lead: "Build a beautiful store in Arabic or French in four steps, with a live preview on phone and desktop. Orders land directly in SahelFlow.",
       points: ["Three professional themes", "Product landing pages", "Protection against fake orders"],
       sections: [
-        ["Four steps, then publish", "Choose a theme, add your products, set delivery prices and publish. A live preview shows exactly what your customers will see.", ["Arabic and French", "Phone and desktop preview", "Your logo and colours"]],
+        ["Four steps, then publish", "Choose a theme, add your products, set delivery prices and publish. A live preview shows what your customers will see.", ["Arabic and French", "Phone and desktop preview", "Your logo and colours"]],
         ["Built for cash on delivery", "The order form asks for exactly what a COD order needs. Prices and delivery fees are checked by the server, not the browser.", ["Wilaya and commune selection", "Server-checked totals", "Fake-order protection"]],
         ["Publish, pause, roll back", "Every publish is a version. Pause the store during a holiday or roll back a change in one click.", ["Durable publishing", "One-click pause", "Roll back to any version"]],
       ],
@@ -217,12 +217,12 @@ export default {
       name: "Team & roles",
       short: "Owner, manager, operator, viewer — or exactly the rights you choose",
       title: "Bring your whole team. Decide exactly what each person can do.",
-      lead: "Invite up to ten team members, each with their own login and PIN. Pick a role — manager, operator, viewer — or tick the exact permissions. Change or remove access in one click, effective immediately.",
+      lead: "Invite up to ten team members, each with their own login and PIN. Pick a role — manager, operator, viewer — or tick the exact permissions. Change or remove access in one click.",
       points: ["Up to 10 members with the licence", "Roles or exact permissions", "Every action carries its author's name"],
       sections: [
-        ["Invite in thirty seconds", "Create an invitation, send the code on WhatsApp, and your colleague joins with their own login and PIN on the same installation.", ["Personal login and PIN", "Invitations that expire", "Per-shop access"]],
+        ["Invite in a few clicks", "Create an invitation, send the code on WhatsApp, and your colleague joins with their own login and PIN on the same installation.", ["Personal login and PIN", "Invitations that expire", "Per-shop access"]],
         ["Each person sees their work", "Operators see the queue, not the accounting. Viewers can look but not touch. Menus only show what a person is allowed to open.", ["Four clear roles", "Custom permission sets", "Hidden where not allowed"]],
-        ["Change access instantly", "Promote, restrict, reset a PIN or remove someone — their open sessions end immediately, and the history keeps who did what.", ["Instant revocation", "PIN reset by the owner", "Complete audit trail"]],
+        ["Change access in one click", "Promote, restrict, reset a PIN or remove someone. Changing someone's access ends their open sessions, and the history keeps who did what.", ["Remove access in one click", "PIN reset by the owner", "Complete audit trail"]],
       ],
       faq: [
         ["How many people can work together?", "The owner plus up to ten active team members."],
@@ -237,7 +237,7 @@ export default {
       name: "Selling on your own",
       short: "From a Facebook page and a phone to an organised shop",
       title: "From a phone full of chats to a shop that runs itself.",
-      lead: "You sell through Facebook, Instagram and WhatsApp, and every order lives in your head, your chats and a notebook. SahelFlow puts it all in one place, on your PC — in an afternoon.",
+      lead: "You sell through Facebook, Instagram and WhatsApp, and every order lives in your head, your chats and a notebook. SahelFlow puts it all in one place, on your PC.",
       pains: [
         ["Orders scattered across chats", "Name in one message, wilaya in another, the size in a voice note."],
         ["Parcels you can't follow", "Five courier apps, and still no idea which parcels are stuck."],
@@ -280,7 +280,7 @@ export default {
       steps: [
         ["Add a shop", "Each shop gets its own data and storefront."],
         ["Give access per shop", "Members only reach the shops you grant."],
-        ["Compare results", "Switch shops in a click and read real profit."],
+        ["Compare results", "Switch shops in a click and read each shop's profit."],
       ],
       modules: ["storefront", "team", "accounting", "risk"],
     },
@@ -447,7 +447,7 @@ export default {
   productPage: {
     eyebrow: "The platform",
     title: "One app for all of cash-on-delivery commerce.",
-    lead: "Nine modules that share the same order, the same customer and the same stock. Nothing typed twice, nothing lost between WhatsApp, the courier and your notebook.",
+    lead: "Nine modules that share the same order, the same customer and the same stock. You type it once, and less gets lost between WhatsApp, the courier and your notebook.",
     coreTitle: "One order. One record. Every module.",
     coreText: "An order is written once and every module reads the same record: the inbox that created it, the stock it reserved, the parcel that carries it and the dinars that pay for it. That is why the numbers always agree.",
     core: ["Message", "Order", "Stock", "Parcel", "Cash"],
@@ -557,7 +557,7 @@ export default {
     ],
     faq: [
       ["What happens after the five years?", "Your SahelFlow keeps working with everything you have. The licence never expires and your data stays yours."],
-      ["Do I lose my work when the trial ends?", "No. Everything stays on your PC. Activating a licence reopens it exactly as you left it."],
+      ["Do I lose my work when the trial ends?", "No. Everything stays on your PC. Activating a licence reopens it as you left it."],
       ["Can I change PC?", "Yes. Write to us and we move your licence. Make an encrypted backup first and keep a copy; restoring it on a new PC is still being tested."],
       ["Do you take card payments?", "Today: BaridiMob and CCP. Write to us if you need another way."],
       ["Can I add shops later?", "Yes — up to five extra shops, 5,000 DA each, whenever you need them."],
@@ -638,7 +638,7 @@ export default {
       delivery: ["Couriers", "Shipping, tracking and returns", [
         ["Which couriers are supported?", "Yalidine, ZR Express, EcoTrack and Maystro Delivery."],
         ["Do statuses update on their own?", "Yes. Tracking updates itself and the order follows."],
-        ["How are returns recorded?", "The parcel's stock goes back and its cost is recorded, so returns show up in your real profit."],
+        ["How are returns recorded?", "The parcel's stock goes back and its cost is recorded, so returns show up in your profit."],
       ]],
       licence: ["Licence & payment", "Buying, activating and moving", [
         ["How do I buy a licence?", "Pay by BaridiMob or CCP, send us the licence request code from the app on WhatsApp, then paste the licence you receive."],

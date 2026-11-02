@@ -85,8 +85,8 @@ export default {
       points: ["Commande préparée à partir de plusieurs messages", "Photos, vidéos, fichiers et vocaux", "Conversations réparties dans l'équipe"],
       sections: [
         ["Conçu pour lire la darja, le français et l'arabe", "Le client envoie son nom dans un message, l'adresse dans le suivant et la taille dans un vocal. L'extraction est pensée pour la façon dont les clients algériens écrivent, dans n'importe quel mélange des trois. Nous n'avons pas encore mesuré sa précision sur de vraies commandes : vérifiez chaque brouillon.", ["Un message ou toute une conversation", "Chaque champ visible avant l'enregistrement", "Votre propre clé Gemini"]],
-        ["Un numéro, toute l'équipe", "Reliez votre numéro professionnel une fois en scannant un QR code. Les conversations sont attribuées, les non-lus restent justes, et chaque réponse porte le nom de son auteur.", ["Attribuer et réattribuer", "Recherche instantanée dans tous les chats", "Envoi de photos, vidéos, documents et vocaux"]],
-        ["Des messages qui ne disparaissent jamais", "Quand la connexion tombe, les messages sortants attendent dans une file et partent quand WhatsApp revient.", ["Statut d'envoi clair sur chaque message", "Nouvel essai sans doublon", "Fonctionne avec votre téléphone"]],
+        ["Un numéro, toute l'équipe", "Reliez votre numéro professionnel une fois en scannant un QR code. Les conversations sont attribuées, les non-lus restent justes, et chaque réponse porte le nom de son auteur.", ["Attribuer et réattribuer", "Recherche dans tous les chats", "Envoi de photos, vidéos, documents et vocaux"]],
+        ["Des messages qui attendent la connexion", "Quand la connexion tombe, les messages sortants attendent dans une file et partent quand WhatsApp revient.", ["Statut d'envoi clair sur chaque message", "Nouvel essai sans doublon", "Fonctionne avec votre téléphone"]],
       ],
       faq: [
         ["Faut-il l'API WhatsApp Business ?", "Non. Vous reliez votre numéro existant en scannant un QR code, comme WhatsApp Web. C'est une connexion non officielle, pas l'API WhatsApp Business."],
@@ -99,11 +99,11 @@ export default {
       short: "La file de confirmation vous dit qui appeler d'abord",
       title: "Chaque commande sur un seul parcours — de nouvelle à livrée.",
       lead: "Nouvelle, confirmée, préparée, expédiée, livrée : chaque commande suit un seul parcours, avec tout son historique. La file de confirmation classe qui appeler d'abord, et le stock se réserve et se libère tout seul.",
-      points: ["Stock réservé à la confirmation", "Historique complet de chaque changement", "Recherche instantanée partout"],
+      points: ["Stock réservé à la confirmation", "Historique complet de chaque changement", "Recherche partout"],
       sections: [
         ["Une file qui sait qui appeler", "Les commandes qui attendent depuis le plus longtemps et les plus risquées remontent en tête. Appelez, confirmez, reportez ou annulez d'une touche — la suivante est déjà ouverte.", ["Appels et rappels suivis", "Confirmations en retard signalées", "Pensé clavier pour les confirmatrices"]],
-        ["Un stock toujours juste", "Confirmer réserve, annuler libère, un retour remet en stock. Chaque mouvement est écrit une fois et jamais écrasé : le chiffre s'explique toujours.", ["Variantes, tailles et couleurs", "Alertes de stock bas", "Historique stock et argent en ajout seul"]],
-        ["Rien n'est saisi deux fois", "La même commande va au livreur, à la comptabilité et à l'historique du client. Les doublons sont repérés avant de vous coûter un colis.", ["Détection des doublons", "Actions groupées et exports", "Import Excel ou CSV"]],
+        ["Un stock que vous pouvez retracer", "Confirmer réserve, annuler libère, un retour remet en stock. Chaque mouvement est écrit une fois et jamais écrasé : le chiffre s'explique toujours.", ["Variantes, tailles et couleurs", "Alertes de stock bas", "Historique stock et argent en ajout seul"]],
+        ["Saisi une fois, utilisé partout", "La même commande va au livreur, à la comptabilité et à l'historique du client. Les doublons sont repérés avant de vous coûter un colis.", ["Détection des doublons", "Actions groupées et exports", "Import Excel ou CSV"]],
       ],
       faq: [
         ["Puis-je personnaliser les statuts ?", "Le parcours de base reste le même pour que l'argent et le stock restent justes, mais vous filtrez, étiquetez et attribuez les commandes comme votre équipe travaille."],
@@ -120,7 +120,7 @@ export default {
       sections: [
         ["Le bon prix avant de le promettre", "Tarifs domicile et bureau par wilaya, par livreur : le total annoncé au client est le total facturé.", ["Tarifs par wilaya et commune", "Domicile ou stop-desk", "Frais de livraison enregistrés sur la commande"]],
         ["Un suivi qu'on ne court pas après", "Les statuts se mettent à jour seuls et la commande suit. Les colis bloqués trop longtemps ressortent avant de devenir des retours.", ["Statuts automatiques", "Alertes de colis bloqués", "Chronologie complète par commande"]],
-        ["Des retours bien gérés", "Un colis retourné remet son stock et enregistre son coût : vous savez exactement ce que chaque retour vous a pris.", ["Motifs de retour enregistrés", "Remise en stock au retour", "Coût des retours en dinars"]],
+        ["Des retours bien gérés", "Un colis retourné remet son stock et enregistre son coût : vous voyez ce que chaque retour vous a coûté.", ["Motifs de retour enregistrés", "Remise en stock au retour", "Coût des retours en dinars"]],
       ],
       faq: [
         ["Quels livreurs sont pris en charge ?", "Yalidine, ZR Express, EcoTrack (et les livreurs qui l'utilisent) et Maystro Delivery, tous en test. Dites-nous lequel vous faut en premier."],
@@ -130,8 +130,8 @@ export default {
     },
     risk: {
       name: "Risque et retours",
-      short: "Sachez quelle commande reviendra avant de l'expédier",
-      title: "Sachez quelle commande reviendra — avant de l'expédier.",
+      short: "Voyez quelles commandes méritent un second appel avant l'envoi",
+      title: "Voyez quelles commandes méritent un second appel — avant de les expédier.",
       lead: "Avant l'expédition, SahelFlow vous dit quelles commandes méritent un appel de confirmation de plus, et pourquoi. Puis il vous montre où vous perdez vraiment : par wilaya, par produit et par canal.",
       points: ["Une liste « à vérifier avant d'expédier »", "Les pertes de retours en dinars", "Une liste noire des clients qui refusent"],
       sections: [
@@ -148,17 +148,17 @@ export default {
     accounting: {
       name: "Comptabilité COD",
       short: "Ce que le livreur a encaissé, gardé et vous doit",
-      title: "Sachez exactement où est l'argent de vos livraisons.",
-      lead: "Voyez ce que chaque livreur a encaissé, ce qu'il a retenu et ce qui doit vous revenir. Le vrai bénéfice après livraison et retours — pas une estimation.",
+      title: "Voyez où est l'argent de vos livraisons.",
+      lead: "Voyez ce que chaque livreur a encaissé, ce qu'il a retenu et ce qui doit vous revenir. Un bénéfice calculé à partir de vos propres chiffres, après frais de livraison et retours.",
       points: ["Versements rapprochés", "Coût et frais de chaque colis", "Rapports exportables"],
       sections: [
         ["Le rapprochement sans le cahier", "Associez chaque versement du livreur aux colis qu'il paie. Les montants manquants sautent aux yeux au lieu de se cacher dans un tableur.", ["Encaissé vs reçu", "Solde dû par livreur", "Chaque montant relié à une commande"]],
-        ["Un bénéfice auquel croire", "Coût produit, frais de livraison, coût des retours et dépenses se rejoignent en un vrai bénéfice net par jour, produit et canal.", ["Dépenses et budget pub", "Marge par produit", "Vues jour, semaine, mois"]],
+        ["Un bénéfice que vous pouvez suivre", "Coût produit, frais de livraison, coût des retours et dépenses se rejoignent en un bénéfice net par jour, produit et canal, à partir des coûts que vous saisissez.", ["Dépenses et budget pub", "Marge par produit", "Vues jour, semaine, mois"]],
         ["Prêt pour votre comptable", "Exportez des rapports propres vers Excel quand vous voulez. L'historique de l'argent ne s'écrase jamais : une correction est une nouvelle écriture.", ["Exports Excel", "Historique en ajout seul", "Rapport quotidien sur votre téléphone"]],
       ],
       faq: [
         ["Remplace-t-il mon comptable ?", "Il donne à votre comptable des chiffres propres et complets ; il ne fait pas vos déclarations."],
-        ["Puis-je saisir mes dépenses ?", "Oui — publicité, emballage, salaires ou autre, pour un bénéfice réel."],
+        ["Puis-je saisir mes dépenses ?", "Oui — publicité, emballage, salaires ou autre : le bénéfice tient compte de tous les coûts que vous saisissez."],
         ["Les montants sont-ils en dinars ?", "Tout est en dinars algériens, comme vous comptez."],
       ],
     },
@@ -170,7 +170,7 @@ export default {
       points: ["Modèles pensés pour le vendeur algérien", "Attente et revérification avant chaque étape", "Un journal clair de chaque exécution"],
       sections: [
         ["Partez de ce qui marche déjà", "Des modèles prêts pour les messages de confirmation, les relances, les colis bloqués et le stock bas. Activez, ajustez le texte, c'est fini.", ["Confirmation et relance", "Colis bloqués", "Alertes de stock bas"]],
-        ["Sûr par conception", "Chaque étape revérifie la commande avant d'agir : un client qui a déjà confirmé ne reçoit jamais de relance.", ["Attentes et conditions", "Revérification avant d'agir", "Pause immédiate de tout scénario"]],
+        ["Sûr par conception", "Chaque étape revérifie la commande avant d'agir : un client qui a déjà confirmé n'est pas relancé.", ["Attentes et conditions", "Revérification avant d'agir", "Mettez tout scénario en pause d'un interrupteur"]],
         ["Savoir ce qui s'est passé", "Chaque exécution est journalisée avec ce qu'elle a fait et pourquoi, pour faire confiance à ce qui tourne seul.", ["Historique des exécutions", "Raisons d'échec claires", "Testez avant d'activer"]],
       ],
       faq: [
@@ -182,11 +182,11 @@ export default {
     storefront: {
       name: "Boutique en ligne",
       short: "Une boutique en quatre étapes, commandes dans SahelFlow",
-      title: "Votre boutique en ligne, en ligne en quelques minutes.",
+      title: "Votre boutique en ligne, en quatre étapes.",
       lead: "Créez une belle boutique en arabe ou en français en quatre étapes, avec un aperçu en direct sur téléphone et ordinateur. Les commandes arrivent directement dans SahelFlow.",
       points: ["Trois thèmes professionnels", "Landing pages produit", "Protection contre les fausses commandes"],
       sections: [
-        ["Quatre étapes, puis publiez", "Choisissez un thème, ajoutez vos produits, fixez les prix de livraison et publiez. L'aperçu montre exactement ce que verront vos clients.", ["Arabe et français", "Aperçu téléphone et ordinateur", "Votre logo et vos couleurs"]],
+        ["Quatre étapes, puis publiez", "Choisissez un thème, ajoutez vos produits, fixez les prix de livraison et publiez. L'aperçu montre ce que verront vos clients.", ["Arabe et français", "Aperçu téléphone et ordinateur", "Votre logo et vos couleurs"]],
         ["Pensée pour le paiement à la livraison", "Le formulaire demande exactement ce qu'il faut à une commande COD. Prix et frais de livraison sont vérifiés par le serveur, pas par le navigateur.", ["Choix wilaya et commune", "Totaux vérifiés côté serveur", "Protection anti-fausses commandes"]],
         ["Publier, mettre en pause, revenir en arrière", "Chaque publication est une version. Mettez la boutique en pause pendant les fêtes ou annulez un changement en un clic.", ["Publication durable", "Pause en un clic", "Retour à n'importe quelle version"]],
       ],
@@ -217,12 +217,12 @@ export default {
       name: "Équipe et rôles",
       short: "Propriétaire, manager, opérateur, lecteur — ou les droits exacts que vous choisissez",
       title: "Faites venir toute l'équipe. Décidez exactement ce que chacun peut faire.",
-      lead: "Invitez jusqu'à dix membres, chacun avec son identifiant et son PIN. Choisissez un rôle — manager, opérateur, lecteur — ou cochez les droits exacts. Modifiez ou retirez un accès en un clic, effet immédiat.",
+      lead: "Invitez jusqu'à dix membres, chacun avec son identifiant et son PIN. Choisissez un rôle — manager, opérateur, lecteur — ou cochez les droits exacts. Modifiez ou retirez un accès en un clic.",
       points: ["Jusqu'à 10 membres avec la licence", "Rôles ou droits sur mesure", "Chaque action porte le nom de son auteur"],
       sections: [
-        ["Inviter en trente secondes", "Créez une invitation, envoyez le code sur WhatsApp : votre collègue rejoint avec son propre identifiant et son PIN, sur la même installation.", ["Identifiant et PIN personnels", "Invitations qui expirent", "Accès par boutique"]],
+        ["Inviter en quelques clics", "Créez une invitation, envoyez le code sur WhatsApp : votre collègue rejoint avec son propre identifiant et son PIN, sur la même installation.", ["Identifiant et PIN personnels", "Invitations qui expirent", "Accès par boutique"]],
         ["Chacun voit son travail", "Les opérateurs voient la file, pas la comptabilité. Les lecteurs regardent sans toucher. Les menus n'affichent que ce que chacun peut ouvrir.", ["Quatre rôles clairs", "Droits sur mesure", "Masqué quand non autorisé"]],
-        ["Changer un accès, tout de suite", "Promouvoir, restreindre, réinitialiser un PIN ou retirer quelqu'un — ses sessions ouvertes se ferment aussitôt, et l'historique garde qui a fait quoi.", ["Révocation immédiate", "PIN réinitialisé par le propriétaire", "Journal d'audit complet"]],
+        ["Changer un accès en un clic", "Promouvoir, restreindre, réinitialiser un PIN ou retirer quelqu'un. Un changement d'accès ferme ses sessions ouvertes, et l'historique garde qui a fait quoi.", ["Retirer un accès en un clic", "PIN réinitialisé par le propriétaire", "Journal d'audit complet"]],
       ],
       faq: [
         ["Combien de personnes peuvent travailler ensemble ?", "Le propriétaire et jusqu'à dix membres actifs."],
@@ -237,7 +237,7 @@ export default {
       name: "Vendre seul",
       short: "D'une page Facebook et d'un téléphone à une boutique organisée",
       title: "D'un téléphone plein de chats à une boutique qui tourne seule.",
-      lead: "Vous vendez sur Facebook, Instagram et WhatsApp, et chaque commande vit dans votre tête, vos chats et un cahier. SahelFlow réunit tout au même endroit, sur votre PC — en un après-midi.",
+      lead: "Vous vendez sur Facebook, Instagram et WhatsApp, et chaque commande vit dans votre tête, vos chats et un cahier. SahelFlow réunit tout au même endroit, sur votre PC.",
       pains: [
         ["Des commandes éparpillées dans les chats", "Le nom dans un message, la wilaya dans un autre, la taille dans un vocal."],
         ["Des colis impossibles à suivre", "Cinq applis de livreurs, et toujours aucune idée des colis bloqués."],
@@ -280,7 +280,7 @@ export default {
       steps: [
         ["Ajoutez une boutique", "Chacune a ses données et sa vitrine."],
         ["Donnez l'accès par boutique", "Les membres n'atteignent que les boutiques accordées."],
-        ["Comparez les résultats", "Changez de boutique en un clic et lisez le vrai bénéfice."],
+        ["Comparez les résultats", "Changez de boutique en un clic et lisez le bénéfice de chacune."],
       ],
       modules: ["storefront", "team", "accounting", "risk"],
     },
@@ -447,7 +447,7 @@ export default {
   productPage: {
     eyebrow: "La plateforme",
     title: "Une seule app pour le paiement à la livraison.",
-    lead: "Neuf modules qui partagent la même commande, le même client et le même stock. Rien n'est saisi deux fois, rien ne se perd entre WhatsApp, le livreur et votre cahier.",
+    lead: "Neuf modules qui partagent la même commande, le même client et le même stock. Vous la saisissez une fois, et moins de choses se perdent entre WhatsApp, le livreur et votre cahier.",
     coreTitle: "Une commande. Un seul enregistrement. Tous les modules.",
     coreText: "Une commande est écrite une fois et chaque module lit le même enregistrement : la boîte qui l'a créée, le stock qu'elle réserve, le colis qui la transporte et les dinars qui la paient. C'est pour ça que les chiffres sont toujours d'accord.",
     core: ["Message", "Commande", "Stock", "Colis", "Cash"],
@@ -557,7 +557,7 @@ export default {
     ],
     faq: [
       ["Que se passe-t-il après les cinq ans ?", "Votre SahelFlow continue de fonctionner avec tout ce que vous avez. La licence n'expire jamais et vos données restent à vous."],
-      ["Est-ce que je perds mon travail à la fin de l'essai ?", "Non. Tout reste sur votre PC. Activer une licence rouvre tout exactement comme vous l'avez laissé."],
+      ["Est-ce que je perds mon travail à la fin de l'essai ?", "Non. Tout reste sur votre PC. Activer une licence rouvre tout comme vous l'avez laissé."],
       ["Puis-je changer de PC ?", "Oui. Écrivez-nous et nous transférons votre licence. Faites d'abord une sauvegarde chiffrée et gardez-en une copie ; la restauration sur un nouveau PC est encore en test."],
       ["Acceptez-vous la carte bancaire ?", "Aujourd'hui : BaridiMob et CCP. Écrivez-nous s'il vous faut un autre moyen."],
       ["Puis-je ajouter des boutiques plus tard ?", "Oui — jusqu'à cinq boutiques de plus, 5 000 DA chacune, quand vous en avez besoin."],
@@ -638,7 +638,7 @@ export default {
       delivery: ["Livreurs", "Expédition, suivi et retours", [
         ["Quels livreurs sont pris en charge ?", "Yalidine, ZR Express, EcoTrack et Maystro Delivery."],
         ["Les statuts se mettent-ils à jour seuls ?", "Oui. Le suivi se met à jour et la commande suit."],
-        ["Comment les retours sont-ils enregistrés ?", "Le stock du colis revient et son coût est enregistré : les retours apparaissent dans votre vrai bénéfice."],
+        ["Comment les retours sont-ils enregistrés ?", "Le stock du colis revient et son coût est enregistré : les retours apparaissent dans votre bénéfice."],
       ]],
       licence: ["Licence et paiement", "Achat, activation et changement de PC", [
         ["Comment acheter une licence ?", "Payez par BaridiMob ou CCP, envoyez-nous sur WhatsApp le code de demande de licence depuis l'app, puis collez la licence reçue."],
