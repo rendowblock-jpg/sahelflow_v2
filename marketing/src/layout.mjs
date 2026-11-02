@@ -79,10 +79,37 @@ ${scripts.map((f) => `<script defer src="/assets/${f}?v=${SITE.asset}"></script>
 
 const MARK = `<img class="mark" src="/img/logo-96.png" srcset="/img/logo-48.png 1x, /img/logo-96.png 2x, /img/logo-192.png 3x" width="29" height="40" alt="" decoding="async">`;
 
+const CHEV = `<svg class="chev" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 function header({ locale, pageId, path }) {
   const t = COPY[locale];
-  const on = (id) => pageId === id || (id === "product" && pageId.startsWith("module:"));
-  const link = (id, label) => `<li><a href="${href(locale, id)}"${on(id) ? ' aria-current="page"' : ""}>${esc(label)}</a></li>`;
+  const rl = t.nav.resourceLinks;
+  const cur = (yes) => (yes ? ' aria-current="page"' : "");
+  const inProduct = pageId === "product" || pageId.startsWith("module:");
+  const inSolutions = pageId.startsWith("solution:") || pageId === "why";
+  const inResources = ["help", "security", "contact", "download"].includes(pageId);
+  const item = (url, ico, name, text, here) =>
+    `<a class="mi" href="${url}"${cur(here)}><span class="mi-ic">${icon(ico)}</span><span class="mi-t"><b>${esc(name)}</b><small>${esc(text)}</small></span></a>`;
+  const go = `<span class="mf-go">${esc(t.common.learnMore)}${icon("arrow", "flip")}</span>`;
+  const drop = (key, label, active, heading, grid, wide, side) =>
+    `<li class="nl has-mega" data-mega><button type="button" class="nl-a${active ? " is-here" : ""}" aria-expanded="false" aria-controls="mega-${key}">${esc(label)}${CHEV}</button><div class="mega" id="mega-${key}"><div class="mega-card"><div class="mega-main"><p class="mega-h">${esc(heading)}</p><div class="mega-grid${wide ? "" : " mega-grid-1"}">${grid}</div></div>${side}</div></div></li>`;
+  const plain = (id, label) => `<li class="nl"><a class="nl-a" href="${href(locale, id)}"${cur(pageId === id)}>${esc(label)}</a></li>`;
+
+  const modules = MODULES.map((m) => item(href(locale, `product/${m.key}`), m.icon, t.modules[m.key].name, t.modules[m.key].short, pageId === `module:${m.key}`)).join("");
+  const productSide = `<a class="mega-feat" href="${href(locale, "product")}"><span class="mf-pic"><img src="/img/screens/queue-${locale}-480.webp" width="480" height="300" alt="" loading="lazy" decoding="async"></span><b>${esc(t.nav.platformOverview)}</b><small>${esc(t.nav.platformOverviewText)}</small>${go}</a>`;
+  const solutions = SOLUTIONS.map((s) => item(href(locale, `solutions/${s.key}`), s.icon, t.solutions[s.key].name, t.solutions[s.key].short, pageId === `solution:${s.key}`)).join("");
+  const solutionsSide = `<a class="mega-feat" href="${href(locale, "why")}"><span class="mf-ic">${icon("scale")}</span><b>${esc(t.nav.why)}</b><small>${esc(t.nav.whyText)}</small>${go}</a>`;
+  const resources = [
+    item(href(locale, "help"), "help", rl.help[0], rl.help[1], pageId === "help"),
+    item(href(locale, "security"), "shield", rl.security[0], rl.security[1], pageId === "security"),
+    item(href(locale, "contact"), "message", rl.contact[0], rl.contact[1], pageId === "contact"),
+    item(href(locale, "download"), "download", rl.download[0], rl.download[1], pageId === "download"),
+  ].join("");
+  const resourcesSide = `<a class="mega-feat" href="${whatsappHref(t.whatsappMessage)}" rel="noopener"><span class="mf-ic">${icon("whatsapp")}</span><b>${esc(t.nav.talk)}</b><small dir="ltr">${esc(phoneDisplay())}</small><span class="mf-go">WhatsApp${icon("arrow", "flip")}</span></a>`;
+
+  const langPop = SITE.locales
+    .map((l) => `<a href="${href(l, path)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}><span>${esc(COPY[l].name)}</span><i aria-hidden="true">${l.toUpperCase()}</i></a>`)
+    .join("");
   const langs = SITE.locales
     .map((l) => `<a href="${href(l, path)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}>${esc(COPY[l].name)}</a>`)
     .join("");
@@ -94,11 +121,16 @@ function header({ locale, pageId, path }) {
 <summary class="menu-btn"><span>${esc(t.nav.menu)}</span></summary>
 <div class="menu-panel">
 <nav aria-label="${esc(t.nav.menu)}"><ul class="nav-links">
-${link("product", t.nav.product)}${link("integrations", t.nav.integrations)}${link("pricing", t.nav.pricing)}${link("security", t.nav.resourceLinks.security[0])}${link("help", t.nav.resourceLinks.help[0])}
+${drop("product", t.nav.product, inProduct, t.nav.platformTitle, modules, true, productSide)}
+${drop("solutions", t.nav.solutions, inSolutions, t.nav.solutionsTitle, solutions, false, solutionsSide)}
+${plain("integrations", t.nav.integrations)}
+${plain("pricing", t.nav.pricing)}
+${drop("resources", t.nav.resources, inResources, t.nav.resourcesTitle, resources, false, resourcesSide)}
 </ul></nav>
 <div class="nav-tools">
+<details class="langmenu" data-langmenu><summary aria-label="${esc(t.nav.language)}">${icon("globe")}<span>${esc(t.name)}</span>${CHEV}</summary><div class="lang-pop">${langPop}</div></details>
 <p class="langs">${langs}</p>
-<a class="btn btn-primary" href="${href(locale, "download")}">${esc(t.nav.resourceLinks.download[0])}</a>
+<a class="nav-cta" href="${href(locale, "download")}">${icon("download")}<span>${esc(t.nav.start)}</span></a>
 </div>
 </div>
 </details>

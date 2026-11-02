@@ -25,7 +25,7 @@
   /* ── menu: open on desktop, Escape closes it on a phone and returns focus ── */
   const menu = $("[data-menu]");
   if (menu) {
-    const wide = matchMedia("(min-width: 900px)");
+    const wide = matchMedia("(min-width: 1080px)");
     const sync = () => { menu.open = wide.matches; };
     sync();
     wide.addEventListener("change", sync);
@@ -35,6 +35,77 @@
       $("summary", menu)?.focus();
     });
     menu.addEventListener("click", (e) => { if (!wide.matches && e.target.closest("a")) menu.open = false; });
+  }
+
+  /* ── navigation: menus open by hover (mouse), by tap or Enter (touch, keyboard); Escape closes; reading line ── */
+  const topbar = $("[data-header]");
+  if (topbar) {
+    const megas = $$("[data-mega]", topbar);
+    const lang = $("[data-langmenu]", topbar);
+    const closeAll = (except) => megas.forEach((li) => {
+      if (li === except) return;
+      li.classList.remove("is-open");
+      const b = $("button", li);
+      if (b) b.setAttribute("aria-expanded", "false");
+    });
+    megas.forEach((li) => {
+      const btn = $("button", li);
+      btn.addEventListener("click", (e) => {
+        if (matchMedia("(hover: hover) and (min-width: 1080px)").matches && e.detail !== 0) return;
+        const open = !li.classList.contains("is-open");
+        closeAll(li);
+        li.classList.toggle("is-open", open);
+        btn.setAttribute("aria-expanded", String(open));
+      });
+    });
+    /* mouse: hover intent. A short wait before opening or swapping, a longer one before closing, one shared timer,
+       so sweeping diagonally across a neighbouring label never swaps or closes the panel you are heading for. */
+    if (matchMedia("(hover: hover) and (min-width: 1080px)").matches) {
+      let timer = 0;
+      const later = (fn, ms) => { clearTimeout(timer); timer = setTimeout(fn, ms); };
+      const openOnly = (li) => {
+        closeAll(li);
+        li.classList.add("is-open");
+        const b = $("button", li);
+        if (b) b.setAttribute("aria-expanded", "true");
+      };
+      megas.forEach((li) => {
+        li.addEventListener("pointerenter", (e) => {
+          if (e.pointerType !== "mouse") return;
+          const anyOpen = megas.some((x) => x.classList.contains("is-open"));
+          if (li.classList.contains("is-open")) { clearTimeout(timer); return; }
+          later(() => openOnly(li), anyOpen ? 140 : 70);
+        });
+        li.addEventListener("pointerleave", (e) => {
+          if (e.pointerType !== "mouse") return;
+          later(() => closeAll(), 220);
+        });
+      });
+      /* hovering a plain link (Integrations, Pricing) closes an open panel after the same short wait */
+      $$(".nav-links > li:not([data-mega])", topbar).forEach((li) => li.addEventListener("pointerenter", (e) => {
+        if (e.pointerType === "mouse") later(() => closeAll(), 140);
+      }));
+    }
+    doc.addEventListener("click", (e) => {
+      if (!e.target.closest("[data-mega]")) closeAll();
+      if (lang && lang.open && !e.target.closest("[data-langmenu]")) lang.open = false;
+    });
+    doc.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const inside = doc.activeElement && doc.activeElement.closest ? doc.activeElement.closest("[data-mega]") : null;
+      closeAll();
+      if (lang && lang.open) { lang.open = false; $("summary", lang).focus(); }
+      else if (inside) $("button", inside).focus();
+    });
+    let line = false;
+    const paint = () => {
+      line = false;
+      const h = doc.documentElement.scrollHeight - innerHeight;
+      topbar.style.setProperty("--sp", h > 0 ? Math.min(1, scrollY / h).toFixed(4) : "0");
+      topbar.classList.toggle("is-stuck", scrollY > 8);
+    };
+    addEventListener("scroll", () => { if (!line) { line = true; requestAnimationFrame(paint); } }, { passive: true });
+    paint();
   }
 
   /* ── price count-up: 600 ms, once, when it scrolls into view ── */

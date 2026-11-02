@@ -18,36 +18,10 @@ h1,h2,h3,h4{font-family:var(--f)}
 ::selection{background:var(--accent);color:var(--ink)}
 :focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 
-/* ───────── header: solid white, brand | centred links | language switch + download ───────── */
-.top{position:sticky;inset-block-start:0;z-index:60;background:#fff;border-block-end:1px solid transparent;transition:border-color .3s}
-.top.is-stuck{border-color:var(--line)}
-.top-in{max-inline-size:none;padding-inline:var(--pad-x);gap:20px}
-.brand .wm{color:var(--ink);font-weight:700;letter-spacing:-.03em}
-.menu>summary{background:var(--ink);color:#fff;border-radius:999px;padding:0 22px;font-weight:600}
-.menu[open]>summary{background:var(--accent);color:var(--ink)}
-.menu[open] .menu-panel{background:#fff}
-.nav-links a{color:var(--ink);border-block-end:1px solid var(--line)}
-.nav-links a[aria-current=page]{color:var(--accent-text)}
-.langs a{background:var(--surface);color:var(--muted);border-radius:12px}
-.langs a[aria-current]{background:var(--ink);color:#fff}
+/* header: see 13-nav.css */
 .btn{border-radius:999px}
 .btn-primary{background:var(--ink);color:#fff;font-weight:600;border-radius:999px}
 .btn-primary:hover{background:var(--accent);color:var(--ink)}
-@media (min-width:900px){
-.menu{flex:1}
-.menu[open] .menu-panel,.menu-panel{flex:1;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px}
-.menu-panel>nav{grid-column:2;grid-row:1}
-.nav-tools{grid-column:3;grid-row:1;justify-self:end;gap:14px}
-.nav-links{gap:2px}
-.nav-links a{padding:0 16px;border:0;border-radius:999px;color:var(--muted);font-weight:500;transition:background-color .2s,color .2s}
-.nav-links a:hover{background:var(--surface);color:var(--ink)}
-.nav-links a[aria-current=page]{background:var(--surface);color:var(--ink);text-decoration:none;box-shadow:none}
-.langs{background:var(--surface);border-radius:999px;padding:4px}
-.langs a{background:none;color:var(--muted);border-radius:999px;min-block-size:36px;padding:0 14px;font-weight:600;font-size:.9375rem}
-.langs a:hover{color:var(--ink)}
-.langs a[aria-current]{background:#fff;color:var(--ink);text-decoration:none;box-shadow:0 1px 3px rgba(12,15,20,.14)}
-.nav-tools .btn{min-block-size:46px;padding:0 26px}
-}
 
 /* ───────── buttons ───────── */
 .v-btn,.v-btn-on{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.6em;min-block-size:58px;padding:0 30px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:600 1.0625rem/1.2 var(--f);text-decoration:none;cursor:pointer;overflow:hidden;transition:transform .25s var(--ease),background-color .2s,color .2s,box-shadow .3s}
