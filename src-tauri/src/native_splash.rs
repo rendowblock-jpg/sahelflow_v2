@@ -690,6 +690,50 @@ pub(crate) fn scale_override(value: Option<&str>) -> Option<f32> {
     (scale.is_finite() && (1.0..=4.0).contains(&scale)).then_some(scale)
 }
 
+/// Where the card's window opens: centred in the work area of a monitor (left, top, right, bottom: the screen
+/// minus the taskbar, wherever it sits; a second monitor may have negative coordinates). The card is a fixed
+/// size, so the size of the screen only decides this; a work area smaller than the window lets the shadow
+/// margin hang over equally on both sides and the card itself stays centred.
+pub(crate) fn centered_in(area: (i32, i32, i32, i32), width: i32, height: i32) -> (i32, i32) {
+    (
+        area.0 + ((area.2 - area.0) - width) / 2,
+        area.1 + ((area.3 - area.1) - height) / 2,
+    )
+}
+
+/// Test builds only (the lab harness): a comma-separated list of moments in milliseconds, 0 to 5000, in the
+/// order given. Anything else in the list is ignored.
+#[cfg(test)]
+pub(crate) fn parse_ms_list(text: &str) -> Vec<u32> {
+    text.split(',')
+        .filter_map(|part| part.trim().parse::<u32>().ok())
+        .filter(|ms| *ms <= 5_000)
+        .collect()
+}
+
+/// Test builds only: a window-button look as `(hovered, pressed)`. A pressed button is under the pointer too.
+#[cfg(test)]
+pub(crate) fn chip_look(name: &str) -> Option<(Option<Chip>, Option<Chip>)> {
+    match name {
+        "none" => Some((None, None)),
+        "hover-min" => Some((Some(Chip::Minimize), None)),
+        "hover-close" => Some((Some(Chip::Close), None)),
+        "press-min" => Some((Some(Chip::Minimize), Some(Chip::Minimize))),
+        "press-close" => Some((Some(Chip::Close), Some(Chip::Close))),
+        _ => None,
+    }
+}
+
+/// Test builds only: whether `name` is in a comma-separated font list, whatever the case.
+#[cfg(test)]
+pub(crate) fn names_font(list: &str, name: &str) -> bool {
+    let name = name.trim();
+    !name.is_empty()
+        && list
+            .split(',')
+            .any(|entry| entry.trim().eq_ignore_ascii_case(name))
+}
+
 /// GDI+ fills the S through regions, and regions ignore the anti-aliasing mode:
 /// every curve came out as a staircase. The mark is therefore drawn `k` times
 /// larger into a layer of its own and averaged down. GDI+ paints that layer in
@@ -1393,9 +1437,26 @@ mod imp {
         typographic: *mut GpStringFormat,
     }
 
+    /// A test build may pretend some fonts are not installed (`SF_CARD_FONT_MISSING`, a comma-separated list),
+    /// to see the card as a PC without "Segoe UI Variable" draws it (Windows 10). A real build never does.
+    #[cfg(test)]
+    fn font_is_missing(name: &str) -> bool {
+        names_font(
+            &std::env::var("SF_CARD_FONT_MISSING").unwrap_or_default(),
+            name,
+        )
+    }
+    #[cfg(not(test))]
+    fn font_is_missing(_name: &str) -> bool {
+        false
+    }
+
     impl Fonts {
         unsafe fn create(locale: Locale) -> Option<Self> {
             let family_named = |name: &str| {
+                if font_is_missing(name) {
+                    return std::ptr::null_mut();
+                }
                 let mut family: *mut GpFontFamily = std::ptr::null_mut();
                 let name = wide(name);
                 let status =
@@ -2689,10 +2750,12 @@ mod imp {
                     bottom: 728,
                 }
             };
-            POINT {
-                x: area.left + ((area.right - area.left) - width) / 2,
-                y: area.top + ((area.bottom - area.top) - height) / 2,
-            }
+            let (x, y) = centered_in(
+                (area.left, area.top, area.right, area.bottom),
+                width,
+                height,
+            );
+            POINT { x, y }
         }
     }
 
@@ -3005,6 +3068,12 @@ mod imp {
             let phases = list("SF_CARD_PHASES", "preparing");
             let hints = list("SF_CARD_HINT", "0");
             let bench: u32 = setting("SF_CARD_BENCH", "0").parse().unwrap_or(0);
+            // The first moments of a live card (ms), the window-button looks, the hand-over state and a free
+            // tag for the file names (to tell font runs apart).
+            let times = parse_ms_list(&setting("SF_CARD_TIMES", ""));
+            let chips = list("SF_CARD_CHIPS", "none");
+            let finish = setting("SF_CARD_FINISH", "0") == "1";
+            let tag = setting("SF_CARD_TAG", "");
             assert!(!percents.is_empty(), "SF_CARD_PERCENTS has no number");
             let data_dir = out.join(format!("appdata-{theme}-{preset}-{locale}"));
             fs::create_dir_all(&data_dir).expect("create the app data folder");
@@ -3030,41 +3099,77 @@ mod imp {
                 RENDERER.with(|cell| {
                     let mut guard = cell.borrow_mut();
                     let renderer = guard.as_mut().expect("the renderer exists after create");
-                    // Everything settled, nothing animating: a still picture.
-                    renderer.reduced_motion = true;
-                    for hint in &hints {
-                        for phase in &phases {
-                            for percent in &percents {
-                                let fraction = *percent as f32 / 100.0;
-                                renderer.progress.shown = fraction;
-                                renderer.progress.target = fraction;
-                                renderer.progress.phase = phase_named(phase);
-                                // No cross-fade: the label of THIS phase, whole.
-                                renderer.stage_text = "";
-                                renderer.stage_prev = "";
-                                renderer.shown_at = if hint == "1" {
-                                    Instant::now()
-                                        .checked_sub(Duration::from_secs(60))
-                                        .unwrap_or_else(Instant::now)
-                                } else {
-                                    Instant::now()
-                                };
-                                renderer.settled.clear();
-                                renderer.steady = false;
-                                renderer.last_signature = None;
-                                let t = renderer.elapsed_ms();
-                                renderer.paint(t);
-                                GdipFlush(renderer.graphics, FlushIntentionSync);
-                                let slow = if hint == "1" { "-hint" } else { "" };
-                                let name = format!(
-                                    "{theme}-{preset}-{locale}-{phase}-p{percent:02}{slow}-{}x{}.bgra",
-                                    renderer.width, renderer.height
-                                );
-                                fs::write(out.join(name), renderer.copy_out())
-                                    .expect("write the picture");
+                    // Everything settled, nothing animating: a still picture. SF_CARD_TIMES paints the
+                    // first moments of a live card instead, SF_CARD_CHIPS the window-button states and
+                    // SF_CARD_FINISH=1 the card as it hands over to the workspace.
+                    let moments: Vec<Option<u32>> = if times.is_empty() {
+                        vec![None]
+                    } else {
+                        times.iter().map(|ms| Some(*ms)).collect()
+                    };
+                    if finish {
+                        super::super::WORKSPACE_READY.store(true, Ordering::SeqCst);
+                        renderer.closing_since = Some(Instant::now());
+                    }
+                    for chip in &chips {
+                        let (hovered, pressed) = chip_look(chip)
+                            .unwrap_or_else(|| panic!("SF_CARD_CHIPS: unknown look {chip:?}"));
+                        HOVERED.store(chip_code(hovered), Ordering::Relaxed);
+                        PRESSED.store(chip_code(pressed), Ordering::Relaxed);
+                        for hint in &hints {
+                            for phase in &phases {
+                                for percent in &percents {
+                                    for moment in &moments {
+                                        let fraction = *percent as f32 / 100.0;
+                                        renderer.progress.shown = fraction;
+                                        renderer.progress.target = fraction;
+                                        renderer.progress.phase = phase_named(phase);
+                                        // No cross-fade: the label of THIS phase, whole.
+                                        renderer.stage_text = "";
+                                        renderer.stage_prev = "";
+                                        renderer.reduced_motion = moment.is_none();
+                                        let age = match (hint == "1", moment) {
+                                            (true, _) => Duration::from_secs(60),
+                                            (false, Some(ms)) => Duration::from_millis(u64::from(*ms)),
+                                            (false, None) => Duration::ZERO,
+                                        };
+                                        renderer.shown_at =
+                                            Instant::now().checked_sub(age).unwrap_or_else(Instant::now);
+                                        renderer.settled.clear();
+                                        renderer.steady = false;
+                                        renderer.last_signature = None;
+                                        let t = match moment {
+                                            Some(ms) => *ms as f32,
+                                            None => renderer.elapsed_ms(),
+                                        };
+                                        renderer.paint(t);
+                                        GdipFlush(renderer.graphics, FlushIntentionSync);
+                                        let slow = if hint == "1" { "-hint" } else { "" };
+                                        let at = moment.map(|ms| format!("-t{ms:04}")).unwrap_or_default();
+                                        let pointer = if chip == "none" {
+                                            String::new()
+                                        } else {
+                                            format!("-chip-{chip}")
+                                        };
+                                        let done = if finish { "-finish" } else { "" };
+                                        let label = if tag.is_empty() {
+                                            String::new()
+                                        } else {
+                                            format!("-{tag}")
+                                        };
+                                        let name = format!(
+                                            "{theme}-{preset}-{locale}-{phase}-p{percent:02}{slow}{at}{pointer}{done}{label}-{}x{}.bgra",
+                                            renderer.width, renderer.height
+                                        );
+                                        fs::write(out.join(name), renderer.copy_out())
+                                            .expect("write the picture");
+                                    }
+                                }
                             }
                         }
                     }
+                    HOVERED.store(NO_CHIP, Ordering::Relaxed);
+                    PRESSED.store(NO_CHIP, Ordering::Relaxed);
                     if bench > 0 {
                         // The ripple on, 34 %: what a seller's PC does every frame. The same frame is
                         // timed with no layer (the old direct drawing) and with layers of 2x2, 3x3 and
@@ -4064,6 +4169,85 @@ mod tests {
         for bad in ["", "abc", "0", "0.5", "-1", "NaN", "inf", "4.5", "100"] {
             assert_eq!(scale_override(Some(bad)), None, "{bad:?} must be refused");
         }
+    }
+
+    // 1080p and every other screen: the card is a fixed size, so the screen size only decides WHERE it opens.
+    // `centered_in` takes a monitor's work area (left, top, right, bottom: the screen minus the taskbar,
+    // which may sit on any edge, and a second monitor may have negative coordinates) and the window size.
+    #[test]
+    fn the_card_opens_centred_in_the_work_area_of_any_screen() {
+        // 1080p with a 40 px taskbar at the bottom; the 680x440 window (600x360 card + 40 px shadow all round).
+        assert_eq!(centered_in((0, 0, 1920, 1040), 680, 440), (620, 300));
+        // The same screen at 150 %: the window is 1020x660 device pixels.
+        assert_eq!(centered_in((0, 0, 1920, 1040), 1020, 660), (450, 190));
+        // A 1366x768 laptop with its taskbar.
+        assert_eq!(centered_in((0, 0, 1366, 728), 680, 440), (343, 144));
+        // A taskbar on top moves the centre down with the work area.
+        assert_eq!(centered_in((0, 40, 1920, 1080), 680, 440), (620, 340));
+        // A second monitor to the left of the main one has negative coordinates.
+        assert_eq!(centered_in((-1920, 0, 0, 1040), 680, 440), (-1300, 300));
+        // A work area smaller than the window (a 200 % laptop): the shadow margin hangs over equally on both
+        // sides, so the card itself stays centred.
+        assert_eq!(centered_in((0, 0, 600, 400), 680, 440), (-40, -20));
+        for area in [
+            (0, 0, 1920, 1040),
+            (0, 0, 1366, 728),
+            (-1920, 0, 0, 1040),
+            (0, 40, 2560, 1440),
+        ] {
+            for (w, h) in [(680, 440), (850, 550), (1020, 660), (1360, 880)] {
+                let (x, y) = centered_in(area, w, h);
+                let (cx, cy) = (x + w / 2, y + h / 2);
+                let (ax, ay) = ((area.0 + area.2) / 2, (area.1 + area.3) / 2);
+                assert!(
+                    (cx - ax).abs() <= 1 && (cy - ay).abs() <= 1,
+                    "{area:?} {w}x{h}"
+                );
+            }
+        }
+    }
+
+    // The lab can now show the first moments of the card, the chip states and the fallback fonts.
+    #[test]
+    fn a_list_of_moments_keeps_only_sensible_times() {
+        assert_eq!(parse_ms_list(""), Vec::<u32>::new());
+        assert_eq!(parse_ms_list("0, 150,700"), vec![0, 150, 700]);
+        assert_eq!(parse_ms_list("x,5,-3,99999,2000"), vec![5, 2000]);
+        assert_eq!(
+            parse_ms_list("300,100"),
+            vec![300, 100],
+            "the order given is kept"
+        );
+    }
+
+    #[test]
+    fn a_chip_look_says_what_the_pointer_is_doing() {
+        assert_eq!(chip_look("none"), Some((None, None)));
+        assert_eq!(chip_look("hover-min"), Some((Some(Chip::Minimize), None)));
+        assert_eq!(chip_look("hover-close"), Some((Some(Chip::Close), None)));
+        // A pressed chip is under the pointer too.
+        assert_eq!(
+            chip_look("press-min"),
+            Some((Some(Chip::Minimize), Some(Chip::Minimize)))
+        );
+        assert_eq!(
+            chip_look("press-close"),
+            Some((Some(Chip::Close), Some(Chip::Close)))
+        );
+        assert_eq!(chip_look("hover"), None);
+        assert_eq!(chip_look(""), None);
+    }
+
+    #[test]
+    fn a_missing_font_list_matches_names_whatever_their_case() {
+        assert!(names_font(
+            "Segoe UI Variable Text",
+            "segoe ui variable text"
+        ));
+        assert!(names_font("Segoe UI Variable Text, Segoe UI", "Segoe UI"));
+        assert!(!names_font("Segoe UI Variable Text", "Segoe UI"));
+        assert!(!names_font("", "Segoe UI"));
+        assert!(!names_font("Segoe UI", ""));
     }
 
     #[test]
