@@ -227,7 +227,7 @@ export default {
       faq: [
         ["How many people can work together?", "The owner plus up to ten active team members."],
         ["Can a member change their own PIN?", "Yes, from Settings → My account. The owner can also reset it."],
-        ["What happens when I remove someone?", "Their sessions end at once and they can no longer sign in. Their past actions stay in the history."],
+        ["What happens when I remove someone?", "They can no longer sign in to this shop. Their past actions stay in the history."],
       ],
     },
   },
@@ -655,7 +655,7 @@ export default {
         ["How many people can use SahelFlow?", "The owner plus up to ten active team members."],
         ["How do I invite someone?", "Settings → Team → Invite. Send the code; they choose their login and PIN."],
         ["What can each role do?", "Managers run the shop, operators confirm and ship, viewers read. You can also tick exact permissions."],
-        ["How do I remove access?", "Settings → Team → Remove. Their sessions end immediately."],
+        ["How do I remove access?", "Settings → Team → Remove. The member can no longer sign in to the shop."],
       ]],
     },
   },

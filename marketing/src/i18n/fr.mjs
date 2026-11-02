@@ -227,7 +227,7 @@ export default {
       faq: [
         ["Combien de personnes peuvent travailler ensemble ?", "Le propriétaire et jusqu'à dix membres actifs."],
         ["Un membre peut-il changer son PIN ?", "Oui, depuis Paramètres → Mon compte. Le propriétaire peut aussi le réinitialiser."],
-        ["Que se passe-t-il quand je retire quelqu'un ?", "Ses sessions se ferment aussitôt et il ne peut plus se connecter. Ses actions passées restent dans l'historique."],
+        ["Que se passe-t-il quand je retire quelqu'un ?", "Il ne peut plus se connecter à cette boutique. Ses actions passées restent dans l'historique."],
       ],
     },
   },
@@ -655,7 +655,7 @@ export default {
         ["Combien de personnes peuvent utiliser SahelFlow ?", "Le propriétaire et jusqu'à dix membres actifs."],
         ["Comment inviter quelqu'un ?", "Paramètres → Équipe → Inviter. Envoyez le code ; la personne choisit son identifiant et son PIN."],
         ["Que peut faire chaque rôle ?", "Le manager gère la boutique, l'opérateur confirme et expédie, le lecteur consulte. Vous pouvez aussi cocher des droits précis."],
-        ["Comment retirer un accès ?", "Paramètres → Équipe → Retirer. Ses sessions se ferment aussitôt."],
+        ["Comment retirer un accès ?", "Paramètres → Équipe → Retirer. Le membre ne peut plus se connecter à la boutique."],
       ]],
     },
   },
