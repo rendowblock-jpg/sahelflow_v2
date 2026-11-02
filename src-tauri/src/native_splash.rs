@@ -188,6 +188,8 @@ const STATUS_DOT: f32 = 4.0;
 const STATUS_DOT_CENTER_Y: f32 = 9.5;
 const ENTRANCE_MS: f32 = 220.0;
 const ENTRANCE_FLOOR: f32 = 0.55;
+/// The status text size in card pixels (the body face of the card).
+const BODY_FONT_PX: f32 = 13.5;
 const SLOW_HINT_AFTER_MS: f32 = launch_screen::SLOW_HINT_AFTER_SECS as f32 * 1_000.0;
 const FADE_OUT_MS: f32 = 170.0;
 /// Every entrance animation has finished by this time. The static part of the
@@ -933,6 +935,15 @@ pub(crate) fn stage_swap(stage_ms: f32, has_previous: bool) -> StageSwap {
     }
 }
 
+/// The width to give a text that GDI+ will draw with its default string format.
+/// `measured` is the text width without side padding (the typographic format).
+/// The drawing format keeps about a sixth of an em at the start and a quarter at
+/// the end, so a slot of `measured + 2` px made character trimming drop the last
+/// letter ("Preparing your dat"). Two pixels of slack stay for rounding.
+pub(crate) fn label_slot_width(measured: f32, font_px: f32) -> f32 {
+    measured + font_px * (1.0 / 6.0 + 1.0 / 4.0) + 2.0
+}
+
 /// The room the status text takes in the row. When the text changes, the room
 /// changes from the old width to the new one while both texts are faint, so
 /// the dot and the percent glide instead of jumping.
@@ -1251,6 +1262,9 @@ mod imp {
                     flags |= StringFormatFlagsDirectionRightToLeft;
                 }
                 GdipCreateStringFormat(flags, 0, &mut format);
+                // Never drop a letter: the default trimming cuts the last
+                // character that does not fit ("Preparing your dat").
+                GdipSetStringFormatTrimming(format, StringTrimmingNone);
                 GdipSetStringFormatAlign(format, align);
                 GdipSetStringFormatLineAlign(format, StringAlignmentNear);
                 format
@@ -1261,8 +1275,8 @@ mod imp {
             }
             let fonts = Self {
                 family,
-                body: font(family, 13.5, FontStyleRegular),
-                percent: font(family, 13.5, FontStyleBold),
+                body: font(family, BODY_FONT_PX, FontStyleRegular),
+                percent: font(family, BODY_FONT_PX, FontStyleBold),
                 small: font(family, 12.0, FontStyleRegular),
                 tiny: font(family, 12.0, FontStyleRegular),
                 center: format(false, StringAlignmentCenter),
@@ -1446,12 +1460,12 @@ mod imp {
             }
             match measure_width(g, text, self.fonts.body, self.fonts.typographic) {
                 Some(width) => {
-                    let width = width + 2.0;
+                    let width = label_slot_width(width, BODY_FONT_PX);
                     self.label_widths.borrow_mut().push((text, width));
                     width
                 }
                 // GDI+ could not measure it: a rough per-letter guess, not remembered.
-                None => text.chars().count() as f32 * 7.0 + 2.0,
+                None => label_slot_width(text.chars().count() as f32 * 7.0, BODY_FONT_PX),
             }
         }
 
@@ -3337,6 +3351,42 @@ mod handoff_tests {
 mod tests {
     use super::*;
     use std::fs;
+
+    // F-0002 (Founder's lab run 41407479045): the status read "Preparing your
+    // dat". The slot was measured WITHOUT GDI+'s side padding and drawn WITH it,
+    // so the last letter did not fit and character trimming dropped it.
+    #[test]
+    fn a_label_slot_clears_the_padding_gdi_plus_adds_when_it_draws() {
+        for font_px in [12.0_f32, 13.5, 16.0] {
+            for measured in [40.0_f32, 100.0, 173.0] {
+                let slot = label_slot_width(measured, font_px);
+                // GDI+'s default string format keeps about a sixth of an em at
+                // the start and a quarter at the end.
+                let padding = font_px * (1.0 / 6.0 + 1.0 / 4.0);
+                assert!(
+                    le(measured + padding, slot),
+                    "slot {slot} is narrower than text {measured} + padding {padding} at {font_px} px"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_label_slot_never_wastes_more_than_a_few_pixels() {
+        // A wider slot moves the dot and the percent; it must stay tight.
+        let slot = label_slot_width(100.0, 13.5);
+        assert!(lt(slot, 100.0 + 13.5 * 0.5 + 3.0), "slot {slot} is too loose");
+    }
+
+    // The same bug class in the other direction: whatever the measure says, a
+    // drawing format must never drop a letter. The needle is built from two
+    // pieces so this test does not find itself.
+    #[test]
+    fn the_drawing_formats_never_trim_a_letter() {
+        let source = include_str!("native_splash.rs");
+        let needle = concat!("GdipSetStringFormatTrimming(", "format, StringTrimmingNone)");
+        assert!(source.contains(needle), "the drawing format must switch trimming off");
+    }
 
     const PRESETS: [Preset; 4] = [Preset::Sahel, Preset::Atlas, Preset::Oasis, Preset::Dune];
     const THEMES: [Theme; 2] = [Theme::Light, Theme::Dark];
