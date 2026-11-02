@@ -285,95 +285,58 @@
       .catch(() => { /* the server-rendered card stays */ });
   }
 
-  /* ── 7. connections: two rows of logos, and an activity console whose events arrive by themselves ── */
+  /* ── 7. connections: one line of logos that drifts by itself. It keeps moving when the device asks for less motion (slower),
+        and it can always be paused with the button, by hovering it, or by scrolling it off screen. ── */
   const feed = $("[data-feed]");
   if (feed) {
-    let paused = false;
-    const onScreen = { v: true };
-    const rowsBox = $("[data-feed-rows]", feed);
-    if (!calm && hasIO && rowsBox) {
-      /* each row is doubled so it can drift forever without a seam; the copies are hidden from screen readers and from the keyboard */
-      $$("[data-feed-row]", feed).forEach((row) => {
-        [...row.children].forEach((li) => {
-          const copy = li.cloneNode(true);
-          copy.setAttribute("aria-hidden", "true");
-          copy.setAttribute("inert", "");
-          row.append(copy);
-        });
+    const box = $("[data-feed-rows]", feed);
+    const row = $("[data-feed-row]", feed);
+    if (box && row) {
+      const originals = [...row.children];
+      const speed = calm ? 36 : 52; /* pixels per second */
+      let sets = 1; /* copies of the whole set that one half of the track holds */
+      let unit = 0; /* width of one set including its trailing gap */
+      const build = () => {
+        [...row.children].slice(originals.length).forEach((node) => node.remove());
+        box.classList.add("is-run");
         row.classList.add("is-run");
-      });
-      rowsBox.classList.add("is-run");
-    }
-    if (hasIO) new IntersectionObserver((es) => { onScreen.v = es[0].isIntersecting; feed.classList.toggle("is-off", !onScreen.v); }).observe(feed);
-    const pbtn = $("[data-feed-pause]", feed);
-    if (pbtn) {
-      pbtn.addEventListener("click", () => {
-        paused = pbtn.getAttribute("aria-pressed") !== "true";
-        pbtn.setAttribute("aria-pressed", String(paused));
-        pbtn.setAttribute("aria-label", paused ? pbtn.dataset.lPlay : pbtn.dataset.lPause);
-        feed.classList.toggle("is-paused", paused);
-      });
-    }
-    /* a device that asks for less motion gets the calm version; this strip lets the visitor switch every animation on */
-    const strip = $("[data-calm-strip]", feed);
-    if (strip && calm && root.hasAttribute("data-os-reduced")) {
-      strip.hidden = false;
-      $("[data-motion-full]", strip).addEventListener("click", () => {
-        try { localStorage.setItem("sf-motion", "full"); location.reload(); } catch (e) { /* storage is blocked: nothing to switch */ }
-      });
-    }
-    const list = $("[data-ev-list]", feed);
-    if (list) {
-      const d = feed.dataset;
-      const phone = matchMedia("(max-width: 600px)");
-      const limit = () => (phone.matches ? 4 : 5);
-      const shown = () => $$("[data-ev]:not([hidden])", list);
-      const queue = $$("[data-ev][hidden]", list);
-      const born = new Map();
-      let vt = 0; /* the feed's own clock in ms: it stops while the feed is paused or off screen, so ages never jump */
-      const label = (s) => (s < 1 ? d.now : d.sec.replace("{n}", String(s)));
-      const refresh = () => shown().forEach((li) => { $("[data-age]", li).textContent = label(Math.max(0, Math.round((vt - born.get(li)) / 1000))); });
-      shown().forEach((li, i) => born.set(li, -i * 3000));
-      const trim = () => shown().slice(limit()).forEach((li) => { li.hidden = true; queue.push(li); });
-      trim();
-      refresh();
-      if (phone.addEventListener) phone.addEventListener("change", trim);
-      /* a short, contained slide inside the panel, kept in calm mode too (the panel is small and has its own pause button) */
-      const dur = calm ? 520 : 760;
-      const ease = "cubic-bezier(.2,.8,.2,1)";
-      const light = (li) => {
-        li.classList.add("is-new");
-        setTimeout(() => li.classList.remove("is-new"), 2600);
-        $$(`.h7-card[data-brand="${li.dataset.brand}"]`, feed).forEach((c) => {
-          c.classList.add("is-hot");
-          setTimeout(() => c.classList.remove("is-hot"), 2800);
-        });
+        unit = row.getBoundingClientRect().width;
+        if (!unit) return;
+        sets = Math.max(1, Math.ceil(innerWidth / unit));
+        for (let c = 0; c < 2 * sets - 1; c++) {
+          originals.forEach((li) => {
+            const copy = li.cloneNode(true);
+            copy.setAttribute("aria-hidden", "true");
+            copy.setAttribute("inert", "");
+            row.append(copy);
+          });
+        }
+        row.style.setProperty("--dur", ((unit * sets) / speed).toFixed(1) + "s");
       };
-      const add = () => {
-        const next = queue.shift();
-        if (!next) return;
-        const cur = shown();
-        const before = new Map(cur.map((li) => [li, li.getBoundingClientRect().top]));
-        next.hidden = false;
-        list.prepend(next);
-        born.set(next, vt);
-        refresh();
-        cur.forEach((li) => {
-          const dy = before.get(li) - li.getBoundingClientRect().top;
-          if (dy) li.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: dur, easing: ease });
-        });
-        next.animate([{ opacity: 0, transform: `translateY(${calm ? -12 : -26}px)` }, { opacity: 1, transform: "none" }], { duration: dur, easing: ease });
-        light(next);
-        const over = shown().slice(limit());
-        setTimeout(() => over.forEach((li) => { li.hidden = true; queue.push(li); }), dur + 60);
+      build();
+      /* a late font changes the widths: keep the speed constant, and add copies if the screen is now wider than one half */
+      const refit = () => {
+        const one = row.getBoundingClientRect().width / (2 * sets);
+        if (!one) return;
+        if (Math.ceil(innerWidth / one) > sets) { build(); return; }
+        unit = one;
+        row.style.setProperty("--dur", ((unit * sets) / speed).toFixed(1) + "s");
       };
-      const gap = calm ? 4000 : 3000;
-      let nextAt = 3000;
-      setInterval(() => {
-        if (paused || !onScreen.v || doc.hidden) return;
-        vt += 1000;
-        if (vt >= nextAt) { nextAt = vt + gap; add(); } else refresh();
-      }, 1000);
+      if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(refit);
+      let rt = 0;
+      addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(refit, 250); });
+      if (hasIO) new IntersectionObserver((es) => feed.classList.toggle("is-off", !es[0].isIntersecting)).observe(feed);
+      const pbtn = $("[data-feed-pause]", feed);
+      if (pbtn) {
+        pbtn.addEventListener("click", () => {
+          const on = pbtn.getAttribute("aria-pressed") !== "true";
+          pbtn.setAttribute("aria-pressed", String(on));
+          pbtn.setAttribute("aria-label", on ? pbtn.dataset.lPlay : pbtn.dataset.lPause);
+          feed.classList.toggle("is-paused", on);
+        });
+      }
+      const note = $("[data-calm-note]", feed);
+      if (note && calm && root.hasAttribute("data-os-reduced")) note.hidden = false;
     }
   }
 
