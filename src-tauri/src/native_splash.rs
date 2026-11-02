@@ -2610,6 +2610,101 @@ mod imp {
         );
         true
     }
+
+    /// Paints the REAL card (the code the seller sees) for one look, one
+    /// language and a list of progress values, and writes the pixels to disk, so
+    /// a design is judged on a picture and not on a guess (the 2 Nov card review
+    /// had to work from lab screenshots of a full app run). It opens a real
+    /// window, so it only runs when asked; the lab workflow `render-card` does.
+    ///
+    /// Environment: SF_CARD_PREVIEW_DIR (required), SF_CARD_THEME dark|light,
+    /// SF_CARD_PRESET sahel|atlas|oasis|dune, SF_CARD_LOCALE en|fr|ar,
+    /// SF_CARD_PERCENTS "8,34,72,99", SF_CARD_PHASE preparing|starting|opening.
+    /// Output: `<theme>-<preset>-<locale>-p<percent>-<w>x<h>.bgra`, raw
+    /// premultiplied BGRA, top row first.
+    #[cfg(test)]
+    mod preview {
+        use super::*;
+        use std::fs;
+
+        fn setting(name: &str, fallback: &str) -> String {
+            std::env::var(name)
+                .ok()
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| fallback.to_string())
+        }
+
+        #[test]
+        #[ignore = "opens a real window; run by the lab workflow render-card"]
+        fn render_the_card_for_a_picture() {
+            let out = PathBuf::from(
+                std::env::var("SF_CARD_PREVIEW_DIR").expect("SF_CARD_PREVIEW_DIR is required"),
+            );
+            let theme = setting("SF_CARD_THEME", "dark");
+            let preset = setting("SF_CARD_PRESET", "sahel");
+            let locale = setting("SF_CARD_LOCALE", "en");
+            let phase = setting("SF_CARD_PHASE", "");
+            let percents: Vec<u32> = setting("SF_CARD_PERCENTS", "8,34,72,99")
+                .split(',')
+                .filter_map(|value| value.trim().parse().ok())
+                .collect();
+            assert!(!percents.is_empty(), "SF_CARD_PERCENTS has no number");
+            let data_dir = out.join(format!("appdata-{theme}-{preset}-{locale}"));
+            fs::create_dir_all(&data_dir).expect("create the app data folder");
+            fs::write(
+                data_dir.join("launch-appearance.json"),
+                format!(r#"{{"locale":"{locale}","theme":"{theme}","preset":"{preset}"}}"#),
+            )
+            .expect("write the launch appearance record");
+
+            let mut token: usize = 0;
+            let input = GdiplusStartupInput {
+                GdiplusVersion: 1,
+                DebugEventCallback: 0,
+                SuppressBackgroundThread: 0,
+                SuppressExternalCodecs: 1,
+            };
+            unsafe {
+                assert_eq!(GdiplusStartup(&mut token, &input, std::ptr::null_mut()), Ok);
+                assert!(
+                    create(&data_dir, unix_milliseconds()),
+                    "the card window was not created"
+                );
+                RENDERER.with(|cell| {
+                    let mut guard = cell.borrow_mut();
+                    let renderer = guard.as_mut().expect("the renderer exists after create");
+                    // Everything settled, nothing animating: a still picture.
+                    renderer.reduced_motion = true;
+                    for percent in &percents {
+                        let fraction = *percent as f32 / 100.0;
+                        renderer.progress.shown = fraction;
+                        renderer.progress.target = fraction;
+                        renderer.progress.phase = match phase.as_str() {
+                            "starting" => Phase::Starting,
+                            "opening" => Phase::Opening,
+                            "preparing" => Phase::Preparing,
+                            _ if *percent >= 85 => Phase::Opening,
+                            _ => Phase::Preparing,
+                        };
+                        renderer.settled.clear();
+                        renderer.steady = false;
+                        renderer.last_signature = None;
+                        let t = renderer.elapsed_ms();
+                        renderer.paint(t);
+                        GdipFlush(renderer.graphics, FlushIntentionSync);
+                        let name = format!(
+                            "{theme}-{preset}-{locale}-p{percent:02}-{}x{}.bgra",
+                            renderer.width, renderer.height
+                        );
+                        fs::write(out.join(name), renderer.copy_out()).expect("write the picture");
+                    }
+                    renderer.destroy();
+                    DestroyWindow(renderer.window);
+                });
+                GdiplusShutdown(token);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -3375,7 +3470,10 @@ mod tests {
     fn a_label_slot_never_wastes_more_than_a_few_pixels() {
         // A wider slot moves the dot and the percent; it must stay tight.
         let slot = label_slot_width(100.0, 13.5);
-        assert!(lt(slot, 100.0 + 13.5 * 0.5 + 3.0), "slot {slot} is too loose");
+        assert!(
+            lt(slot, 100.0 + 13.5 * 0.5 + 3.0),
+            "slot {slot} is too loose"
+        );
     }
 
     // The same bug class in the other direction: whatever the measure says, a
@@ -3384,8 +3482,14 @@ mod tests {
     #[test]
     fn the_drawing_formats_never_trim_a_letter() {
         let source = include_str!("native_splash.rs");
-        let needle = concat!("GdipSetStringFormatTrimming(", "format, StringTrimmingNone)");
-        assert!(source.contains(needle), "the drawing format must switch trimming off");
+        let needle = concat!(
+            "GdipSetStringFormatTrimming(",
+            "format, StringTrimmingNone)"
+        );
+        assert!(
+            source.contains(needle),
+            "the drawing format must switch trimming off"
+        );
     }
 
     const PRESETS: [Preset; 4] = [Preset::Sahel, Preset::Atlas, Preset::Oasis, Preset::Dune];
