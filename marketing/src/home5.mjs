@@ -356,7 +356,12 @@ function numsSection(n) {
 </section>`;
 }
 
-/** The connections section: copy in three languages. Example events are illustrations and say so. */
+/** The connections section: copy in three languages. Every event is an illustration and says so. One event per brand, in FEED_ORDER. */
+const FEED_ORDER = ["whatsapp", "groq", "sheets", "yalidine", "openai", "ecotrack", "shopify", "gemini", "zr", "meta", "storefront", "maystro", "woocommerce", "youcan", "excel"];
+const HUE = {
+  whatsapp: "#25d366", gemini: "#7c6cf2", openai: "#111827", groq: "#0ea5e9", yalidine: "#ea5b54", zr: "#ffb824", ecotrack: "#2e4a86", maystro: "#008aff",
+  shopify: "#7ab55c", youcan: "#e1116f", woocommerce: "#873eff", storefront: "#0ea5e9", sheets: "#34a853", excel: "#217346", meta: "#0467df",
+};
 const FEED = {
   ar: {
     h2: "نختبر الربط مع الأدوات التي تستعملها أصلاً",
@@ -366,16 +371,24 @@ const FEED = {
     liveTitle: "ما سيمرّ بين أدواتك",
     liveNote: "أمثلة توضيحية، وليست بيانات حقيقية",
     more: "تفاصيل كل ربط",
+    now: "الآن",
+    sec: "{n} ث",
     events: [
-      ["whatsapp", "رسالة جديدة: «نحب 2 قميص أبيض M، وهران»"],
-      ["gemini", "مسودة الطلبية #1042 جاهزة للمراجعة"],
-      ["sheets", "سطر جديد في ورقة الطلبيات"],
-      ["yalidine", "ملصق الشحن إلى وهران (31) جاهز"],
-      ["groq", "مسودة رد بانتظار موافقتك"],
-      ["ecotrack", "تحديث تتبع: خرجت الشحنة للتسليم"],
-      ["woocommerce", "طلبية جديدة وصلت من المتجر"],
-      ["meta", "حدث شراء أُرسل إلى Meta Pixel"],
-      ["openai", "رد مقترح من اشتراك ChatGPT الخاص بك"],
+      ["whatsapp", "رسالة جديدة", "«نحب 2 قميص أبيض M، وهران» من أمين ب."],
+      ["groq", "مسودة طلبية جاهزة", "المنتج والهاتف والولاية معبّأة، بانتظار مراجعتك."],
+      ["sheets", "سطر جديد في ورقتك", "الطلبيات · #1042 · 5 400 دج"],
+      ["yalidine", "ملصق الشحن جاهز", "وهران (31) · توصيل إلى المنزل"],
+      ["openai", "رد مقترح", "من اشتراكك في ChatGPT، وتوافق عليه قبل الإرسال."],
+      ["ecotrack", "تحديث التتبع", "الشحنة #1038 خرجت للتسليم"],
+      ["shopify", "طلبية جديدة من المتجر", "أُضيفت إلى طابور التأكيد"],
+      ["gemini", "مسودة رد", "بانتظار موافقتك"],
+      ["zr", "شحنة جديدة", "قسنطينة (25) · استلام من المكتب"],
+      ["meta", "حدث شراء أُرسل", "Meta Pixel + Conversions API · #1042"],
+      ["storefront", "طلبية من متجرك", "SahelFlow Store · قطعتان"],
+      ["maystro", "طرد جديد", "سطيف (19) · #1041"],
+      ["woocommerce", "طلبية جديدة وصلت", "من متجر WordPress الخاص بك"],
+      ["youcan", "طلبية مستوردة", "YouCan · بانتظار الاتصال"],
+      ["excel", "ملف مطابَق", "Orders.csv · تمت مطابقة الأعمدة والمعاينة جاهزة"],
     ],
   },
   fr: {
@@ -386,16 +399,24 @@ const FEED = {
     liveTitle: "Ce qui circulera entre vos outils",
     liveNote: "Exemples pour illustrer, pas des données réelles",
     more: "Le détail de chaque connexion",
+    now: "à l'instant",
+    sec: "{n} s",
     events: [
-      ["whatsapp", "Nouveau message : « 2 chemises blanches M, Oran »"],
-      ["gemini", "Brouillon de la commande #1042 prêt à relire"],
-      ["sheets", "Nouvelle ligne dans la feuille des commandes"],
-      ["yalidine", "Étiquette d'expédition pour Oran (31) prête"],
-      ["groq", "Brouillon de réponse en attente de votre validation"],
-      ["ecotrack", "Suivi : le colis est parti en livraison"],
-      ["woocommerce", "Nouvelle commande reçue de la boutique"],
-      ["meta", "Événement d'achat envoyé au Pixel Meta"],
-      ["openai", "Réponse suggérée par votre propre forfait ChatGPT"],
+      ["whatsapp", "Nouveau message", "« 2 chemises blanches M, Oran » de Amine B."],
+      ["groq", "Brouillon de commande prêt", "Produit, téléphone et wilaya remplis. À relire."],
+      ["sheets", "Ligne ajoutée à votre feuille", "Commandes · #1042 · 5 400 DA"],
+      ["yalidine", "Étiquette d'expédition prête", "Oran (31) · livraison à domicile"],
+      ["openai", "Réponse suggérée", "Via votre forfait ChatGPT. Vous validez avant l'envoi."],
+      ["ecotrack", "Mise à jour du suivi", "Le colis #1038 est en cours de livraison"],
+      ["shopify", "Nouvelle commande boutique", "Ajoutée à votre file de confirmation"],
+      ["gemini", "Réponse rédigée", "En attente de votre validation"],
+      ["zr", "Expédition créée", "Constantine (25) · retrait en bureau"],
+      ["meta", "Événement d'achat envoyé", "Pixel Meta + API Conversions · #1042"],
+      ["storefront", "Commande de votre boutique", "SahelFlow Store · 2 articles"],
+      ["maystro", "Colis créé", "Sétif (19) · #1041"],
+      ["woocommerce", "Nouvelle commande reçue", "De votre boutique WordPress"],
+      ["youcan", "Commande importée", "YouCan · en attente d'appel"],
+      ["excel", "Fichier associé", "Orders.csv · colonnes associées, aperçu prêt"],
     ],
   },
   en: {
@@ -406,40 +427,57 @@ const FEED = {
     liveTitle: "What will move between your tools",
     liveNote: "Examples to illustrate, not real data",
     more: "Details of every link",
+    now: "now",
+    sec: "{n}s",
     events: [
-      ["whatsapp", "New message: “2 white shirts, M, Oran”"],
-      ["gemini", "Draft order #1042 ready to review"],
-      ["sheets", "New row in the orders sheet"],
-      ["yalidine", "Shipping label for Oran (31) is ready"],
-      ["groq", "Reply draft waiting for your approval"],
-      ["ecotrack", "Tracking update: out for delivery"],
-      ["woocommerce", "New order received from the store"],
-      ["meta", "Purchase event sent to Meta Pixel"],
-      ["openai", "Reply suggested by your own ChatGPT plan"],
+      ["whatsapp", "New message", "“2 white shirts, M, Oran” from Amine B."],
+      ["groq", "Order draft ready", "Product, phone, wilaya filled in. Waiting for review."],
+      ["sheets", "Row added to your sheet", "Orders · #1042 · 5 400 DA"],
+      ["yalidine", "Shipping label ready", "Oran (31) · home delivery"],
+      ["openai", "Reply suggested", "From your ChatGPT plan. You approve it before sending."],
+      ["ecotrack", "Tracking update", "Parcel #1038 is out for delivery"],
+      ["shopify", "New store order", "Added to your confirmation queue"],
+      ["gemini", "Reply drafted", "Waiting for your approval"],
+      ["zr", "Shipment created", "Constantine (25) · desk pickup"],
+      ["meta", "Purchase event sent", "Meta Pixel + Conversions API · #1042"],
+      ["storefront", "Order from your store", "SahelFlow Store · 2 items"],
+      ["maystro", "Parcel created", "Sétif (19) · #1041"],
+      ["woocommerce", "New order received", "From your WordPress store"],
+      ["youcan", "Order imported", "YouCan · waiting for a call"],
+      ["excel", "File matched", "Orders.csv · columns mapped, preview ready"],
     ],
   },
 };
 
-/** How many example events are on show at once (the rest wait their turn; a phone shows three). */
-const FEED_SHOWN = 4;
+/** Rows the console shows at once (a phone shows four, the script trims it). */
+const FEED_SHOWN = 5;
 
 function feedSection(n, t, locale) {
   const F = FEED[locale];
   const groups = t.integrationsPage.groups;
+  const keys = Object.keys(BRAND_NAMES);
+  for (const k of keys) if (!HUE[k]) throw new Error(`feed: no colour for ${k} in home5.mjs HUE`);
+  if (F.events.length !== keys.length || F.events.some(([k], i) => k !== FEED_ORDER[i]) || FEED_ORDER.some((k) => !keys.includes(k))) {
+    throw new Error(`feed: the ${locale} events must follow FEED_ORDER, one per brand`);
+  }
   const flat = INTEGRATIONS.flatMap((g) => g.items.map((key) => [key, g.group]));
   const allTesting = flat.every(([key]) => integrationStatus(key) === "testing");
   const card = ([key, group]) => {
     const status = integrationStatus(key);
-    return `<li data-status="${status}" data-brand="${key}" class="h7-card">${brandTile(key)}<span class="h7-kind">${esc(groups[group])}</span><span class="h7-name"><bdi>${esc(BRAND_NAMES[key])}</bdi></span>${statusBadge(status, locale)}</li>`;
+    return `<li data-status="${status}" data-brand="${key}" class="h7-card" style="--c:${HUE[key]}">${brandTile(key)}<span class="h7-kind">${esc(groups[group])}</span><span class="h7-name"><bdi>${esc(BRAND_NAMES[key])}</bdi></span>${statusBadge(status, locale)}</li>`;
   };
   const split = Math.ceil(flat.length / 2);
   const rowA = flat.slice(0, split).map(card).join("");
   const rowB = flat.slice(split).map(card).join("");
-  const events = F.events
-    .map(([key, text], i) => `<li class="h7-ev" data-ev${i >= FEED_SHOWN ? " hidden" : ""}><span class="h7-evlogo" aria-hidden="true">${brandTile(key, 40).replace('class="brand-tile"', 'class="h7-evtile"')}</span><span class="h7-evbody"><b><bdi>${esc(BRAND_NAMES[key])}</bdi></b><span>${esc(text)}</span></span></li>`)
-    .join("");
+  const age = (pos) => (pos === 0 ? F.now : F.sec.replace("{n}", String(pos * 3)));
+  const tile = (key) => brandTile(key, 40).replace('class="brand-tile"', 'class="h7-evtile"');
+  const li = ([key, title, detail], pos) =>
+    `<li class="h7-ev" data-ev data-brand="${key}" style="--c:${HUE[key]}"${pos == null ? " hidden" : ""}><span class="h7-evlogo" aria-hidden="true">${tile(key)}</span><span class="h7-evbody"><span class="h7-evb"><bdi>${esc(BRAND_NAMES[key])}</bdi><span class="h7-evtime" data-age>${pos == null ? "" : esc(age(pos))}</span></span><b class="h7-evt">${esc(title)}</b><span class="h7-evd">${esc(detail)}</span></span></li>`;
+  /* newest on top: the first rows are events 4..0 (the day's first message at the bottom), the rest wait their turn */
+  const visible = [4, 3, 2, 1, 0].map((idx, pos) => li(F.events[idx], pos));
+  const queued = F.events.slice(FEED_SHOWN).map((e) => li(e, null));
   const eyebrow = (allTesting ? F.eyebrowAll : F.eyebrowSome)(flat.length);
-  return `<section class="h7-feed" aria-labelledby="h-int" data-feed>
+  return `<section class="h7-feed" aria-labelledby="h-int" data-feed data-now="${esc(F.now)}" data-sec="${esc(F.sec)}">
 <div class="h5-wrap">
 <header class="h7-head rv"><p class="h7-eyebrow"><i aria-hidden="true"></i>${esc(eyebrow)}</p><h2 id="h-int" class="h4-h2">${esc(F.h2)}</h2><p class="h6-sub">${esc(F.sub)}</p></header>
 </div>
@@ -449,8 +487,9 @@ function feedSection(n, t, locale) {
 </div>
 <div class="h5-wrap">
 <div class="h7-live rv">
-<div class="h7-live-head"><span class="h7-sig" aria-hidden="true"><i></i><i></i><i></i></span><span class="h7-live-title"><b>${esc(F.liveTitle)}</b><small>${esc(F.liveNote)}</small></span><button type="button" class="h5-pause h7-pause" data-feed-pause aria-pressed="false" aria-label="${esc(n.motion.pause)}" data-l-pause="${esc(n.motion.pause)}" data-l-play="${esc(n.motion.play)}">${icon("pause", "i-pause")}${icon("play", "i-play")}</button></div>
-<ul class="h7-evs" data-ev-list data-shown="${FEED_SHOWN}">${events}</ul>
+<div class="h7-live-head"><img class="h7-mark" src="/img/logo-48.png" width="22" height="30" alt=""><span class="h7-live-title"><b>${esc(F.liveTitle)}</b><small>${esc(F.liveNote)}</small></span><span class="h7-pulse" aria-hidden="true"></span><button type="button" class="h5-pause h7-pause" data-feed-pause aria-pressed="false" aria-label="${esc(n.motion.pause)}" data-l-pause="${esc(n.motion.pause)}" data-l-play="${esc(n.motion.play)}">${icon("pause", "i-pause")}${icon("play", "i-play")}</button></div>
+<ul class="h7-evs" data-ev-list aria-live="off">${visible.join("")}${queued.join("")}</ul>
+<div class="h7-calm" data-calm-strip hidden><span>${esc(n.motion.tCalm)}</span><button type="button" data-motion-full>${esc(n.motion.bCalm)}</button></div>
 </div>
 <p class="h7-note rv">${esc(BRAND_MARKS[locale])} <a class="v-text" href="${href(locale, "integrations")}">${esc(F.more)}${icon("arrow", "flip")}</a></p>
 </div>

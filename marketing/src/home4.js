@@ -285,10 +285,11 @@
       .catch(() => { /* the server-rendered card stays */ });
   }
 
-  /* ── 7. connections: two rows of logos drifting in opposite directions, and an example feed that updates itself ── */
+  /* ── 7. connections: two rows of logos, and an activity console whose events arrive by themselves ── */
   const feed = $("[data-feed]");
   if (feed) {
     let paused = false;
+    const onScreen = { v: true };
     const rowsBox = $("[data-feed-rows]", feed);
     if (!calm && hasIO && rowsBox) {
       /* each row is doubled so it can drift forever without a seam; the copies are hidden from screen readers and from the keyboard */
@@ -303,7 +304,6 @@
       });
       rowsBox.classList.add("is-run");
     }
-    const onScreen = { v: true };
     if (hasIO) new IntersectionObserver((es) => { onScreen.v = es[0].isIntersecting; feed.classList.toggle("is-off", !onScreen.v); }).observe(feed);
     const pbtn = $("[data-feed-pause]", feed);
     if (pbtn) {
@@ -314,51 +314,66 @@
         feed.classList.toggle("is-paused", paused);
       });
     }
+    /* a device that asks for less motion gets the calm version; this strip lets the visitor switch every animation on */
+    const strip = $("[data-calm-strip]", feed);
+    if (strip && calm && root.hasAttribute("data-os-reduced")) {
+      strip.hidden = false;
+      $("[data-motion-full]", strip).addEventListener("click", () => {
+        try { localStorage.setItem("sf-motion", "full"); location.reload(); } catch (e) { /* storage is blocked: nothing to switch */ }
+      });
+    }
     const list = $("[data-ev-list]", feed);
-    if (list && list.children.length > 4) {
-      const queue = $$("[data-ev][hidden]", list);
-      const limit = () => (matchMedia("(max-width: 600px)").matches ? 3 : Number(list.dataset.shown) || 4);
+    if (list) {
+      const d = feed.dataset;
+      const phone = matchMedia("(max-width: 600px)");
+      const limit = () => (phone.matches ? 4 : 5);
       const shown = () => $$("[data-ev]:not([hidden])", list);
-      const fit = () => { shown().slice(limit()).forEach((li) => { li.hidden = true; queue.push(li); }); };
-      fit();
-      let slot = 0;
-      const swapInPlace = () => {
-        const cur = shown();
-        const old = cur[slot++ % cur.length];
-        const out = old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: "forwards" });
-        out.finished.then(() => {
-          const next = queue.shift();
-          if (!next) { out.cancel(); return; }
-          old.before(next);
-          next.hidden = false;
-          old.hidden = true;
-          out.cancel();
-          queue.push(old);
-          next.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420 });
-        }).catch(() => {});
+      const queue = $$("[data-ev][hidden]", list);
+      const born = new Map();
+      let vt = 0; /* the feed's own clock in ms: it stops while the feed is paused or off screen, so ages never jump */
+      const label = (s) => (s < 1 ? d.now : d.sec.replace("{n}", String(s)));
+      const refresh = () => shown().forEach((li) => { $("[data-age]", li).textContent = label(Math.max(0, Math.round((vt - born.get(li)) / 1000))); });
+      shown().forEach((li, i) => born.set(li, -i * 3000));
+      const trim = () => shown().slice(limit()).forEach((li) => { li.hidden = true; queue.push(li); });
+      trim();
+      refresh();
+      if (phone.addEventListener) phone.addEventListener("change", trim);
+      /* a short, contained slide inside the panel, kept in calm mode too (the panel is small and has its own pause button) */
+      const dur = calm ? 520 : 760;
+      const ease = "cubic-bezier(.2,.8,.2,1)";
+      const light = (li) => {
+        li.classList.add("is-new");
+        setTimeout(() => li.classList.remove("is-new"), 2600);
+        $$(`.h7-card[data-brand="${li.dataset.brand}"]`, feed).forEach((c) => {
+          c.classList.add("is-hot");
+          setTimeout(() => c.classList.remove("is-hot"), 2800);
+        });
       };
-      const slideIn = () => {
+      const add = () => {
         const next = queue.shift();
         if (!next) return;
         const cur = shown();
         const before = new Map(cur.map((li) => [li, li.getBoundingClientRect().top]));
         next.hidden = false;
         list.prepend(next);
+        born.set(next, vt);
+        refresh();
         cur.forEach((li) => {
-          const d = before.get(li) - li.getBoundingClientRect().top;
-          if (d) li.animate([{ transform: `translateY(${d}px)` }, { transform: "none" }], { duration: 600, easing: "cubic-bezier(.2,.8,.2,1)" });
+          const dy = before.get(li) - li.getBoundingClientRect().top;
+          if (dy) li.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: dur, easing: ease });
         });
-        next.animate([{ opacity: 0, transform: "translateY(-16px)" }, { opacity: 1, transform: "none" }], { duration: 600, easing: "cubic-bezier(.2,.8,.2,1)" });
-        shown().slice(limit()).forEach((old) => {
-          const out = old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, fill: "forwards" });
-          out.finished.then(() => { old.hidden = true; out.cancel(); queue.push(old); }).catch(() => {});
-        });
+        next.animate([{ opacity: 0, transform: `translateY(${calm ? -12 : -26}px)` }, { opacity: 1, transform: "none" }], { duration: dur, easing: ease });
+        light(next);
+        const over = shown().slice(limit());
+        setTimeout(() => over.forEach((li) => { li.hidden = true; queue.push(li); }), dur + 60);
       };
-      const tick = () => {
-        if (!paused && onScreen.v && !doc.hidden) (calm ? swapInPlace : slideIn)();
-        setTimeout(tick, calm ? 4600 : 3300);
-      };
-      setTimeout(tick, 2600);
+      const gap = calm ? 4000 : 3000;
+      let nextAt = 3000;
+      setInterval(() => {
+        if (paused || !onScreen.v || doc.hidden) return;
+        vt += 1000;
+        if (vt >= nextAt) { nextAt = vt + gap; add(); } else refresh();
+      }, 1000);
     }
   }
 
