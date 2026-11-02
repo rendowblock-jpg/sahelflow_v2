@@ -364,7 +364,7 @@ const ConversationRow = memo(function ConversationRow({
             <span className={cn(styles.unreadBadge, "shrink-0 font-mono")}>
               <span aria-hidden="true">{chat.unread > 99 ? "99+" : chat.unread}</span>
               <span className="sr-only">
-                {t("inbox.carnet.row.unreadCount", { count: chat.unread })}
+                {t("inbox.list.row.unreadCount", { count: chat.unread })}
               </span>
             </span>
           ) : null}
@@ -401,7 +401,7 @@ const ConversationRow = memo(function ConversationRow({
               data-inbox-assignee={mine ? "mine" : "other"}
               className="ms-auto shrink-0 text-xs leading-5 text-muted-foreground"
             >
-              {t(mine ? "inbox.carnet.assignee.mine" : "inbox.carnet.assignee.other")}
+              {t(mine ? "inbox.list.assignee.mine" : "inbox.list.assignee.other")}
             </span>
           ) : null}
         </span>
@@ -770,11 +770,11 @@ export function InboxV3Queue({
   const footer = deriveListFooter({ loaded: chats.length, total: null });
   const footerText =
     footer.kind === "of-total"
-      ? t("inbox.carnet.footer.loadedOf", { count: footer.loaded, total: footer.total })
+      ? t("inbox.list.footer.loadedOf", { count: footer.loaded, total: footer.total })
       : footer.kind === "capped"
-        ? t("inbox.carnet.footer.capped", { count: footer.loaded })
+        ? t("inbox.list.footer.capped", { count: footer.loaded })
         : footer.kind === "loaded-only"
-          ? t("inbox.carnet.footer.loaded", { count: footer.loaded })
+          ? t("inbox.list.footer.loaded", { count: footer.loaded })
           : "";
 
   return (

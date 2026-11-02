@@ -7,12 +7,12 @@ import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { InboxThreadEmpty, InboxThreadError, InboxThreadLoading } from "@/components/inbox/inbox-thread-states";
-import { getInboxThreadCarnetRuntimeTranslation } from "@/lib/i18n/inbox-thread-carnet-runtime";
+import { getInboxThreadStatesRuntimeTranslation } from "@/lib/i18n/inbox-thread-states-runtime";
 import { render } from "@/test-utils/render";
 
 vi.mock("@/hooks/use-i18n", () => ({
   useI18n: () => ({
-    t: (key: string) => getInboxThreadCarnetRuntimeTranslation("en", key) ?? key,
+    t: (key: string) => getInboxThreadStatesRuntimeTranslation("en", key) ?? key,
     locale: "en",
     dir: "ltr",
   }),
@@ -26,9 +26,9 @@ describe("thread states", () => {
     const source = readFileSync(resolve(process.cwd(), "src/components/inbox/inbox-thread-states.tsx"), "utf8");
     expect(source).not.toMatch(/animate-|shimmer|pulse|keyframes/);
   });
-  it("empty is a blank ruled page with no invented steps", () => {
+  it("empty is a blank page with no invented steps", () => {
     const { container } = render(<InboxThreadEmpty />);
-    expect(container.querySelector(".carnet-ruled")).not.toBeNull();
+    expect(container.querySelector('[data-thread-state="empty"]')).not.toBeNull();
     expect(container.querySelector("ol, li")).toBeNull();
   });
   it("error says what failed and offers exactly one retry", () => {

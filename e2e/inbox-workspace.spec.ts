@@ -117,7 +117,7 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     await expect(page.locator("body")).not.toContainText("(démo)");
 
     if (!authority.sidecarReachable) {
-      // The carnet inbox says it once, in the link line ("Le service WhatsApp ne répond pas : l'envoi est en pause."),
+      // The inbox says it once, in the link line ("Le service WhatsApp ne répond pas : l'envoi est en pause."),
       // and the open thread keeps its composer with a calm paused hint instead of the old "replies are available when
       // WhatsApp is connected" sentence. Either wording is the honest degraded state.
       await expect(workspace).toContainText(
@@ -265,7 +265,7 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     });
     if (transport.sidecarReachable === false) {
       await expect(thread.locator("textarea")).toBeVisible();
-      // The carnet inbox keeps the way back in the ONE link banner (retry, or connect when WhatsApp is not linked),
+      // The inbox keeps the way back in the ONE link banner (retry, or connect when WhatsApp is not linked),
       // not inside every thread.
       await expect(
         page

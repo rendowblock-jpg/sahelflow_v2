@@ -37,12 +37,11 @@ export const OUT_DIR = "marketing/static/img/screens";
 export const DESKTOP_FILE_RE = /^[a-z]+-(ar|fr|en)\.webp$/;
 export const PHONE_FILE_RE = /^[a-z]+-phone-(ar|fr|en)\.webp$/;
 
-// ── the look: LIGHT Carnet only (the Founder does not like the dark and light theme) ──
+// ── the look: LIGHT Sahel only (the Founder does not like the dark and light theme) ──
 export const COOKIE_NAMES = {
   locale: "sahelflow-locale",
   theme: "sahelflow-theme",
   preset: "sahelflow-theme-preset",
-  look: "sahelflow-look",
 } as const;
 
 export interface ScreenCookie {
@@ -54,8 +53,7 @@ export interface ScreenCookie {
 export function screenCookies(locale: ScreenLocale, url: string): ScreenCookie[] {
   return [
     { name: COOKIE_NAMES.theme, value: "light", url },
-    { name: COOKIE_NAMES.preset, value: "carnet", url },
-    { name: COOKIE_NAMES.look, value: "2", url },
+    { name: COOKIE_NAMES.preset, value: "sahel", url },
     { name: COOKIE_NAMES.locale, value: locale, url },
   ];
 }
@@ -64,8 +62,7 @@ export function screenCookies(locale: ScreenLocale, url: string): ScreenCookie[]
 export function localStorageValues(locale: ScreenLocale): Record<string, string> {
   return {
     theme: "light",
-    [COOKIE_NAMES.preset]: "carnet",
-    [COOKIE_NAMES.look]: "2",
+    [COOKIE_NAMES.preset]: "sahel",
     [COOKIE_NAMES.locale]: locale,
   };
 }
