@@ -58,3 +58,13 @@
 .h6-int-grid .bn{flex:1;min-inline-size:0;font-size:1.0625rem;font-weight:620;line-height:1.3}
 .h6-int-grid .stamp{flex:none}
 .h6-int-note{margin-block-start:clamp(20px,3vw,32px);color:var(--muted);line-height:1.7;max-inline-size:70ch}
+
+/* ───────── reduced motion: the 3D scene is a still picture, every part in its finished place ───────── */
+@media (prefers-reduced-motion:reduce){
+.h4-scene *,.h4-aurora i,.h4-tag,.h4-money{animation:none!important}
+.h4-stamp,.h4-drop{opacity:1}
+.h4-beam{opacity:.5}
+.h4-orb,.h4-spark,.h4-ring,.h4-money{display:none}
+.h4-tag{color:var(--ink)}
+.h4-stage{translate:none}
+}
