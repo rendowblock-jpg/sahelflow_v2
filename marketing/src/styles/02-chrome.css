@@ -34,12 +34,7 @@
 @supports selector(::details-content){@media (min-width:1080px){.menu::details-content{content-visibility:visible;display:contents}}}
 
 /* Footer: ink, links in four plain columns, then the name at full width. */
-.site-footer{margin-block-start:0;background:var(--ink);color:var(--bg)}
-.foot-in{max-inline-size:var(--container);margin-inline:auto;padding-inline:var(--pad)}
-.foot-brand{display:grid;gap:10px;padding-block:72px 40px;max-inline-size:62ch}
-.foot-brand p{font-size:var(--t-lead);line-height:1.4;font-weight:600}
-.foot-brand .foot-note{font-size:var(--t-small);font-weight:400;color:#b9bfb8}
-.foot-contact{display:flex;flex-wrap:wrap;gap:0 24px}
+.site-footer{margin-block-start:0;background:var(--ink);color:var(--bg)}.foot-contact{display:flex;flex-wrap:wrap;gap:0 24px}
 .foot-contact a,.foot-col a,.foot-bottom .langs a{display:inline-flex;align-items:center;min-block-size:var(--hit);min-inline-size:var(--hit)}
 .foot-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px 24px;padding-block:24px 56px}
 .foot-col h2{font:800 1.125rem/1.2 var(--f);margin-block-end:8px}
@@ -51,7 +46,5 @@
 .foot-bottom .langs a{background:none;color:#b9bfb8;padding:0 10px}
 .foot-bottom .langs a[aria-current]{color:#fff;background:none}
 .site-footer a:focus-visible{outline-color:var(--kraft)}
-@media (max-width:759px){
-.foot-brand{padding-block:48px 24px}
-.foot-cols{grid-template-columns:1fr 1fr;gap:24px 16px;padding-block-end:32px}
+@media (max-width:759px){.foot-cols{grid-template-columns:1fr 1fr;gap:24px 16px;padding-block-end:32px}
 }
