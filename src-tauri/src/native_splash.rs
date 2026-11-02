@@ -1502,7 +1502,11 @@ mod imp {
 
     impl MarkLayer {
         unsafe fn create(scale: f32) -> Option<Self> {
-            let k = supersample_factor(scale);
+            Self::with_factor(scale, supersample_factor(scale))
+        }
+
+        /// The layer at an explicit factor (the benchmark compares factors).
+        unsafe fn with_factor(scale: f32, k: u32) -> Option<Self> {
             if k <= 1 {
                 return None;
             }
@@ -3032,31 +3036,53 @@ mod imp {
                         }
                     }
                     if bench > 0 {
-                        // The ripple on, 34 %: what a seller's PC does every frame.
+                        // The ripple on, 34 %: what a seller's PC does every frame. The same frame is
+                        // timed with no layer (the old direct drawing) and with layers of 2x2, 3x3 and
+                        // 4x4 samples, one after the other in this process, because the runner's speed
+                        // changes from one run to the next.
                         renderer.reduced_motion = false;
                         renderer.progress.shown = 0.34;
                         renderer.progress.target = 0.34;
                         renderer.progress.phase = Phase::Preparing;
-                        renderer.shown_at = Instant::now();
-                        renderer.settled.clear();
-                        renderer.steady = false;
-                        renderer.last_signature = None;
-                        let first = Instant::now();
-                        renderer.paint(5_000.0);
-                        GdipFlush(renderer.graphics, FlushIntentionSync);
-                        let first_ms = first.elapsed().as_secs_f64() * 1_000.0;
-                        let started = Instant::now();
-                        for _ in 0..bench {
+                        let mut report = format!(
+                            "window={}x{}\nframes={bench}\nproduction_factor={}\n",
+                            renderer.width,
+                            renderer.height,
+                            supersample_factor(renderer.scale)
+                        );
+                        for (name, factor) in [
+                            ("direct", 1_u32),
+                            ("k2", 2),
+                            ("k3", 3),
+                            ("k4", 4),
+                            ("direct", 1),
+                        ] {
+                            if let Some(old) = renderer.mark_layer.take() {
+                                old.destroy();
+                            }
+                            renderer.mark_layer = MarkLayer::with_factor(renderer.scale, factor);
+                            renderer.shown_at = Instant::now();
+                            renderer.settled.clear();
+                            renderer.steady = false;
+                            renderer.last_signature = None;
+                            let first = Instant::now();
                             renderer.paint(5_000.0);
                             GdipFlush(renderer.graphics, FlushIntentionSync);
+                            let first_ms = first.elapsed().as_secs_f64() * 1_000.0;
+                            let started = Instant::now();
+                            for _ in 0..bench {
+                                renderer.paint(5_000.0);
+                                GdipFlush(renderer.graphics, FlushIntentionSync);
+                            }
+                            let per_frame =
+                                started.elapsed().as_secs_f64() * 1_000.0 / bench as f64;
+                            report.push_str(&format!(
+                                "{name}: first_paint_ms={first_ms:.2} steady_frame_ms={per_frame:.2}\n"
+                            ));
                         }
-                        let per_frame = started.elapsed().as_secs_f64() * 1_000.0 / bench as f64;
                         fs::write(
                             out.join(format!("bench-{theme}-{preset}-{locale}.txt")),
-                            format!(
-                                "first_paint_ms={first_ms:.2}\nsteady_frame_ms={per_frame:.2}\nframes={bench}\nwindow={}x{}\n",
-                                renderer.width, renderer.height
-                            ),
+                            report,
                         )
                         .expect("write the timings");
                     }
