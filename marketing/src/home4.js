@@ -344,6 +344,7 @@
         /* a soft light follows the pointer over the line (mouse only) */
         const spot = $(".h7-spot", box);
         if (spot && fine) {
+          const dir = root.dir === "rtl" ? -1 : 1; /* the light is placed from the inline-start edge, so it is measured from there */
           let tx = 0, ty = 0, cx = 0, cy = 0, inside = false, raf = 0;
           const step = () => {
             cx += (tx - cx) * 0.16;
@@ -353,7 +354,7 @@
           };
           box.addEventListener("pointermove", (e) => {
             const r = box.getBoundingClientRect();
-            tx = e.clientX - r.left;
+            tx = dir === 1 ? e.clientX - r.left : e.clientX - r.right;
             ty = e.clientY - r.top;
             if (!inside) { inside = true; cx = tx; cy = ty; box.classList.add("is-lit"); }
             if (!raf) raf = requestAnimationFrame(step);

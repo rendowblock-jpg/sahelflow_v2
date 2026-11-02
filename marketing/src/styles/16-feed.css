@@ -36,7 +36,7 @@ html[data-motion=calm] .h7-eyebrow i::after{animation-name:h7pingc}
 
 /* the soft light that follows the pointer (placed by the script; mouse only, full motion only) */
 .h7-rows.is-run .h7-spot{display:block}
-.h7-spot{position:absolute;left:0;top:0;inline-size:560px;block-size:560px;margin:-280px 0 0 -280px;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .45s ease;background:radial-gradient(closest-side,rgba(14,165,233,.22),rgba(14,165,233,.08) 55%,rgba(14,165,233,0))}
+.h7-spot{position:absolute;inset-inline-start:0;inset-block-start:0;inline-size:560px;block-size:560px;margin-inline-start:-280px;margin-block-start:-280px;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .45s ease;background:radial-gradient(closest-side,rgba(14,165,233,.22),rgba(14,165,233,.08) 55%,rgba(14,165,233,0))}
 .h7-rows.is-lit .h7-spot{opacity:1}
 
 /* one item: a glossy tile with the name and the status beside it */
