@@ -2641,7 +2641,10 @@ mod tests {
         let journal: String = connection
             .query_row("PRAGMA journal_mode", [], |row| row.get(0))
             .expect("journal mode");
-        assert_eq!(synchronous, 0, "an empty database must not sync every statement");
+        assert_eq!(
+            synchronous, 0,
+            "an empty database must not sync every statement"
+        );
         assert_eq!(journal, "memory");
         drop(connection);
         fs::remove_dir_all(root).expect("remove test root");
@@ -2662,7 +2665,10 @@ mod tests {
         let synchronous: i64 = connection
             .query_row("PRAGMA synchronous", [], |row| row.get(0))
             .expect("synchronous");
-        assert_ne!(synchronous, 0, "a database with data must keep synchronous writes");
+        assert_ne!(
+            synchronous, 0,
+            "a database with data must keep synchronous writes"
+        );
         drop(connection);
         fs::remove_dir_all(root).expect("remove test root");
     }
@@ -2672,12 +2678,14 @@ mod tests {
     #[test]
     fn template_built_without_syncs_has_the_same_schema_as_a_strict_migration() {
         let root = test_root("template-equivalence");
-        let migrations =
-            load_migrations(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../prisma/migrations"))
-                .expect("real migrations");
+        let migrations = load_migrations(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../prisma/migrations"),
+        )
+        .expect("real migrations");
         assert!(migrations.len() >= 47, "expected the real migration set");
         create_shop_template(&root, &migrations, &"c".repeat(64)).expect("template");
-        let template = Connection::open(root.join("system/shop-template.db")).expect("open template");
+        let template =
+            Connection::open(root.join("system/shop-template.db")).expect("open template");
         let strict = Connection::open(root.join("strict.db")).expect("open strict reference");
         ensure_migration_table(&strict).expect("migration table");
         for migration in &migrations {
@@ -2695,7 +2703,10 @@ mod tests {
         let journal: String = template
             .query_row("PRAGMA journal_mode", [], |row| row.get(0))
             .expect("journal mode");
-        assert_eq!(journal, "delete", "the persisted template must not keep the build-time journal mode");
+        assert_eq!(
+            journal, "delete",
+            "the persisted template must not keep the build-time journal mode"
+        );
         drop(template);
         drop(strict);
         fs::remove_dir_all(root).expect("remove test root");
