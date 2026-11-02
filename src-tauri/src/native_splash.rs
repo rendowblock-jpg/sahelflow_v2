@@ -3080,6 +3080,36 @@ mod imp {
                                 "{name}: first_paint_ms={first_ms:.2} steady_frame_ms={per_frame:.2}\n"
                             ));
                         }
+                        // The Rust half of a layered frame on its own (average down, lay over), at
+                        // the real layer sizes. GDI+ is a system library, so its share is the same in
+                        // a release build; only this half gets faster there. frame - rust = GDI+.
+                        let (card_w, card_h) = (renderer.width as usize, renderer.height as usize);
+                        let rect = mark_layer_rect(renderer.scale);
+                        let mut card_scratch = vec![0_u8; card_w * card_h * 4];
+                        for factor in [2_usize, 3, 4] {
+                            let (w, h) = (rect.w as usize, rect.h as usize);
+                            let big: Vec<u8> = (0..w * factor * h * factor * 4)
+                                .map(|i| (i * 31 % 251) as u8)
+                                .collect();
+                            let started = Instant::now();
+                            for _ in 0..bench {
+                                let small = box_downsample(&big, w * factor, h * factor, factor);
+                                over_premultiplied(
+                                    &mut card_scratch,
+                                    card_w,
+                                    card_h,
+                                    &small,
+                                    w,
+                                    h,
+                                    rect.x,
+                                    rect.y,
+                                );
+                            }
+                            report.push_str(&format!(
+                                "rust_half_k{factor}: ms={:.2}\n",
+                                started.elapsed().as_secs_f64() * 1_000.0 / bench as f64
+                            ));
+                        }
                         fs::write(
                             out.join(format!("bench-{theme}-{preset}-{locale}.txt")),
                             report,
