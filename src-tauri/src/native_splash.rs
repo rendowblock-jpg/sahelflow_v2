@@ -673,6 +673,23 @@ const MARK_BOX_Y: f32 = MARK_ORIGIN_Y + 6.0 * MARK_UNIT - MARK_BOX_PAD;
 const MARK_BOX_W: f32 = (50.8 - 17.0) * MARK_UNIT + MARK_BOX_PAD * 2.0;
 const MARK_BOX_H: f32 = (57.0 - 6.0) * MARK_UNIT + MARK_BOX_PAD * 2.0;
 
+/// The screen scale from the system DPI (96 is 100 %). A failed query (0) counts as 100 %.
+pub(crate) fn scale_from_dpi(dpi: u32) -> f32 {
+    if dpi == 0 {
+        1.0
+    } else {
+        dpi as f32 / 96.0
+    }
+}
+
+/// A test build may pretend to be on a denser screen (`SF_CARD_SCALE`), because the lab runner is fixed at
+/// 96 DPI. Only a number from 1 to 4 is believed; anything else is ignored.
+#[cfg(test)]
+pub(crate) fn scale_override(value: Option<&str>) -> Option<f32> {
+    let scale: f32 = value?.trim().parse().ok()?;
+    (scale.is_finite() && (1.0..=4.0).contains(&scale)).then_some(scale)
+}
+
 /// GDI+ fills the S through regions, and regions ignore the anti-aliasing mode:
 /// every curve came out as a staircase. The mark is therefore drawn `k` times
 /// larger into a layer of its own and averaged down. GDI+ paints that layer in
@@ -2732,8 +2749,11 @@ mod imp {
             return false;
         }
 
-        let dpi = GetDpiForSystem();
-        let scale = if dpi == 0 { 1.0 } else { dpi as f32 / 96.0 };
+        #[cfg(test)]
+        let scale = scale_override(std::env::var("SF_CARD_SCALE").ok().as_deref())
+            .unwrap_or_else(|| scale_from_dpi(GetDpiForSystem()));
+        #[cfg(not(test))]
+        let scale = scale_from_dpi(GetDpiForSystem());
         let width = ((CARD_WIDTH + SHADOW_MARGIN * 2.0) * scale).round() as i32;
         let height = ((CARD_HEIGHT + SHADOW_MARGIN * 2.0) * scale).round() as i32;
         let position = placement(width, height);
@@ -2926,7 +2946,8 @@ mod imp {
     /// SF_CARD_PERCENTS "8,34,72,99", SF_CARD_PHASES "preparing,starting,
     /// retrying,opening", SF_CARD_HINT "0,1" (1 = the slow-start sentence is
     /// showing), SF_CARD_BENCH N (also time the first paint and N steady
-    /// frames, with the ripple on).
+    /// frames, with the ripple on), SF_CARD_SCALE 1 to 4 (pretend the screen
+    /// is that much denser than 96 DPI, e.g. 1.5 for 150 %).
     /// Output: `<theme>-<preset>-<locale>-<phase>-p<percent>[-hint]-<w>x<h>.bgra`,
     /// raw premultiplied BGRA, top row first; `bench-*.txt` for the timings.
     #[cfg(test)]
@@ -3111,7 +3132,10 @@ mod imp {
                             ));
                         }
                         fs::write(
-                            out.join(format!("bench-{theme}-{preset}-{locale}.txt")),
+                            out.join(format!(
+                                "bench-{theme}-{preset}-{locale}-s{}.txt",
+                                (renderer.scale * 100.0).round() as u32
+                            )),
                             report,
                         )
                         .expect("write the timings");
@@ -4007,6 +4031,30 @@ mod tests {
     // the averaging and the laying-over, which are plain pixel maths.
     fn bgra(blue: u8, green: u8, red: u8, alpha: u8) -> [u8; 4] {
         [blue, green, red, alpha]
+    }
+
+    // The card has never been checked on a screen above 100 %: the lab runner is
+    // fixed at 96 DPI. A test build may therefore be told which scale to use
+    // (SF_CARD_SCALE); the real build always asks the system.
+    #[test]
+    fn the_screen_scale_follows_the_system_dpi() {
+        assert_eq!(scale_from_dpi(0), 1.0, "a failed DPI query means 100 %");
+        assert_eq!(scale_from_dpi(96), 1.0);
+        assert_eq!(scale_from_dpi(120), 1.25);
+        assert_eq!(scale_from_dpi(144), 1.5);
+        assert_eq!(scale_from_dpi(168), 1.75);
+        assert_eq!(scale_from_dpi(192), 2.0);
+        assert_eq!(scale_from_dpi(288), 3.0);
+    }
+
+    #[test]
+    fn a_scale_override_accepts_only_a_sensible_number() {
+        assert_eq!(scale_override(None), None);
+        assert_eq!(scale_override(Some("1.5")), Some(1.5));
+        assert_eq!(scale_override(Some(" 2 ")), Some(2.0));
+        for bad in ["", "abc", "0", "0.5", "-1", "NaN", "inf", "4.5", "100"] {
+            assert_eq!(scale_override(Some(bad)), None, "{bad:?} must be refused");
+        }
     }
 
     #[test]
