@@ -656,6 +656,127 @@ const MARK_FULL_Y: f32 = 6.0;
 const MARK_WAVE_FROM: f32 = 14.0;
 const MARK_WAVE_TO: f32 = 52.0;
 
+/// The square of the card that holds the mark: the S, its dot and a margin for
+/// the settle animation (which starts at 96 % of the size), in card pixels.
+const MARK_BOX_PAD: f32 = 6.0;
+const MARK_BOX_X: f32 = CARD_WIDTH / 2.0 - MARK_SIZE / 2.0 - MARK_BOX_PAD;
+const MARK_BOX_Y: f32 = MARK_TOP - MARK_BOX_PAD;
+const MARK_BOX_SIZE: f32 = MARK_SIZE + MARK_BOX_PAD * 2.0;
+
+/// GDI+ fills the S through regions, and regions ignore the anti-aliasing mode:
+/// every curve came out as a staircase. The mark is therefore drawn `k` times
+/// larger into a layer of its own and averaged down. `k` is 4 on an ordinary
+/// screen and shrinks as the screen gets denser, where the staircase is too
+/// fine to see and the layer would only cost time.
+pub(crate) fn supersample_factor(scale: f32) -> u32 {
+    if !scale.is_finite() || scale <= 0.0 {
+        return 4;
+    }
+    ((4.0 / scale).round() as u32).clamp(1, 4)
+}
+
+/// A rectangle of the card window in whole device pixels.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct LayerRect {
+    pub(crate) x: i32,
+    pub(crate) y: i32,
+    pub(crate) w: i32,
+    pub(crate) h: i32,
+}
+
+/// Where the mark layer lands on the card window. Whole pixels, so the averaged
+/// blocks line up with the screen's own pixels.
+pub(crate) fn mark_layer_rect(scale: f32) -> LayerRect {
+    let scale = if scale.is_finite() && scale > 0.0 {
+        scale
+    } else {
+        1.0
+    };
+    let left = ((MARK_BOX_X + SHADOW_MARGIN) * scale).floor();
+    let top = ((MARK_BOX_Y + SHADOW_MARGIN) * scale).floor();
+    let right = ((MARK_BOX_X + MARK_BOX_SIZE + SHADOW_MARGIN) * scale).ceil();
+    let bottom = ((MARK_BOX_Y + MARK_BOX_SIZE + SHADOW_MARGIN) * scale).ceil();
+    LayerRect {
+        x: left as i32,
+        y: top as i32,
+        w: (right - left) as i32,
+        h: (bottom - top) as i32,
+    }
+}
+
+/// Average every `k` x `k` block of a premultiplied 32-bit picture into one
+/// pixel (every channel, alpha included). Premultiplied pictures can be
+/// averaged channel by channel, which is why the layer uses them.
+pub(crate) fn box_downsample(src: &[u8], width: usize, height: usize, k: usize) -> Vec<u8> {
+    assert!(k >= 1 && width % k == 0 && height % k == 0);
+    assert_eq!(src.len(), width * height * 4);
+    let (out_w, out_h) = (width / k, height / k);
+    let mut out = vec![0_u8; out_w * out_h * 4];
+    let blocks = (k * k) as u32;
+    for oy in 0..out_h {
+        for ox in 0..out_w {
+            let mut sum = [0_u32; 4];
+            for dy in 0..k {
+                let row = ((oy * k + dy) * width + ox * k) * 4;
+                for dx in 0..k {
+                    for (channel, total) in sum.iter_mut().enumerate() {
+                        *total += u32::from(src[row + dx * 4 + channel]);
+                    }
+                }
+            }
+            let at = (oy * out_w + ox) * 4;
+            for (channel, total) in sum.iter().enumerate() {
+                out[at + channel] = ((total + blocks / 2) / blocks) as u8;
+            }
+        }
+    }
+    out
+}
+
+/// Lay a premultiplied picture over another one with its top-left corner at
+/// (`x`, `y`): `dst = src + dst * (1 - src alpha)` per channel. Whatever falls
+/// outside the destination is ignored.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn over_premultiplied(
+    dst: &mut [u8],
+    dst_w: usize,
+    dst_h: usize,
+    src: &[u8],
+    src_w: usize,
+    src_h: usize,
+    x: i32,
+    y: i32,
+) {
+    for sy in 0..src_h {
+        let ty = y + sy as i32;
+        if ty < 0 || ty >= dst_h as i32 {
+            continue;
+        }
+        for sx in 0..src_w {
+            let tx = x + sx as i32;
+            if tx < 0 || tx >= dst_w as i32 {
+                continue;
+            }
+            let from = (sy * src_w + sx) * 4;
+            let alpha = u32::from(src[from + 3]);
+            if alpha == 0 {
+                continue;
+            }
+            let to = (ty as usize * dst_w + tx as usize) * 4;
+            if alpha == 255 {
+                dst[to..to + 4].copy_from_slice(&src[from..from + 4]);
+                continue;
+            }
+            let rest = 255 - alpha;
+            for channel in 0..4 {
+                let blended = u32::from(src[from + channel])
+                    + (u32::from(dst[to + channel]) * rest + 127) / 255;
+                dst[to + channel] = blended.min(255) as u8;
+            }
+        }
+    }
+}
+
 /// Where the surface of the fill sits, in the mark's units, for a progress of
 /// 0 to 1: below the S when empty, above it when full.
 pub(crate) fn mark_fill_level(progress: f32) -> f32 {
@@ -1316,6 +1437,93 @@ mod imp {
     /// What a steady frame draws, so an unchanged frame is not redrawn.
     type Signature = (i32, u32, u8, u8, u8, u8, bool, u32, u8);
 
+    /// How a drawing is mapped onto its surface: `k` times larger than the
+    /// screen, with device pixel (`dx`, `dy`) of the card window as the surface's
+    /// top-left corner. The card window itself is `View::CARD`.
+    #[derive(Clone, Copy)]
+    struct View {
+        k: f32,
+        dx: f32,
+        dy: f32,
+    }
+
+    impl View {
+        const CARD: View = View {
+            k: 1.0,
+            dx: 0.0,
+            dy: 0.0,
+        };
+    }
+
+    /// The mark's own drawing surface, `k` times larger than its place on the
+    /// card. GDI+ draws into `pixels` (premultiplied BGRA); the picture is then
+    /// averaged down and laid over the card (see `supersample_factor`).
+    struct MarkLayer {
+        rect: LayerRect,
+        k: u32,
+        pixels: *mut u8,
+        len: usize,
+        bitmap: *mut GpBitmap,
+        graphics: *mut GpGraphics,
+    }
+
+    impl MarkLayer {
+        unsafe fn create(scale: f32) -> Option<Self> {
+            let k = supersample_factor(scale);
+            if k <= 1 {
+                return None;
+            }
+            let rect = mark_layer_rect(scale);
+            let (width, height) = (rect.w * k as i32, rect.h * k as i32);
+            if width <= 0 || height <= 0 {
+                return None;
+            }
+            let len = width as usize * height as usize * 4;
+            let pixels = Box::into_raw(vec![0_u8; len].into_boxed_slice()).cast::<u8>();
+            let mut bitmap: *mut GpBitmap = std::ptr::null_mut();
+            let mut graphics: *mut GpGraphics = std::ptr::null_mut();
+            let ready = GdipCreateBitmapFromScan0(
+                width,
+                height,
+                width * 4,
+                PIXEL_FORMAT_32BPP_PARGB,
+                pixels as *const u8,
+                &mut bitmap,
+            ) == Ok
+                && GdipGetImageGraphicsContext(bitmap.cast(), &mut graphics) == Ok;
+            let layer = Self {
+                rect,
+                k,
+                pixels,
+                len,
+                bitmap,
+                graphics,
+            };
+            if !ready {
+                layer.destroy();
+                return None;
+            }
+            GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
+            GdipSetPixelOffsetMode(graphics, PixelOffsetModeHighQuality);
+            GdipSetCompositingQuality(graphics, CompositingQualityHighQuality);
+            Some(layer)
+        }
+
+        /// Frees the drawing surface; the layer must not be used afterwards.
+        unsafe fn destroy(&self) {
+            if !self.graphics.is_null() {
+                GdipDeleteGraphics(self.graphics);
+            }
+            if !self.bitmap.is_null() {
+                GdipDisposeImage(self.bitmap.cast());
+            }
+            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
+                self.pixels,
+                self.len,
+            )));
+        }
+    }
+
     struct Renderer {
         window: HWND,
         width: i32,
@@ -1356,10 +1564,15 @@ mod imp {
         /// The width of each status text, measured once.
         label_widths: RefCell<Vec<(&'static str, f32)>>,
         last_signature: Option<Signature>,
+        /// The mark's own larger drawing surface (none on very dense screens).
+        mark_layer: Option<MarkLayer>,
     }
 
     impl Renderer {
         unsafe fn destroy(&mut self) {
+            if let Some(layer) = self.mark_layer.take() {
+                layer.destroy();
+            }
             if !self.graphics.is_null() {
                 GdipDeleteGraphics(self.graphics);
             }
@@ -1566,7 +1779,18 @@ mod imp {
 
         /// Card space: logical pixels with the card's top-left at the origin.
         unsafe fn reset_to_card_space(&self, g: *mut GpGraphics) {
+            self.reset_to_view(g, View::CARD);
+        }
+
+        /// Card space as seen by a surface that is `view.k` times larger than the
+        /// screen and starts at device pixel (`view.dx`, `view.dy`) of the card
+        /// window. Operations are prepended, so they apply last-written first:
+        /// card pixel -> plus shadow margin -> screen scale -> minus the
+        /// surface's corner -> times `k`.
+        unsafe fn reset_to_view(&self, g: *mut GpGraphics, view: View) {
             GdipResetWorldTransform(g);
+            GdipScaleWorldTransform(g, view.k, view.k, MatrixOrderPrepend);
+            GdipTranslateWorldTransform(g, -view.dx, -view.dy, MatrixOrderPrepend);
             GdipScaleWorldTransform(g, self.scale, self.scale, MatrixOrderPrepend);
             GdipTranslateWorldTransform(g, SHADOW_MARGIN, SHADOW_MARGIN, MatrixOrderPrepend);
         }
@@ -1927,12 +2151,59 @@ mod imp {
             }
         }
 
+        /// The mark, anti-aliased: drawn on its own larger layer, averaged down and
+        /// laid over the card (see `supersample_factor`). With no layer (a very
+        /// dense screen, or GDI+ could not make one) it is drawn straight onto the
+        /// card, as it always was.
+        unsafe fn paint_mark(&self, g: *mut GpGraphics, t: f32, fill: f32, finishing: bool) {
+            if timeline(t, 0.0, 700.0) <= 0.0 {
+                return;
+            }
+            let Some(layer) = &self.mark_layer else {
+                self.draw_mark(g, View::CARD, t, fill, finishing);
+                return;
+            };
+            GdipGraphicsClear(layer.graphics, 0);
+            let view = View {
+                k: layer.k as f32,
+                dx: layer.rect.x as f32,
+                dy: layer.rect.y as f32,
+            };
+            self.draw_mark(layer.graphics, view, t, fill, finishing);
+            GdipFlush(layer.graphics, FlushIntentionSync);
+            let k = layer.k as usize;
+            let (width, height) = (layer.rect.w as usize, layer.rect.h as usize);
+            let large = std::slice::from_raw_parts(layer.pixels, layer.len);
+            let small = box_downsample(large, width * k, height * k, k);
+            // What the card drew before the mark must have landed before the
+            // mark goes over it.
+            GdipFlush(g, FlushIntentionSync);
+            let card = std::slice::from_raw_parts_mut(self.bits, self.byte_len);
+            over_premultiplied(
+                card,
+                self.width as usize,
+                self.height as usize,
+                &small,
+                width,
+                height,
+                layer.rect.x,
+                layer.rect.y,
+            );
+        }
+
         /// The mark is the progress: a faint S that fills from the bottom as the
         /// launch really advances (the deep lower arc first, the sky upper arc
         /// last), with a slow low ripple on the surface and a thin bright line
         /// along it. The dot lands last and breathes while the card waits.
         /// Geometry mirrors public/brand/sahelflow-logo.svg (viewBox 9 7 50 50).
-        unsafe fn paint_mark(&self, g: *mut GpGraphics, t: f32, fill: f32, finishing: bool) {
+        unsafe fn draw_mark(
+            &self,
+            g: *mut GpGraphics,
+            view: View,
+            t: f32,
+            fill: f32,
+            finishing: bool,
+        ) {
             let appear = ease_out_cubic(timeline(t, 0.0, 700.0));
             if appear <= 0.0 {
                 return;
@@ -1968,7 +2239,7 @@ mod imp {
             });
 
             let place = || {
-                self.reset_to_card_space(g);
+                self.reset_to_view(g, view);
                 GdipTranslateWorldTransform(g, CARD_WIDTH / 2.0, MARK_CENTER_Y, MatrixOrderPrepend);
                 GdipScaleWorldTransform(g, settle, settle, MatrixOrderPrepend);
                 GdipTranslateWorldTransform(
@@ -2101,7 +2372,7 @@ mod imp {
                 );
                 GdipDeleteBrush(dot.cast());
             }
-            self.reset_to_card_space(g);
+            self.reset_to_view(g, view);
         }
     }
 
@@ -2548,6 +2819,7 @@ mod imp {
         GdipSetPixelOffsetMode(graphics, PixelOffsetModeHighQuality);
         GdipSetCompositingQuality(graphics, CompositingQualityHighQuality);
         GdipSetTextRenderingHint(graphics, TextRenderingHintAntiAliasGridFit);
+        let mark_layer = MarkLayer::create(scale);
 
         HIT_SCALE_MILLI.store((scale * 1_000.0).round() as u32, Ordering::Relaxed);
         HIT_RTL.store(locale == Locale::Ar, Ordering::Relaxed);
@@ -2589,6 +2861,7 @@ mod imp {
             gauge: CalmGauge::default(),
             label_widths: RefCell::new(Vec::new()),
             last_signature: None,
+            mark_layer,
         };
         // Paint the first frame before the window becomes visible, so the
         // very first pixels are the card, never an empty rectangle.
@@ -3508,6 +3781,158 @@ mod handoff_tests {
 mod tests {
     use super::*;
     use std::fs;
+
+    // F-0003 (Founder's lab run 41407479045): every curve of the mark was a
+    // staircase, because GDI+ regions and clips ignore the anti-aliasing mode.
+    // The mark is drawn several times larger and averaged down; these tests pin
+    // the averaging and the laying-over, which are plain pixel maths.
+    fn bgra(blue: u8, green: u8, red: u8, alpha: u8) -> [u8; 4] {
+        [blue, green, red, alpha]
+    }
+
+    #[test]
+    fn the_mark_is_drawn_larger_on_ordinary_screens_and_not_on_very_dense_ones() {
+        assert_eq!(supersample_factor(1.0), 4);
+        assert_eq!(supersample_factor(1.25), 3);
+        assert_eq!(supersample_factor(1.5), 3);
+        assert_eq!(supersample_factor(2.0), 2);
+        assert_eq!(supersample_factor(3.0), 1);
+        assert_eq!(supersample_factor(4.0), 1);
+        // A broken scale must not give 0 (a zero-size surface) or a huge one.
+        for scale in [0.0_f32, -1.0, f32::NAN, f32::INFINITY, 0.01, 100.0] {
+            let k = supersample_factor(scale);
+            assert!((1..=4).contains(&k), "scale {scale} gave {k}");
+        }
+    }
+
+    #[test]
+    fn the_mark_layer_holds_the_whole_mark_at_every_screen_scale() {
+        // The S spans x 17..46 and y 6..57 in the mark's own units (its dot reaches
+        // x 50.4); the unit is MARK_SIZE / 50, the mark is centred on the card.
+        let unit = MARK_SIZE / 50.0;
+        let origin_x = CARD_WIDTH / 2.0 - MARK_SIZE / 2.0 - 9.0 * unit;
+        let origin_y = MARK_TOP - 7.0 * unit;
+        for scale in [1.0_f32, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0] {
+            let rect = mark_layer_rect(scale);
+            let (left, top) = (rect.x as f32, rect.y as f32);
+            let (right, bottom) = ((rect.x + rect.w) as f32, (rect.y + rect.h) as f32);
+            // The settle animation starts at 96 % of the size around the mark's centre.
+            for (mark_x, mark_y) in [(17.0, 6.0), (50.4, 6.0), (17.0, 57.0), (50.4, 57.0)] {
+                let card_x = origin_x + mark_x * unit;
+                let card_y = origin_y + mark_y * unit;
+                let device_x = (card_x + SHADOW_MARGIN) * scale;
+                let device_y = (card_y + SHADOW_MARGIN) * scale;
+                assert!(
+                    le(left, device_x) && le(device_x, right),
+                    "x {device_x} outside {left}..{right} at scale {scale}"
+                );
+                assert!(
+                    le(top, device_y) && le(device_y, bottom),
+                    "y {device_y} outside {top}..{bottom} at scale {scale}"
+                );
+            }
+            assert!(rect.w > 0 && rect.h > 0);
+        }
+    }
+
+    #[test]
+    fn averaging_blocks_gives_the_mean_of_every_channel() {
+        // One 4x4 block: eight black pixels and eight half-transparent white ones
+        // (premultiplied, so a 50 % white pixel is 128,128,128,128).
+        let mut block = Vec::new();
+        for row in 0..4 {
+            for _ in 0..4 {
+                block.extend_from_slice(&if row < 2 {
+                    bgra(0, 0, 0, 255)
+                } else {
+                    bgra(128, 128, 128, 128)
+                });
+            }
+        }
+        let small = box_downsample(&block, 4, 4, 4);
+        assert_eq!(small.len(), 4);
+        assert_eq!(small, vec![64, 64, 64, 192]);
+    }
+
+    #[test]
+    fn a_slanted_edge_becomes_a_soft_edge_when_averaged_down() {
+        // 40x40 picture of an opaque white shape whose edge is a hard staircase.
+        let (width, height, k) = (40_usize, 40_usize, 4_usize);
+        let mut big = vec![0_u8; width * height * 4];
+        for y in 0..height {
+            for x in 0..width {
+                if x * 3 > y * 4 + 7 {
+                    let i = (y * width + x) * 4;
+                    big[i..i + 4].copy_from_slice(&bgra(255, 255, 255, 255));
+                }
+            }
+        }
+        let small = box_downsample(&big, width, height, k);
+        let (sw, sh) = (width / k, height / k);
+        let mut crossing_rows = 0;
+        let mut soft = 0;
+        for y in 0..sh {
+            let alphas: Vec<u8> = (0..sw).map(|x| small[(y * sw + x) * 4 + 3]).collect();
+            let has_edge = alphas.contains(&0) && alphas.contains(&255);
+            if has_edge {
+                crossing_rows += 1;
+                if alphas.iter().any(|a| *a > 0 && *a < 255) {
+                    soft += 1;
+                }
+            }
+        }
+        assert!(crossing_rows >= 4, "the test picture has no edge to test");
+        assert_eq!(
+            soft, crossing_rows,
+            "a row crossed the edge with a hard 0 to 255 step"
+        );
+    }
+
+    #[test]
+    fn averaging_refuses_a_picture_that_is_not_a_whole_number_of_blocks() {
+        let result = std::panic::catch_unwind(|| box_downsample(&[0_u8; 5 * 4 * 4], 5, 4, 2));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn laying_a_picture_over_another_follows_premultiplied_over() {
+        let mut card = vec![0_u8; 3 * 4];
+        card[0..4].copy_from_slice(&bgra(10, 20, 30, 255));
+        card[4..8].copy_from_slice(&bgra(10, 20, 30, 255));
+        card[8..12].copy_from_slice(&bgra(10, 20, 30, 255));
+        // Opaque, transparent and half-transparent source pixels.
+        let mut layer = Vec::new();
+        layer.extend_from_slice(&bgra(200, 100, 50, 255));
+        layer.extend_from_slice(&bgra(0, 0, 0, 0));
+        layer.extend_from_slice(&bgra(50, 50, 50, 128));
+        over_premultiplied(&mut card, 3, 1, &layer, 3, 1, 0, 0);
+        assert_eq!(&card[0..4], &bgra(200, 100, 50, 255));
+        assert_eq!(&card[4..8], &bgra(10, 20, 30, 255));
+        // 50 + 10 * (255 - 128) / 255 = 55 (rounded), alpha 128 + 255 * 127 / 255 = 255.
+        assert_eq!(&card[8..12], &bgra(55, 60, 65, 255));
+    }
+
+    #[test]
+    fn laying_a_picture_over_another_only_touches_the_overlap() {
+        let original = vec![7_u8; 4 * 4 * 4];
+        let mut card = original.clone();
+        let layer = vec![255_u8; 3 * 3 * 4];
+        // Hanging off the top-left corner by two pixels, then off the bottom-right.
+        over_premultiplied(&mut card, 4, 4, &layer, 3, 3, -2, -2);
+        assert_eq!(&card[0..4], &[255, 255, 255, 255]);
+        assert_eq!(&card[4..8], &original[4..8]);
+        over_premultiplied(&mut card, 4, 4, &layer, 3, 3, 3, 3);
+        assert_eq!(
+            &card[(3 * 4 + 3) * 4..(3 * 4 + 3) * 4 + 4],
+            &[255, 255, 255, 255]
+        );
+        assert_eq!(card.len(), original.len());
+        // Entirely outside: nothing changes, nothing panics.
+        let before = card.clone();
+        over_premultiplied(&mut card, 4, 4, &layer, 3, 3, 40, 40);
+        over_premultiplied(&mut card, 4, 4, &layer, 3, 3, -40, -40);
+        assert_eq!(card, before);
+    }
 
     // F-0002 (Founder's lab run 41407479045): the status read "Preparing your
     // dat". The slot was measured WITHOUT GDI+'s side padding and drawn WITH it,
