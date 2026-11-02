@@ -285,15 +285,17 @@
       .catch(() => { /* the server-rendered card stays */ });
   }
 
-  /* ── 7. connections: one line of logos that drifts by itself. It keeps moving when the device asks for less motion (slower),
-        and it can always be paused with the button, by hovering it, or by scrolling it off screen. ── */
+  /* ── 7. connections: ONE line of logos that drifts by itself, like the logo strips on premium sites.
+        Full motion (every desktop, and anyone who chose it): 64 px/s, it speeds up while the page is scrolled and settles back, a soft light
+        follows the pointer over it, and the logo under the pointer lifts while the others dim.
+        Calm: 36 px/s and none of the extras. Always: a pause button, it pauses on hover, and it stops while off screen. ── */
   const feed = $("[data-feed]");
   if (feed) {
     const box = $("[data-feed-rows]", feed);
     const row = $("[data-feed-row]", feed);
     if (box && row) {
       const originals = [...row.children];
-      const speed = calm ? 36 : 52; /* pixels per second */
+      const speed = calm ? 36 : 64; /* pixels per second */
       let sets = 1; /* copies of the whole set that one half of the track holds */
       let unit = 0; /* width of one set including its trailing gap */
       const build = () => {
@@ -337,12 +339,61 @@
       }
       const note = $("[data-calm-note]", feed);
       if (note && calm && root.hasAttribute("data-os-reduced")) note.hidden = false;
+
+      if (!calm) {
+        /* a soft light follows the pointer over the line (mouse only) */
+        const spot = $(".h7-spot", box);
+        if (spot && fine) {
+          let tx = 0, ty = 0, cx = 0, cy = 0, inside = false, raf = 0;
+          const step = () => {
+            cx += (tx - cx) * 0.16;
+            cy += (ty - cy) * 0.16;
+            spot.style.transform = `translate3d(${cx.toFixed(1)}px,${cy.toFixed(1)}px,0)`;
+            raf = inside || Math.abs(tx - cx) + Math.abs(ty - cy) > 0.5 ? requestAnimationFrame(step) : 0;
+          };
+          box.addEventListener("pointermove", (e) => {
+            const r = box.getBoundingClientRect();
+            tx = e.clientX - r.left;
+            ty = e.clientY - r.top;
+            if (!inside) { inside = true; cx = tx; cy = ty; box.classList.add("is-lit"); }
+            if (!raf) raf = requestAnimationFrame(step);
+          });
+          box.addEventListener("pointerleave", () => { inside = false; box.classList.remove("is-lit"); });
+        }
+        /* scrolling speeds the line up, then it settles back to its own pace */
+        const track = () => row.getAnimations().find((x) => x.animationName === "h7run");
+        let last = scrollY, lastT = performance.now(), target = 1, rate = 1, sraf = 0;
+        const settle = () => {
+          target += (1 - target) * 0.05;
+          rate += (target - rate) * 0.14;
+          const a = track();
+          if (a && a.updatePlaybackRate && Math.abs(a.playbackRate - rate) > 0.01) a.updatePlaybackRate(rate);
+          if (Math.abs(rate - 1) > 0.01 || Math.abs(target - 1) > 0.01) sraf = requestAnimationFrame(settle);
+          else {
+            sraf = 0;
+            if (a && a.updatePlaybackRate && a.playbackRate !== 1) a.updatePlaybackRate(1);
+          }
+        };
+        addEventListener("scroll", () => {
+          const now = performance.now();
+          const dy = Math.abs(scrollY - last);
+          const dt = Math.max(8, now - lastT);
+          last = scrollY;
+          lastT = now;
+          if (feed.classList.contains("is-off")) return;
+          target = Math.min(3.2, Math.max(target, 1 + (dy / dt) * 0.6));
+          if (!sraf) sraf = requestAnimationFrame(settle);
+        }, { passive: true });
+      }
     }
   }
 
   /* ── motion: the device may ask for less; the visitor can overrule it, and can always pause the hero scene ── */
   const mnote = $("[data-motion-note]");
-  if (mnote && root.hasAttribute("data-os-reduced")) {
+  let noteSeen = false;
+  try { noteSeen = localStorage.getItem("sf-motion-note") === "1"; } catch (e) { /* storage blocked: the note shows every time */ }
+  if (mnote && root.hasAttribute("data-os-reduced") && !noteSeen) {
+    try { localStorage.setItem("sf-motion-note", "1"); } catch (e) { /* ignore */ }
     const isFull = root.getAttribute("data-motion") === "full";
     const k = isFull ? "Full" : "Calm";
     $("[data-mn-text]", mnote).textContent = mnote.dataset["t" + k];

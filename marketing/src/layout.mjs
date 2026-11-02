@@ -7,7 +7,10 @@ import { COPY } from "./i18n/index.mjs";
 import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
 
 /** The one inline script: no-js flag + motion flag before first paint (its CSP hash is in static/_headers). */
-export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{var s=null;try{s=localStorage.getItem("sf-motion")}catch(e){}var r=matchMedia("(prefers-reduced-motion: reduce)").matches;d.setAttribute("data-motion",s==="full"||s==="calm"?s:r?"calm":"full");if(r)d.setAttribute("data-os-reduced","");if(window.IntersectionObserver)d.classList.add("js-motion")}catch(e){}})()`;
+export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{var s=null;try{s=localStorage.getItem("sf-motion")}catch(e){}var r=matchMedia("(prefers-reduced-motion: reduce)").matches;var p=matchMedia("(hover: hover) and (pointer: fine)").matches;d.setAttribute("data-motion",s==="full"||s==="calm"?s:r&&!p?"calm":"full");if(r)d.setAttribute("data-os-reduced","");if(window.IntersectionObserver)d.classList.add("js-motion")}catch(e){}})()`;
+
+/** The footer switch: its label per language. Pressed = calm. */
+const MOTION_LABEL = { ar: "تقليل الحركة", fr: "Réduire les animations", en: "Reduce animations" };
 import { esc, href, icon, phoneDisplay, whatsappHref } from "./ui.mjs";
 import { HOME3_COPY } from "./home3.mjs";
 
@@ -183,6 +186,7 @@ ${col(t.footer.legal, [[href(locale, "privacy"), t.footer.privacy], [href(locale
 <p class="foot-note foot-marks">${esc(BRAND_MARKS[locale])}</p>
 <div class="foot-bottom">
 <p>© ${year} SahelFlow. ${esc(t.footer.rights)} ${esc(t.footer.made)}</p>
+<button type="button" class="foot-motion" data-motion-toggle aria-pressed="false" hidden><span class="fm-sw" aria-hidden="true"><i></i></span><span>${esc(MOTION_LABEL[locale])}</span></button>
 <p class="langs">${SITE.locales.map((l) => `<a href="${href(l)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}>${esc(COPY[l].name)}</a>`).join("")}</p>
 </div>
 ${wordmark(locale)}

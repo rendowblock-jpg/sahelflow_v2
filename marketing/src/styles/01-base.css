@@ -27,7 +27,7 @@ html{--f:"SF Cairo",system-ui,"Segoe UI",Tahoma,sans-serif;
 
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;font-synthesis:none;scroll-padding-block-start:calc(var(--header-h) + 16px)}
-@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+html[data-motion=full]{scroll-behavior:smooth}
 body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:400 var(--t-body)/1.5 var(--f);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:clip}
 html[lang=ar] body{line-height:1.7}
 h1,h2,h3,h4,p,dl,dd,ol,ul,figure{margin:0;padding:0}

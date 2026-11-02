@@ -36,7 +36,7 @@ h1,h2,h3,h4{font-family:var(--f)}
 html[dir=rtl] .v-text:hover svg{transform:scaleX(-1) translateX(4px)}
 
 /* ───────── entrances ───────── */
-.js-motion .rv{opacity:0;transform:translateY(30px);transition:opacity .9s var(--ease),transform .9s var(--ease);transition-delay:calc(var(--i,0)*90ms)}
+.js-motion .rv{opacity:0;transform:translateY(24px);transition:opacity .6s var(--ease),transform .7s var(--ease);transition-delay:calc(var(--i,0)*60ms)}
 .js-motion .rv.in{opacity:1;transform:none}
 
 /* ───────── type steps ───────── */

@@ -3,7 +3,7 @@
 // five jobs as a lit grid, a live order reader, one price, and a closing sentence with a blank in it.
 // Facts come from claims.mjs / model.mjs / config.mjs and the vetted copy in home3.mjs; only the connective words are new here.
 import { COPY } from "./i18n/index.mjs";
-import { integrationStatus } from "./claims.mjs";
+import { integrationStatus, statusLabel } from "./claims.mjs";
 import { BRAND_NAMES, INTEGRATIONS, PACKAGE } from "./model.mjs";
 import { SITE } from "./config.mjs";
 import { fmtMoney, readOrder } from "./orderparse.mjs";
@@ -399,7 +399,7 @@ function feedSection(n, t, locale) {
   const allTesting = keys.every((k) => integrationStatus(k) === "testing");
   const card = (key) => {
     const status = integrationStatus(key);
-    return `<li data-status="${status}" data-brand="${key}" class="h7-card" style="--c:${HUE[key]}">${brandTile(key)}<span class="h7-name"><bdi>${esc(BRAND_NAMES[key])}</bdi></span>${statusBadge(status, locale)}</li>`;
+    return `<li data-status="${status}" data-brand="${key}" class="h7-card" style="--c:${HUE[key]}">${brandTile(key)}<span class="h7-txt"><span class="h7-name"><bdi>${esc(BRAND_NAMES[key])}</bdi></span><span class="h7-st" data-st="${status}"><i aria-hidden="true"></i>${esc(statusLabel(status, locale))}</span></span></li>`;
   };
   const eyebrow = (allTesting ? F.eyebrowAll : F.eyebrowSome)(keys.length);
   return `<section class="h7-feed" aria-labelledby="h-int" data-feed>
@@ -407,6 +407,7 @@ function feedSection(n, t, locale) {
 <header class="h7-head rv"><p class="h7-eyebrow"><i aria-hidden="true"></i>${esc(eyebrow)}</p><h2 id="h-int" class="h4-h2">${esc(F.h2)}</h2><p class="h6-sub">${esc(F.sub)}</p></header>
 </div>
 <div class="h7-rows rv" data-feed-rows data-marquee>
+<i class="h7-spot" aria-hidden="true"></i>
 <ul class="h7-row" data-feed-row aria-label="${esc(F.h2)}">${DISPLAY.map(card).join("")}</ul>
 </div>
 <div class="h5-wrap">

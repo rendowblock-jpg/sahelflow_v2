@@ -1,7 +1,9 @@
-/* The connections section: ONE line of logo pills that drifts by itself, like the logo strips on premium sites.
-   The script (home4.js, section 7) doubles the pills so the line never ends and adds .is-run. It moves in both motion modes: 46 px/s in full,
-   28 px/s in calm (the device asks for less motion), and it can be paused with the button, by hovering it, and it stops off screen.
-   Without script the pills are a still, centred, wrapped grid. Only transform and opacity are animated. Loaded after 15-motion.css. */
+/* The connections section: ONE line of logos that drifts by itself, like the logo strips on premium sites.
+   Each item is a lockup: a large glossy tile (the official logo) with the name and the honest status beside it, no card around it.
+   The script (home4.js, section 7) doubles the items so the line never ends and adds .is-run. It moves in both motion modes (64 px/s in full,
+   36 px/s in calm); in full it also speeds up while the page is scrolled, a soft light follows the pointer, and the hovered logo lifts while
+   the others dim. A pause button, hover and being off screen all stop it. Without script: a still, centred, wrapped list.
+   Only transform and opacity are animated. Loaded after 15-motion.css. */
 
 .h7-feed{position:relative;isolation:isolate;overflow:hidden;padding:var(--gap-s) 0 clamp(56px,8vw,120px);background:#fff}
 .h7-feed::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(70% 60% at 50% -8%,rgba(14,165,233,.16),transparent 72%),radial-gradient(rgba(12,74,110,.14) 1px,transparent 1.6px) 0 0/24px 24px;-webkit-mask-image:linear-gradient(#000 30%,transparent 95%);mask-image:linear-gradient(#000 30%,transparent 95%)}
@@ -20,22 +22,43 @@ html[data-motion=calm] .h7-eyebrow i::after{animation-name:h7pingc}
 .h7-feed.is-paused .h7-eyebrow i::after,.h7-feed.is-off .h7-eyebrow i::after{animation-play-state:paused}
 @media (prefers-reduced-motion:reduce){html:not([data-motion]) .h7-eyebrow i::after{animation:none}}
 
-/* the line */
-.h7-rows{display:grid;margin-block:clamp(30px,4.4vw,60px)}
-.h7-row{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin:0;padding:0 var(--pad-x);list-style:none}
-.h7-rows.is-run{overflow:hidden;padding-block:16px;margin-block:calc(clamp(30px,4.4vw,60px) - 16px);-webkit-mask-image:linear-gradient(to right,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(to right,transparent,#000 8%,#000 92%,transparent)}
-.h7-row.is-run{flex-wrap:nowrap;justify-content:flex-start;inline-size:max-content;padding:0;padding-inline-end:14px;animation:h7run var(--dur,70s) linear infinite}
+/* the line: a band with a hairline above and below, faded out at both ends */
+.h7-rows{position:relative;display:grid;margin-block:clamp(40px,5vw,76px)}
+.h7-spot{display:none}
+.h7-row{--g:56px;position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:center;gap:30px 48px;margin:0;padding:0 var(--pad-x);list-style:none}
+.h7-rows.is-run{overflow:hidden;padding-block:34px;margin-block:calc(clamp(40px,5vw,76px) - 34px);background:linear-gradient(180deg,rgba(14,165,233,.05),rgba(14,165,233,0) 70%);-webkit-mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent)}
+.h7-rows.is-run::before,.h7-rows.is-run::after{content:"";position:absolute;inset-inline:0;block-size:1px;background:rgba(12,74,110,.15);pointer-events:none}
+.h7-rows.is-run::before{inset-block-start:0}
+.h7-rows.is-run::after{inset-block-end:0}
+.h7-row.is-run{flex-wrap:nowrap;justify-content:flex-start;inline-size:max-content;gap:var(--g);padding:0;padding-inline-end:var(--g);animation:h7run var(--dur,70s) linear infinite}
 @keyframes h7run{to{transform:translate3d(calc(-50% * var(--dir)),0,0)}}
 .h7-feed.is-off .h7-row,.h7-feed.is-paused .h7-row{animation-play-state:paused}
-@media (hover:hover){.h7-row.is-run:hover{animation-play-state:paused}}
 
-.h7-card{--c:#0ea5e9;flex:none;box-sizing:border-box;display:grid;grid-template-columns:52px auto;grid-template-areas:"l n" "l s";column-gap:14px;row-gap:5px;align-items:center;align-content:center;justify-items:start;block-size:88px;padding-inline:16px 28px;border:1px solid rgba(12,74,110,.09);border-radius:999px;background:linear-gradient(180deg,#fff,#f6fafd);box-shadow:0 1px 0 #fff inset,0 1px 2px rgba(12,74,110,.06),0 18px 34px -24px rgba(12,74,110,.45);transition:transform .35s var(--ease),border-color .3s,box-shadow .45s}
-.h7-card .brand-tile{grid-area:l;inline-size:52px;block-size:52px;border-radius:50%;background:#fff;border:1px solid rgba(12,74,110,.09);box-shadow:0 10px 18px -12px rgba(12,74,110,.45)}
-.h7-name{grid-area:n;font-size:1.0625rem;font-weight:650;line-height:1.25;color:var(--ink);white-space:nowrap}
-.h7-card .stamp{grid-area:s}
-@media (hover:hover){.h7-card:hover{transform:translateY(-3px);border-color:var(--c);box-shadow:0 1px 0 #fff inset,0 2px 4px rgba(12,74,110,.08),0 24px 40px -22px rgba(14,165,233,.6)}}
-@supports (color:color-mix(in srgb,red,blue)){@media (hover:hover){.h7-card:hover{box-shadow:0 1px 0 #fff inset,0 2px 4px rgba(12,74,110,.08),0 24px 40px -22px color-mix(in srgb,var(--c) 65%,transparent)}}}
-html[data-motion=calm] .h7-card:hover{transform:none}
+/* the soft light that follows the pointer (placed by the script; mouse only, full motion only) */
+.h7-rows.is-run .h7-spot{display:block}
+.h7-spot{position:absolute;left:0;top:0;inline-size:560px;block-size:560px;margin:-280px 0 0 -280px;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .45s ease;background:radial-gradient(closest-side,rgba(14,165,233,.22),rgba(14,165,233,.08) 55%,rgba(14,165,233,0))}
+.h7-rows.is-lit .h7-spot{opacity:1}
+
+/* one item: a glossy tile with the name and the status beside it */
+.h7-card{--c:#0ea5e9;flex:none;display:flex;align-items:center;gap:18px;color:var(--ink);transition:opacity .4s ease}
+.h7-card .brand-tile{flex:none;inline-size:72px;block-size:72px;border-radius:22px;background:linear-gradient(155deg,#fff 0%,#f1f6fb 100%);border:1px solid rgba(12,74,110,.09);box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(12,74,110,.07),0 16px 26px -14px rgba(12,74,110,.3);transition:transform .45s var(--ease),box-shadow .45s ease}
+@supports (color:color-mix(in srgb,red,blue)){.h7-card .brand-tile{box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(12,74,110,.07),0 16px 26px -14px rgba(12,74,110,.3),0 30px 38px -24px color-mix(in srgb,var(--c) 60%,transparent)}}
+.h7-txt{display:grid;gap:4px;min-inline-size:0}
+.h7-name{font-size:1.1875rem;font-weight:650;line-height:1.2;letter-spacing:0;white-space:nowrap;color:var(--ink)}
+.h7-st{display:inline-flex;align-items:center;gap:7px;font-size:.8125rem;font-weight:550;line-height:1.3;white-space:nowrap;color:var(--soft)}
+.h7-st i{flex:none;inline-size:8px;block-size:8px;border-radius:50%}
+.h7-st[data-st=testing] i{box-shadow:inset 0 0 0 2px #0ea5e9}
+.h7-st[data-st=live] i{background:#16a34a}
+.h7-st[data-st=planned] i{box-shadow:inset 0 0 0 2px #9aa3b2}
+
+@media (hover:hover){
+.h7-row.is-run:hover{animation-play-state:paused}
+.h7-row.is-run:hover .h7-card{opacity:.45}
+.h7-row.is-run:hover .h7-card:hover{opacity:1}
+.h7-card:hover .brand-tile{transform:translateY(-6px) scale(1.07);box-shadow:inset 0 1px 0 #fff,0 2px 4px rgba(12,74,110,.08),0 24px 34px -14px rgba(14,165,233,.5)}
+}
+@supports (color:color-mix(in srgb,red,blue)){@media (hover:hover){.h7-card:hover .brand-tile{box-shadow:inset 0 1px 0 #fff,0 2px 4px rgba(12,74,110,.08),0 24px 34px -14px color-mix(in srgb,var(--c) 65%,transparent)}}}
+html[data-motion=calm] .h7-card:hover .brand-tile{transform:none}
 
 /* pause button and the calm-mode sentence */
 .h7-ctl{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 14px;margin-block-start:4px}
@@ -45,15 +68,13 @@ html[data-motion=calm] .h7-card:hover{transform:none}
 .h7-note{max-inline-size:78ch;margin:clamp(20px,3vw,36px) auto 0;font-size:.8125rem;line-height:1.75;text-align:center;color:var(--soft)}
 .h7-note .v-text{display:inline-flex;margin-inline-start:6px;font-size:.9375rem;font-weight:620}
 
-/* without script: a still, centred grid (the pills are taller and wrap) */
-.h7-row:not(.is-run) .h7-card{block-size:auto;min-block-size:84px;padding-block:12px}
-
 @media (max-width:600px){
 .h7-head{gap:14px}
-.h7-card{block-size:76px;grid-template-columns:44px auto;column-gap:12px;padding-inline:12px 22px}
-.h7-card .brand-tile{inline-size:44px;block-size:44px}
+.h7-row{--g:38px}
+.h7-rows.is-run{padding-block:26px;margin-block:calc(clamp(40px,5vw,76px) - 26px)}
+.h7-card{gap:14px}
+.h7-card .brand-tile{inline-size:56px;block-size:56px;border-radius:18px}
 .h7-name{font-size:1rem}
-.h7-row:not(.is-run){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.h7-row:not(.is-run) .h7-card{inline-size:auto;border-radius:22px;grid-template-columns:minmax(0,1fr);grid-template-areas:"l" "n" "s";row-gap:8px;padding:14px;min-block-size:0}
+.h7-row:not(.is-run){display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:22px 18px;padding-inline:0}
 .h7-row:not(.is-run) .h7-name{white-space:normal}
 }

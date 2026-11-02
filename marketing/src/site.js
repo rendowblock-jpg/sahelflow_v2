@@ -7,7 +7,8 @@
   const doc = document;
   const root = doc.documentElement;
   const locale = root.lang || "ar";
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* motion mode from the boot script: "calm" on touch devices that ask for less, or when the visitor chose it; every desktop is "full" */
+  const reduced = root.getAttribute("data-motion") === "calm";
   const $ = (sel, el = doc) => el.querySelector(sel);
   const $$ = (sel, el = doc) => Array.from(el.querySelectorAll(sel));
   const store = {
@@ -110,6 +111,16 @@
     };
     addEventListener("scroll", () => { if (!line) { line = true; requestAnimationFrame(paint); } }, { passive: true });
     paint();
+  }
+
+  /* ── footer switch: reduce animations (calm) on or off; the choice is remembered and the page reloads once ── */
+  const mt = $("[data-motion-toggle]");
+  if (mt) {
+    mt.hidden = false;
+    mt.setAttribute("aria-pressed", String(reduced));
+    mt.addEventListener("click", () => {
+      try { localStorage.setItem("sf-motion", reduced ? "full" : "calm"); location.reload(); } catch (e) { mt.disabled = true; }
+    });
   }
 
   /* ── price count-up: 600 ms, once, when it scrolls into view ── */
