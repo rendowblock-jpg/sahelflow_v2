@@ -8,6 +8,15 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-11-02 — The Carnet look is removed
+
+- **Founder's order (2 November):** the cream "Carnet" look, its fonts and its styles are removed from the app. Settings > Appearance offers four looks again: Sahel, Atlas, Oasis, Dune. Sahel is the default.
+  - **Saved choice:** every install had "carnet" saved (the one-time migration in wave 2 moved everyone to it). A saved name that is no longer offered now counts as not chosen: the install shows Sahel and the next save overwrites the old name. The marker `sahelflow-look` is no longer written or read; an old one left in storage changes nothing. Whoever chose Atlas, Oasis or Dune before the migration does not get that choice back: the migration had already replaced it.
+  - **Files:** `carnet-identity.css`, the two Carnet colour blocks, six IBM Plex / Amiri font files and their three OFL texts are deleted. The app ships Inter and Noto Sans Arabic only. `lib/appearance/look.ts` becomes `lib/appearance/preset.ts` (same single source for the server layout, the first-paint script and the provider, without the migration).
+  - **Inbox:** the Carnet-only decoration is gone (the "Approved" stamp, the double-rule banner, the written index letter, the ruled empty page). The text keys `inbox.carnet.*` are renamed `inbox.list.*`; the key `inbox.thread.draft.stamp` is deleted.
+  - **Tests:** new `preset.test.ts`, `carnet-removed-contract.test.ts` and `appearance-panel.render.test.tsx`; the Carnet-only tests are deleted. The accessibility-matrix contrast checks that only ever ran on Carnet now run on all four presets. One of them (the blacklist button on its dark outline fill) failed on the four presets until the test counted the translucent dark `--input` colour (alpha 0.16); the button itself is unchanged.
+  - **Not touched:** the marketing site and its tests, the phone companion app under `control-plane/pwa`, and the history entries below.
+
 ### 2026-11-01 — FD-083 adopts the Internal.47 release authority
 
 - FD-083 authorizes one signed successor: app `1.0.0-internal.47` / MSI `1.0.0.47`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.46 (`db68bfe2…`):
