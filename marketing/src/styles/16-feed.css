@@ -16,7 +16,7 @@
 .h7-rows{display:grid;gap:14px;margin-block:clamp(30px,4.4vw,60px)}
 .h7-row{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin:0;padding:0 var(--pad-x);list-style:none}
 .h7-rows.is-run{overflow:hidden;-webkit-mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent)}
-.h7-row.is-run{flex-wrap:nowrap;justify-content:flex-start;inline-size:max-content;padding:0;padding-inline-end:14px;will-change:transform;animation:h7run var(--dur,60s) linear infinite}
+.h7-row.is-run{flex-wrap:nowrap;justify-content:flex-start;inline-size:max-content;padding:0;padding-inline-end:14px;animation:h7run var(--dur,60s) linear infinite}
 .h7-row.is-run[data-dir="1"]{--dur:64s}
 .h7-row.is-run[data-dir="-1"]{--dur:56s;animation-direction:reverse}
 @keyframes h7run{to{transform:translate3d(calc(-50% * var(--dir)),0,0)}}
