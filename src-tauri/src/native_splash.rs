@@ -179,7 +179,7 @@ const STATUS_TOP: f32 = 265.0;
 const HINT_TOP: f32 = 293.0;
 const VERSION_TOP: f32 = 323.0;
 /// Distance of the slow hint from the card's start and end edges.
-const EDGE_INSET: f32 = 60.0;
+const EDGE_INSET: f32 = 40.0;
 const PERCENT_WIDTH: f32 = 44.0;
 const STATUS_GAP: f32 = 10.0;
 const STATUS_DOT: f32 = 4.0;
@@ -4387,6 +4387,20 @@ mod tests {
         assert!(
             tagline_to_status >= 2.0 * name_to_tagline,
             "tagline to status is {tagline_to_status} px, name to tagline {name_to_tagline} px"
+        );
+    }
+
+    #[test]
+    fn the_longest_slow_hint_keeps_a_tenth_of_slack_in_its_box() {
+        // Measured on Windows (lab run 41520342342, Segoe UI Variable, 13 px): the French
+        // sentence is 463 px wide. If the PC falls back to another face the text can run wider;
+        // the box must absorb that, because a second line would land on the version.
+        let size = std::hint::black_box;
+        let measured = 463.0 * size(HINT_FONT_PX) / 13.0;
+        let box_width = size(CARD_WIDTH) - size(EDGE_INSET) * 2.0;
+        assert!(
+            box_width >= measured * 1.10,
+            "the French hint needs {measured} px, its box is {box_width} px"
         );
     }
 
