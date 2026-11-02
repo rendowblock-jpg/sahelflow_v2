@@ -78,12 +78,15 @@
         });
         li.addEventListener("pointerleave", (e) => {
           if (e.pointerType !== "mouse") return;
+          if (li.querySelector(":focus-visible")) return; /* a menu opened from the keyboard stays open when the pointer drifts past it */
           later(() => closeAll(), 220);
         });
       });
       /* hovering a plain link (Integrations, Pricing) closes an open panel after the same short wait */
       $$(".nav-links > li:not([data-mega])", topbar).forEach((li) => li.addEventListener("pointerenter", (e) => {
-        if (e.pointerType === "mouse") later(() => closeAll(), 140);
+        if (e.pointerType !== "mouse") return;
+        if (megas.some((x) => x.querySelector(":focus-visible"))) return;
+        later(() => closeAll(), 140);
       }));
     }
     doc.addEventListener("click", (e) => {
