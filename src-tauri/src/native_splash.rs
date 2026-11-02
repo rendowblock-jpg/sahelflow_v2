@@ -848,12 +848,15 @@ pub(crate) const DOT_MIN_ALPHA: f32 = 0.72;
 /// card waits, rests a little under full when the ripple is off, and is full
 /// when the workspace is ready.
 pub(crate) fn dot_alpha(seconds: f32, calm: bool, finishing: bool) -> f32 {
+    // Halfway between the floor and full, and the swing that reaches each end.
+    let rest = (1.0 + DOT_MIN_ALPHA) / 2.0;
+    let swing = (1.0 - DOT_MIN_ALPHA) / 2.0;
     if finishing {
         1.0
     } else if calm {
-        0.86
+        rest
     } else {
-        0.86 + 0.14 * (seconds * 2.6).sin()
+        rest + swing * (seconds * 2.6).sin()
     }
 }
 
