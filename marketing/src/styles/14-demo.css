@@ -47,7 +47,7 @@
 .h6-status.is-warn{background:#fff1cf;color:#7a4b00}
 .h6-note{margin-block-start:clamp(20px,3vw,36px);max-inline-size:70ch;color:var(--soft);font-size:.875rem;line-height:1.7}
 @media (max-width:899px){.h6-grid{grid-template-columns:1fr}.h6-msgs{min-block-size:190px}}
-@media (prefers-reduced-motion:reduce){.h6-typing i{animation:none}.h6-who button,.h6-send{transition:none}}
+
 
 /* ───────── connections: all thirteen, each with its own status label ───────── */
 .h6-int{padding:var(--gap-s) var(--pad-x) clamp(48px,7vw,110px);background:#fff}
@@ -59,12 +59,3 @@
 .h6-int-grid .stamp{grid-area:s;justify-self:start}
 .h6-int-note{margin-block-start:clamp(20px,3vw,32px);color:var(--muted);line-height:1.7;max-inline-size:70ch}
 
-/* ───────── reduced motion: the 3D scene is a still picture, every part in its finished place ───────── */
-@media (prefers-reduced-motion:reduce){
-.h4-scene *,.h4-aurora i,.h4-tag,.h4-money{animation:none!important}
-.h4-stamp,.h4-drop{opacity:1}
-.h4-beam{opacity:.5}
-.h4-orb,.h4-spark,.h4-ring,.h4-money{display:none}
-.h4-tag{color:var(--ink)}
-.h4-stage{translate:none}
-}

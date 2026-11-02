@@ -6,7 +6,7 @@ import { COPY } from "./i18n/index.mjs";
 import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
 
 /** The one inline script: no-js flag + motion flag before first paint (its CSP hash is in static/_headers). */
-export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{if(window.IntersectionObserver&&!matchMedia("(prefers-reduced-motion: reduce)").matches)d.classList.add("js-motion")}catch(e){}})()`;
+export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{var s=null;try{s=localStorage.getItem("sf-motion")}catch(e){}var r=matchMedia("(prefers-reduced-motion: reduce)").matches;d.setAttribute("data-motion",s==="full"||s==="calm"?s:r?"calm":"full");if(r)d.setAttribute("data-os-reduced","");if(window.IntersectionObserver)d.classList.add("js-motion")}catch(e){}})()`;
 import { esc, href, icon, phoneDisplay, whatsappHref } from "./ui.mjs";
 import { HOME3_COPY } from "./home3.mjs";
 
@@ -135,6 +135,7 @@ ${drop("resources", t.nav.resources, inResources, t.nav.resourcesTitle, resource
 </div>
 </details>
 </div>
+<i class="top-line" aria-hidden="true"></i>
 </header>`;
 }
 

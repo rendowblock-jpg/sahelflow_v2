@@ -6,7 +6,8 @@
   "use strict";
   const doc = document;
   const root = doc.documentElement;
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* motion mode, "full" or "calm", decided before first paint by the boot script: the device preference unless the visitor overruled it */
+  const calm = root.getAttribute("data-motion") === "calm";
   const fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
   const wide = matchMedia("(min-width: 900px)");
   const $ = (sel, el = doc) => el.querySelector(sel);
@@ -39,6 +40,9 @@
   const story = $("[data-story]");
   let lastY = scrollY;
   let ticking = false;
+  const heroStage = hero ? $("[data-stage]", hero) : null;
+  let heroH = hero ? hero.offsetHeight : 0;
+  addEventListener("resize", () => { heroH = hero ? hero.offsetHeight : 0; });
 
   let storyUpdate = () => {};
   if (story && motion) {
@@ -46,6 +50,8 @@
     const steps = $$("[data-steps] > li", story);
     const shots = $$(".h4-shot", story);
     const btns = $$("[data-go]", story);
+    const devEl = $("[data-device]", story);
+    const fillEl = $(".h4-rail-fill", story);
     const N = steps.length;
     let cur = 0;
     const set = (i) => {
@@ -58,7 +64,9 @@
       const r = track.getBoundingClientRect();
       const span = Math.max(1, r.height - innerHeight);
       const p = clamp(-r.top / span, 0, 1);
-      story.style.setProperty("--p", p.toFixed(4));
+      const pv = p.toFixed(4);
+      if (devEl && !calm) devEl.style.setProperty("--p", pv);
+      if (fillEl) fillEl.style.setProperty("--p", pv);
       const i = Math.min(N - 1, Math.floor(p * N));
       if (i !== cur) set(i);
     };
@@ -77,7 +85,7 @@
     const y = scrollY;
     if (header) header.classList.toggle("is-stuck", y > 8);
     lastY = y;
-    if (hero) hero.style.setProperty("--hy", clamp(y / Math.max(1, hero.offsetHeight), 0, 1).toFixed(3));
+    if (heroStage && !calm && y < heroH + 120) heroStage.style.translate = `0 ${(-clamp(y / Math.max(1, heroH), 0, 1) * 46).toFixed(1)}px`;
     storyUpdate();
   };
   const ask = () => {
@@ -93,7 +101,7 @@
   const stage = $("[data-stage]");
   if (stage && hasIO) {
     new IntersectionObserver((es) => stage.classList.toggle("is-off", !es[0].isIntersecting)).observe(stage);
-    if (hero && fine && !reduced) {
+    if (hero && fine && !calm) {
       hero.addEventListener("pointermove", (e) => {
         const b = hero.getBoundingClientRect();
         stage.style.setProperty("--mx", (clamp((e.clientX - b.left) / b.width, 0, 1) * 2 - 1).toFixed(3));
@@ -109,7 +117,7 @@
   }
 
   /* ── 4. lit cards: light and tilt follow the pointer ── */
-  if (fine && !reduced) {
+  if (fine && !calm) {
     $$("[data-tilt]").forEach((card) => {
       card.addEventListener("pointermove", (e) => {
         const b = card.getBoundingClientRect();
@@ -129,7 +137,7 @@
 
   /* ── 5. numbers count up once ── */
   const counts = $$("[data-count-to]");
-  if (counts.length && hasIO && !reduced) {
+  if (counts.length && hasIO) {
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -188,7 +196,7 @@
             span.textContent = miss[missKey];
             el.append(span);
           }
-          if (!reduced) {
+          {
             el.classList.remove("tick");
             el.style.animationDelay = `${delay}ms`;
             void el.offsetWidth;
@@ -199,7 +207,7 @@
           const r = readOrder(msg, locale);
           const line = r.product ? [`${r.qty} ×`, r.product.label, r.color && r.color.label, r.size ? `· ${r.size}` : ""].filter(Boolean).join(" ") : "";
           if (replay) ["product", "phone", "wilaya", "goods", "delivery", "total"].forEach((k) => { field(k).dataset.v = ""; });
-          const gap = replay && !reduced ? 120 : 0;
+          const gap = replay ? 120 : 0;
           put("product", line, "product", 0);
           put("phone", r.phone, "phone", gap);
           put("wilaya", r.wilaya ? `${r.wilaya.code} · ${r.wilaya.name}` : "", "wilaya", gap * 2);
@@ -222,7 +230,6 @@
           input.value = "";
           const full = nb(msg);
           ghost.textContent = full;
-          if (reduced) { bubble.hidden = false; typing.hidden = true; live.textContent = full; render(msg, false); return; }
           bubble.hidden = true;
           typing.hidden = false;
           card.classList.add("is-wait");
@@ -262,7 +269,7 @@
         });
         render(tabs[0].dataset.ex, false);
         /* the first time the section is on screen, the first customer writes by himself */
-        if (hasIO && !reduced) {
+        if (hasIO) {
           let touched = false;
           const mark = () => { touched = true; };
           tabs.forEach((b) => b.addEventListener("click", mark));
@@ -276,6 +283,29 @@
         }
       })
       .catch(() => { /* the server-rendered card stays */ });
+  }
+
+  /* ── motion: the device may ask for less; the visitor can overrule it, and can always pause the hero scene ── */
+  const mnote = $("[data-motion-note]");
+  if (mnote && root.hasAttribute("data-os-reduced")) {
+    const isFull = root.getAttribute("data-motion") === "full";
+    const k = isFull ? "Full" : "Calm";
+    $("[data-mn-text]", mnote).textContent = mnote.dataset["t" + k];
+    const mb = $("[data-mn-btn]", mnote);
+    mb.textContent = mnote.dataset["b" + k];
+    mnote.hidden = false;
+    mb.addEventListener("click", () => {
+      try { localStorage.setItem("sf-motion", isFull ? "calm" : "full"); location.reload(); } catch (e) { mb.disabled = true; }
+    });
+  }
+  const pbtn = $("[data-pause]");
+  if (pbtn && hero) {
+    pbtn.addEventListener("click", () => {
+      const on = pbtn.getAttribute("aria-pressed") !== "true";
+      pbtn.setAttribute("aria-pressed", String(on));
+      pbtn.setAttribute("aria-label", on ? pbtn.dataset.lPlay : pbtn.dataset.lPause);
+      hero.classList.toggle("is-paused", on);
+    });
   }
 
   /* ── screenshots open large; on a phone the picture is shown at reading size and can be panned ── */

@@ -1,0 +1,44 @@
+/* Motion modes. The boot script sets <html data-motion>:
+   full = everything as designed.
+   calm = the device asks for reduced motion (or the visitor chose calm): nothing travels, zooms, tilts or loops without a
+          reason. What explains the product stays: fades, the order moving along the lane, the story steps, typing, counters.
+   The visitor can overrule the device with the button under the hero text (stored as localStorage sf-motion). */
+
+@keyframes h5fade{to{opacity:1}}
+@keyframes h5show{0%{opacity:0}4%,90%{opacity:1}97%,100%{opacity:0}}
+@keyframes h5ring{0%{opacity:0}2%{opacity:.8}16%,100%{opacity:0}}
+@keyframes h5money{0%{opacity:0}4%,22%{opacity:1}32%,100%{opacity:0}}
+@keyframes h5tick{from{opacity:.25}to{opacity:1}}
+
+
+html[data-motion=calm].js-motion .rv{transform:none;transition:opacity .7s ease;transition-delay:calc(var(--i,0)*70ms)}
+html[data-motion=calm].js-motion .h4-h1 .w>span{transform:none;opacity:0;animation:h5fade .8s ease both;animation-delay:calc(var(--i)*90ms + 120ms)}
+html[data-motion=calm] .h4-aurora i,html[data-motion=calm] .h4-bob,html[data-motion=calm] .h4-pop,html[data-motion=calm] .h4-flow{animation:none}
+html[data-motion=calm] .h4-spark{display:none}
+html[data-motion=calm] .h4-ring{animation-name:h5ring;transform:scale(1.25)}
+html[data-motion=calm] .h4-stamp,html[data-motion=calm] .h4-drop{animation-name:h5show;transform:none}
+html[data-motion=calm] .h4-money{animation-name:h5money}
+html[data-motion=calm] .h4-stage{translate:none}
+html[data-motion=calm].js-motion .h4-story .h4-device{transform:none;transition:none}
+html[data-motion=calm].js-motion .h4-steps li{transform:none;transition:opacity .14s linear,visibility 0s .14s}
+html[data-motion=calm].js-motion .h4-steps li[data-on]{transform:none;transition:opacity .3s linear .16s,visibility 0s .16s}
+html[data-motion=calm].js-motion .h4-shot,html[data-motion=calm].js-motion .h4-shot[data-on]{transform:none;transition:opacity .5s linear}
+html[data-motion=calm] .mega{transform:none}
+html[data-motion=calm] .v-btn:hover,html[data-motion=calm] .nav-cta:hover,html[data-motion=calm] .h6-who button:hover,html[data-motion=calm] .h6-send:hover{transform:none}
+html[data-motion=calm] .tick,html[data-motion=calm] .h6-demo .tick{animation-name:h5tick}
+
+/* no script and a device that asks for less: the scene is a still picture */
+@media (prefers-reduced-motion:reduce){html:not([data-motion]) .h4-scene *,html:not([data-motion]) .h4-aurora i{animation:none!important}}
+
+/* the pause button on the scene (WCAG 2.2.2) and the note under the hero text */
+.h5-pause{position:absolute;inset-block-end:2%;inset-inline-end:1%;z-index:3;display:grid;place-items:center;inline-size:44px;block-size:44px;padding:0;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--ink);cursor:pointer;box-shadow:0 8px 20px -10px rgba(12,15,20,.35);transition:background-color .2s,color .2s}
+.h5-pause:hover{background:var(--ink);color:#fff}
+.h5-pause svg{inline-size:18px;block-size:18px}
+.h5-pause .i-play,.h5-pause[aria-pressed=true] .i-pause{display:none}
+.h5-pause[aria-pressed=true] .i-play{display:block}
+.h4-hero.is-paused *{animation-play-state:paused!important}
+.h5-motionnote{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-block-start:18px;padding:10px 12px 10px 16px;border-radius:18px;background:#f1f8fd;color:var(--ink);font-size:.9375rem;line-height:1.5;max-inline-size:56ch}
+.h5-motionnote[hidden]{display:none}
+.h5-motionnote button{min-block-size:44px;padding:0 18px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:600 .9375rem/1 var(--f);cursor:pointer;transition:background-color .2s,color .2s}
+.h5-motionnote button:hover{background:var(--accent);color:var(--ink)}
+@media (max-width:899px){.h5-motionnote{order:6}}

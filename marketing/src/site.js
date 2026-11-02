@@ -100,11 +100,12 @@
       if (lang && lang.open) { lang.open = false; $("summary", lang).focus(); }
       else if (inside) $("button", inside).focus();
     });
+    const lineEl = $(".top-line", topbar);
     let line = false;
     const paint = () => {
       line = false;
       const h = doc.documentElement.scrollHeight - innerHeight;
-      topbar.style.setProperty("--sp", h > 0 ? Math.min(1, scrollY / h).toFixed(4) : "0");
+      if (lineEl) lineEl.style.transform = "scaleX(" + (h > 0 ? Math.min(1, scrollY / h).toFixed(4) : "0") + ")";
       topbar.classList.toggle("is-stuck", scrollY > 8);
     };
     addEventListener("scroll", () => { if (!line) { line = true; requestAnimationFrame(paint); } }, { passive: true });

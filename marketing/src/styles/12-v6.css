@@ -95,7 +95,7 @@ html[lang=ar] .h5-row-t h3{line-height:1.4}
 /* ───────── small corrections ───────── */
 .h4-final-s .v-btn{color:#fff}
 .h4-final-s .v-btn:hover{color:var(--ink)}
-@media (prefers-reduced-motion:reduce){.js-motion .h4-steps li,.js-motion .h4-steps li[data-on]{transition:none}}
+
 
 /* ───────── scene labels never touch each other or the headline ───────── */
 .h4-money{inset-block-start:calc(var(--t) + 10px);translate:calc(-50% * var(--dir)) 0}

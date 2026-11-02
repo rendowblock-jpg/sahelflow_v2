@@ -16,6 +16,7 @@ const NB = "\u00a0";
 const N = {
   ar: {
     zoom: "كبّر", close: "إغلاق",
+    motion: { pause: "إيقاف الحركة مؤقتاً", play: "تشغيل الحركة", tCalm: "جهازك يطلب تقليل الحركة، لذلك نعرض لك نسخة هادئة.", bCalm: "فعّل كل الحركة", tFull: "كل الحركة مفعّلة رغم أن جهازك يطلب تقليلها.", bFull: "العودة إلى النسخة الهادئة" },
     hero: {
       l1: "من رسالة واتساب", l2: "إلى آخر دينار.", alt: "رسالة واتساب تتحول إلى طلبية ثم طرد ثم مال على مسار مضيء",
       lead: "كل طلبية تبدأ برسالة، وتنتهي بمال عند شركة توصيل. SahelFlow يربط الطرفين: يحوّل الرسائل إلى طلبيات، يقول لك بمن تتصل قبل أن تشحن، ويحسب ما حصّلته كل شركة وما بقي لك عندها.",
@@ -56,6 +57,7 @@ const N = {
   },
   fr: {
     zoom: "Agrandir", close: "Fermer",
+    motion: { pause: "Mettre l'animation en pause", play: "Relancer l'animation", tCalm: "Votre appareil demande moins d'animations : nous affichons une version calme.", bCalm: "Voir toutes les animations", tFull: "Toutes les animations sont actives, même si votre appareil en demande moins.", bFull: "Revenir à la version calme" },
     hero: {
       l1: "Du message WhatsApp", l2: "au dernier dinar.", alt: "Un message WhatsApp devient commande, colis puis argent sur une voie lumineuse",
       lead: "Chaque commande commence par un message et finit par de l'argent chez un livreur. SahelFlow relie les deux : il transforme les messages en commandes, vous dit qui appeler avant d'expédier, et calcule ce que chaque livreur a encaissé et vous doit encore.",
@@ -96,6 +98,7 @@ const N = {
   },
   en: {
     zoom: "Enlarge", close: "Close",
+    motion: { pause: "Pause animation", play: "Play animation", tCalm: "Your device asks for reduced motion, so we show a calm version.", bCalm: "Show all animations", tFull: "All animations are on, although your device asks for less.", bFull: "Back to the calm version" },
     hero: {
       l1: "From a WhatsApp message", l2: "to the last dinar.", alt: "A WhatsApp message becomes an order, a parcel and then cash along a lit lane",
       lead: "Every order starts as a message and ends as cash sitting with a courier. SahelFlow connects the two: it turns messages into orders, tells you who to call before you ship, and shows what each courier collected and still owes you.",
@@ -139,6 +142,9 @@ const N = {
 const words = (text, start = 0) =>
   text.split(" ").map((w, k) => `<span class="w"><span style="--i:${start + k}">${esc(w)}</span></span>`).join(" ");
 
+const pauseButton = (n) => `<button type="button" class="h5-pause" data-pause aria-pressed="false" aria-label="${esc(n.motion.pause)}" data-l-pause="${esc(n.motion.pause)}" data-l-play="${esc(n.motion.play)}">${icon("pause", "i-pause")}${icon("play", "i-play")}</button>`;
+const motionNote = (n) => `<p class="h5-motionnote" data-motion-note hidden data-t-calm="${esc(n.motion.tCalm)}" data-b-calm="${esc(n.motion.bCalm)}" data-t-full="${esc(n.motion.tFull)}" data-b-full="${esc(n.motion.bFull)}"><span data-mn-text></span> <button type="button" data-mn-btn></button></p>`;
+
 function heroSection(n, t, locale) {
   const v = V[locale];
   const names = v.how.names;
@@ -159,11 +165,13 @@ function heroSection(n, t, locale) {
 <a class="v-text" href="${esc(whatsappHref(t.whatsappMessage))}" rel="noopener">${esc(t.home.hero.secondary)}</a>
 </div>
 <ul class="h4-chips rv" style="--i:5">${v.hero.facts.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
+${motionNote(n)}
 </div>
 <div class="h4-stage" data-stage>
 ${heroScene({ label: esc(n.hero.alt) })}
 ${tags}
 <span class="h4-money" style="--l:${TAGS[3].left}%;--t:${TAGS[3].top}%;--at:${ARRIVE[3]}s" aria-hidden="true">+${esc(fmtMoney(first.total, locale))}</span>
+${pauseButton(n)}
 </div>
 </div>
 </section>`;

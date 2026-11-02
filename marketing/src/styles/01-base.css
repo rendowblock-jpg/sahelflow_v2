@@ -114,4 +114,4 @@ html[dir=rtl] .flip{transform:scaleX(-1)}
 
 input[type=range]{min-block-size:44px;cursor:pointer}
 @media (pointer:coarse){a.btn,button,summary{min-block-size:var(--hit)}}
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+@media (prefers-reduced-motion:reduce){html:not([data-motion]) *,html:not([data-motion]) *::before,html:not([data-motion]) *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
