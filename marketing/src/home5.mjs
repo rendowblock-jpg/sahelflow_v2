@@ -261,20 +261,74 @@ ${rows}
 </section>`;
 }
 
+const DEMO = {
+  ar: {
+    h2: "شاهد رسالة زبون تتحول إلى طلبية",
+    sub: "اختر زبوناً أو اكتب رسالته بنفسك. تقرأ الصفحة الجملة وتملأ البطاقة: المنتج والهاتف والولاية والمبلغ عند الاستلام.",
+    who: [["أمين ب.", "وهران"], ["كريم ل.", "سطيف"], ["سارة م.", "الجزائر"], ["ياسين ر.", "قسنطينة"]],
+    pick: "اختر زبوناً", customer: "زبون جديد", you: "زبونك", placeholder: "اكتب كما يكتب زبونك…", send: "أرسل", result: "الطلبية التي بُنيت",
+    ready: "جاهزة لطابور التأكيد", missing: "ينقصها:", sep: "، ", f: { product: "المنتج", phone: "الهاتف", wilaya: "الولاية" },
+    note: "عرض توضيحي بقواعد بسيطة ومتجر تجريبي. في التطبيق تراجع كل طلبية قبل أن تُشحن.",
+  },
+  fr: {
+    h2: "Regardez un message client devenir une commande",
+    sub: "Choisissez un client ou écrivez son message vous-même. La page lit la phrase et remplit la fiche : produit, téléphone, wilaya et montant à encaisser.",
+    who: [["Amine B.", "Oran"], ["Karim L.", "Sétif"], ["Sara M.", "Alger"], ["Yacine R.", "Constantine"]],
+    pick: "Choisissez un client", customer: "Nouveau client", you: "Votre client", placeholder: "Écrivez comme votre client…", send: "Envoyer", result: "La commande obtenue",
+    ready: "Prête pour la file de confirmation", missing: "Il manque :", sep: ", ", f: { product: "le produit", phone: "le téléphone", wilaya: "la wilaya" },
+    note: "Démonstration avec des règles simples et une boutique modèle. Dans l'appli, vous vérifiez chaque commande avant l'expédition.",
+  },
+  en: {
+    h2: "Watch a customer's message become an order",
+    sub: "Pick a customer or write their message yourself. The page reads the sentence and fills the card: product, phone, wilaya and the amount to collect.",
+    who: [["Amine B.", "Oran"], ["Karim L.", "Sétif"], ["Sara M.", "Algiers"], ["Yacine R.", "Constantine"]],
+    pick: "Pick a customer", customer: "New customer", you: "Your customer", placeholder: "Write like your customer…", send: "Send", result: "The order it builds",
+    ready: "Ready for the confirmation queue", missing: "Still missing:", sep: ", ", f: { product: "a product", phone: "a phone number", wilaya: "the wilaya" },
+    note: "A demonstration with simple rules and a model shop. In the app you review every order before it ships.",
+  },
+};
+
+/** Keep a phone number on one line. */
+const nbPhone = (s) => s.replace(/(\d{4}) (\d{2}) (\d{2}) (\d{2})/g, "$1\u00a0$2\u00a0$3\u00a0$4");
+
 function demoSection(locale) {
   const v = V[locale];
-  const T = v.type;
-  const first = readOrder(v.hero.chat.text, locale);
-  return `<section class="h4-demo" aria-labelledby="h-demo" data-type data-locale="${locale}">
-<div class="h4-demo-in">
-<div class="h4-demo-l">
-<h2 id="h-demo" class="h4-h2 rv">${esc(T.h2)}</h2>
-<label class="h4-compose rv" for="msg"><span class="sr-only">${esc(T.label)}</span><input id="msg" type="text" value="${esc(v.hero.chat.text)}" autocomplete="off" spellcheck="false" data-msg></label>
-<p class="h4-try rv">${esc(T.try)}</p>
-<ul class="h4-ex rv">${T.examples.map((e) => `<li><button type="button" data-ex="${esc(e)}">${esc(e)}</button></li>`).join("")}</ul>
-<p class="h4-note rv">${esc(T.note)}</p>
+  const D = DEMO[locale];
+  const msgs = [v.hero.chat.text, ...v.type.examples];
+  const first = readOrder(msgs[0], locale);
+  const ok = first.missing.length === 0;
+  const status = ok ? D.ready : `${D.missing} ${first.missing.map((k) => D.f[k]).join(D.sep)}`;
+  const initial = (str) => [...str][0];
+  const tabs = D.who
+    .map(([name, town], i) => `<button type="button" data-ex="${esc(msgs[i])}" data-who="${esc(name)}" aria-pressed="${i === 0}"><b>${esc(name)}</b><small>${esc(town)}</small></button>`)
+    .join("");
+  return `<section class="h6-demo" aria-labelledby="h-demo" data-type data-locale="${locale}" data-ready="${esc(D.ready)}" data-missing="${esc(D.missing)}" data-sep="${esc(D.sep)}" data-you="${esc(D.you)}" data-f-product="${esc(D.f.product)}" data-f-phone="${esc(D.f.phone)}" data-f-wilaya="${esc(D.f.wilaya)}">
+<div class="h5-wrap">
+<header class="h6-head"><h2 id="h-demo" class="h4-h2 rv">${esc(D.h2)}</h2><p class="h6-sub rv">${esc(D.sub)}</p></header>
+<div class="h6-grid rv">
+<div class="h6-left">
+<p class="h6-pick" id="h6-pick">${esc(D.pick)}</p>
+<div class="h6-who" role="group" aria-labelledby="h6-pick">${tabs}</div>
+<div class="h6-phone" data-ui>
+<div class="h6-bar"><span class="h6-av" data-avatar aria-hidden="true">${esc(initial(D.who[0][0]))}</span><span class="h6-id"><b data-chat-name>${esc(D.who[0][0])}</b><small>${esc(D.customer)}</small></span></div>
+<div class="h6-msgs">
+<p class="h6-bubble" data-bubble><span class="h6-ghost" data-ghost aria-hidden="true">${esc(nbPhone(msgs[0]))}</span><span class="h6-live" data-live>${esc(nbPhone(msgs[0]))}</span><small class="num">${esc(v.hero.chat.time)}</small></p>
+<p class="h6-typing" data-typing hidden aria-hidden="true"><i></i><i></i><i></i></p>
 </div>
-<div class="h4-demo-r rv">${orderCard({ ...v, lang: locale }, first, { state: "call", live: true })}</div>
+<form class="h6-compose" action="#" data-compose>
+<label class="sr-only" for="msg">${esc(D.placeholder)}</label>
+<input id="msg" type="text" data-msg placeholder="${esc(D.placeholder)}" autocomplete="off" spellcheck="false">
+<button type="submit" class="h6-send" aria-label="${esc(D.send)}">${icon("arrow", "flip")}</button>
+</form>
+</div>
+</div>
+<div class="h6-right">
+<p class="h6-label">${esc(D.result)}</p>
+${orderCard({ ...v, lang: locale }, first, { state: "call", live: true })}
+<p class="h6-status ${ok ? "is-ok" : "is-warn"}" data-status role="status">${esc(status)}</p>
+</div>
+</div>
+<p class="h6-note rv">${esc(D.note)}</p>
 </div>
 </section>`;
 }

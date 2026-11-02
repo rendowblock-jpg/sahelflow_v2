@@ -152,17 +152,29 @@
     counts.forEach((el) => io.observe(el));
   }
 
-  /* ── 6. write it like your customer: the same plain rules the server used for the first card ── */
+  /* ── 6. message → order: pick a customer (the message types itself) or write one; the card fills in field by field ── */
   const demo = $("[data-type]");
   if (demo) {
     import("/assets/orderparse.js")
       .then(({ readOrder, fmtMoney }) => {
-        const locale = demo.dataset.locale || "en";
+        const d = demo.dataset;
+        const locale = d.locale || "en";
         const input = $("[data-msg]", demo);
         const card = $("[data-card]", demo);
-        const field = (k) => $(`[data-f="${k}"]`, card);
+        const live = $("[data-live]", demo);
+        const ghost = $("[data-ghost]", demo);
+        const bubble = $("[data-bubble]", demo);
+        const typing = $("[data-typing]", demo);
+        const nameEl = $("[data-chat-name]", demo);
+        const avatar = $("[data-avatar]", demo);
+        const status = $("[data-status]", demo);
+        const form = $("[data-compose]", demo);
+        const tabs = $$("[data-ex]", demo);
         const miss = { product: card.dataset.missProduct, wilaya: card.dataset.missWilaya, phone: card.dataset.missPhone };
-        const put = (k, text, missKey) => {
+        const nb = (s) => s.replace(/(\d{4}) (\d{2}) (\d{2}) (\d{2})/g, "$1\u00a0$2\u00a0$3\u00a0$4");
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        const field = (k) => $(`[data-f="${k}"]`, card);
+        const put = (k, text, missKey, delay) => {
           const el = field(k);
           const next = text || "";
           const key = next || `miss:${missKey}`;
@@ -178,32 +190,93 @@
           }
           if (!reduced) {
             el.classList.remove("tick");
+            el.style.animationDelay = `${delay}ms`;
             void el.offsetWidth;
             el.classList.add("tick");
           }
         };
-        const render = () => {
-          const r = readOrder(input.value, locale);
+        const render = (msg, replay) => {
+          const r = readOrder(msg, locale);
           const line = r.product ? [`${r.qty} ×`, r.product.label, r.color && r.color.label, r.size ? `· ${r.size}` : ""].filter(Boolean).join(" ") : "";
-          put("product", line, "product");
-          put("phone", r.phone, "phone");
-          put("wilaya", r.wilaya ? `${r.wilaya.code} · ${r.wilaya.name}` : "", "wilaya");
-          put("goods", r.goods != null ? fmtMoney(r.goods, locale) : "–");
-          put("delivery", r.delivery != null ? fmtMoney(r.delivery, locale) : "–");
-          put("total", r.total != null ? fmtMoney(r.total, locale) : "–");
+          if (replay) ["product", "phone", "wilaya", "goods", "delivery", "total"].forEach((k) => { field(k).dataset.v = ""; });
+          const gap = replay && !reduced ? 120 : 0;
+          put("product", line, "product", 0);
+          put("phone", r.phone, "phone", gap);
+          put("wilaya", r.wilaya ? `${r.wilaya.code} · ${r.wilaya.name}` : "", "wilaya", gap * 2);
+          put("goods", r.goods != null ? fmtMoney(r.goods, locale) : "–", "", gap * 3);
+          put("delivery", r.delivery != null ? fmtMoney(r.delivery, locale) : "–", "", gap * 4);
+          put("total", r.total != null ? fmtMoney(r.total, locale) : "–", "", gap * 5);
+          const ok = r.missing.length === 0;
+          status.classList.toggle("is-ok", ok);
+          status.classList.toggle("is-warn", !ok);
+          status.textContent = ok ? d.ready : `${d.missing} ${r.missing.map((x) => d["f" + x[0].toUpperCase() + x.slice(1)]).join(d.sep)}`;
         };
-        input.addEventListener("input", render);
-        $$("[data-ex]", demo).forEach((b) =>
-          b.addEventListener("click", () => {
-            input.value = b.dataset.ex;
-            render();
-          }),
-        );
-        render();
+        const press = (btn) => tabs.forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+        const who = (name) => { nameEl.textContent = name; avatar.textContent = [...name][0] || ""; };
+        let run = 0;
+        const play = async (btn) => {
+          const id = ++run;
+          const msg = btn.dataset.ex;
+          press(btn);
+          who(btn.dataset.who);
+          input.value = "";
+          const full = nb(msg);
+          ghost.textContent = full;
+          if (reduced) { bubble.hidden = false; typing.hidden = true; live.textContent = full; render(msg, false); return; }
+          bubble.hidden = true;
+          typing.hidden = false;
+          card.classList.add("is-wait");
+          await sleep(600);
+          if (id !== run) return;
+          typing.hidden = true;
+          bubble.hidden = false;
+          live.textContent = "";
+          const step = Math.max(10, Math.min(26, 1000 / full.length));
+          for (let i = 1; i <= full.length; i++) {
+            live.textContent = full.slice(0, i);
+            await sleep(step);
+            if (id !== run) return;
+          }
+          await sleep(240);
+          if (id !== run) return;
+          card.classList.remove("is-wait");
+          render(msg, true);
+        };
+        tabs.forEach((b) => b.addEventListener("click", () => play(b)));
+        input.addEventListener("input", () => {
+          run++;
+          typing.hidden = true;
+          bubble.hidden = false;
+          card.classList.remove("is-wait");
+          tabs.forEach((b) => b.setAttribute("aria-pressed", "false"));
+          who(d.you);
+          const text = nb(input.value) || "…";
+          ghost.textContent = text;
+          live.textContent = text;
+          render(input.value, false);
+        });
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          if (!input.value.trim()) { input.focus(); return; }
+          render(input.value, true);
+        });
+        render(tabs[0].dataset.ex, false);
+        /* the first time the section is on screen, the first customer writes by himself */
+        if (hasIO && !reduced) {
+          let touched = false;
+          const mark = () => { touched = true; };
+          tabs.forEach((b) => b.addEventListener("click", mark));
+          input.addEventListener("input", mark);
+          const once = new IntersectionObserver((es) => {
+            if (!es[0].isIntersecting) return;
+            once.disconnect();
+            if (!touched) play(tabs[0]);
+          }, { threshold: 0.55 });
+          once.observe($(".h6-phone", demo));
+        }
       })
       .catch(() => { /* the server-rendered card stays */ });
   }
-
 
   /* ── screenshots open large; on a phone the picture is shown at reading size and can be panned ── */
   const zoomLinks = $$("[data-zoom]");
