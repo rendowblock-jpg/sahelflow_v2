@@ -47,15 +47,3 @@
 .h6-status.is-warn{background:#fff1cf;color:#7a4b00}
 .h6-note{margin-block-start:clamp(20px,3vw,36px);max-inline-size:70ch;color:var(--soft);font-size:.875rem;line-height:1.7}
 @media (max-width:899px){.h6-grid{grid-template-columns:1fr}.h6-msgs{min-block-size:190px}}
-
-
-/* ───────── connections: all thirteen, each with its own status label ───────── */
-.h6-int{padding:var(--gap-s) var(--pad-x) clamp(48px,7vw,110px);background:#fff}
-.h6-int .h4-h3{max-inline-size:28ch}
-.h6-int-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:10px;margin-block-start:clamp(24px,3.4vw,44px)}
-.h6-int-grid li{display:grid;grid-template-columns:44px minmax(0,1fr);grid-template-areas:"m n" "m s";column-gap:14px;row-gap:5px;align-items:center;padding:14px 16px;border-radius:20px;background:var(--surface)}
-.h6-int-grid .brand-tile{grid-area:m;display:grid;place-items:center;inline-size:44px;block-size:44px;border-radius:14px;background:#fff;color:#0369a1;font-weight:700;font-size:.9375rem}
-.h6-int-grid .bn{grid-area:n;min-inline-size:0;font-size:1.0625rem;font-weight:620;line-height:1.3;overflow-wrap:anywhere}
-.h6-int-grid .stamp{grid-area:s;justify-self:start}
-.h6-int-note{margin-block-start:clamp(20px,3vw,32px);color:var(--muted);line-height:1.7;max-inline-size:70ch}
-

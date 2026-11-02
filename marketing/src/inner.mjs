@@ -1,5 +1,6 @@
 // The inner pages of sahelflow.com built from the Carnet parts: ruled sheets, stamps that come from claims.mjs,
 // the red margin only on what needs care. Product, module (one template), solution, integrations, help, contact, legal, 404.
+import { BRAND_MARKS } from "./brands.mjs";
 import { claimById, integrationStatus } from "./claims.mjs";
 import { SITE } from "./config.mjs";
 import { COPY } from "./i18n/index.mjs";
@@ -76,7 +77,7 @@ const NOT_YET = {
   accounting: ["sheets", "excel"],
   automations: ["whatsapp"],
   storefront: ["storefront", "meta"],
-  agents: ["gemini"],
+  agents: ["gemini", "openai", "groq"],
   team: ["backup-restore-new-pc"],
 };
 
@@ -179,6 +180,7 @@ export function integrationsPage(locale) {
   const body = `${pageHero({ locale, eyebrow: p.eyebrow, eyebrowIcon: "sheet", title: p.title, lead: p.lead })}
 ${groups}
 ${sec(`<p class="more">${icon("whatsapp")}<a href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${esc(p.missing)}</a></p>`)}
+${sec(`<p class="h7-marks">${esc(BRAND_MARKS[locale])}</p>`)}
 ${finalCta(locale)}`;
   return shell({ locale, pageId: "integrations", path: "integrations", title, description }, body);
 }

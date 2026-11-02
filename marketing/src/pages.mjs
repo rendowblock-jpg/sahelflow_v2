@@ -11,6 +11,7 @@ import { BRAND_NAMES, HELP_TOPICS, INTEGRATIONS, MODULES, PACKAGE, SOLUTIONS, mo
 import { assistantScene, coreDiagram, flowDiagram, heroStack, screenStack, specPanel } from "./scenes.mjs";
 import { HOME } from "./i18n/home.mjs";
 import { homeBody5, homeFaq5 } from "./home5.mjs";
+import { brandTile } from "./brandmark.mjs";
 import {
   appWindow,
   arrow,
@@ -61,10 +62,7 @@ ${ctas(locale)}
 </section>`;
 }
 
-const monogram = (key) => BRAND_NAMES[key].replace(/[^A-Za-z]/g, "").slice(0, 2);
-export function brandTile(key) {
-  return `<span class="brand-tile" aria-hidden="true">${esc(monogram(key))}</span>`;
-}
+export { brandTile };
 
 function marquee(locale) {
   const t = COPY[locale];

@@ -1,6 +1,7 @@
 // Document shell for every page: <head>, the mega-menu header and the
 // footer. Everything works without JavaScript; site.js adds
 // hover intent, keyboard support and the mobile sheet.
+import { BRAND_MARKS } from "./brands.mjs";
 import { SITE } from "./config.mjs";
 import { COPY } from "./i18n/index.mjs";
 import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
@@ -179,6 +180,7 @@ ${col(t.footer.company, [
 ${col(t.footer.legal, [[href(locale, "privacy"), t.footer.privacy], [href(locale, "terms"), t.footer.terms]])}
 </div>
 <p class="foot-note">${esc(t.common.whatsappNote)}</p>
+<p class="foot-note foot-marks">${esc(BRAND_MARKS[locale])}</p>
 <div class="foot-bottom">
 <p>© ${year} SahelFlow. ${esc(t.footer.rights)} ${esc(t.footer.made)}</p>
 <p class="langs">${SITE.locales.map((l) => `<a href="${href(l)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}>${esc(COPY[l].name)}</a>`).join("")}</p>

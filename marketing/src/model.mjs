@@ -60,10 +60,11 @@ export const HELP_TOPICS = Object.freeze([
 /** Integration wordmarks, grouped; descriptions live in the copy files. */
 export const INTEGRATIONS = Object.freeze([
   { group: "messaging", items: ["whatsapp"] },
+  { group: "ai", items: ["gemini", "openai", "groq"] },
   { group: "couriers", items: ["yalidine", "zr", "ecotrack", "maystro"] },
-  { group: "stores", items: ["sheets", "shopify", "youcan", "woocommerce", "storefront"] },
-  { group: "growth", items: ["meta", "gemini"] },
-  { group: "data", items: ["excel"] },
+  { group: "stores", items: ["shopify", "youcan", "woocommerce", "storefront"] },
+  { group: "data", items: ["sheets", "excel"] },
+  { group: "growth", items: ["meta"] },
 ]);
 
 // A brand listed here without a claims.mjs entry fails the build, so nothing
@@ -72,18 +73,20 @@ for (const group of INTEGRATIONS) for (const key of group.items) integrationStat
 
 export const BRAND_NAMES = Object.freeze({
   whatsapp: "WhatsApp",
+  gemini: "Google Gemini",
+  openai: "OpenAI",
+  groq: "Groq",
   yalidine: "Yalidine",
   zr: "ZR Express",
   ecotrack: "EcoTrack",
   maystro: "Maystro Delivery",
-  sheets: "Google Sheets",
   shopify: "Shopify",
   youcan: "YouCan",
   woocommerce: "WooCommerce",
   storefront: "SahelFlow Store",
-  meta: "Meta Pixel + CAPI",
-  gemini: "Google Gemini",
+  sheets: "Google Sheets",
   excel: "Excel / CSV",
+  meta: "Meta Pixel + CAPI",
 });
 
 /** Every page each locale gets, as [id, path segment]. */

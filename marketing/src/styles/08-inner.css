@@ -12,7 +12,13 @@
 .int-card{padding:0}
 .int-card>header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
 .int-card p{margin-block-start:6px}
-.brand-tile{display:inline-grid;place-items:center;inline-size:36px;block-size:36px;border-radius:var(--r);background:var(--surface);font-weight:600;font-size:var(--t-small)}
+.brand-tile{display:inline-grid;place-items:center;flex:none;inline-size:36px;block-size:36px;border-radius:var(--r);background:var(--surface);font-weight:600;font-size:var(--t-small)}
+.brand-tile img{display:block;inline-size:62%;block-size:62%;object-fit:contain}
+.brand-tile[data-neutral]{color:#0369a1}
+.brand-tile[data-neutral] svg{inline-size:56%;block-size:56%}
+.int-card .brand-tile{inline-size:48px;block-size:48px;border-radius:14px;background:#fff;border:1px solid var(--line)}
+.h7-marks{max-inline-size:78ch;color:var(--soft);font-size:.8125rem;line-height:1.7}
+.foot-marks{max-inline-size:78ch}
 .ints .int-aside{margin-block-start:6px;color:var(--muted)}
 .hsearch{display:flex;align-items:center;gap:10px;max-inline-size:520px;margin-block-start:20px;padding-inline:14px;border-radius:var(--r);background:var(--bg)}
 .hsearch svg{inline-size:20px;block-size:20px;flex:none}

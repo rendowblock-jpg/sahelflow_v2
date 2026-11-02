@@ -178,10 +178,10 @@ export function coreDiagram(locale) {
 </div>`;
 }
 
-/** Security data-flow diagram: your PC in the centre, five outbound flows. */
+/** Security data-flow diagram: your PC in the centre, seven outbound flows. */
 export function flowDiagram(locale) {
   const s = COPY[locale].securityPage;
-  const icons = ["whatsapp", "delivery", "sparkle", "key", "storefront"];
+  const icons = ["whatsapp", "delivery", "sparkle", "sparkle", "sparkle", "key", "storefront"];
   return `<div class="dataflow">
   <div class="dataflow-core">${icon("lock")}<b>${esc(s.flowsCenter)}</b><small>AES-256-GCM</small></div>
   <ul class="dataflow-list">${s.flows

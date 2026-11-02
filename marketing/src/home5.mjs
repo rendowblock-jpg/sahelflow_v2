@@ -10,6 +10,8 @@ import { fmtMoney, readOrder } from "./orderparse.mjs";
 import { HOME3_COPY as V, homeFaq, orderCard } from "./home3.mjs";
 import { ARRIVE, TAGS, heroScene } from "./scene4.mjs";
 import { esc, href, icon, licencePricing, money, screenImg, shotUrl, statusBadge, whatsappHref } from "./ui.mjs";
+import { brandTile } from "./brandmark.mjs";
+import { BRAND_MARKS } from "./brands.mjs";
 
 const NB = "\u00a0";
 
@@ -354,23 +356,103 @@ function numsSection(n) {
 </section>`;
 }
 
-const mono = (k) => BRAND_NAMES[k].replace(/[^A-Za-z]/g, "").slice(0, 2);
+/** The connections section: copy in three languages. Example events are illustrations and say so. */
+const FEED = {
+  ar: {
+    h2: "نختبر الربط مع الأدوات التي تستعملها أصلاً",
+    sub: "واتساب وشركات التوصيل والمتاجر والجداول والذكاء الاصطناعي. على كل رابط حالته مكتوبة بجانبه، ولن نكتب «متصل» قبل أن نجرّبه على حساب حقيقي.",
+    eyebrowAll: (n) => `${n} ربطاً، كلها قيد الاختبار`,
+    eyebrowSome: (n) => `${n} ربطاً، لكل منها حالتها`,
+    liveTitle: "ما سيمرّ بين أدواتك",
+    liveNote: "أمثلة توضيحية، وليست بيانات حقيقية",
+    more: "تفاصيل كل ربط",
+    events: [
+      ["whatsapp", "رسالة جديدة: «نحب 2 قميص أبيض M، وهران»"],
+      ["gemini", "مسودة الطلبية #1042 جاهزة للمراجعة"],
+      ["sheets", "سطر جديد في ورقة الطلبيات"],
+      ["yalidine", "ملصق الشحن إلى وهران (31) جاهز"],
+      ["groq", "مسودة رد بانتظار موافقتك"],
+      ["ecotrack", "تحديث تتبع: خرجت الشحنة للتسليم"],
+      ["woocommerce", "طلبية جديدة وصلت من المتجر"],
+      ["meta", "حدث شراء أُرسل إلى Meta Pixel"],
+      ["openai", "رد مقترح من اشتراك ChatGPT الخاص بك"],
+    ],
+  },
+  fr: {
+    h2: "Nous testons la connexion avec les outils que vous utilisez déjà",
+    sub: "WhatsApp, transporteurs, boutiques, tableurs et IA. Chaque connexion affiche son statut, et nous n'écrirons « connecté » qu'après un essai sur un vrai compte.",
+    eyebrowAll: (n) => `${n} connexions, toutes en test`,
+    eyebrowSome: (n) => `${n} connexions, chacune avec son statut`,
+    liveTitle: "Ce qui circulera entre vos outils",
+    liveNote: "Exemples pour illustrer, pas des données réelles",
+    more: "Le détail de chaque connexion",
+    events: [
+      ["whatsapp", "Nouveau message : « 2 chemises blanches M, Oran »"],
+      ["gemini", "Brouillon de la commande #1042 prêt à relire"],
+      ["sheets", "Nouvelle ligne dans la feuille des commandes"],
+      ["yalidine", "Étiquette d'expédition pour Oran (31) prête"],
+      ["groq", "Brouillon de réponse en attente de votre validation"],
+      ["ecotrack", "Suivi : le colis est parti en livraison"],
+      ["woocommerce", "Nouvelle commande reçue de la boutique"],
+      ["meta", "Événement d'achat envoyé au Pixel Meta"],
+      ["openai", "Réponse suggérée par votre propre forfait ChatGPT"],
+    ],
+  },
+  en: {
+    h2: "We are testing links with the tools you already use",
+    sub: "WhatsApp, couriers, stores, spreadsheets and AI. Each link carries its status next to it, and we will not write “connected” until it has run against a real account.",
+    eyebrowAll: (n) => `${n} links, all in testing`,
+    eyebrowSome: (n) => `${n} links, each with its own status`,
+    liveTitle: "What will move between your tools",
+    liveNote: "Examples to illustrate, not real data",
+    more: "Details of every link",
+    events: [
+      ["whatsapp", "New message: “2 white shirts, M, Oran”"],
+      ["gemini", "Draft order #1042 ready to review"],
+      ["sheets", "New row in the orders sheet"],
+      ["yalidine", "Shipping label for Oran (31) is ready"],
+      ["groq", "Reply draft waiting for your approval"],
+      ["ecotrack", "Tracking update: out for delivery"],
+      ["woocommerce", "New order received from the store"],
+      ["meta", "Purchase event sent to Meta Pixel"],
+      ["openai", "Reply suggested by your own ChatGPT plan"],
+    ],
+  },
+};
 
-function intSection(t, locale) {
-  const v = V[locale];
-  const keys = Object.keys(BRAND_NAMES);
-  const allTesting = keys.every((k) => integrationStatus(k) === "testing");
-  const tiles = keys
-    .map((k) => {
-      const st = integrationStatus(k);
-      return `<li data-status="${st}"><span class="brand-tile" aria-hidden="true">${esc(mono(k))}</span><span class="bn" dir="ltr">${esc(BRAND_NAMES[k])}</span>${statusBadge(st, locale)}</li>`;
-    })
+/** How many example events are on show at once (the rest wait their turn; a phone shows three). */
+const FEED_SHOWN = 4;
+
+function feedSection(n, t, locale) {
+  const F = FEED[locale];
+  const groups = t.integrationsPage.groups;
+  const flat = INTEGRATIONS.flatMap((g) => g.items.map((key) => [key, g.group]));
+  const allTesting = flat.every(([key]) => integrationStatus(key) === "testing");
+  const card = ([key, group]) => {
+    const status = integrationStatus(key);
+    return `<li data-status="${status}" data-brand="${key}" class="h7-card">${brandTile(key)}<span class="h7-kind">${esc(groups[group])}</span><span class="h7-name"><bdi>${esc(BRAND_NAMES[key])}</bdi></span>${statusBadge(status, locale)}</li>`;
+  };
+  const split = Math.ceil(flat.length / 2);
+  const rowA = flat.slice(0, split).map(card).join("");
+  const rowB = flat.slice(split).map(card).join("");
+  const events = F.events
+    .map(([key, text], i) => `<li class="h7-ev" data-ev${i >= FEED_SHOWN ? " hidden" : ""}><span class="h7-evlogo" aria-hidden="true">${brandTile(key, 40).replace('class="brand-tile"', 'class="h7-evtile"')}</span><span class="h7-evbody"><b><bdi>${esc(BRAND_NAMES[key])}</bdi></b><span>${esc(text)}</span></span></li>`)
     .join("");
-  return `<section class="h6-int" aria-labelledby="h-int">
+  const eyebrow = (allTesting ? F.eyebrowAll : F.eyebrowSome)(flat.length);
+  return `<section class="h7-feed" aria-labelledby="h-int" data-feed>
 <div class="h5-wrap">
-<h2 id="h-int" class="h4-h3 rv">${esc(allTesting ? v.proof.all : v.proof.some)}</h2>
-<ul class="h6-int-grid rv">${tiles}</ul>
-<p class="h6-int-note rv">${esc(v.proof.note)} <a class="v-text" href="${href(locale, "integrations")}">${esc(v.proof.link)}${icon("arrow", "flip")}</a></p>
+<header class="h7-head rv"><p class="h7-eyebrow"><i aria-hidden="true"></i>${esc(eyebrow)}</p><h2 id="h-int" class="h4-h2">${esc(F.h2)}</h2><p class="h6-sub">${esc(F.sub)}</p></header>
+</div>
+<div class="h7-rows rv" data-feed-rows data-marquee>
+<ul class="h7-row" data-feed-row data-dir="1">${rowA}</ul>
+<ul class="h7-row" data-feed-row data-dir="-1">${rowB}</ul>
+</div>
+<div class="h5-wrap">
+<div class="h7-live rv">
+<div class="h7-live-head"><span class="h7-sig" aria-hidden="true"><i></i><i></i><i></i></span><span class="h7-live-title"><b>${esc(F.liveTitle)}</b><small>${esc(F.liveNote)}</small></span><button type="button" class="h5-pause h7-pause" data-feed-pause aria-pressed="false" aria-label="${esc(n.motion.pause)}" data-l-pause="${esc(n.motion.pause)}" data-l-play="${esc(n.motion.play)}">${icon("pause", "i-pause")}${icon("play", "i-play")}</button></div>
+<ul class="h7-evs" data-ev-list data-shown="${FEED_SHOWN}">${events}</ul>
+</div>
+<p class="h7-note rv">${esc(BRAND_MARKS[locale])} <a class="v-text" href="${href(locale, "integrations")}">${esc(F.more)}${icon("arrow", "flip")}</a></p>
 </div>
 </section>`;
 }
@@ -461,7 +543,7 @@ ${storySection(n, t, locale)}
 ${featSection(n, t, locale)}
 ${demoSection(locale)}
 ${numsSection(n)}
-${intSection(t, locale)}
+${feedSection(n, t, locale)}
 ${priceSection(n, t, locale)}
 ${faqSection(locale)}
 ${ctaSection(t, locale)}`;

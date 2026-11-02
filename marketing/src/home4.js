@@ -285,6 +285,83 @@
       .catch(() => { /* the server-rendered card stays */ });
   }
 
+  /* ── 7. connections: two rows of logos drifting in opposite directions, and an example feed that updates itself ── */
+  const feed = $("[data-feed]");
+  if (feed) {
+    let paused = false;
+    const rowsBox = $("[data-feed-rows]", feed);
+    if (!calm && hasIO && rowsBox) {
+      /* each row is doubled so it can drift forever without a seam; the copies are hidden from screen readers and from the keyboard */
+      $$("[data-feed-row]", feed).forEach((row) => {
+        [...row.children].forEach((li) => {
+          const copy = li.cloneNode(true);
+          copy.setAttribute("aria-hidden", "true");
+          copy.setAttribute("inert", "");
+          row.append(copy);
+        });
+        row.classList.add("is-run");
+      });
+      rowsBox.classList.add("is-run");
+    }
+    const onScreen = { v: true };
+    if (hasIO) new IntersectionObserver((es) => { onScreen.v = es[0].isIntersecting; feed.classList.toggle("is-off", !onScreen.v); }).observe(feed);
+    const pbtn = $("[data-feed-pause]", feed);
+    if (pbtn) {
+      pbtn.addEventListener("click", () => {
+        paused = pbtn.getAttribute("aria-pressed") !== "true";
+        pbtn.setAttribute("aria-pressed", String(paused));
+        pbtn.setAttribute("aria-label", paused ? pbtn.dataset.lPlay : pbtn.dataset.lPause);
+        feed.classList.toggle("is-paused", paused);
+      });
+    }
+    const list = $("[data-ev-list]", feed);
+    if (list && list.children.length > 4) {
+      const queue = $$("[data-ev][hidden]", list);
+      const limit = () => (matchMedia("(max-width: 600px)").matches ? 3 : Number(list.dataset.shown) || 4);
+      const shown = () => $$("[data-ev]:not([hidden])", list);
+      const fit = () => { shown().slice(limit()).forEach((li) => { li.hidden = true; queue.push(li); }); };
+      fit();
+      let slot = 0;
+      const swapInPlace = () => {
+        const cur = shown();
+        const old = cur[slot++ % cur.length];
+        const out = old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: "forwards" });
+        out.finished.then(() => {
+          const next = queue.shift();
+          if (!next) { out.cancel(); return; }
+          old.before(next);
+          next.hidden = false;
+          old.hidden = true;
+          out.cancel();
+          queue.push(old);
+          next.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420 });
+        }).catch(() => {});
+      };
+      const slideIn = () => {
+        const next = queue.shift();
+        if (!next) return;
+        const cur = shown();
+        const before = new Map(cur.map((li) => [li, li.getBoundingClientRect().top]));
+        next.hidden = false;
+        list.prepend(next);
+        cur.forEach((li) => {
+          const d = before.get(li) - li.getBoundingClientRect().top;
+          if (d) li.animate([{ transform: `translateY(${d}px)` }, { transform: "none" }], { duration: 600, easing: "cubic-bezier(.2,.8,.2,1)" });
+        });
+        next.animate([{ opacity: 0, transform: "translateY(-16px)" }, { opacity: 1, transform: "none" }], { duration: 600, easing: "cubic-bezier(.2,.8,.2,1)" });
+        shown().slice(limit()).forEach((old) => {
+          const out = old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, fill: "forwards" });
+          out.finished.then(() => { old.hidden = true; out.cancel(); queue.push(old); }).catch(() => {});
+        });
+      };
+      const tick = () => {
+        if (!paused && onScreen.v && !doc.hidden) (calm ? swapInPlace : slideIn)();
+        setTimeout(tick, calm ? 4600 : 3300);
+      };
+      setTimeout(tick, 2600);
+    }
+  }
+
   /* ── motion: the device may ask for less; the visitor can overrule it, and can always pause the hero scene ── */
   const mnote = $("[data-motion-note]");
   if (mnote && root.hasAttribute("data-os-reduced")) {

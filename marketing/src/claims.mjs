@@ -62,6 +62,8 @@ export const CLAIMS = Object.freeze([
   entry("meta", "integration", "testing", `${NOT_RUN} src/lib/meta (Pixel and Conversions API from the storefront).`, { ownerWave: "W5" }),
   // Conservative: these have code and tests but no real-account or real-shop proof recorded.
   entry("gemini", "integration", "testing", "The seller's own Gemini key; extraction accuracy on Darja orders is unmeasured (Wave 3 eval).", { ownerWave: "W3" }),
+  entry("openai", "integration", "testing", "Sign in with the seller's own ChatGPT plan (src/lib/ai/providers/openai-chatgpt); code and tests exist, no real-account proof recorded; extraction accuracy on Darja orders is unmeasured (Wave 3 eval).", { ownerWave: "W3" }),
+  entry("groq", "integration", "testing", "The seller's own Groq key (src/app/api/secrets/groq-key); code and tests exist, no real-account proof recorded; extraction accuracy on Darja orders is unmeasured (Wave 3 eval).", { ownerWave: "W3" }),
   entry("storefront", "integration", "testing", "The hosted store runs, but no seller has published a real store yet.", { ownerWave: "W5" }),
   entry("excel", "integration", "testing", "src/lib/import and export have unit tests; not yet recorded against a real seller's file.", { ownerWave: "W5" }),
 
