@@ -2214,7 +2214,13 @@ mod imp {
                 return;
             }
             let Some(layer) = &self.mark_layer else {
+                // No layer on a very dense screen: the mark goes straight onto the card. GDI+'s
+                // high-quality compositing blends in linear light, which made the empty S about
+                // 1.4x brighter than on the layered path (lab run 41526402555, F-0008). The
+                // palette is tuned for plain sRGB blending, so use that here too.
+                GdipSetCompositingQuality(g, CompositingQualityHighSpeed);
                 self.draw_mark(g, View::CARD, t, fill, finishing);
+                GdipSetCompositingQuality(g, CompositingQualityHighQuality);
                 return;
             };
             GdipGraphicsClear(layer.graphics, 0);
