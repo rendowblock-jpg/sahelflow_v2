@@ -167,29 +167,34 @@ const SHADOW_DROP: f32 = 10.0;
 const SHADOW_FALLOFF: f32 = 2.4;
 const CARD_RADIUS: f32 = 14.0;
 const MARK_SIZE: f32 = 124.0;
-const MARK_TOP: f32 = 46.0;
+const MARK_TOP: f32 = 35.0;
 const MARK_CENTER_Y: f32 = MARK_TOP + MARK_SIZE / 2.0;
 const GLOW_RADIUS: f32 = 260.0;
-const WORDMARK_TOP: f32 = 193.0;
-const WORDMARK_WIDTH: f32 = 144.0;
+const WORDMARK_TOP: f32 = 184.0;
+const WORDMARK_WIDTH: f32 = 168.0;
 #[cfg(test)]
-const WORDMARK_HEIGHT: f32 = 24.0;
-const TAGLINE_TOP: f32 = 234.0;
-const STATUS_TOP: f32 = 284.0;
-const HINT_TOP: f32 = 312.0;
-const VERSION_TOP: f32 = 334.0;
+const WORDMARK_HEIGHT: f32 = 28.0;
+const TAGLINE_TOP: f32 = 221.0;
+const STATUS_TOP: f32 = 265.0;
+const HINT_TOP: f32 = 293.0;
+const VERSION_TOP: f32 = 323.0;
 /// Distance of the slow hint from the card's start and end edges.
 const EDGE_INSET: f32 = 60.0;
-const PERCENT_WIDTH: f32 = 38.0;
+const PERCENT_WIDTH: f32 = 44.0;
 const STATUS_GAP: f32 = 10.0;
 const STATUS_DOT: f32 = 4.0;
 /// The dot's centre below the top of the status line: half the text line
 /// (an eyeballed value, not yet checked on a Windows screen).
-const STATUS_DOT_CENTER_Y: f32 = 9.5;
+const STATUS_DOT_CENTER_Y: f32 = 10.5;
 const ENTRANCE_MS: f32 = 220.0;
 const ENTRANCE_FLOOR: f32 = 0.55;
-/// The status text size in card pixels (the body face of the card).
-const BODY_FONT_PX: f32 = 13.5;
+/// The type scale, in card pixels: the name (the 28 px wordmark) is the
+/// first step, the status line the second, then the tagline, the slow hint
+/// and the version line (F-0005).
+const BODY_FONT_PX: f32 = 15.0;
+const TAGLINE_FONT_PX: f32 = 14.0;
+const HINT_FONT_PX: f32 = 13.0;
+const VERSION_FONT_PX: f32 = 12.0;
 const SLOW_HINT_AFTER_MS: f32 = launch_screen::SLOW_HINT_AFTER_SECS as f32 * 1_000.0;
 const FADE_OUT_MS: f32 = 170.0;
 /// Every entrance animation has finished by this time. The static part of the
@@ -1359,6 +1364,7 @@ mod imp {
         family: *mut GpFontFamily,
         body: *mut GpFont,
         percent: *mut GpFont,
+        tagline: *mut GpFont,
         small: *mut GpFont,
         tiny: *mut GpFont,
         center: *mut GpStringFormat,
@@ -1423,14 +1429,16 @@ mod imp {
                 family,
                 body: font(family, BODY_FONT_PX, FontStyleRegular),
                 percent: font(family, BODY_FONT_PX, FontStyleBold),
-                small: font(family, 12.0, FontStyleRegular),
-                tiny: font(family, 12.0, FontStyleRegular),
+                tagline: font(family, TAGLINE_FONT_PX, FontStyleRegular),
+                small: font(family, HINT_FONT_PX, FontStyleRegular),
+                tiny: font(family, VERSION_FONT_PX, FontStyleRegular),
                 center: format(false, StringAlignmentCenter),
                 center_rtl: format(true, StringAlignmentCenter),
                 typographic,
             };
             if fonts.percent.is_null()
                 || fonts.body.is_null()
+                || fonts.tagline.is_null()
                 || fonts.small.is_null()
                 || fonts.tiny.is_null()
                 || fonts.center.is_null()
@@ -1443,7 +1451,7 @@ mod imp {
         }
 
         unsafe fn destroy(&self) {
-            for font in [self.body, self.percent, self.small, self.tiny] {
+            for font in [self.body, self.percent, self.tagline, self.small, self.tiny] {
                 if !font.is_null() {
                     GdipDeleteFont(font);
                 }
@@ -1923,7 +1931,7 @@ mod imp {
             draw_text(
                 g,
                 self.copy.tagline,
-                self.fonts.body,
+                self.fonts.tagline,
                 if rtl {
                     self.fonts.center_rtl
                 } else {
@@ -3268,7 +3276,9 @@ pub(crate) mod glow_layer_tests {
                 let green = (channel(*pixel, 8) + 1) / 3 * 3;
                 *pixel = (*pixel & !0x0000_FF00) | (green << 8);
             }
-            for y in [60_usize, 108, 250] {
+            // The middle row is the one through the glow's centre. It was the literal 108 while the
+            // mark's centre was 108; it now follows the mark (moved up by F-0005).
+            for y in [60_usize, MARK_CENTER_Y as usize, 250] {
                 let (from, to) = inner_span(y);
                 grain_worst = grain_worst.max(local_deviation(&green_row(&good, y), from, to));
                 staircase_best =
@@ -4272,6 +4282,97 @@ mod tests {
         fs::remove_dir_all(&directory).unwrap();
     }
 
+    // F-0005 (Founder: "looks like shit, not premium"): the name was 24 px and
+    // everything else 12-13.5 px, so below the name there was no second step;
+    // the mark's top margin was 51 px and the version line sat 13 px from the
+    // bottom edge. These tests pin a type scale and a vertical rhythm. The
+    // offsets below were MEASURED on the lab's Windows renders of Segoe UI:
+    // the top of a capital sits 0.37 em under the line's top, the baseline
+    // 1.07 em, and a descender ends 1.26 em.
+    fn cap_top(top: f32, font_px: f32) -> f32 {
+        top + 0.37 * font_px
+    }
+    fn baseline(top: f32, font_px: f32) -> f32 {
+        top + 1.07 * font_px
+    }
+    fn descender_bottom(top: f32, font_px: f32) -> f32 {
+        top + 1.26 * font_px
+    }
+
+    #[test]
+    fn the_type_has_clear_steps() {
+        // Read through black_box: they are constants, and clippy refuses
+        // assertions that it can decide at compile time.
+        let size = std::hint::black_box;
+        let (name, status) = (size(WORDMARK_HEIGHT), size(BODY_FONT_PX));
+        let (tagline, hint, version) = (
+            size(TAGLINE_FONT_PX),
+            size(HINT_FONT_PX),
+            size(VERSION_FONT_PX),
+        );
+        assert!(name >= 27.0, "the name is {name} px tall");
+        assert!(status >= 15.0, "the status is {status} px");
+        assert!(
+            tagline >= 14.0 && tagline < status,
+            "the tagline is {tagline} px"
+        );
+        assert!(hint >= 12.5 && hint < tagline, "the hint is {hint} px");
+        assert!(
+            version >= 11.5 && version <= hint,
+            "the version is {version} px"
+        );
+        assert!(name >= 1.8 * status);
+    }
+
+    #[test]
+    fn the_card_is_balanced_top_to_bottom() {
+        let ink_top = MARK_ORIGIN_Y + 9.0 * MARK_UNIT;
+        let bottom_margin = CARD_HEIGHT - baseline(VERSION_TOP, VERSION_FONT_PX);
+        assert!(
+            (32.0..=46.0).contains(&ink_top),
+            "the mark starts {ink_top} px from the top"
+        );
+        assert!(
+            bottom_margin >= 20.0,
+            "the version line is {bottom_margin} px from the bottom"
+        );
+        assert!(
+            ink_top <= 2.0 * bottom_margin,
+            "top margin {ink_top} against bottom margin {bottom_margin}"
+        );
+    }
+
+    #[test]
+    fn the_name_and_tagline_read_as_one_group() {
+        let mark_bottom = MARK_ORIGIN_Y + 55.0 * MARK_UNIT;
+        let mark_to_name = WORDMARK_TOP - mark_bottom;
+        let name_to_tagline =
+            cap_top(TAGLINE_TOP, TAGLINE_FONT_PX) - (WORDMARK_TOP + WORDMARK_HEIGHT);
+        let tagline_to_status =
+            cap_top(STATUS_TOP, BODY_FONT_PX) - baseline(TAGLINE_TOP, TAGLINE_FONT_PX);
+        assert!(
+            (24.0..=36.0).contains(&mark_to_name),
+            "mark to name is {mark_to_name} px"
+        );
+        assert!(
+            (10.0..=18.0).contains(&name_to_tagline),
+            "name to tagline is {name_to_tagline} px"
+        );
+        assert!(
+            tagline_to_status >= 2.0 * name_to_tagline,
+            "tagline to status is {tagline_to_status} px, name to tagline {name_to_tagline} px"
+        );
+    }
+
+    #[test]
+    fn the_slow_hint_has_room_between_the_status_and_the_version() {
+        let above = cap_top(HINT_TOP, HINT_FONT_PX) - descender_bottom(STATUS_TOP, BODY_FONT_PX);
+        let below =
+            cap_top(VERSION_TOP, VERSION_FONT_PX) - descender_bottom(HINT_TOP, HINT_FONT_PX);
+        assert!(above >= 10.0, "hint is {above} px under the status");
+        assert!(below >= 10.0, "hint is {below} px above the version");
+    }
+
     #[test]
     fn the_layout_reads_top_to_bottom_without_overlap() {
         let stack = [
@@ -4287,10 +4388,10 @@ mod tests {
             assert!(pair[0] < pair[1], "layout out of order: {stack:?}");
         }
         // Each text block has room for its line (font size x 1.4).
-        assert!(lt(TAGLINE_TOP + 13.5 * 1.4, STATUS_TOP));
-        assert!(lt(STATUS_TOP + 13.5 * 1.4, HINT_TOP));
-        assert!(lt(HINT_TOP + 12.0 * 1.4, VERSION_TOP));
-        assert!(lt(VERSION_TOP + 12.0 * 1.4, CARD_HEIGHT));
+        assert!(lt(TAGLINE_TOP + TAGLINE_FONT_PX * 1.4, STATUS_TOP));
+        assert!(lt(STATUS_TOP + BODY_FONT_PX * 1.4, HINT_TOP));
+        assert!(lt(HINT_TOP + HINT_FONT_PX * 1.4, VERSION_TOP));
+        assert!(lt(VERSION_TOP + VERSION_FONT_PX * 1.4, CARD_HEIGHT));
         // The longest status line (French, about 190 px) and the percent fit.
         assert!(lt(
             PERCENT_WIDTH + STATUS_GAP * 2.0 + STATUS_DOT + 260.0,
