@@ -421,7 +421,7 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             sky: (0x319212, 0x02942E),
             deep: (0x03773B, 0x014D2B),
             ghost: (0x014D2B, 48),
-            dot: 0x02942E,
+            dot: 0x03691F,
             accent: 0x02942E,
         },
         (Theme::Light, Preset::Atlas) => Look {
@@ -436,7 +436,7 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             sky: (0x7275CF, 0x7661E3),
             deep: (0x684BB6, 0x472F74),
             ghost: (0x472F74, 47),
-            dot: 0x7661E3,
+            dot: 0x5C42C2,
             accent: 0x7661E3,
         },
         (Theme::Light, Preset::Oasis) => Look {
@@ -451,7 +451,7 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             sky: (0x0A8B97, 0x018A9C),
             deep: (0x046F84, 0x064758),
             ghost: (0x064758, 48),
-            dot: 0x018A9C,
+            dot: 0x056270,
             accent: 0x018A9C,
         },
         (Theme::Light, Preset::Dune) => Look {
@@ -466,7 +466,7 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             sky: (0xB76C10, 0xB66001),
             deep: (0x9B4800, 0x662D0B),
             ghost: (0x662D0B, 47),
-            dot: 0xB66001,
+            dot: 0x894700,
             accent: 0xB66001,
         },
         (Theme::Dark, Preset::Sahel) => Look {
@@ -659,20 +659,29 @@ const MARK_WAVE_TO: f32 = 52.0;
 /// The square of the card that holds the mark: the S, its dot and a margin for
 /// the settle animation (which starts at 96 % of the size), in card pixels.
 const MARK_BOX_PAD: f32 = 6.0;
-const MARK_BOX_X: f32 = CARD_WIDTH / 2.0 - MARK_SIZE / 2.0 - MARK_BOX_PAD;
-const MARK_BOX_Y: f32 = MARK_TOP - MARK_BOX_PAD;
-const MARK_BOX_SIZE: f32 = MARK_SIZE + MARK_BOX_PAD * 2.0;
+const MARK_UNIT: f32 = MARK_SIZE / 50.0;
+const MARK_ORIGIN_X: f32 = CARD_WIDTH / 2.0 - MARK_SIZE / 2.0 - 9.0 * MARK_UNIT;
+const MARK_ORIGIN_Y: f32 = MARK_TOP - 7.0 * MARK_UNIT;
+/// The S spans x 17 to 46.5 and y 6 to 57 in the mark's units; its dot reaches x 50.6.
+const MARK_BOX_X: f32 = MARK_ORIGIN_X + 17.0 * MARK_UNIT - MARK_BOX_PAD;
+const MARK_BOX_Y: f32 = MARK_ORIGIN_Y + 6.0 * MARK_UNIT - MARK_BOX_PAD;
+const MARK_BOX_W: f32 = (50.8 - 17.0) * MARK_UNIT + MARK_BOX_PAD * 2.0;
+const MARK_BOX_H: f32 = (57.0 - 6.0) * MARK_UNIT + MARK_BOX_PAD * 2.0;
 
 /// GDI+ fills the S through regions, and regions ignore the anti-aliasing mode:
 /// every curve came out as a staircase. The mark is therefore drawn `k` times
-/// larger into a layer of its own and averaged down. `k` is 4 on an ordinary
-/// screen and shrinks as the screen gets denser, where the staircase is too
-/// fine to see and the layer would only cost time.
+/// larger into a layer of its own and averaged down. GDI+ paints that layer in
+/// software, so its cost grows with the square of `k` (F-0006): 3 on an
+/// ordinary screen, 2 at 125-175 %, and none at 200 % and over, where a device
+/// pixel is already half a card pixel and the staircase is too fine to see.
 pub(crate) fn supersample_factor(scale: f32) -> u32 {
-    if !scale.is_finite() || scale <= 0.0 {
-        return 4;
+    if !scale.is_finite() || scale < 1.2 {
+        3
+    } else if scale < 1.9 {
+        2
+    } else {
+        1
     }
-    ((4.0 / scale).round() as u32).clamp(1, 4)
 }
 
 /// A rectangle of the card window in whole device pixels.
@@ -694,8 +703,8 @@ pub(crate) fn mark_layer_rect(scale: f32) -> LayerRect {
     };
     let left = ((MARK_BOX_X + SHADOW_MARGIN) * scale).floor();
     let top = ((MARK_BOX_Y + SHADOW_MARGIN) * scale).floor();
-    let right = ((MARK_BOX_X + MARK_BOX_SIZE + SHADOW_MARGIN) * scale).ceil();
-    let bottom = ((MARK_BOX_Y + MARK_BOX_SIZE + SHADOW_MARGIN) * scale).ceil();
+    let right = ((MARK_BOX_X + MARK_BOX_W + SHADOW_MARGIN) * scale).ceil();
+    let bottom = ((MARK_BOX_Y + MARK_BOX_H + SHADOW_MARGIN) * scale).ceil();
     LayerRect {
         x: left as i32,
         y: top as i32,
@@ -807,6 +816,22 @@ pub(crate) fn glow_alpha(progress: f32, dark: bool) -> f32 {
         0.05 + 0.12 * p
     } else {
         0.035 + 0.07 * p
+    }
+}
+
+/// The dot never fades below this opacity, so it can always be seen.
+pub(crate) const DOT_MIN_ALPHA: f32 = 0.72;
+
+/// How opaque the dot is: it breathes between `DOT_MIN_ALPHA` and 1 while the
+/// card waits, rests a little under full when the ripple is off, and is full
+/// when the workspace is ready.
+pub(crate) fn dot_alpha(seconds: f32, calm: bool, finishing: bool) -> f32 {
+    if finishing {
+        1.0
+    } else if calm {
+        0.86
+    } else {
+        0.86 + 0.14 * (seconds * 2.6).sin()
     }
 }
 
@@ -2349,13 +2374,7 @@ mod imp {
             let land = timeline(t, 900.0, 550.0);
             if land > 0.0 {
                 let radius = 3.1 * ease_out_back(land);
-                let breathing = if finishing {
-                    1.0
-                } else if calm {
-                    0.6
-                } else {
-                    0.45 + 0.25 * (seconds * 2.6).sin()
-                };
+                let breathing = dot_alpha(seconds, calm, finishing);
                 place();
                 let mut dot: *mut GpSolidFill = std::ptr::null_mut();
                 GdipCreateSolidFill(
@@ -3872,6 +3891,50 @@ mod tests {
         }
     }
 
+    // F-0004 again: the dot is drawn at 60 % opacity and the new layer mixes it
+    // in plain sRGB, which is darker than GDI+'s linear mix. In the light theme
+    // it was 2.0:1. Its opacity now has a floor, and the floor is tested.
+    #[test]
+    fn the_dot_never_fades_below_its_floor() {
+        for calm in [false, true] {
+            for step in 0..400 {
+                let seconds = step as f32 * 0.05;
+                let alpha = dot_alpha(seconds, calm, false);
+                assert!(
+                    (DOT_MIN_ALPHA - 1e-6..=1.0).contains(&alpha),
+                    "alpha {alpha} at {seconds} s (calm {calm})"
+                );
+            }
+        }
+        assert_eq!(dot_alpha(3.0, false, true), 1.0);
+        assert_eq!(dot_alpha(3.0, true, true), 1.0);
+    }
+
+    #[test]
+    fn the_dot_still_breathes_while_the_card_waits() {
+        let alphas: Vec<f32> = (0..200)
+            .map(|i| dot_alpha(i as f32 * 0.05, false, false))
+            .collect();
+        let low = alphas.iter().cloned().fold(f32::MAX, f32::min);
+        let high = alphas.iter().cloned().fold(f32::MIN, f32::max);
+        assert!(high - low >= 0.12, "the dot barely moves: {low}..{high}");
+    }
+
+    #[test]
+    fn the_dot_clears_three_to_one_at_its_dimmest_in_every_look() {
+        for appearance in looks() {
+            let p = palette(appearance);
+            for backdrop in backdrops(p) {
+                let dimmest = over(with_alpha(p.dot, DOT_MIN_ALPHA), backdrop);
+                let seen = contrast(dimmest, backdrop);
+                assert!(
+                    seen >= FILLED_MIN,
+                    "{appearance:?}: the dot at its dimmest is {seen:.2}:1 on {backdrop:06X}, under {FILLED_MIN}:1"
+                );
+            }
+        }
+    }
+
     // F-0003 (Founder's lab run 41407479045): every curve of the mark was a
     // staircase, because GDI+ regions and clips ignore the anti-aliasing mode.
     // The mark is drawn several times larger and averaged down; these tests pin
@@ -3882,16 +3945,18 @@ mod tests {
 
     #[test]
     fn the_mark_is_drawn_larger_on_ordinary_screens_and_not_on_very_dense_ones() {
-        assert_eq!(supersample_factor(1.0), 4);
-        assert_eq!(supersample_factor(1.25), 3);
-        assert_eq!(supersample_factor(1.5), 3);
-        assert_eq!(supersample_factor(2.0), 2);
+        assert_eq!(supersample_factor(1.0), 3);
+        assert_eq!(supersample_factor(1.1), 3);
+        assert_eq!(supersample_factor(1.25), 2);
+        assert_eq!(supersample_factor(1.5), 2);
+        assert_eq!(supersample_factor(1.75), 2);
+        assert_eq!(supersample_factor(2.0), 1);
         assert_eq!(supersample_factor(3.0), 1);
         assert_eq!(supersample_factor(4.0), 1);
         // A broken scale must not give 0 (a zero-size surface) or a huge one.
         for scale in [0.0_f32, -1.0, f32::NAN, f32::INFINITY, 0.01, 100.0] {
             let k = supersample_factor(scale);
-            assert!((1..=4).contains(&k), "scale {scale} gave {k}");
+            assert!((1..=3).contains(&k), "scale {scale} gave {k}");
         }
     }
 
@@ -3907,7 +3972,7 @@ mod tests {
             let (left, top) = (rect.x as f32, rect.y as f32);
             let (right, bottom) = ((rect.x + rect.w) as f32, (rect.y + rect.h) as f32);
             // The settle animation starts at 96 % of the size around the mark's centre.
-            for (mark_x, mark_y) in [(17.0, 6.0), (50.4, 6.0), (17.0, 57.0), (50.4, 57.0)] {
+            for (mark_x, mark_y) in [(17.0, 6.0), (50.7, 6.0), (17.0, 57.0), (50.7, 57.0)] {
                 let card_x = origin_x + mark_x * unit;
                 let card_y = origin_y + mark_y * unit;
                 let device_x = (card_x + SHADOW_MARGIN) * scale;
@@ -3923,6 +3988,19 @@ mod tests {
             }
             assert!(rect.w > 0 && rect.h > 0);
         }
+    }
+
+    #[test]
+    fn the_mark_layer_is_no_bigger_than_the_mark_needs() {
+        // F-0006: GDI+ paints the layer in software and its cost grows with the
+        // number of pixels, so the layer is the S and its dot, not a square.
+        let rect = mark_layer_rect(1.0);
+        assert!(rect.w <= 100, "layer is {} px wide", rect.w);
+        assert!(rect.h <= 140, "layer is {} px tall", rect.h);
+        assert!(
+            rect.w * rect.h * 9 <= 130_000,
+            "layer holds too many pixels"
+        );
     }
 
     #[test]
