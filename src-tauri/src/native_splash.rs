@@ -2612,26 +2612,47 @@ mod imp {
     }
 
     /// Paints the REAL card (the code the seller sees) for one look, one
-    /// language and a list of progress values, and writes the pixels to disk, so
-    /// a design is judged on a picture and not on a guess (the 2 Nov card review
-    /// had to work from lab screenshots of a full app run). It opens a real
-    /// window, so it only runs when asked; the lab workflow `render-card` does.
+    /// language, every launch phase and a list of progress values, and writes
+    /// the pixels to disk, so a design is judged on a picture and not on a
+    /// guess. It opens a real window, so it only runs when asked; the lab
+    /// workflow `render-card` does.
     ///
     /// Environment: SF_CARD_PREVIEW_DIR (required), SF_CARD_THEME dark|light,
     /// SF_CARD_PRESET sahel|atlas|oasis|dune, SF_CARD_LOCALE en|fr|ar,
-    /// SF_CARD_PERCENTS "8,34,72,99", SF_CARD_PHASE preparing|starting|opening.
-    /// Output: `<theme>-<preset>-<locale>-p<percent>-<w>x<h>.bgra`, raw
-    /// premultiplied BGRA, top row first.
+    /// SF_CARD_PERCENTS "8,34,72,99", SF_CARD_PHASES "preparing,starting,
+    /// retrying,opening", SF_CARD_HINT "0,1" (1 = the slow-start sentence is
+    /// showing), SF_CARD_BENCH N (also time the first paint and N steady
+    /// frames, with the ripple on).
+    /// Output: `<theme>-<preset>-<locale>-<phase>-p<percent>[-hint]-<w>x<h>.bgra`,
+    /// raw premultiplied BGRA, top row first; `bench-*.txt` for the timings.
     #[cfg(test)]
     mod preview {
         use super::*;
         use std::fs;
+        use std::time::Duration;
 
         fn setting(name: &str, fallback: &str) -> String {
             std::env::var(name)
                 .ok()
                 .filter(|value| !value.is_empty())
                 .unwrap_or_else(|| fallback.to_string())
+        }
+
+        fn list(name: &str, fallback: &str) -> Vec<String> {
+            setting(name, fallback)
+                .split(',')
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .collect()
+        }
+
+        fn phase_named(name: &str) -> Phase {
+            match name {
+                "starting" => Phase::Starting,
+                "retrying" => Phase::Retrying,
+                "opening" => Phase::Opening,
+                _ => Phase::Preparing,
+            }
         }
 
         #[test]
@@ -2643,11 +2664,13 @@ mod imp {
             let theme = setting("SF_CARD_THEME", "dark");
             let preset = setting("SF_CARD_PRESET", "sahel");
             let locale = setting("SF_CARD_LOCALE", "en");
-            let phase = setting("SF_CARD_PHASE", "");
-            let percents: Vec<u32> = setting("SF_CARD_PERCENTS", "8,34,72,99")
-                .split(',')
-                .filter_map(|value| value.trim().parse().ok())
+            let percents: Vec<u32> = list("SF_CARD_PERCENTS", "8,34,72,99")
+                .iter()
+                .filter_map(|value| value.parse().ok())
                 .collect();
+            let phases = list("SF_CARD_PHASES", "preparing");
+            let hints = list("SF_CARD_HINT", "0");
+            let bench: u32 = setting("SF_CARD_BENCH", "0").parse().unwrap_or(0);
             assert!(!percents.is_empty(), "SF_CARD_PERCENTS has no number");
             let data_dir = out.join(format!("appdata-{theme}-{preset}-{locale}"));
             fs::create_dir_all(&data_dir).expect("create the app data folder");
@@ -2675,28 +2698,67 @@ mod imp {
                     let renderer = guard.as_mut().expect("the renderer exists after create");
                     // Everything settled, nothing animating: a still picture.
                     renderer.reduced_motion = true;
-                    for percent in &percents {
-                        let fraction = *percent as f32 / 100.0;
-                        renderer.progress.shown = fraction;
-                        renderer.progress.target = fraction;
-                        renderer.progress.phase = match phase.as_str() {
-                            "starting" => Phase::Starting,
-                            "opening" => Phase::Opening,
-                            "preparing" => Phase::Preparing,
-                            _ if *percent >= 85 => Phase::Opening,
-                            _ => Phase::Preparing,
-                        };
+                    for hint in &hints {
+                        for phase in &phases {
+                            for percent in &percents {
+                                let fraction = *percent as f32 / 100.0;
+                                renderer.progress.shown = fraction;
+                                renderer.progress.target = fraction;
+                                renderer.progress.phase = phase_named(phase);
+                                // No cross-fade: the label of THIS phase, whole.
+                                renderer.stage_text = "";
+                                renderer.stage_prev = "";
+                                renderer.shown_at = if hint == "1" {
+                                    Instant::now()
+                                        .checked_sub(Duration::from_secs(60))
+                                        .unwrap_or_else(Instant::now)
+                                } else {
+                                    Instant::now()
+                                };
+                                renderer.settled.clear();
+                                renderer.steady = false;
+                                renderer.last_signature = None;
+                                let t = renderer.elapsed_ms();
+                                renderer.paint(t);
+                                GdipFlush(renderer.graphics, FlushIntentionSync);
+                                let slow = if hint == "1" { "-hint" } else { "" };
+                                let name = format!(
+                                    "{theme}-{preset}-{locale}-{phase}-p{percent:02}{slow}-{}x{}.bgra",
+                                    renderer.width, renderer.height
+                                );
+                                fs::write(out.join(name), renderer.copy_out())
+                                    .expect("write the picture");
+                            }
+                        }
+                    }
+                    if bench > 0 {
+                        // The ripple on, 34 %: what a seller's PC does every frame.
+                        renderer.reduced_motion = false;
+                        renderer.progress.shown = 0.34;
+                        renderer.progress.target = 0.34;
+                        renderer.progress.phase = Phase::Preparing;
+                        renderer.shown_at = Instant::now();
                         renderer.settled.clear();
                         renderer.steady = false;
                         renderer.last_signature = None;
-                        let t = renderer.elapsed_ms();
-                        renderer.paint(t);
+                        let first = Instant::now();
+                        renderer.paint(5_000.0);
                         GdipFlush(renderer.graphics, FlushIntentionSync);
-                        let name = format!(
-                            "{theme}-{preset}-{locale}-p{percent:02}-{}x{}.bgra",
-                            renderer.width, renderer.height
-                        );
-                        fs::write(out.join(name), renderer.copy_out()).expect("write the picture");
+                        let first_ms = first.elapsed().as_secs_f64() * 1_000.0;
+                        let started = Instant::now();
+                        for _ in 0..bench {
+                            renderer.paint(5_000.0);
+                            GdipFlush(renderer.graphics, FlushIntentionSync);
+                        }
+                        let per_frame = started.elapsed().as_secs_f64() * 1_000.0 / bench as f64;
+                        fs::write(
+                            out.join(format!("bench-{theme}-{preset}-{locale}.txt")),
+                            format!(
+                                "first_paint_ms={first_ms:.2}\nsteady_frame_ms={per_frame:.2}\nframes={bench}\nwindow={}x{}\n",
+                                renderer.width, renderer.height
+                            ),
+                        )
+                        .expect("write the timings");
                     }
                     renderer.destroy();
                     DestroyWindow(renderer.window);
