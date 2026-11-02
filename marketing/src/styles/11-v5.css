@@ -29,7 +29,7 @@ h1,h2,h3,h4{font-family:var(--f)}
 .v-btn:hover{background:var(--accent);color:var(--ink);transform:translateY(-2px);box-shadow:0 18px 36px -16px rgba(14,165,233,.7)}
 .v-btn:hover svg{transform:translateY(2px)}
 .v-btn:active{transform:scale(.97)}
-.v-text{display:inline-flex;align-items:center;gap:8px;min-block-size:44px;color:var(--ink);font-weight:600;text-decoration:none;border-block-end:2px solid var(--accent);transition:border-color .2s,gap .25s var(--ease)}
+.v-text{display:inline-flex;align-items:center;gap:8px;min-block-size:44px;color:var(--ink);font-weight:600;text-decoration:none;border-block-end:2px solid var(--accent);transition:border-color .2s}
 .v-text svg{inline-size:16px;block-size:16px;transition:transform .25s var(--ease)}
 .v-text:hover{border-color:var(--ink)}
 .v-text:hover svg{transform:translateX(4px)}

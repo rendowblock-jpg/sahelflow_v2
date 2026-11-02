@@ -128,11 +128,8 @@ html[dir=rtl] .mega-feat:hover .mf-go svg{transform:scaleX(-1) translateX(4px)}
 .langs a{border-radius:12px}
 }
 
-/* ───────── footer: the name, whole, at the page margins ───────── */
+/* ───────── footer: the name, whole, at the page margins (no letter-spacing, so Arabic and Latin pages share one rule) ───────── */
 .site-footer .foot-word{display:block;container-type:inline-size;overflow:visible;padding:clamp(6px,1.2vw,18px) var(--pad-x) clamp(14px,2.2vw,34px);line-height:1;text-align:center}
-.site-footer .fw{display:block;font:700 calc(100cqw / 4.78)/1.06 var(--f);letter-spacing:-.045em;white-space:nowrap;color:var(--navy);transform:none;translate:-.025em 0;text-align:center}
-/* the Arabic pages zero letter-spacing everywhere; the Latin name keeps its own */
-html[lang=ar] .site-footer .fw{letter-spacing:-.045em!important}
-html[lang=ar] .brand .wm{letter-spacing:-.03em!important}
+.site-footer .fw{display:block;font:700 calc(100cqw / 5.2)/1.06 var(--f);letter-spacing:0;white-space:nowrap;color:var(--navy);transform:none;text-align:center}
 
 @media (prefers-reduced-motion:reduce){.top::after{transition:none}.mega{transition:none}}

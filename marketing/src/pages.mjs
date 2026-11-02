@@ -10,8 +10,7 @@ import { LEGAL_UPDATED, PRIVACY, TERMS } from "./legal.mjs";
 import { BRAND_NAMES, HELP_TOPICS, INTEGRATIONS, MODULES, PACKAGE, SOLUTIONS, monthlyOverUpdateYears } from "./model.mjs";
 import { assistantScene, coreDiagram, flowDiagram, heroStack, screenStack, specPanel } from "./scenes.mjs";
 import { HOME } from "./i18n/home.mjs";
-import { homeFaq } from "./home3.mjs";
-import { homeBody5 } from "./home5.mjs";
+import { homeBody5, homeFaq5 } from "./home5.mjs";
 import {
   appWindow,
   arrow,
@@ -242,7 +241,7 @@ function closeSection(locale) {
 
 export function homePage(locale) {
   const [title, description] = meta(locale, "home");
-  return shell({ locale, pageId: "home", path: "", title, description, scripts: ["home4.js"], jsonLd: [faqJsonLd(homeFaq(locale))] }, homeBody5(locale));
+  return shell({ locale, pageId: "home", path: "", title, description, scripts: ["home4.js"], jsonLd: [faqJsonLd(homeFaq5(locale))] }, homeBody5(locale));
 }
 
 /* ───────────────────────────── pricing ───────────────────────────── */

@@ -96,7 +96,7 @@ function header({ locale, pageId, path }) {
   const plain = (id, label) => `<li class="nl"><a class="nl-a" href="${href(locale, id)}"${cur(pageId === id)}>${esc(label)}</a></li>`;
 
   const modules = MODULES.map((m) => item(href(locale, `product/${m.key}`), m.icon, t.modules[m.key].name, t.modules[m.key].short, pageId === `module:${m.key}`)).join("");
-  const productSide = `<a class="mega-feat" href="${href(locale, "product")}"><span class="mf-pic"><img src="/img/screens/queue-${locale}-480.webp" width="480" height="300" alt="" loading="lazy" decoding="async"></span><b>${esc(t.nav.platformOverview)}</b><small>${esc(t.nav.platformOverviewText)}</small>${go}</a>`;
+  const productSide = `<a class="mega-feat" href="${href(locale, "product")}"><span class="mf-pic"><img src="/img/nav-product-${locale}.webp" width="600" height="375" alt="" loading="lazy" decoding="async"></span><b>${esc(t.nav.platformOverview)}</b><small>${esc(t.nav.platformOverviewText)}</small>${go}</a>`;
   const solutions = SOLUTIONS.map((s) => item(href(locale, `solutions/${s.key}`), s.icon, t.solutions[s.key].name, t.solutions[s.key].short, pageId === `solution:${s.key}`)).join("");
   const solutionsSide = `<a class="mega-feat" href="${href(locale, "why")}"><span class="mf-ic">${icon("scale")}</span><b>${esc(t.nav.why)}</b><small>${esc(t.nav.whyText)}</small>${go}</a>`;
   const resources = [

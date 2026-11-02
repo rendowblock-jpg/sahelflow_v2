@@ -32,7 +32,7 @@ const N = {
     story: {
       h2: "طلبية واحدة، من الرسالة إلى المال",
       steps: [
-        ["الرسالة", "الزبون يكتب، وأنت لا تعيد الكتابة", "زبائنك يكتبون بالدارجة أو الفرنسية أو العربية. تختار المحادثة فيصوغ SahelFlow الطلبية: الاسم والهاتف والولاية والمنتجات. وتراجعها قبل أن تعتمدها."],
+        ["الرسالة", "الزبون يكتب، وأنت لا تعيد الكتابة", "زبائنك يكتبون على واتساب بكلماتهم. الذكاء الاصطناعي يُعدّ مسودة الرد والطلب، وأنت تعتمد كل مسودة."],
         ["الطلبية", "كل شيء في بطاقة واحدة", "المنتج والمقاس واللون، الهاتف والولاية، سعر التوصيل والمبلغ المطلوب عند الاستلام. وما ينقص يُعلَّم لك لتسأل عنه الزبون."],
         ["الطرد", "اتصل أولاً، ثم اشحن", "طابور التأكيد يرتّب لك بمن تتصل أولاً، ولماذا. وبعد التأكيد تُنشئ الطرد لشركة التوصيل من داخل التطبيق (الربط مع الشركات قيد الاختبار)."],
         ["المال", "اعرف أين مالك", "ما حصّلته كل شركة توصيل، وما اقتطعته، وما بقي لك عندها. وربحك الحقيقي بعد رسوم التوصيل والمرتجعات."],
@@ -72,7 +72,7 @@ const N = {
     story: {
       h2: "Une commande, du message à l'argent",
       steps: [
-        ["Message", "Le client écrit, vous ne retapez rien", "Vos clients écrivent en darija, en français ou en arabe. Vous choisissez la conversation et SahelFlow prépare la commande : nom, téléphone, wilaya, produits. Vous la vérifiez avant de la valider."],
+        ["Message", "Le client écrit, vous ne retapez rien", "Vos clients écrivent sur WhatsApp avec leurs mots. L'IA prépare la réponse et la commande ; vous validez chaque brouillon."],
         ["Commande", "Tout tient dans une seule fiche", "Produit, taille, couleur, téléphone, wilaya, frais de livraison et montant à encaisser. Ce qui manque est signalé pour que vous le demandiez au client."],
         ["Colis", "Appelez d'abord, expédiez ensuite", "La file de confirmation classe qui appeler en premier, et pourquoi. Une fois confirmée, vous créez le colis pour votre livreur depuis l'appli (les connexions livreurs sont en test)."],
         ["Argent", "Sachez où est votre argent", "Ce que chaque livreur a encaissé, ce qu'il a retenu et ce qu'il vous doit encore. Et votre vrai bénéfice, après frais de livraison et retours."],
@@ -112,7 +112,7 @@ const N = {
     story: {
       h2: "One order, from message to money",
       steps: [
-        ["Message", "The customer writes. You retype nothing.", "Your customers write in Darija, French or Arabic. Pick the conversation and SahelFlow drafts the order: name, phone, wilaya, products. You check it before you approve it."],
+        ["Message", "The customer writes. You retype nothing.", "Your customers write on WhatsApp in their own words. The AI drafts the reply and the order; you approve each draft."],
         ["Order", "Everything on one card", "Product, size, colour, phone, wilaya, delivery fee and the amount to collect. Anything missing is flagged so you can ask the customer."],
         ["Parcel", "Call first, then ship", "The confirmation queue ranks who to call first, and why. Once confirmed, you create the parcel for your courier from inside the app (courier connections are in testing)."],
         ["Cash", "Know where your money is", "What each courier collected, what they kept and what still reaches you. And your real profit after delivery fees and returns."],
@@ -346,16 +346,24 @@ function numsSection(n) {
 </section>`;
 }
 
+const mono = (k) => BRAND_NAMES[k].replace(/[^A-Za-z]/g, "").slice(0, 2);
+
 function intSection(t, locale) {
   const v = V[locale];
-  const names = INTEGRATIONS.flatMap((g) => g.items).filter((k) => k !== "storefront");
-  const allTesting = names.every((k) => integrationStatus(k) === "testing");
-  const list = names.map((k) => `<span class="h4-n" dir="ltr">${esc(BRAND_NAMES[k])}</span>`).join("");
-  return `<section class="h4-int" aria-labelledby="h-int">
+  const keys = Object.keys(BRAND_NAMES);
+  const allTesting = keys.every((k) => integrationStatus(k) === "testing");
+  const tiles = keys
+    .map((k) => {
+      const st = integrationStatus(k);
+      return `<li data-status="${st}"><span class="brand-tile" aria-hidden="true">${esc(mono(k))}</span><span class="bn" dir="ltr">${esc(BRAND_NAMES[k])}</span>${statusBadge(st, locale)}</li>`;
+    })
+    .join("");
+  return `<section class="h6-int" aria-labelledby="h-int">
+<div class="h5-wrap">
 <h2 id="h-int" class="h4-h3 rv">${esc(allTesting ? v.proof.all : v.proof.some)}</h2>
-<ul class="sr-only">${names.map((k) => `<li>${esc(BRAND_NAMES[k])}</li>`).join("")}</ul>
-<div class="h4-marq" aria-hidden="true"><div class="h4-marq-track">${list}${list}</div></div>
-<p class="h4-int-note rv">${esc(v.proof.note)} <a class="v-text" href="${href(locale, "integrations")}">${esc(v.proof.link)}${icon("arrow", "flip")}</a></p>
+<ul class="h6-int-grid rv">${tiles}</ul>
+<p class="h6-int-note rv">${esc(v.proof.note)} <a class="v-text" href="${href(locale, "integrations")}">${esc(v.proof.link)}${icon("arrow", "flip")}</a></p>
+</div>
 </section>`;
 }
 
@@ -395,12 +403,28 @@ ${p.offer ? `<p class="h4-was"><s>${esc(p.offer.regular)}</s> <em>${esc(p.offer.
 </section>`;
 }
 
+const FAQ_H2 = { ar: "أسئلة عليك طرحها أولاً", fr: "Les questions à poser d'abord", en: "Questions to ask first" };
+const DARJA = {
+  en: "It is built to read Darja, French, Arabic or a mix.",
+  fr: "Elle est conçue pour lire la darja, le français, l'arabe ou un mélange.",
+  ar: "صُمّم ليقرأ الدارجة والفرنسية والعربية أو خليطاً منها.",
+};
+
+/** The home questions: the vetted ones, plus the help-centre answer that says the reading of Darja is built, not measured. */
+export function homeFaq5(locale) {
+  const t = COPY[locale];
+  const base = homeFaq(locale);
+  let darja = null;
+  for (const topic of Object.values(t.helpPage.topics)) for (const item of topic[2] || []) if (!darja && item[1] && item[1].includes(DARJA[locale])) darja = item;
+  return darja ? [base[0], darja, ...base.slice(1)] : base;
+}
+
 function faqSection(locale) {
   const v = V[locale];
-  const items = homeFaq(locale);
+  const items = homeFaq5(locale);
   return `<section class="h4-faq" aria-labelledby="h-faq">
 <div class="h4-faq-in">
-<h2 id="h-faq" class="h4-h2 rv">${esc(v.faq.h2)}</h2>
+<h2 id="h-faq" class="h4-h2 rv">${esc(FAQ_H2[locale])}</h2>
 <div class="h4-qas">
 ${items.map(([q, a], i) => `<details class="h4-qa rv" name="home-faq"${i === 0 ? " open" : ""}><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("\n")}
 </div>

@@ -64,8 +64,6 @@ export function build(outDir = join(root, "dist")) {
   const styles = join(root, "src", "styles");
   write("assets/site.css", readdirSync(styles).filter((f) => f.endsWith(".css")).sort().map((f) => readFileSync(join(styles, f), "utf8")).join("\n"));
   cpSync(join(root, "src", "site.js"), join(dist, "assets", "site.js"));
-  cpSync(join(root, "src", "stage.js"), join(dist, "assets", "stage.js"));
-  cpSync(join(root, "src", "map.js"), join(dist, "assets", "map.js"));
   cpSync(join(root, "src", "home4.js"), join(dist, "assets", "home4.js"));
   cpSync(join(root, "src", "orderparse.mjs"), join(dist, "assets", "orderparse.js"));
 
