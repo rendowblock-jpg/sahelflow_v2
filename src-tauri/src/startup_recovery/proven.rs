@@ -22,8 +22,8 @@ const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 /// How long the startup thread waits for the main window before it gives up. The window is built on the main
 /// thread and that includes WebView2's start; on a machine that has not run WebView2 recently the lab saw it come
-/// 8 to 44 s after the runtime was ready (F-0010), and a 30 s limit produced the "Startup blocked" screen (F-0011).
-/// The launch card stays up meanwhile (its own hang limit is 30 minutes).
+/// 8 to 44 s after launch (4.9 to 36.8 s after the runtime was ready) (F-0010), and a 30 s limit produced the
+/// "Startup blocked" screen (F-0011). The launch card stays up meanwhile (its own hang limit is 30 minutes).
 const WORKSPACE_WINDOW_WAIT: Duration = Duration::from_secs(180);
 const WORKSPACE_WINDOW_POLL: Duration = Duration::from_millis(25);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -907,9 +907,9 @@ mod tests {
         (attempts, result, calls, failed, sleeps)
     }
 
-    // F-0011: on a machine that has not run WebView2 recently the main window is built 8 to 44 s after the runtime
-    // is ready (lab runs 41548641239, 41550825036, 41550827824, 41550831302). The startup thread used to give up
-    // after 30 s and the seller saw "Startup blocked" (code SF-WINDOW-NAVIGATION-BLOCKED).
+    // F-0011: on a machine that has not run WebView2 recently the main window is built 8 to 44 s after launch
+    // (4.9 to 36.8 s after the runtime was ready; lab runs 41548641239, 41550825036, 41550827824, 41550831302).
+    // The startup thread used to give up after 30 s and the seller saw "Startup blocked" (code SF-WINDOW-NAVIGATION-BLOCKED).
     fn run_scripted_wait(
         limit: Duration,
         window_ready_at: Option<Duration>,
@@ -951,7 +951,7 @@ mod tests {
 
     #[test]
     fn the_wait_for_the_window_outlasts_the_slowest_cold_webview2_start_seen_in_the_lab() {
-        // The runtime was ready at 7.5 s and the window was built at 44.4 s: a 36.9 s wait.
+        // The runtime was ready at 7.5 s and the window was built at 44.4 s: a 36.8 s wait.
         let window_at = Duration::from_millis(44_370);
         let (found, _, _) = run_scripted_wait(WORKSPACE_WINDOW_WAIT, Some(window_at));
         assert!(
