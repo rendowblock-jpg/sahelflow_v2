@@ -61,6 +61,117 @@ describe("seedWilayaRiskProfiles", () => {
     expect(count).toBe(result.seeded);
   });
 
+  // F-0015: first-run setup waited 4.0-11.8 s on a lab runner; the sampler showed about 1,300 disk write operations for
+  // POST /api/auth/setup and almost no CPU. One findUnique + one create per wilaya = one synced commit each.
+  /** A context whose WilayaRiskProfile delegate counts every call made on it, per method. */
+  function countingContext() {
+    const calls: Record<string, number> = {};
+    const real = db.wilayaRiskProfile as unknown as Record<string, unknown>;
+    const delegate = new Proxy(real, {
+      get(target, property: string) {
+        const value = target[property];
+        if (typeof value !== "function") return value;
+        return (...args: unknown[]) => {
+          calls[property] = (calls[property] ?? 0) + 1;
+          return (value as (...a: unknown[]) => unknown).apply(target, args);
+        };
+      },
+    });
+    const prisma = new Proxy(db as unknown as Record<string, unknown>, {
+      get(target, property: string) {
+        if (property === "wilayaRiskProfile") return delegate;
+        const value = target[property];
+        return typeof value === "function" ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    return { calls, context: { prisma: prisma as never, shop: TEST_SHOP_CONTEXT } };
+  }
+
+  it("does not write one wilaya at a time: a handful of database calls for every wilaya", async () => {
+    const { calls, context: counted } = countingContext();
+    const result = await seedWilayaRiskProfilesForShop(counted);
+    expect(result.seeded).toBeGreaterThan(50);
+    const total = Object.values(calls).reduce((a, b) => a + b, 0);
+    expect(total, JSON.stringify(calls)).toBeLessThanOrEqual(3);
+    expect(await db.wilayaRiskProfile.count()).toBe(result.seeded);
+  });
+
+  it("a second run reads once and writes nothing", async () => {
+    await seedWilayaRiskProfiles();
+    const { calls, context: counted } = countingContext();
+    const result = await seedWilayaRiskProfilesForShop(counted);
+    expect(result.seeded).toBe(0);
+    expect(result.skipped).toBeGreaterThan(50);
+    expect(calls.create ?? 0).toBe(0);
+    expect(calls.createMany ?? 0).toBe(0);
+  });
+
+  it("fills only what is missing and keeps a profile the seller already changed", async () => {
+    await seedWilayaRiskProfiles();
+    const total = await db.wilayaRiskProfile.count();
+    await db.wilayaRiskProfile.update({ where: { wilaya: "Adrar" }, data: { riskLevel: 1, notes: "mine" } });
+    await db.wilayaRiskProfile.delete({ where: { wilaya: "Oran" } });
+    const result = await seedWilayaRiskProfiles();
+    expect(result.seeded).toBe(1);
+    expect(result.skipped).toBe(total - 1);
+    expect(await db.wilayaRiskProfile.count()).toBe(total);
+    const adrar = await db.wilayaRiskProfile.findUnique({ where: { wilaya: "Adrar" } });
+    expect(adrar!.riskLevel).toBe(1);
+    expect(adrar!.notes).toBe("mine");
+  });
+
+  it("survives a second seed that wrote some of the rows between its read and its write", async () => {
+    const real = db.wilayaRiskProfile as unknown as Record<string, unknown>;
+    let thrown = 0;
+    const delegate = new Proxy(real, {
+      get(target, property: string) {
+        const value = target[property];
+        if (typeof value !== "function") return value;
+        if (property !== "createMany") return (value as (...a: unknown[]) => unknown).bind(target);
+        return async (args: { data: Array<{ wilaya: string }> }) => {
+          if (thrown === 0) {
+            thrown++;
+            // the other seed got there first with the first ten wilayas
+            await (value as (a: unknown) => Promise<unknown>).call(target, { data: args.data.slice(0, 10) });
+            throw Object.assign(new Error("Unique constraint failed on the fields: (`wilaya`)"), { code: "P2002" });
+          }
+          return (value as (a: unknown) => Promise<unknown>).call(target, args);
+        };
+      },
+    });
+    const prisma = new Proxy(db as unknown as Record<string, unknown>, {
+      get(target, property: string) {
+        if (property === "wilayaRiskProfile") return delegate;
+        const value = target[property];
+        return typeof value === "function" ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    const result = await seedWilayaRiskProfilesForShop({ prisma: prisma as never, shop: TEST_SHOP_CONTEXT });
+    const total = await db.wilayaRiskProfile.count();
+    expect(thrown).toBe(1);
+    expect(total).toBeGreaterThan(50);
+    expect(result.seeded).toBe(total - 10);
+    expect(result.seeded + result.skipped).toBe(total);
+  });
+
+  it("does not hide any other database error", async () => {
+    const delegate = new Proxy(db.wilayaRiskProfile as unknown as Record<string, unknown>, {
+      get(target, property: string) {
+        if (property === "createMany") return async () => { throw Object.assign(new Error("disk is full"), { code: "SQLITE_FULL" }); };
+        const value = target[property];
+        return typeof value === "function" ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    const prisma = new Proxy(db as unknown as Record<string, unknown>, {
+      get(target, property: string) {
+        if (property === "wilayaRiskProfile") return delegate;
+        const value = target[property];
+        return typeof value === "function" ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    await expect(seedWilayaRiskProfilesForShop({ prisma: prisma as never, shop: TEST_SHOP_CONTEXT })).rejects.toThrow("disk is full");
+  });
+
   it("is idempotent — second run skips all and seeds none", async () => {
     await seedWilayaRiskProfiles();
     const result = await seedWilayaRiskProfiles();
