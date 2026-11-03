@@ -34,7 +34,7 @@ import {
   type ScheduledBackupState,
 } from "./scheduled-backup-state";
 
-const STARTUP_DELAY_MS = 5 * 60_000;
+const STARTUP_DELAY_MS = 60 * 60_000; // LAB ONLY (F-0016 test): first automatic backup after 1 h
 const STARTUP_JITTER_RATIO = 0.2;
 const CHECK_INTERVAL_MS = 30 * 60_000;
 const CHECK_JITTER_RATIO = 0.1;
