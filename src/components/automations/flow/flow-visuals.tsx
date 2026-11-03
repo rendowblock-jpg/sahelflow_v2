@@ -56,7 +56,7 @@ export const ACTION_TONES: Record<string, string> = {
   send_whatsapp: "bg-success-soft text-success-ink",
   update_status: "bg-warning-soft text-warning-ink",
   tag_customer: "bg-info-soft text-info-ink",
-  send_notification: "bg-primary-soft text-primary",
+  send_notification: "bg-primary-soft text-primary-ink",
   wait: "bg-muted text-muted-foreground",
   recheck_order_status: "bg-muted text-muted-foreground",
 };

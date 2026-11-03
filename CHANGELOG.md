@@ -8,6 +8,27 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-11-03 — FD-084 adopts the Internal.48 release authority
+
+- FD-084 authorizes one signed successor: app `1.0.0-internal.48` / MSI `1.0.0.48`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. It carries fourteen reviewed pull requests merged together (#656 to #662, #664 and #667 to #672; the Carnet removal below is #656):
+  - **Start-up on a slow PC (#657, #658, #659, #668):** the start-up card's status text is no longer cut and its mark is smoother (#657). A fresh install builds its empty databases without a disk sync per statement: the migration step took 1.3 to 5.4 s instead of 52 to 97 s on the lab machine, and 2 to 5 s instead of 87 to 236 s on a simulated slow disk (#658). The start-up thread waits for the main window as long as WebView2 needs instead of giving up at 30 s, which stopped a false "Startup blocked" screen in the lab (#659). The host waits up to 180 s instead of 90 s for the page to report ready (#668; shown only in a simulation). #658 and #659 ship together.
+  - **Look (#656, #664):** the Carnet look is gone (below). Small coloured text in the light look is a little darker in 48 places: 0 contrast findings on 820 lab pages, 42 before (#664).
+  - **Orders and customers (#667, #669, #671, #672):** confirming an order without enough stock says "Not enough stock to confirm this order" in English, French and Arabic instead of "Something went wrong on our side", also in the confirmation queue; three more refusals read plainly: a customer with orders cannot be deleted, a phone or a product code already exists (#667). Picking a saved customer in New order fills the commune even when its spelling differs, and on the first pick: before, all 8 saved customers tried in the Windows lab left it blank (#669). The customer page has an Edit button (the edit form existed, nothing opened it), and a field the seller clears is saved as empty (#671). Every duplicate-phone refusal from the server reads in French and Arabic (#672).
+  - **Quieter start and setup (#660, #661, #662):** a hidden error on every page is caught (#660). The setup checklist asks for the PIN instead of showing delivery and AI as "not configured" after 10 minutes (#661). Setup seeds the 69 wilaya risk profiles with one read and one write: about 6 s became about 1 s (#662).
+  - **Slow disk (#670):** the 5-minute session-activity write no longer holds every request. On a simulated slow disk a freeze of 7.8 to 18.6 s with two HTTP 503 answers became 2.2 to 3.3 s with no error.
+  - **Not in this release:** #663 and #665 (two compile-cache flush designs; neither removed the short stall after the first start).
+  - **Database:** none of these changes touches `prisma/`.
+  - **Measured and not measured:** the Windows checks ran on lab machines (datacenter, fast disk) or on a simulated slow disk: Windows build and tests (library 274, integration 87 + 87, none failed), the full Linux quality gate (1,321 test files passed), three cold first launches (ready 10 to 15 s after the first start-up event), a click-through of the packaged app, an 820-visit walk with 0 contrast findings. Not measured: a real low-end PC or hard-disk laptop, WhatsApp, couriers and AI providers, a power cut during the first launch. The French and Arabic texts of #661, #667 and #672 are not read by a native speaker. Open finding F-0019: the whole app can wait about 5 s a few times per half hour; the cause is not known and no fix is in this release.
+- The tag, digests and publish time are recorded after the signed run succeeds. Published is not installed: no ledger row converts.
+
+### 2026-11-02 — The Carnet look is removed
+
+- **Founder's order (2 November):** the cream "Carnet" look, its fonts and its styles are gone. Settings > Appearance offers Sahel, Atlas, Oasis and Dune again; Sahel is the default.
+  - **Saved choice:** every install had "carnet" saved (the wave 2 migration moved everyone to it). A saved name that is no longer offered now counts as not chosen: the install shows Sahel and the next save replaces it. The look marker is no longer written or read. Earlier Atlas, Oasis or Dune picks are not restored.
+  - **Removed:** the Carnet stylesheet and colour blocks, six IBM Plex and Amiri font files with their three licence texts, and the inbox's Carnet-only decoration. The inbox text keys `inbox.carnet.*` are now `inbox.list.*`. The app ships Inter and Noto Sans Arabic only.
+  - **Tests:** one source file holds the preset rule, with a test table; a contract test keeps the name, files and fonts out of the app source. The dark-mode contrast check for the blacklist button now counts the translucent input colour and runs on all four presets.
+  - **Not touched:** the marketing site, the phone app, earlier entries.
+
 ### 2026-11-01 — FD-083 adopts the Internal.47 release authority
 
 - FD-083 authorizes one signed successor: app `1.0.0-internal.47` / MSI `1.0.0.47`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.46 (`db68bfe2…`):

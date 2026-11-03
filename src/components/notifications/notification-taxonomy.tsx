@@ -35,7 +35,7 @@ const TYPE_PRESENTATION: Record<
 > = {
   order: {
     icon: ShoppingBag,
-    className: "bg-primary-soft text-primary",
+    className: "bg-primary-soft text-primary-ink",
     labelKey: "notifications.type.order",
   },
   delivery: {
@@ -67,7 +67,7 @@ const TYPE_PRESENTATION: Record<
 
 const INBOX_PRESENTATION: NotificationPresentation = {
   icon: MessageSquare,
-  className: "bg-primary-soft text-primary",
+  className: "bg-primary-soft text-primary-ink",
   labelKey: "notifications.inboxCategory",
 };
 

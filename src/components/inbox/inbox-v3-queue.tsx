@@ -364,7 +364,7 @@ const ConversationRow = memo(function ConversationRow({
             <span className={cn(styles.unreadBadge, "shrink-0 font-mono")}>
               <span aria-hidden="true">{chat.unread > 99 ? "99+" : chat.unread}</span>
               <span className="sr-only">
-                {t("inbox.carnet.row.unreadCount", { count: chat.unread })}
+                {t("inbox.list.row.unreadCount", { count: chat.unread })}
               </span>
             </span>
           ) : null}
@@ -401,7 +401,7 @@ const ConversationRow = memo(function ConversationRow({
               data-inbox-assignee={mine ? "mine" : "other"}
               className="ms-auto shrink-0 text-xs leading-5 text-muted-foreground"
             >
-              {t(mine ? "inbox.carnet.assignee.mine" : "inbox.carnet.assignee.other")}
+              {t(mine ? "inbox.list.assignee.mine" : "inbox.list.assignee.other")}
             </span>
           ) : null}
         </span>
@@ -770,11 +770,11 @@ export function InboxV3Queue({
   const footer = deriveListFooter({ loaded: chats.length, total: null });
   const footerText =
     footer.kind === "of-total"
-      ? t("inbox.carnet.footer.loadedOf", { count: footer.loaded, total: footer.total })
+      ? t("inbox.list.footer.loadedOf", { count: footer.loaded, total: footer.total })
       : footer.kind === "capped"
-        ? t("inbox.carnet.footer.capped", { count: footer.loaded })
+        ? t("inbox.list.footer.capped", { count: footer.loaded })
         : footer.kind === "loaded-only"
-          ? t("inbox.carnet.footer.loaded", { count: footer.loaded })
+          ? t("inbox.list.footer.loaded", { count: footer.loaded })
           : "";
 
   return (
@@ -821,7 +821,7 @@ export function InboxV3Queue({
             className={cn(
               "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
               queueFilter === "unassigned"
-                ? "border-primary/25 bg-primary-soft text-primary"
+                ? "border-primary/25 bg-primary-soft text-primary-ink"
                 : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
             )}
           >
@@ -845,7 +845,7 @@ export function InboxV3Queue({
                   priorityFilter !== "" ||
                   labelFilter !== "" ||
                   workflowFilter !== "all"
-                    ? "border-primary/25 bg-primary-soft text-primary"
+                    ? "border-primary/25 bg-primary-soft text-primary-ink"
                     : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
               >
@@ -871,7 +871,7 @@ export function InboxV3Queue({
                     className={cn(
                       "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       workflowFilter === filter
-                        ? "border-primary/25 bg-primary-soft text-primary"
+                        ? "border-primary/25 bg-primary-soft text-primary-ink"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                     )}
                   >
@@ -892,7 +892,7 @@ export function InboxV3Queue({
                     className={cn(
                       "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       priorityFilter === value
-                        ? "border-primary/25 bg-primary-soft text-primary"
+                        ? "border-primary/25 bg-primary-soft text-primary-ink"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                     )}
                   >
@@ -915,7 +915,7 @@ export function InboxV3Queue({
                       className={cn(
                         "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                         labelFilter === ""
-                          ? "border-primary/25 bg-primary-soft text-primary"
+                          ? "border-primary/25 bg-primary-soft text-primary-ink"
                           : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                       )}
                     >
@@ -934,7 +934,7 @@ export function InboxV3Queue({
                         className={cn(
                           "inline-flex h-7 max-w-36 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                           labelFilter === label
-                            ? "border-primary/25 bg-primary-soft text-primary"
+                            ? "border-primary/25 bg-primary-soft text-primary-ink"
                             : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                         )}
                       >

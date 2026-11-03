@@ -6,15 +6,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import { deriveInboxLinkState } from "@/components/inbox/inbox-link-state";
 import { ThreadPausedHint } from "@/components/inbox/inbox-thread-link";
-import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";
-import { getInboxThreadCarnetRuntimeTranslation } from "@/lib/i18n/inbox-thread-carnet-runtime";
+import { getInboxListRuntimeTranslation } from "@/lib/i18n/inbox-list-runtime";
+import { getInboxThreadStatesRuntimeTranslation } from "@/lib/i18n/inbox-thread-states-runtime";
 import { render } from "@/test-utils/render";
 
 vi.mock("@/hooks/use-i18n", () => ({
   useI18n: () => ({
     t: (key: string) =>
-      getInboxThreadCarnetRuntimeTranslation("en", key) ??
-      getInboxCarnetRuntimeTranslation("en", key) ??
+      getInboxThreadStatesRuntimeTranslation("en", key) ??
+      getInboxListRuntimeTranslation("en", key) ??
       key,
     locale: "en",
     dir: "ltr",
@@ -35,12 +35,12 @@ describe("composer hint", () => {
     const text = container.textContent ?? "";
     expect(text).toMatch(/Sending is paused/i);
     for (const key of [
-      "inbox.carnet.link.reason.disconnected",
-      "inbox.carnet.link.reason.error",
-      "inbox.carnet.link.reason.offline",
-      "inbox.carnet.link.reason.notLinked",
+      "inbox.list.link.reason.disconnected",
+      "inbox.list.link.reason.error",
+      "inbox.list.link.reason.offline",
+      "inbox.list.link.reason.notLinked",
     ]) {
-      const cause = getInboxCarnetRuntimeTranslation("en", key) ?? "";
+      const cause = getInboxListRuntimeTranslation("en", key) ?? "";
       expect(cause.length).toBeGreaterThan(5);
       expect(text).not.toContain(cause);
     }

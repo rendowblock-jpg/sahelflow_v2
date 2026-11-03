@@ -128,6 +128,26 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             ? { customerId: customer.id, isBlacklisted: customer.isBlacklisted === true }
             : null
         }
+        edit={
+          // Same rule as the PATCH route: customers.manage + customers.contact.update; and the real values must
+          // be readable (a restricted contact has no name/phone to prefill).
+          customer.fieldAccess.manage &&
+          customer.fieldAccess.contactUpdate &&
+          customer.fieldAccess.contact &&
+          customer.name !== null &&
+          customer.phone !== null
+            ? {
+                id: customer.id,
+                name: customer.name,
+                phone: customer.phone,
+                phone2: customer.phone2,
+                wilaya: customer.wilaya,
+                commune: customer.commune,
+                address: customer.address,
+                notes: customer.notes,
+              }
+            : null
+        }
       />
 
       {customer.fieldAccess.risk && customer.isBlacklisted === true ? (

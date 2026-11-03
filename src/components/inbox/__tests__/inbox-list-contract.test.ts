@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";
+import { getInboxListRuntimeTranslation } from "@/lib/i18n/inbox-list-runtime";
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const css = () => read("src/components/inbox/inbox-v3-workspace.module.css");
@@ -53,13 +53,10 @@ describe("row geometry, touch targets, phone, RTL, motion", () => {
     expect(css()).not.toMatch(/(margin|padding|border)-(left|right)|[\s{;]left:|[\s{;]right:|text-align:\s*(left|right)/);
     expect(css()).not.toMatch(/@keyframes|animation:|transition:/);
   });
-  it("carnet decoration is scoped to the preset and defines none of the shared primitives", () => {
+  it("no rule in the module css depends on a colour preset or loads a special face", () => {
     const c = css();
-    expect(c).toContain('html[data-theme-preset="carnet"]');
-    expect(c).toMatch(/Amiri/);
-    expect(c).not.toMatch(/\.carnet-(ruled|margin|stamp)\s*[{,]/);
-    const outside = c.split('html[data-theme-preset="carnet"]')[0]!;
-    expect(outside).not.toMatch(/Amiri|--carnet-/);
+    expect(c).not.toContain("data-theme-preset");
+    expect(c).not.toMatch(/font-family/);
   });
   it("row markup uses logical classes only and no shimmer", () => {
     const q = queue();
@@ -115,15 +112,15 @@ describe("list footer and tabs are honest", () => {
 });
 
 describe("runtime catalog", () => {
-  const src = read("src/lib/i18n/inbox-carnet-runtime.ts");
-  const keys = [...new Set([...src.matchAll(/"(inbox\.carnet\.[A-Za-z.]+)":/g)].map((m) => m[1]!))];
+  const src = read("src/lib/i18n/inbox-list-runtime.ts");
+  const keys = [...new Set([...src.matchAll(/"(inbox\.list\.[A-Za-z.]+)":/g)].map((m) => m[1]!))];
   it("has keys and the same keys in ar, fr and en, all non-empty, same placeholders", () => {
     expect(keys.length).toBeGreaterThan(30);
     for (const k of keys) {
       const ph = (s: string) => (s.match(/\{\{\w+\}\}/g) ?? []).sort().join();
-      const en = getInboxCarnetRuntimeTranslation("en", k);
+      const en = getInboxListRuntimeTranslation("en", k);
       for (const l of LOCALES) {
-        const v = getInboxCarnetRuntimeTranslation(l, k);
+        const v = getInboxListRuntimeTranslation(l, k);
         expect(v, `${l}:${k}`).toBeTruthy();
         expect(ph(v!), `${l}:${k} placeholders`).toBe(ph(en!));
       }
@@ -131,7 +128,7 @@ describe("runtime catalog", () => {
   });
   it("is registered in runtime-translations with one import and one line", () => {
     const rt = read("src/lib/i18n/runtime-translations.ts");
-    expect(rt).toContain('import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";');
-    expect(rt).toContain("getInboxCarnetRuntimeTranslation(locale, key) ??");
+    expect(rt).toContain('import { getInboxListRuntimeTranslation } from "@/lib/i18n/inbox-list-runtime";');
+    expect(rt).toContain("getInboxListRuntimeTranslation(locale, key) ??");
   });
 });

@@ -5,7 +5,7 @@ import { screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InboxLinkSurface } from "@/components/inbox/inbox-link-surface";
-import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";
+import { getInboxListRuntimeTranslation } from "@/lib/i18n/inbox-list-runtime";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import arJson from "@/lib/i18n/locales/ar.json";
 import enJson from "@/lib/i18n/locales/en.json";
@@ -24,7 +24,7 @@ vi.mock("@/hooks/use-i18n", () => ({
   useI18n: () => ({
     t: (key: string) =>
       CATALOGS[harness.locale][key] ??
-      getInboxCarnetRuntimeTranslation(harness.locale, key) ??
+      getInboxListRuntimeTranslation(harness.locale, key) ??
       key,
     locale: harness.locale,
     dir: harness.locale === "ar" ? "rtl" : "ltr",
@@ -55,7 +55,7 @@ function workspace(locale: L, k: (typeof KINDS)[keyof typeof KINDS]) {
   return {
     locale,
     t: (key: string) =>
-      CATALOGS[locale][key] ?? getInboxCarnetRuntimeTranslation(locale, key) ?? key,
+      CATALOGS[locale][key] ?? getInboxListRuntimeTranslation(locale, key) ?? key,
     copy: (key: Parameters<typeof getInboxWorkspaceCopy>[1]) => getInboxWorkspaceCopy(locale, key),
     transport: { reachable: k.reachable, status: k.status, user: null, wsOpen: k.wsOpen },
     dataDegraded: false,

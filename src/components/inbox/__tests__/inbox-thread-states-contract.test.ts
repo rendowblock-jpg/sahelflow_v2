@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { getInboxThreadCarnetRuntimeTranslation } from "@/lib/i18n/inbox-thread-carnet-runtime";
+import { getInboxThreadStatesRuntimeTranslation } from "@/lib/i18n/inbox-thread-states-runtime";
 
 const src = (name: string) => readFileSync(new URL(`../${name}`, import.meta.url), "utf8");
 const thread = src("inbox-v3-thread.tsx");
@@ -53,9 +53,10 @@ describe("slips and the failed send", () => {
     expect(message).toContain("data-bubble-flow={BUBBLE_FLOW}");
     expect(message).toContain("bubbleSide(BUBBLE_FLOW");
   });
-  it("customer slip is the card surface, seller slip is the carnet wash only under carnet", () => {
+  it("customer slip is the card surface, seller slip is the soft primary tint, in every preset", () => {
     expect(message).toContain("bg-card");
-    expect(src("inbox-v3-workspace.module.css")).toMatch(/html\[data-theme-preset="carnet"\]\) \.slipOut[^}]*--carnet-slip-out/);
+    expect(message).toContain("bg-primary-soft");
+    expect(src("inbox-v3-workspace.module.css")).not.toContain("data-theme-preset");
   });
   it("a failed send is a designed object reusing the existing resend path", () => {
     expect(message).toContain("messageVisual(");
@@ -75,21 +76,21 @@ describe("honest copy and RTL-safe classes", () => {
     }
   });
   it("every key exists in ar, fr and en with text", () => {
-    const text = readFileSync(new URL("../../../lib/i18n/inbox-thread-carnet-runtime.ts", import.meta.url), "utf8");
+    const text = readFileSync(new URL("../../../lib/i18n/inbox-thread-states-runtime.ts", import.meta.url), "utf8");
     const keys = [...text.matchAll(/^\s*"(inbox\.thread\.[\w.]+)":/gm)].map((m) => m[1]!);
     expect(keys.length).toBeGreaterThan(30);
     for (const key of new Set(keys))
       for (const locale of ["ar", "fr", "en"] as const)
-        expect(getInboxThreadCarnetRuntimeTranslation(locale, key)?.length ?? 0, `${locale} ${key}`).toBeGreaterThan(0);
+        expect(getInboxThreadStatesRuntimeTranslation(locale, key)?.length ?? 0, `${locale} ${key}`).toBeGreaterThan(0);
   });
   it("never promises that a draft is saved, and never prints the global no-auto-create line", () => {
     for (const locale of ["ar", "fr", "en"] as const) {
       const all = ["inbox.thread.draft.fine", "inbox.thread.draft.title", "inbox.thread.dock.text"]
-        .map((k) => getInboxThreadCarnetRuntimeTranslation(locale, k) ?? "")
+        .map((k) => getInboxThreadStatesRuntimeTranslation(locale, k) ?? "")
         .join(" ");
       expect(all).not.toMatch(/saved|sauvegard|enregistr|محفوظ|حفظ/i);
     }
-    expect(getInboxThreadCarnetRuntimeTranslation("en", "inbox.thread.draft.fine")).toBe(
+    expect(getInboxThreadStatesRuntimeTranslation("en", "inbox.thread.draft.fine")).toBe(
       "AI only suggests. Nothing is created from this draft until you press Approve.",
     );
   });

@@ -275,7 +275,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                   onClick={() => setStep(candidate)}
                   className={cn(
                     "flex h-8 items-center gap-2 rounded-full px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-                    current ? "bg-primary-subtle text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    current ? "bg-primary-subtle text-primary-ink" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   <span

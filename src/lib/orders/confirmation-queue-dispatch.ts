@@ -53,6 +53,11 @@ export interface QueueDecisionOptions {
   fallbackMessage: string;
   /** Translated message used when an order cannot be decided at all. */
   blockedMessage: string;
+  /**
+   * Optional translator for a legacy PATCH refusal (the screen pipes the raw server text through translateServerError).
+   * Without it the raw text is shown as before.
+   */
+  legacyErrorTranslator?: (raw: string) => string;
 }
 
 const DECISION_STORAGE_PREFIX = "sf-order-decision";
@@ -204,10 +209,14 @@ async function dispatchLegacyDecision(
     });
     const body: unknown = await response.json().catch(() => ({}));
     if (!response.ok) {
+      const raw = extractApiErrorMessage(body);
       return {
         orderId: target.id,
         ok: false,
-        message: extractApiErrorMessage(body) ?? options.fallbackMessage,
+        message:
+          raw === undefined
+            ? options.fallbackMessage
+            : (options.legacyErrorTranslator?.(raw) ?? raw),
       };
     }
     return { orderId: target.id, ok: true };

@@ -33,7 +33,6 @@ import type { HeldDiscardUiStatus } from "@/hooks/inbox/held-discard-client";
 import { heldSendView } from "@/lib/whatsapp/held-send";
 import { BUBBLE_FLOW, bubbleSide, messageVisual } from "@/components/inbox/inbox-message-visual";
 import { SignalShape } from "@/components/inbox/inbox-signal-shape";
-import styles from "@/components/inbox/inbox-v3-workspace.module.css";
 
 /** A succeeded outbox already reached WhatsApp. A late error receipt must not offer a resend. */
 export function outboxAllowsResend(
@@ -368,7 +367,7 @@ export const MessageBubble = memo(function MessageBubble({
             "max-w-[min(46rem,75%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
             inbound
               ? "border-border/70 bg-card text-foreground"
-              : cn("border-primary/20 bg-primary-soft text-foreground", styles.slipOut),
+              : "border-primary/20 bg-primary-soft text-foreground",
             visual.edge === "destructive" && "border-destructive",
             // Tail corner sits on the group's last bubble; continuation
             // bubbles soften their connecting corners (WhatsApp grouping).
@@ -580,7 +579,7 @@ export const MessageBubble = memo(function MessageBubble({
               className={cn(
                 "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 candidate
-                  ? "bg-primary-soft text-primary"
+                  ? "bg-primary-soft text-primary-ink"
                   : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
               )}
             >

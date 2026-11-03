@@ -79,7 +79,8 @@ const VARIANTS = [
   { id: "demo-variant-07", productId: "demo-product-10", name: "Camel", sku: "DZ-MODE-002-CM", price: 5300, stock: 12, sortOrder: 1 },
 ] as const;
 
-const CUSTOMERS = [
+/** The demo customers: name, phone, wilaya, commune, address. Wilaya and commune are the names data/wilayas.json and data/communes.json use (pinned by a test). */
+export const ALGERIAN_DEMO_CUSTOMERS = [
   ["Fatima Zohra Benamar", "0550001101", "Alger", "Bab Ezzouar", "Cité AADL, Bâtiment 14"],
   ["Yacine Boudiaf", "0660001102", "Oran", "Bir El Djir", "Hai Sabah, îlot 18"],
   ["Amel Khelifi", "0770001103", "Sétif", "El Eulma", "Cité 1000 logements"],
@@ -91,19 +92,19 @@ const CUSTOMERS = [
   ["Sara Bouzid", "0770001109", "Annaba", "El Bouni", "Cité 8 Mars"],
   ["Sofiane Merabet", "0550001110", "Tlemcen", "Mansourah", "Boulevard Imama"],
   ["Khadidja Rahmani", "0660001111", "Médéa", "Berrouaghia", "Cité El Wiam"],
-  ["Adel Benyahia", "0770001112", "Djelfa", "Aïn Oussera", "Quartier 5 Juillet"],
+  ["Adel Benyahia", "0770001112", "Aïn Ouessara", "Ain Oussera", "Quartier 5 Juillet"],
   ["Lamia Hamdi", "0550001113", "Skikda", "Azzaba", "Cité des Frères"],
   ["Nabil Ouali", "0660001114", "Mostaganem", "Mostaganem", "Salamandre"],
   ["Dounia Haddad", "0770001115", "Chlef", "Chlef", "Hay Nasr"],
   ["Karim Meziane", "0550001116", "Boumerdès", "Boudouaou", "Cité 800 logements"],
   ["Meriem Touati", "0660001117", "Alger", "Birkhadem", "Coopérative El Feth"],
-  ["Fares Bensaïd", "0770001118", "Oran", "Es Sénia", "Cité 2000 logements"],
-  ["Wissam Brahimi", "0550001119", "Sétif", "Sétif", "El Hidhab"],
-  ["Omar Maouche", "0660001120", "Béjaïa", "Béjaïa", "Ihaddaden"],
+  ["Fares Bensaïd", "0770001118", "Oran", "Es Senia", "Cité 2000 logements"],
+  ["Wissam Brahimi", "0550001119", "Sétif", "Setif", "El Hidhab"],
+  ["Omar Maouche", "0660001120", "Béjaïa", "Bejaia", "Ihaddaden"],
   ["Nadia Slimani", "0770001121", "Constantine", "Constantine", "Sidi Mabrouk"],
   ["Bilal Ziani", "0550001122", "Tiaret", "Tiaret", "Cité Sonatiba"],
-  ["Houda Gacem", "0660001123", "Tipaza", "Koléa", "Cité 500 logements"],
-  ["Reda Mokrani", "0770001124", "M'Sila", "M'Sila", "Cité 206 logements"],
+  ["Houda Gacem", "0660001123", "Tipaza", "Kolea", "Cité 500 logements"],
+  ["Reda Mokrani", "0770001124", "M'Sila", "M'sila", "Cité 206 logements"],
 ] as const;
 
 const ORDER_STATUSES = [
@@ -353,7 +354,7 @@ export async function seedAlgerianDemoData(
     });
 
     await client.customer.createMany({
-      data: CUSTOMERS.map(([name, phone, wilaya, commune, address], index) => ({
+      data: ALGERIAN_DEMO_CUSTOMERS.map(([name, phone, wilaya, commune, address], index) => ({
         id: `demo-customer-${String(index + 1).padStart(2, "0")}`,
         name,
         phone,
@@ -387,7 +388,7 @@ export async function seedAlgerianDemoData(
     }> = [];
 
     for (let index = 0; index < 48; index += 1) {
-      const customerIndex = index % CUSTOMERS.length;
+      const customerIndex = index % ALGERIAN_DEMO_CUSTOMERS.length;
       const customerId = `demo-customer-${String(customerIndex + 1).padStart(2, "0")}`;
       const productA = PRODUCTS[(index * 3) % PRODUCTS.length]!;
       const productB = PRODUCTS[(index * 5 + 2) % PRODUCTS.length]!;
@@ -409,7 +410,7 @@ export async function seedAlgerianDemoData(
       const deliveredAt = ["delivered", "returned"].includes(status)
         ? daysAfter(createdAt, 1 + (index % 3))
         : null;
-      const customer = CUSTOMERS[customerIndex]!;
+      const customer = ALGERIAN_DEMO_CUSTOMERS[customerIndex]!;
       const orderId = `demo-order-${String(index + 1).padStart(3, "0")}`;
       const orderNumber = `DZ-DEMO-${String(index + 1).padStart(4, "0")}`;
       const collected = status === "delivered" || status === "returned";
@@ -673,7 +674,7 @@ export async function seedAlgerianDemoData(
 
     for (let index = 0; index < conversationCustomers.length; index += 1) {
       const customerIndex = conversationCustomers[index]!;
-      const customer = CUSTOMERS[customerIndex]!;
+      const customer = ALGERIAN_DEMO_CUSTOMERS[customerIndex]!;
       const conversationId = `demo-conversation-${String(index + 1).padStart(2, "0")}`;
       const order = createdOrders.find((candidate) => candidate.customerId === `demo-customer-${String(customerIndex + 1).padStart(2, "0")}`);
       await client.conversation.create({

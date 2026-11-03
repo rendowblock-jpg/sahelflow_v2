@@ -1081,3 +1081,31 @@ after the pull requests then in flight had merged:
 - **Not Stable:** Beta/Stable authority is unchanged. This authority converts
   no ledger row and does not turn source or CI evidence into installed or
   live-provider evidence. #306 logout stays LAST.
+
+## FD-084 — One signed successor Internal.48: the reviewed pull requests of 3 November (2026-11-03, ADOPTED)
+
+On 2026-11-03 the Founder directed: "I like the work that you did but we don't
+have a lot of time left. I want you to complete the rest of the work
+professionally, then merge everything to main, then make the next signed
+release. When you make that, I will install it and we can go from there and
+continue the work." That directive adopts the next customer-online release
+authority as one signed successor, to be built from the `main` tip this release
+pull request merges into:
+
+- **Package:** app `1.0.0-internal.48` / MSI `1.0.0.48`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
+  offline-signed. Trial origins stay `license.sahelflow.com` and
+  `activate.sahelflow.com`.
+- **Content:** protected `main` at the tip this pull request merges into: the
+  Internal.47 tip (`29b8d6e6…`) plus fourteen reviewed pull requests, #656 to
+  #662, #664 and #667 to #672, merged together with this authority commit. The
+  list and the evidence are in `CHANGELOG.md`, section 2026-11-03. #663 and
+  #665 (compile-cache flush designs that failed their Windows probes) are not
+  part of it.
+- **Gates:** this release-authority PR merges only after its full Required
+  battery is green. The signed train builds from that exact `main` tip and
+  nothing else merges while it runs. The tag, digests and publish time are
+  recorded only after the signed run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row and does not turn source or CI evidence into installed or
+  live-provider evidence. #306 logout stays LAST.

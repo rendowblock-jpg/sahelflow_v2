@@ -643,7 +643,7 @@ export function Topbar({
               aria-label={memberIdentity?.displayName ?? t("topbar.user")}
             >
               <Avatar className="size-7 ring-1 ring-border">
-                <AvatarFallback className="bg-primary-soft text-xs font-semibold text-primary">
+                <AvatarFallback className="bg-primary-soft text-xs font-semibold text-primary-ink">
                   {memberIdentity?.displayName ? (
                     memberIdentity.displayName.charAt(0).toUpperCase()
                   ) : (

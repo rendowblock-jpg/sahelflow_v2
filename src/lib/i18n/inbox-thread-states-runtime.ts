@@ -36,7 +36,6 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.thread.draft.dismiss": "Dismiss",
     "inbox.thread.draft.fine": "AI only suggests. Nothing is created from this draft until you press Approve.",
     "inbox.thread.draft.approved": "Order created",
-    "inbox.thread.draft.stamp": "Approved",
     "inbox.thread.draft.orderId": "Order {{id}}",
     "inbox.thread.draft.status": "Status: {{status}}",
     "inbox.thread.draft.open": "Open the order",
@@ -82,7 +81,6 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.thread.draft.dismiss": "Écarter",
     "inbox.thread.draft.fine": "L'IA ne fait que suggérer. Rien n'est créé à partir de ce brouillon tant que vous n'appuyez pas sur Approuver.",
     "inbox.thread.draft.approved": "Commande créée",
-    "inbox.thread.draft.stamp": "Approuvé",
     "inbox.thread.draft.orderId": "Commande {{id}}",
     "inbox.thread.draft.status": "Statut : {{status}}",
     "inbox.thread.draft.open": "Ouvrir la commande",
@@ -128,7 +126,6 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.thread.draft.dismiss": "تجاهل",
     "inbox.thread.draft.fine": "الذكاء الاصطناعي يقترح فقط. لا يُنشأ شيء من هذه المسودة حتى تضغط اعتماد.",
     "inbox.thread.draft.approved": "تم إنشاء الطلب",
-    "inbox.thread.draft.stamp": "معتمد",
     "inbox.thread.draft.orderId": "الطلب {{id}}",
     "inbox.thread.draft.status": "الحالة: {{status}}",
     "inbox.thread.draft.open": "فتح الطلب",
@@ -146,7 +143,7 @@ const translations: Record<Locale, Record<string, string>> = {
   },
 };
 
-export function getInboxThreadCarnetRuntimeTranslation(
+export function getInboxThreadStatesRuntimeTranslation(
   locale: Locale,
   key: string,
 ): string | undefined {

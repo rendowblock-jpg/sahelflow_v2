@@ -38,7 +38,7 @@ const TONE_CLASSES: Record<IconTileTone, { tinted: string; bordered: string }> =
       bordered: "border-border",
     },
     primary: {
-      tinted: "bg-primary-soft text-primary",
+      tinted: "bg-primary-soft text-primary-ink",
       bordered: "border-primary/20",
     },
     success: {

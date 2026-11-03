@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_PRESET } from "@/lib/appearance/look";
+import { DEFAULT_PRESET } from "@/lib/appearance/preset";
 import { RUNTIME_LAUNCH_APPEARANCE_PATH } from "@/lib/runtime-auth";
 import { LAUNCH_APPEARANCE_FILE, readLaunchAppearance } from "@/lib/runtime/launch-appearance";
 
@@ -136,14 +136,11 @@ describe("how the Rust shell reads it", () => {
 
   it("understands exactly the language, mode and preset tags the workspace writes", () => {
     const providerSource = read("src/components/theme-provider.tsx");
-    const presets = quotedWords(read("src/lib/appearance/look.ts"), /export const PRESETS = \[([^\]]*)\]/);
+    const presets = quotedWords(read("src/lib/appearance/preset.ts"), /export const PRESETS = \[([^\]]*)\]/);
     const modes = quotedWords(providerSource, /export type ThemeMode = ([^;]*);/);
     const locales = ["ar", "fr", "en"];
 
-    // Carnet is recorded for the card but launch_screen.rs does not have a Preset::Carnet arm yet (it then wears its
-    // Sahel default). When the Rust side learns "carnet", this list must become empty: the equality below fails first.
-    const NATIVE_PENDING = ["carnet"];
-    expect(tagsIn("preset_from_tag").sort()).toEqual(presets.filter((preset) => !NATIVE_PENDING.includes(preset)).sort());
+    expect(tagsIn("preset_from_tag").sort()).toEqual([...presets].sort());
     expect(tagsIn("theme_from_tag").sort()).toEqual([...modes].sort());
     expect(tagsIn("locale_from_tag").sort()).toEqual([...locales].sort());
 
@@ -162,8 +159,8 @@ describe("how the Rust shell reads it", () => {
   it("falls back to the workspace default (dark, Sahel) when nothing is recorded", () => {
     expect(rust).toMatch(/pub const DEFAULT: Appearance = Appearance \{\s*theme: Theme::Dark,\s*preset: Preset::Sahel,/);
     expect(read("src/app/layout.tsx")).toContain('hasThemeCookie ? themeCookie : "dark"');
-    // The workspace itself now defaults to Carnet (lib/appearance/look.ts); the native card still defaults to Sahel.
-    expect(DEFAULT_PRESET).toBe("carnet");
-    expect(read("src/app/layout.tsx")).toContain("resolveLook({ presetCookie, lookCookie }).preset");
+    // The workspace and the native card default to the same preset (lib/appearance/preset.ts).
+    expect(DEFAULT_PRESET).toBe("sahel");
+    expect(read("src/app/layout.tsx")).toContain("resolvePreset({ presetCookie })");
   });
 });

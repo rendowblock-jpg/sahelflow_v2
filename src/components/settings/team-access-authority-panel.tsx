@@ -563,7 +563,7 @@ export function TeamAccessAuthorityPanel() {
 
         <ul className="mt-4 divide-y divide-border/70 rounded-surface border border-border/80 bg-card">
           <li className="flex items-center gap-3 p-4">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-subtle text-primary-ink">
               <Crown className="size-4" aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
@@ -713,7 +713,7 @@ export function TeamAccessAuthorityPanel() {
                 key={key}
                 className="flex gap-3 rounded-surface border border-border/80 bg-card p-4"
               >
-                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-subtle text-caption font-semibold text-primary tabular-nums">
+                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary-subtle text-caption font-semibold text-primary-ink tabular-nums">
                   {index + 1}
                 </span>
                 <p className="text-body-sm text-muted-foreground">{c(key)}</p>

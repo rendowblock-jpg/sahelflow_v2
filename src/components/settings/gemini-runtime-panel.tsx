@@ -76,7 +76,7 @@ function ChoiceCard({
         <span className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-foreground">{title}</span>
           {badge ? (
-            <span className="rounded-control border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-caption font-medium text-primary">
+            <span className="rounded-control border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-caption font-medium text-primary-ink">
               {badge}
             </span>
           ) : null}

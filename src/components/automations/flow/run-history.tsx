@@ -22,7 +22,7 @@ const STATUS_LOOK: Record<string, { icon: LucideIcon; tone: string }> = {
   dry_run: { icon: CircleDashed, tone: "text-info-ink bg-info-soft" },
   waiting: { icon: Clock, tone: "text-info-ink bg-info-soft" },
   queued: { icon: CircleDashed, tone: "text-muted-foreground bg-muted" },
-  running: { icon: CircleDashed, tone: "text-primary bg-primary-soft" },
+  running: { icon: CircleDashed, tone: "text-primary-ink bg-primary-soft" },
 };
 
 function statusLabel(status: string, c: ReturnType<typeof useAutomationCopy>): string {

@@ -53,6 +53,11 @@ interface ErrorRule {
 
 // Ordered list — first match wins. Keep specific phrases before generic ones.
 const RULES: readonly ErrorRule[] = [
+  // Order cannot be confirmed: not enough stock (409 CONFLICT). The producers (manual-confirmation.ts, product-stock-model.ts)
+  // throw "Insufficient available stock for product '<id>'" / "... for variant '<id>'". FIRST on purpose: the text carries an id
+  // inside quotes, and no id may ever be able to trigger a rule further down. The seller sentence must not show the id.
+  { match: "insufficient available stock", key: "orders.errors.insufficientStock" },
+
   // Auth
   { match: "incorrect pin", key: "auth.incorrectPin" },
   { match: "incorrect login or pin", key: "auth.incorrectCredentials" },
@@ -90,6 +95,14 @@ const RULES: readonly ErrorRule[] = [
   { match: "stop-desk pickup and has no delivery address", key: "deliveries.errors.stopDeskNotBookable" },
   { match: "must be confirmed before shipping", key: "deliveries.errors.mustBeConfirmed" },
   { match: "pas de numéro de suivi", key: "deliveries.errors.noTrackingNumber" },
+
+  // Customers / products: refusals (409 CONFLICT) the seller can act on. Server texts stay byte-identical.
+  { match: "cannot delete customer with", key: "customers.errors.hasOrders" },
+  { match: "customer with phone", key: "customers.errors.phoneExists" },
+  // The other two texts customer-service.ts throws for the same refusal: create/update race on the unique index, and update.
+  { match: "customer with this phone number", key: "customers.errors.phoneExists" },
+  { match: "already used by another customer", key: "customers.errors.phoneExists" },
+  { match: "product with sku", key: "products.errors.skuExists" },
 
   // Validation
   { match: "invalid wilaya", key: "common.invalidWilaya" },

@@ -59,7 +59,7 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(appearance).toContain('from "@/components/theme-provider"');
     expect(appearance).not.toContain('from "next-themes"');
     expect(provider).toContain("type ThemePreset");
-    expect(read("src/lib/appearance/look.ts")).toContain('export const PRESETS = ["carnet", "sahel", "atlas", "oasis", "dune"] as const');
+    expect(read("src/lib/appearance/preset.ts")).toContain('export const PRESETS = ["sahel", "atlas", "oasis", "dune"] as const');
     expect(provider).toContain("sahelflow-theme-preset");
     expect(provider).toContain("let runtimeThemeOverride: ThemeMode | null = null");
     expect(provider).toContain("let runtimePresetOverride: ThemePreset | null = null");
@@ -72,7 +72,7 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(provider).toContain("beginAppearanceTransaction()");
     expect(provider).toContain("notifyAppearanceChanged();");
     expect(rootLayout).toContain("appearanceBootstrapScript(");
-    expect(read("src/lib/appearance/look.ts")).toContain("e.dataset.themePreset=p");
+    expect(read("src/lib/appearance/preset.ts")).toContain("e.dataset.themePreset=p");
     expect(productSystem).toContain('html[data-theme-preset="atlas"]');
     expect(productSystem).toContain('html[data-theme-preset="oasis"]');
     expect(productSystem).toContain('html[data-theme-preset="dune"]');
