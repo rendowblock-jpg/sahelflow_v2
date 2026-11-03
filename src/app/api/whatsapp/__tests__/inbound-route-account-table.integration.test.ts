@@ -253,3 +253,41 @@ describe("POST /api/whatsapp/inbound, route table (F-0024)", () => {
     await expect(db.providerIngressEvent.count()).resolves.toBe(0);
   });
 });
+
+/**
+ * The same route also takes the seller's own phone-sent messages (fromMe). They
+ * ask the same account question, so they must get the same codes and the same
+ * remembered account, and write nothing when refused.
+ */
+function phoneEnvelope(id: string, accountId = ACCOUNT_ID): Record<string, unknown> {
+  const base = envelope(id, accountId) as { message: { key: Record<string, unknown> } };
+  return { ...base, message: { ...base.message, key: { ...base.message.key, fromMe: true } } };
+}
+
+describe("POST /api/whatsapp/inbound, phone-sent (fromMe) messages follow the same account rules (F-0024)", () => {
+  it.each([
+    { name: "status call times out, nothing remembered", call: () => Promise.reject(timeout()), accountId: ACCOUNT_ID, httpStatus: 503, code: "WHATSAPP_ACCOUNT_UNAVAILABLE" },
+    { name: "sidecar says disconnected", call: () => Promise.resolve({ status: "disconnected", user: null, hasQr: false }), accountId: ACCOUNT_ID, httpStatus: 409, code: "WHATSAPP_ACCOUNT_NOT_CONNECTED" },
+    { name: "message of another paired account", call: () => Promise.resolve(connected()), accountId: OTHER_ACCOUNT_ID, httpStatus: 409, code: "WHATSAPP_ACCOUNT_MISMATCH" },
+  ])("$name -> $httpStatus $code and no message row", async ({ call, accountId, httpStatus, code }) => {
+    harness.status.mockImplementation(call);
+
+    const response = await post(phoneEnvelope("PHONE-REFUSED", accountId));
+
+    expect(response.status).toBe(httpStatus);
+    await expect(response.json()).resolves.toMatchObject({ code });
+    await expect(db.message.count()).resolves.toBe(0);
+  });
+
+  it("a timeout right after a good answer still stores the message (remembered account) -> 201", async () => {
+    harness.status.mockResolvedValueOnce(connected());
+    await post(phoneEnvelope("PHONE-CACHE-1"));
+
+    harness.status.mockRejectedValueOnce(timeout());
+    const response = await post(phoneEnvelope("PHONE-CACHE-2"));
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ acknowledged: true, status: "stored" });
+    await expect(db.message.count()).resolves.toBe(2);
+  });
+});

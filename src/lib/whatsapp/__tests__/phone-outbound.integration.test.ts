@@ -5,7 +5,6 @@ process.env.SF_MASTER_KEY =
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { db, shopContext } from "@/lib/db";
-import { ConflictError } from "@/types/errors";
 import { persistWhatsAppPhoneOutbound } from "../phone-outbound";
 
 const ACCOUNT_ID = "213555999000:12@s.whatsapp.net";
@@ -92,7 +91,10 @@ describe("phone-sent fromMe messages", () => {
         context,
         envelope(PROVIDER_ID, "213555888000:12@s.whatsapp.net"),
       ),
-    ).rejects.toBeInstanceOf(ConflictError);
+    ).rejects.toMatchObject({
+      code: "WHATSAPP_ACCOUNT_MISMATCH",
+      statusCode: 409,
+    });
     expect(await db.message.count()).toBe(0);
   });
 
