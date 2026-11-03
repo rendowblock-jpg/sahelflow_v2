@@ -15,7 +15,7 @@
  * (keeps the 197KB communes.json out of the client bundle — T-019).
  */
 
-import { useEffect, useId, useState, useMemo } from "react";
+import { useEffect, useId, useRef, useState, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useI18n } from "@/hooks/use-i18n";
+import { resolveCommuneName } from "@/lib/commune-name";
 import type { Locale } from "@/lib/i18n";
 import {
   createStorefrontTranslator,
@@ -154,6 +155,9 @@ function WilayaCommuneSelectCore({
 
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [communesLoading, setCommunesLoading] = useState(false);
+  // The wilaya code `communes` was fetched for. A pre-fill changes wilaya and commune in one render, while the list
+  // still belongs to the previous wilaya; the stored commune is only matched against the list of ITS wilaya.
+  const [communesWilaya, setCommunesWilaya] = useState<number | undefined>(undefined);
 
   const wilayaCode = useMemo(
     () => wilayas.find((w) => w.name === wilaya)?.code,
@@ -173,7 +177,10 @@ function WilayaCommuneSelectCore({
     fetch(`/api/communes?wilaya=${wilayaCode}`)
       .then((res) => (res.ok ? res.json() : { communes: [] }))
       .then((data) => {
-        if (!cancelled) setCommunes(data.communes ?? []);
+        if (!cancelled) {
+          setCommunes(data.communes ?? []);
+          setCommunesWilaya(wilayaCode);
+        }
       })
       .catch(() => {
         if (!cancelled) setCommunes([]);
@@ -186,6 +193,30 @@ function WilayaCommuneSelectCore({
     };
   }, [wilayaCode]);
 
+  // A stored commune can be spelled differently from the list ("M'Sila" stored, "M'sila" listed). Show the listed
+  // option, and tell the form the listed name once so what it validates and saves is the name the list uses.
+  // An unknown or ambiguous commune stays as it is (resolveCommuneName returns it unchanged).
+  const resolvedCommune = useMemo(
+    () =>
+      commune && communesWilaya === wilayaCode && communes.length > 0
+        ? resolveCommuneName(wilaya, commune, communes)
+        : commune,
+    [commune, communes, communesWilaya, wilaya, wilayaCode],
+  );
+  // The pair last reported, so a parent that keeps the old value is told once, not on every render. Cleared as soon as
+  // the value is in step again, so picking another record with the same spelling is reported again.
+  const reportedRef = useRef("");
+  useEffect(() => {
+    if (resolvedCommune === commune) {
+      reportedRef.current = "";
+      return;
+    }
+    const token = `${wilaya}\u0000${commune}\u0000${resolvedCommune}`;
+    if (reportedRef.current === token) return;
+    reportedRef.current = token;
+    onCommuneChange(resolvedCommune);
+  }, [wilaya, commune, resolvedCommune, onCommuneChange]);
+
   /** Returns the localized name for a wilaya or commune. */
   function localizeName(item: { name: string; nameAr: string }): string {
     if (locale === "ar") return item.nameAr || item.name;
@@ -196,6 +227,15 @@ function WilayaCommuneSelectCore({
     onWilayaChange(v);
     onCommuneChange(""); // reset commune when wilaya changes
     setCommunes([]);
+  }
+
+  // Radix keeps a hidden native <select> in step with `value`. When that value has no <option> (yet) - the list for the
+  // new wilaya is still loading, or the pre-filled name is not in it - the browser reads the native value as "" and
+  // Radix reports it as a choice. This select has no empty item, so "" is never the seller's choice: passing it on
+  // wiped the commune a saved customer had just pre-filled, on the first pick only (the list is loaded by the second).
+  function handleCommuneSelect(v: string) {
+    if (v === "") return;
+    onCommuneChange(v);
   }
 
   function handleSearchPick(wilayaName: string, communeName: string) {
@@ -263,8 +303,8 @@ function WilayaCommuneSelectCore({
           </Label>
         )}
         <Select
-          value={commune}
-          onValueChange={onCommuneChange}
+          value={resolvedCommune}
+          onValueChange={handleCommuneSelect}
           disabled={disabled || !wilaya}
         >
           <SelectTrigger
