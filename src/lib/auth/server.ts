@@ -5,6 +5,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { logAudit } from "@/lib/audit";
+import { qlogRecord } from "@/lib/runtime/qlog";
 import {
   openAuthSecretValue,
   sealAuthSecretValue,
@@ -452,6 +453,7 @@ function startSessionTouch(sessionId: string, now: Date): boolean {
     attempt,
   });
 
+  const qlogT0 = Date.now(); // LAB ONLY (F-0016 qlog): the write is NOT awaited
   let write: Promise<{ count: number }>;
   try {
     write = Promise.resolve(
@@ -465,6 +467,7 @@ function startSessionTouch(sessionId: string, now: Date): boolean {
   }
   void write.then(
     (refreshed) => {
+      qlogRecord({ kind: "session-touch", dur: Date.now() - qlogT0 }); // LAB ONLY
       if (refreshed.count !== 1) {
         // Revoked or deleted between the read and this write: refuse the
         // session from its next request on. A session cannot authenticate
@@ -476,6 +479,7 @@ function startSessionTouch(sessionId: string, now: Date): boolean {
       }
     },
     () => {
+      qlogRecord({ kind: "session-touch", dur: Date.now() - qlogT0, err: true }); // LAB ONLY
       // Best effort: retry after a short back-off, unless a newer attempt
       // has already replaced this one.
       const current = sessionTouchMemo.get(sessionId);

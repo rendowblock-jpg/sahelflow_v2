@@ -59,6 +59,10 @@ export async function register(): Promise<void> {
     requestBackgroundStart,
   } = await import("./lib/runtime/background-start");
   if (isPackagedDesktopRuntime()) {
+    // LAB ONLY (F-0016): event-loop lag recorder, not awaited, never throws.
+    void import("./lib/runtime/lag-recorder")
+      .then(({ startLagRecorder }) => startLagRecorder())
+      .catch(() => undefined);
     // Next.js awaits register() before answering the first request, so the
     // workers must not load here: see lib/runtime/background-start.ts.
     const startDeferred = () => {
