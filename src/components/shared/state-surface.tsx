@@ -26,7 +26,7 @@ const TONE_CLASSES: Record<
     frame: "border-border/70 bg-background",
   },
   info: {
-    icon: "border-primary/20 bg-primary-soft text-primary",
+    icon: "border-primary/20 bg-primary-soft text-primary-ink",
     frame: "border-primary/15 bg-primary-subtle",
   },
   success: {

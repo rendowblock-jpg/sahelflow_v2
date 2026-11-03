@@ -202,7 +202,7 @@ export function WhatsAppPairingDialog({
           <div className="px-6 py-6">
             {phase === "starting" || phase === "waiting-qr" ? (
               <div className="flex min-h-72 flex-col items-center justify-center text-center">
-                <div className="flex size-14 items-center justify-center rounded-surface border bg-primary-soft text-primary">
+                <div className="flex size-14 items-center justify-center rounded-surface border bg-primary-soft text-primary-ink">
                   <Loader2 className="size-6 animate-spin" aria-hidden="true" />
                 </div>
                 <h3 className="mt-5 text-base font-semibold">

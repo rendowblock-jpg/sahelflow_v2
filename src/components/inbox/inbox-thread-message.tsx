@@ -579,7 +579,7 @@ export const MessageBubble = memo(function MessageBubble({
               className={cn(
                 "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 candidate
-                  ? "bg-primary-soft text-primary"
+                  ? "bg-primary-soft text-primary-ink"
                   : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
               )}
             >

@@ -84,7 +84,7 @@ export function PhotoUpload({
       >
         <Avatar className={cn("size-full ring-1 ring-border", !disabled && "group-hover:ring-primary")}>
           {value ? <AvatarImage src={value} alt="" /> : null}
-          <AvatarFallback className="bg-primary-soft text-title-2 text-primary">
+          <AvatarFallback className="bg-primary-soft text-title-2 text-primary-ink">
             {fallback.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
