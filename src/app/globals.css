@@ -64,6 +64,7 @@
   --color-success-ink: var(--success-ink);
   --color-warning-ink: var(--warning-ink);
   --color-info-ink: var(--info-ink);
+  --color-primary-ink: var(--primary-ink);
   --color-surface-0: var(--surface-0);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
@@ -214,6 +215,9 @@
   --success-ink: color-mix(in oklch, var(--success) 80%, black);
   --warning-ink: color-mix(in oklch, var(--warning) 80%, black);
   --info-ink: color-mix(in oklch, var(--info) 80%, black);
+  /* The primary has an ink too (3 Nov 2026, F-0013): text-primary on bg-primary-subtle|soft|strong measured 4.13 to 4.49
+     in the lab. Same 20% toward black; it resolves per look because the look sets --primary on this same element. */
+  --primary-ink: color-mix(in oklch, var(--primary) 80%, black);
 
   /* 27 Oct 2026: destructive 0.577 -> 0.553, success 0.52 -> 0.51, warning 0.55 -> 0.543 (hue and chroma unchanged).
      A 4% primary tint, the selected table row, darkens its surface enough to take these three texts under 4.5:1
@@ -281,6 +285,7 @@
   --success-ink: var(--success);
   --warning-ink: var(--warning);
   --info-ink: var(--info);
+  --primary-ink: var(--primary);
 
   /* ── Named shadow system (dark mode) ── */
   --shadow-btn-rested:

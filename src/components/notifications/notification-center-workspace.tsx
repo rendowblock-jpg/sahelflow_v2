@@ -265,7 +265,7 @@ export function NotificationCenterWorkspace() {
                 >
                   {t(`notifications.filter.${value}`)}
                   {value === "unread" && feed.unreadCount > 0 ? (
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-soft px-1.5 text-caption font-semibold tabular-nums text-primary">
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-soft px-1.5 text-caption font-semibold tabular-nums text-primary-ink">
                       <span dir="ltr">{feed.unreadCount}</span>
                       <span className="sr-only">{t("notifications.unread")}</span>
                     </span>

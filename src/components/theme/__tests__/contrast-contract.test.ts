@@ -1036,7 +1036,11 @@ describe("accessibility matrix: the four color-contrast causes (carnet, light an
  * Surfaces: table.tsx hovers a row with bg-muted/50 and selects it with bg-muted; the data tables sit on the page or on a
  * card; the selected-row case above is the 4% primary tint over the card; the sidebar is the desk.
  */
-const FEEDBACK_KINDS = ["destructive", "success", "warning", "info"] as const;
+/**
+ * "primary" joined the four on 3 Nov 2026 (F-0013): text-primary on bg-primary-soft|subtle|strong measured 4.13 to 4.49
+ * in the lab (axe, light mode) because there was no --primary-ink. It is not a feedback colour, but it follows the rule.
+ */
+const FEEDBACK_KINDS = ["destructive", "success", "warning", "info", "primary"] as const;
 type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
 const TINT_STEPS = ["subtle", "soft", "strong"] as const;
 type ChipSurface = { name: string; base: string; over?: { token: string; alpha: number } };
@@ -1112,11 +1116,18 @@ function classTokens(literal: string): Set<string> {
   return new Set(literal.replace(/["'`${}()?]/g, " ").split(/\s+/).filter((token) => token.length > 0));
 }
 
-/** The kinds for which `tokens` hold a tint background (bg-<kind>-subtle|soft|strong or bg-<kind>/N) AND the bare text-<kind>. */
+/** A Tailwind palette tint, `bg-red-500/10` (a palette colour at an opacity). Not a token, but the same kind of chip. */
+const PALETTE_TINT = /^bg-[a-z]+-\d{2,3}\/(\d+|\[[\d.]+\])$/;
+
+/**
+ * The kinds for which `tokens` hold a tint background (bg-<kind>-subtle|soft|strong, bg-<kind>/N or a palette tint
+ * bg-<colour>-<shade>/N) AND the bare text-<kind>.
+ */
 function feedbackPairsIn(tokens: Set<string>): FeedbackKind[] {
+  const paletteTint = [...tokens].some((token) => PALETTE_TINT.test(token));
   return FEEDBACK_KINDS.filter((kind) => {
     const tint = new RegExp(`^bg-${kind}(-(subtle|soft|strong)|/(\\d+|\\[[\\d.]+\\]))$`);
-    return [...tokens].some((token) => tint.test(token)) && tokens.has(`text-${kind}`);
+    return ([...tokens].some((token) => tint.test(token)) || paletteTint) && tokens.has(`text-${kind}`);
   });
 }
 
@@ -1204,5 +1215,60 @@ describe("feedback ink: a feedback colour on its own tint (light, five looks)", 
       for (const hit of bareFeedbackPairs(readFileSync(file, "utf8"))) offenders.push(`${file.slice(srcDir.length)}:${hit}`);
     }
     expect(offenders, `${offenders.length} places use the bare colour on its tint, use text-<kind>-ink: ${offenders.slice(0, 20).join(", ")}`).toEqual([]);
+  });
+});
+
+/*
+ * F-0013 (3 Nov 2026), measured in the lab (Windows, axe, light mode, 294 default-look visits): five places a hair under
+ * 4.5:1. text-primary on bg-primary-soft (avatar initials 4.43 to 4.49 at 18 px; the returns badge 4.13 to 4.33 at
+ * 12 px) and text-destructive on bg-red-500/10 (the risk badges 4.37 to 4.40 at 12 px). The ink tokens were there for
+ * the four feedback colours but not for the primary, and the scanner above only looked for the token tints
+ * (bg-<kind>-soft), so a palette tint (bg-red-500/10) and the primary tint slipped through. Both are covered now.
+ */
+describe("ink on a tint, part two: the primary ink and palette tints (F-0013)", () => {
+  it("source scan, the scanner itself: also finds the primary tints and palette tints (bg-red-500/10); ignores the ink, solid fills, hover tints and other text", () => {
+    expect(bareFeedbackPairs('c = "bg-primary-soft text-primary";')).toEqual(["1 primary"]);
+    expect(bareFeedbackPairs('c = "rounded bg-primary-subtle text-caption text-primary";')).toEqual(["1 primary"]);
+    expect(bareFeedbackPairs('c = "border-primary/20 bg-primary/10 text-primary";')).toEqual(["1 primary"]);
+    expect(bareFeedbackPairs('s = { bg: "bg-primary-soft", text: "text-primary" };')).toEqual(["1 primary"]);
+    expect(bareFeedbackPairs('c = "bg-red-500/10 text-destructive dark:text-red-400";')).toEqual(["1 destructive"]);
+    expect(bareFeedbackPairs('c = "bg-emerald-500/10 text-success dark:text-emerald-400";')).toEqual(["1 success"]);
+    expect(bareFeedbackPairs('c = "bg-amber-500/[0.12] text-warning";')).toEqual(["1 warning"]);
+    expect(bareFeedbackPairs('c = "bg-primary-soft text-primary-ink";')).toEqual([]);
+    expect(bareFeedbackPairs('c = "bg-red-500/10 text-destructive-ink dark:text-red-400";')).toEqual([]);
+    expect(bareFeedbackPairs('c = "bg-primary text-primary-foreground";')).toEqual([]);
+    expect(bareFeedbackPairs('c = "bg-red-500 text-destructive";')).toEqual([]);
+    expect(bareFeedbackPairs('c = "hover:bg-primary-soft text-primary";')).toEqual([]);
+    expect(bareFeedbackPairs('c = "bg-orange-500/10 text-orange-700";')).toEqual([]);
+    expect(bareFeedbackPairs('c = "text-primary";')).toEqual([]);
+  });
+
+  it("keeps the ink of a palette tint (red, emerald and amber at 10%) at >= 4.55:1 over every surface a chip sits on, in every preset", () => {
+    const pairs = [["red-500", "destructive"], ["emerald-500", "success"], ["amber-500", "warning"]] as const;
+    const failing: string[] = [];
+    for (const look of PRESETS) {
+      const cascade = lightFeedbackCascade(look);
+      for (const [palette, kind] of pairs) {
+        for (const surface of CHIP_SURFACES) {
+          const ratio = inkOnChip(feedbackInk(cascade, kind), tailwindPalette(palette), 0.1, cascade, surface);
+          if (ratio < AA_PRIMARY_FLOOR) failing.push(`${look} ${kind}-ink on ${palette}/10 on ${surface.name}: ${ratio.toFixed(2)}`);
+        }
+      }
+    }
+    expect(failing, `${failing.length} cells under ${AA_PRIMARY_FLOOR}:1, first: ${failing.slice(0, 4).join("; ")}`).toEqual([]);
+  });
+
+  it("the places measured in the lab use the ink (pinned by class string): avatar initials, returns badge, risk badges", () => {
+    const srcDir = fileURLToPath(new URL("../../../", import.meta.url));
+    const pinned: ReadonlyArray<readonly [string, string, number]> = [
+      ["components/shared/photo-upload.tsx", 'className="bg-primary-soft text-title-2 text-primary-ink"', 1],
+      ["components/layout/topbar.tsx", 'className="bg-primary-soft text-xs font-semibold text-primary-ink"', 1],
+      ["components/returns/return-status-badge.tsx", 'text: "text-primary-ink"', 1],
+      ["components/risk/risk-badges.tsx", 'bg-red-500/10 text-destructive-ink dark:text-red-400', 2],
+    ];
+    for (const [file, literal, count] of pinned) {
+      const found = readFileSync(join(srcDir, file), "utf8").split(literal).length - 1;
+      expect(found, `${file} has ${count} x ${literal}`).toBe(count);
+    }
   });
 });
