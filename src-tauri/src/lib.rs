@@ -663,6 +663,10 @@ pub fn run() {
             // It is built only now, after the startup thread is running, so
             // WebView2 initialization overlaps migration and runtime startup
             // instead of preceding them on the critical path.
+            // LAB ONLY (never merged): reproduces a slow first WebView2 start by holding the main thread for 45 s
+            // before the window is built. Used to prove F-0011 and its fix on real Windows.
+            #[cfg(not(debug_assertions))]
+            std::thread::sleep(std::time::Duration::from_secs(45));
             create_workspace_window(app)?;
             #[cfg(not(debug_assertions))]
             {
