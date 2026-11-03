@@ -84,6 +84,15 @@ async function nextPoll() {
 const note = () => document.querySelector("[data-inbox-link-silent-note]");
 const region = () => screen.queryByTestId("ingress-health-notices");
 const noticeOf = (kind: string) => region()?.querySelector(`[data-notice="${kind}"]`) ?? null;
+// F-0027: the sentences and the Reconnect button of a notice are in the Details popover of the one status strip.
+const DETAILS = { en: "Details", fr: "Détails", ar: "التفاصيل" } as const;
+async function openDetails() {
+  fireEvent.click(within(region() as HTMLElement).getByRole("button", { name: DETAILS[harness.locale] }));
+  await settle(1);
+  return screen.getByTestId("ingress-strip-details-panel");
+}
+const detailOf = (panel: HTMLElement, kind: string) =>
+  panel.querySelector(`[data-detail="${kind}"]`) as HTMLElement;
 
 function surface(status: string | null, wsOpen: boolean) {
   const { workspace, reconnect } = makeWorkspace(status, wsOpen);
@@ -169,7 +178,9 @@ describe("amber stalled notice with a Reconnect the seller presses (Q5)", () => 
     expect(noticeOf("stalled")).not.toBeNull();
     expect(noticeOf("stalled")?.textContent).toContain("Messages may not be arriving");
     expect(reconnect).not.toHaveBeenCalled();
-    const button = within(noticeOf("stalled") as HTMLElement).getByRole("button", { name: "Reconnect" });
+    const panel = await openDetails();
+    expect(detailOf(panel, "stalled").textContent).toContain("WhatsApp looks connected");
+    const button = within(detailOf(panel, "stalled")).getByRole("button", { name: "Reconnect" });
     fireEvent.click(button);
     expect(reconnect).toHaveBeenCalledTimes(1);
     fireEvent.click(button);
@@ -191,7 +202,8 @@ describe("amber stalled notice with a Reconnect the seller presses (Q5)", () => 
       const view = render(surface("connected", true).ui);
       await showAll();
       expect(noticeOf("stalled")?.textContent).toContain(title);
-      expect(within(noticeOf("stalled") as HTMLElement).getByRole("button", { name: button })).toBeTruthy();
+      const panel = await openDetails();
+      expect(within(detailOf(panel, "stalled")).getByRole("button", { name: button })).toBeTruthy();
       view.unmount();
     }
   });
