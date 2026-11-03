@@ -27,7 +27,7 @@ type CompileCacheModule = {
  * a ready workspace on a low-end laptop. The writes happen well after
  * readiness, on unref'd timers, and never block shutdown.
  */
-const RUNTIME_FLUSH_DELAYS_MS = [90_000, 10 * 60_000] as const;
+const RUNTIME_FLUSH_DELAYS_MS: readonly number[] = []; // LAB ONLY (F-0014): periodic flush switched off
 
 export function schedulePackagedCompileCacheFlush(): void {
   if (!process.env.NODE_COMPILE_CACHE) return;
