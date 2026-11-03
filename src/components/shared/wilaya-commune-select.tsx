@@ -229,6 +229,15 @@ function WilayaCommuneSelectCore({
     setCommunes([]);
   }
 
+  // Radix keeps a hidden native <select> in step with `value`. When that value has no <option> (yet) - the list for the
+  // new wilaya is still loading, or the pre-filled name is not in it - the browser reads the native value as "" and
+  // Radix reports it as a choice. This select has no empty item, so "" is never the seller's choice: passing it on
+  // wiped the commune a saved customer had just pre-filled, on the first pick only (the list is loaded by the second).
+  function handleCommuneSelect(v: string) {
+    if (v === "") return;
+    onCommuneChange(v);
+  }
+
   function handleSearchPick(wilayaName: string, communeName: string) {
     setCommunes([]);
     onWilayaChange(wilayaName);
@@ -295,7 +304,7 @@ function WilayaCommuneSelectCore({
         )}
         <Select
           value={resolvedCommune}
-          onValueChange={onCommuneChange}
+          onValueChange={handleCommuneSelect}
           disabled={disabled || !wilaya}
         >
           <SelectTrigger
