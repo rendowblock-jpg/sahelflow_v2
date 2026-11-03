@@ -53,6 +53,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArabicRuns } from "@/components/inbox/arabic-runs";
+import {
+  SampleBadge,
+  SampleDataFooter,
+} from "@/components/inbox/inbox-sample-data";
+import {
+  isSampleChat,
+  sampleRowsLast,
+} from "@/components/inbox/inbox-sample-model";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -380,6 +388,8 @@ const ConversationRow = memo(function ConversationRow({
             <span className="truncate">{t(chip.labelKey)}</span>
           </span>
 
+          <SampleBadge conversationId={chat.conversationId} t={t} />
+
           {priority ? (
             <Flag
               className={cn(
@@ -441,6 +451,8 @@ export function InboxV3Queue({
     markUnread,
     setConversationState,
     refreshChats,
+    activeChat,
+    clearActiveChat,
     dataDegraded,
     canUpdateConversation,
     localDrafts,
@@ -565,7 +577,7 @@ export function InboxV3Queue({
   }, [copy, normalizedQuery, query, searchAttempt]);
 
   const rows = useMemo(() => {
-    if (!normalizedQuery) return localMatches;
+    if (!normalizedQuery) return sampleRowsLast(localMatches);
     const byConversation = new Map<string, InboxChat>();
     const serverResults =
       searchState.query === normalizedQuery
@@ -584,10 +596,12 @@ export function InboxV3Queue({
       }
     }
     const merged = [...byConversation.values()];
-    return merged.filter(
-      (chat) =>
-        (!priorityFilter || chat.workflow.priority === priorityFilter) &&
-        (!labelFilter || (chat.workflow.labels ?? []).includes(labelFilter)),
+    return sampleRowsLast(
+      merged.filter(
+        (chat) =>
+          (!priorityFilter || chat.workflow.priority === priorityFilter) &&
+          (!labelFilter || (chat.workflow.labels ?? []).includes(labelFilter)),
+      ),
     );
   }, [
     currentMemberId,
@@ -762,6 +776,17 @@ export function InboxV3Queue({
     }
     exitSelectMode();
   };
+
+  // F-0030: the sample data is gone; refresh the lists, and leave a thread that
+  // no longer exists instead of showing its 404.
+  const handleSampleRemoved = useCallback(() => {
+    if (activeChat && isSampleChat(activeChat)) {
+      clearActiveChat();
+      router.replace("/inbox");
+    }
+    void refreshChats();
+    router.refresh();
+  }, [activeChat, clearActiveChat, refreshChats, router]);
 
   const unreadEmpty =
     queueFilter === "unread" && queueCounts.unread === 0 && !normalizedQuery;
@@ -1277,6 +1302,12 @@ export function InboxV3Queue({
             {footerText}
           </p>
         ) : null}
+        <SampleDataFooter
+          hasRealRows={chats.some((chat) => !isSampleChat(chat))}
+          sampleRowCount={chats.filter(isSampleChat).length}
+          t={t}
+          onRemoved={handleSampleRemoved}
+        />
       </div>
 
       <AlertDialog

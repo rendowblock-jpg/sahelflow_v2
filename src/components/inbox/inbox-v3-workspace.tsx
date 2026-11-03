@@ -17,6 +17,7 @@ import type {
   WorkflowFilter,
 } from "@/components/inbox/inbox-desk-types";
 import { InboxV3Header } from "@/components/inbox/inbox-v3-header";
+import { compareQueueRows } from "@/components/inbox/inbox-sample-model";
 import { useInboxRouteParams } from "@/hooks/inbox/use-inbox-route-params";
 import { InboxPaneResizer } from "@/components/inbox/inbox-pane-resizer";
 import {
@@ -211,9 +212,10 @@ export function InboxV3Workspace({
       const status = chat.workflow.status ?? "open";
       return workflowFilter === "all" || status === workflowFilter;
       })
-      // Pinned conversations float first (INB-12); the stable sort keeps the
-      // server's recency order inside each group.
-      .sort((a, b) => Number(b.pinned) - Number(a.pinned));
+      // Real conversations first, sample rows last (F-0030); inside each group
+      // pinned ones float first (INB-12). The sort is stable, so the server's
+      // recency order survives inside every group.
+      .sort(compareQueueRows);
   }, [authority?.currentMemberId, chats, queueFilter, workflowFilter]);
 
   useEffect(() => {

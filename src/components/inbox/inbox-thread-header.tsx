@@ -4,6 +4,7 @@ import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction
 import { ArrowLeft, Mail, PanelRight, Search, Sparkles } from "lucide-react";
 
 import { ArabicRuns } from "@/components/inbox/arabic-runs";
+import { SampleBadge } from "@/components/inbox/inbox-sample-data";
 import { StatusControl } from "@/components/inbox/conversation-controls";
 import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
@@ -184,6 +185,7 @@ export function InboxThreadHeader({
                 status={activeChat.workflow.status ?? "open"}
               />
             )}
+            <SampleBadge conversationId={activeChat.conversationId} t={t} />
           </div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-muted-foreground">
             {activeChat.phone ? (
