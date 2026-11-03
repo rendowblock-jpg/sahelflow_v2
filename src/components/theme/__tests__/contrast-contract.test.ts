@@ -329,17 +329,19 @@ describe("design-token contrast contract (WCAG AA)", () => {
     // Sync-check: the contract reads the CSS directly, and the recalibrated
     // values are pinned so any future primary change fails here until the AA
     // math is consciously re-verified (hue identity + ratio tests below).
+    // 3 Nov 2026 (F-0026): the light primaries dropped 0.005-0.026 L (hue and chroma kept) when the light page
+    // went from 0.985 to 0.947-0.950; the ratio tests below are the proof, these literals only re-pin them.
     expect(resolveToken(lightCascade("sahel"), "--primary")).toBe(
-      "oklch(0.515 0.18 150)",
+      "oklch(0.485 0.18 150)",
     );
     expect(resolveToken(lightCascade("oasis"), "--primary")).toBe(
-      "oklch(0.511 0.135 205)",
+      "oklch(0.485 0.135 205)",
     );
     expect(resolveToken(lightCascade("atlas"), "--primary")).toBe(
-      "oklch(0.54 0.2 286)",
+      "oklch(0.535 0.2 286)",
     );
     expect(resolveToken(lightCascade("dune"), "--primary")).toBe(
-      "oklch(0.55 0.145 63)",
+      "oklch(0.520 0.145 63)",
     );
   });
 
@@ -513,15 +515,16 @@ describe("design-token contrast contract (WCAG AA)", () => {
   it("pins the feedback semantic calibration and keeps their rendered text roles AA", () => {
     // Sync-check: rendered roles are colored text on tinted fills (see
     // consumers: operational-state, notification-taxonomy, status badges,
-    // attention-center, command palette). Calibrated in the Wave 6 preflight.
+    // attention-center, command palette). Calibrated in the Wave 6 preflight; re-pinned 3 Nov 2026 (F-0026) after
+    // the light page got darker (success/warning/info/destructive lost 0.02-0.03 L, hue and chroma kept).
     expect(resolveToken([globalsLightRoot], "--success")).toBe(
-      "oklch(0.51 0.2 145)",
+      "oklch(0.485 0.2 145)",
     );
     expect(resolveToken([globalsLightRoot], "--warning")).toBe(
-      "oklch(0.543 0.16 72)",
+      "oklch(0.520 0.16 72)",
     );
     expect(resolveToken([globalsLightRoot], "--info")).toBe(
-      "oklch(0.52 0.18 240)",
+      "oklch(0.500 0.18 240)",
     );
     expect(resolveToken([globalsDark], "--info-foreground")).toBe(
       "oklch(0.16 0.03 240)",

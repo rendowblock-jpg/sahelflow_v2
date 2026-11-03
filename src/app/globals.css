@@ -222,17 +222,21 @@
      A 4% primary tint, the selected table row, darkens its surface enough to take these three texts under 4.5:1
      (destructive 4.26, success 4.42, warning 4.45, worst preset); at these values each stays at 4.55:1 or better
      there. Real Chromium had measured the risk score in a selected row at 4.48:1. */
-  --destructive: oklch(0.553 0.245 27.325);
+  /* 3 Nov 2026 (F-0026): the light page went from 0.985 to 0.947-0.950 so layers are visible; every status text
+     lost about 9% contrast on it (4.4:1 on the page, 4.2:1 in a selected row). Same recalibration, hue and chroma
+     unchanged: destructive 0.553 -> 0.520, success 0.51 -> 0.485, warning 0.543 -> 0.520, info 0.52 -> 0.500;
+     each is back at 4.5:1 or better on the page, the card and a selected row in all four looks. */
+  --destructive: oklch(0.520 0.245 27.325);
   /* Feedback semantics are calibrated for their RENDERED role — colored text
      on canvas/card tints (bg-success-soft chips, text-success, ...) — at WCAG AA
      (>= 4.5:1). Solid -foreground pairs are gated too where they pass; the
      light warning solid pair never renders (warning surfaces carry dark text
      on tinted fills only) — see contrast-contract.test.ts. */
-  --success: oklch(0.51 0.2 145);
+  --success: oklch(0.485 0.2 145);
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.543 0.16 72);
+  --warning: oklch(0.520 0.16 72);
   --warning-foreground: oklch(0.18 0 0);  /* deep amber stays light enough to need dark text */
-  --info: oklch(0.52 0.18 240);
+  --info: oklch(0.500 0.18 240);
   --info-foreground: oklch(0.985 0 0);  /* Was 150 (emerald) — moved to blue for distinction */
 
   /* ── Named shadow system (Cal.com pattern) ── */
