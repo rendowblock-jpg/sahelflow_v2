@@ -14,6 +14,7 @@ import { ConversationStatusBadge } from "@/components/inbox/conversation-status-
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { registerOrderDraft, updateOrderDraft } from "@/components/inbox/inbox-order-draft-store";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
+import { SampleBadge } from "@/components/inbox/inbox-sample-data";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -196,6 +197,7 @@ export function InboxThreadHeader({
                 status={activeChat.workflow.status ?? "open"}
               />
             )}
+            <SampleBadge conversationId={activeChat.conversationId} t={t} />
           </div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-muted-foreground">
             {phoneLine && title.kind !== "phone" ? (

@@ -133,7 +133,19 @@ const SOURCES = [
 
 const PROVIDERS = ["yalidine", "zrexpress", "maystro"] as const;
 
-async function businessCounts(client: DbClient): Promise<DemoCounts> {
+/** Rows the sample workspace owns: the `demo-` id prefix (FD-052/FD-054). */
+const SAMPLE_ROWS = { id: { startsWith: DEMO_PREFIX } } as const;
+
+/**
+ * Row counts per kind. With `where` the count is the SAMPLE rows only; without
+ * it, the whole shop. The status a seller sees must say how many SAMPLE rows
+ * exist (F-0030: the inbox confirm dialog prints these numbers before it
+ * deletes), so a shop that also holds real rows must not be summed into them.
+ */
+async function businessCounts(
+  client: DbClient,
+  where?: typeof SAMPLE_ROWS,
+): Promise<DemoCounts> {
   const [
     categories,
     products,
@@ -146,16 +158,16 @@ async function businessCounts(client: DbClient): Promise<DemoCounts> {
     messages,
     expenses,
   ] = await Promise.all([
-    client.category.count(),
-    client.product.count(),
-    client.customer.count(),
-    client.order.count(),
-    client.delivery.count(),
-    client.return.count(),
-    client.refund.count(),
-    client.conversation.count(),
-    client.message.count(),
-    client.expense.count(),
+    client.category.count({ where }),
+    client.product.count({ where }),
+    client.customer.count({ where }),
+    client.order.count({ where }),
+    client.delivery.count({ where }),
+    client.return.count({ where }),
+    client.refund.count({ where }),
+    client.conversation.count({ where }),
+    client.message.count({ where }),
+    client.expense.count({ where }),
   ]);
 
   return {
@@ -182,10 +194,13 @@ export async function getAlgerianDemoStatus(
   const [marker, createdAt, counts] = await Promise.all([
     client.setting.findUnique({ where: { key: DEMO_MARKER_KEY } }),
     client.setting.findUnique({ where: { key: DEMO_CREATED_AT_KEY } }),
-    businessCounts(client),
+    businessCounts(client, SAMPLE_ROWS),
   ]);
   const loaded = marker?.value === ALGERIAN_DEMO_VERSION;
-  const hasBusinessData = hasAnyBusinessData(counts);
+  // "Business data" is about the whole shop; the whole-shop count is only
+  // needed when there is no sample row (a sample row already answers it).
+  const hasBusinessData =
+    hasAnyBusinessData(counts) || hasAnyBusinessData(await businessCounts(client));
 
   return {
     version: ALGERIAN_DEMO_VERSION,
