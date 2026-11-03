@@ -18,7 +18,22 @@ const STARTUP_TRACE_FILE: &str = "startup-trace.json";
 const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
-const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
+/// How long the host waits, after the page navigation has started, for the page to report UI-ready (the matching
+/// durable acknowledgment, see `matching_ui_ready`). When it runs out the host records the startup stage "ui-blocked"
+/// and shows the "Startup blocked" screen.
+///
+/// 90 s was too short for a very slow PC. Lab SIMULATION on a datacenter runner, not a real PC (the app held to ONE
+/// logical CPU, plus 4 background synced-write processes on the disk; n = 1 launch blocked of 2 in that setting): in
+/// run 41585147923 the first launch had the runtime ready at 9.2 s and the window at 41.5 s, then "ui-blocked" at
+/// 132.0 s (90.5 s after navigation started). The second launch of the same run (warm WebView2, same load) reached
+/// ui-ready at 115.0 s, its page load took 34.9 s. So the page was still coming and the limit blocked a launch that
+/// would have become ready. Same settings, other run (41585145251): first launch ready at 56.9 s. One CPU without
+/// the disk load (41585137750): 30.9 s. Two CPUs with the disk load (41585143005): 34.6 s.
+///
+/// Trade-off: a page that is really broken now shows the "Startup blocked" screen after 180 s instead of 90 s. The
+/// launch card stays visible meanwhile (its own hang limit is 30 minutes, `MAX_LIFETIME` in launch_screen.rs).
+/// 180 s is the same as `WORKSPACE_WINDOW_WAIT`, the wait for the window itself.
+const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(180);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 /// How long the startup thread waits for the main window before it gives up. The window is built on the main
 /// thread and that includes WebView2's start; on a machine that has not run WebView2 recently the lab saw it come
@@ -531,11 +546,30 @@ fn wait_for_matching_ui_ready(app_data_dir: &Path, timeout: Duration) -> bool {
     let diagnostic_path = app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE);
     let started_at = Instant::now();
 
-    while started_at.elapsed() < timeout {
-        if matching_ui_ready(&endpoint_path, &ui_ready_path, &diagnostic_path) {
+    wait_until(
+        timeout,
+        UI_READY_POLL_INTERVAL,
+        || matching_ui_ready(&endpoint_path, &ui_ready_path, &diagnostic_path),
+        || started_at.elapsed(),
+        thread::sleep,
+    )
+}
+
+/// Polls `probe` every `poll` until it is true or `limit` has passed on `elapsed`'s clock. The clock and the sleep
+/// are passed in so the wait can be tested without waiting. Order as before: the limit is checked first, then the
+/// probe, then the sleep, so a `limit` of zero never probes.
+fn wait_until(
+    limit: Duration,
+    poll: Duration,
+    mut probe: impl FnMut() -> bool,
+    mut elapsed: impl FnMut() -> Duration,
+    mut sleep: impl FnMut(Duration),
+) -> bool {
+    while elapsed() < limit {
+        if probe() {
             return true;
         }
-        thread::sleep(UI_READY_POLL_INTERVAL);
+        sleep(poll);
     }
     false
 }
@@ -1031,5 +1065,118 @@ mod tests {
             "the authenticated workspace was ready but the desktop window could not be shown: failed to send message to the webview"
         ));
         assert!(detail.contains("8 attempts"));
+    }
+
+    // The UI-ready wait. F-0014 family, lab SIMULATION x14 (1 CPU + 4 synced-write hogs): the first launch of run
+    // 41585147923 was blocked at 90.5 s after navigation; the second launch of the same run was ui-ready at 115.0 s.
+    fn run_scripted_ui_wait(
+        limit: Duration,
+        ready_at: Option<Duration>,
+    ) -> (bool, Duration, usize) {
+        let clock = std::cell::Cell::new(Duration::ZERO);
+        let sleeps = std::cell::Cell::new(0usize);
+        let ready = wait_until(
+            limit,
+            UI_READY_POLL_INTERVAL,
+            || matches!(ready_at, Some(at) if clock.get() >= at),
+            || clock.get(),
+            |pause| {
+                clock.set(clock.get() + pause);
+                sleeps.set(sleeps.get() + 1);
+            },
+        );
+        (ready, clock.get(), sleeps.get())
+    }
+
+    #[test]
+    fn the_ui_ready_limit_is_wide_enough_for_a_very_slow_pc_and_far_below_the_launch_card_limit() {
+        // Lab simulation: a page that needed more than 90 s. Twice the old 90 s is the least margin that makes sense.
+        assert!(PACKAGED_UI_READY_TIMEOUT >= Duration::from_secs(120));
+        // The launch card hangs up after 30 minutes (launch_screen.rs); this wait must stay far below that.
+        assert!(PACKAGED_UI_READY_TIMEOUT <= Duration::from_secs(600));
+        // The page cannot be expected to load faster than the window can be built.
+        assert!(PACKAGED_UI_READY_TIMEOUT >= WORKSPACE_WINDOW_WAIT);
+    }
+
+    #[test]
+    fn a_page_that_reports_ready_after_100_s_is_accepted() {
+        // Old limit: 90 s, so this launch ended in "Startup blocked".
+        let at = Duration::from_secs(100);
+        let (ready, spent, _) = run_scripted_ui_wait(PACKAGED_UI_READY_TIMEOUT, Some(at));
+        assert!(ready, "the host gave up before the page reported ready");
+        assert_eq!(spent, at);
+    }
+
+    #[test]
+    fn a_page_that_reports_ready_in_the_last_poll_before_the_limit_is_accepted_and_one_just_after_is_not(
+    ) {
+        let last = PACKAGED_UI_READY_TIMEOUT - UI_READY_POLL_INTERVAL;
+        let (ready, _, _) = run_scripted_ui_wait(PACKAGED_UI_READY_TIMEOUT, Some(last));
+        assert!(ready);
+        let late = PACKAGED_UI_READY_TIMEOUT + UI_READY_POLL_INTERVAL;
+        let (ready, _, _) = run_scripted_ui_wait(PACKAGED_UI_READY_TIMEOUT, Some(late));
+        assert!(!ready);
+    }
+
+    #[test]
+    fn a_page_that_never_reports_ready_ends_the_wait_after_exactly_the_limit() {
+        let (ready, spent, sleeps) = run_scripted_ui_wait(PACKAGED_UI_READY_TIMEOUT, None);
+        assert!(!ready);
+        assert_eq!(spent, PACKAGED_UI_READY_TIMEOUT);
+        let polls = PACKAGED_UI_READY_TIMEOUT.as_millis() / UI_READY_POLL_INTERVAL.as_millis();
+        assert_eq!(sleeps as u128, polls);
+    }
+
+    #[test]
+    fn a_page_that_is_ready_at_once_ends_the_wait_without_sleeping() {
+        let (ready, spent, sleeps) =
+            run_scripted_ui_wait(PACKAGED_UI_READY_TIMEOUT, Some(Duration::ZERO));
+        assert!(ready);
+        assert_eq!(spent, Duration::ZERO);
+        assert_eq!(sleeps, 0);
+    }
+
+    #[test]
+    fn the_ui_ready_wait_reads_the_three_files_and_accepts_only_a_matching_trio() {
+        // Real files and a real clock with a short limit: wait_for_matching_ui_ready still hands the files to
+        // matching_ui_ready (that function is unchanged).
+        let root = std::env::temp_dir().join(format!(
+            "sahelflow-ui-wait-test-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        let started = Instant::now();
+        assert!(!wait_for_matching_ui_ready(
+            &root,
+            Duration::from_millis(300)
+        ));
+        assert!(started.elapsed() >= Duration::from_millis(300));
+
+        let version = env!("CARGO_PKG_VERSION");
+        fs::write(
+            root.join(RUNTIME_ENDPOINT_FILE),
+            format!(r#"{{"state":"ready","instanceId":"instance-a","appVersion":"{version}"}}"#),
+        )
+        .unwrap();
+        fs::write(
+            root.join(RUNTIME_UI_READY_FILE),
+            format!(
+                r#"{{"formatVersion":1,"protocolVersion":1,"state":"ready","instanceId":"instance-a","appVersion":"{version}","pageUrl":"http://127.0.0.1:43123"}}"#
+            ),
+        )
+        .unwrap();
+        fs::write(
+            root.join(RUNTIME_UI_DIAGNOSTIC_FILE),
+            format!(
+                r#"{{"formatVersion":1,"state":"ready","code":"RUNTIME_UI_READY_PERSISTED","attempt":1,"instanceId":"instance-a","appVersion":"{version}"}}"#
+            ),
+        )
+        .unwrap();
+        assert!(wait_for_matching_ui_ready(&root, Duration::from_secs(30)));
+        fs::remove_dir_all(root).unwrap();
     }
 }
