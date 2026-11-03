@@ -33,6 +33,8 @@ import type { HeldDiscardUiStatus } from "@/hooks/inbox/held-discard-client";
 import { heldSendView } from "@/lib/whatsapp/held-send";
 import { BUBBLE_FLOW, bubbleSide, messageVisual } from "@/components/inbox/inbox-message-visual";
 import { SignalShape } from "@/components/inbox/inbox-signal-shape";
+import { MessagePreviewPlaceholder } from "@/components/inbox/message-preview-glyph";
+import { messagePreview } from "@/lib/inbox/message-preview";
 
 /** A succeeded outbox already reached WhatsApp. A late error receipt must not offer a resend. */
 export function outboxAllowsResend(
@@ -317,6 +319,23 @@ export const MessageBubble = memo(function MessageBubble({
       ),
   );
   const canExtract = inbound && message.body.trim().length > 10;
+  // F-0029: a bubble must always show something. Two shapes drew only the time
+  // and the tick: a plain message with no words (the phone-sent path stores
+  // reactions, polls and other stanzas as type "text" with an empty body), and
+  // a photo / video / voice / document row that has no attachment record.
+  const hasBodyText = message.body.trim().length > 0;
+  const mediaWithoutAttachment = binaryMedia && !message.attachment;
+  const emptyPreview =
+    (!media && !hasBodyText) || mediaWithoutAttachment
+      ? messagePreview(
+          {
+            body: message.body,
+            messageType: message.messageType,
+            attachment: message.attachment,
+          },
+          locale,
+        )
+      : null;
   const hasActions = Boolean(message.body.trim() || message.attachment?.fileName);
   // Which side each party sits on is one constant (inbox-message-visual.ts).
   const side = bubbleSide(BUBBLE_FLOW, inbound);
@@ -411,7 +430,11 @@ export const MessageBubble = memo(function MessageBubble({
               )}
             >
               {binaryMedia ? (
-                <InboxMediaAttachment message={message} />
+                message.attachment ? (
+                  <InboxMediaAttachment message={message} />
+                ) : emptyPreview ? (
+                  <MessagePreviewPlaceholder preview={emptyPreview} />
+                ) : null
               ) : (
                 <>
                   <div className="flex items-center gap-2 text-sm font-medium">
@@ -467,6 +490,10 @@ export const MessageBubble = memo(function MessageBubble({
                 </>
               )}
             </div>
+          ) : null}
+
+          {!media && emptyPreview ? (
+            <MessagePreviewPlaceholder preview={emptyPreview} />
           ) : null}
 
           {message.body.trim() ? (

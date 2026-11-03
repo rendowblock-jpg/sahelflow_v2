@@ -127,7 +127,9 @@ describe("where the conversation list and header draw a name or preview", () => 
   it("the queue row name and last-message preview go through ArabicRuns", () => {
     const queue = read("src/components/inbox/inbox-v3-queue.tsx");
     expect(queue).toContain("<ArabicRuns text={chat.name} locale={locale} />");
-    expect(queue).toContain("<ArabicRuns text={chat.lastMessageText} locale={locale} />");
+    // The preview line (the words, or the label of a photo / voice note) is built by
+    // messagePreview(); its text still goes through ArabicRuns.
+    expect(queue).toContain("<ArabicRuns text={preview.text} locale={locale} />");
   });
 
   it("the thread header name goes through ArabicRuns", () => {

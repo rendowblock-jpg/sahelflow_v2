@@ -10,22 +10,18 @@ import {
   Check,
   CheckCheck,
   CheckCircle2,
-  FileText,
   Filter,
   Flag,
-  ImageIcon,
   ListChecks,
   Loader2,
   Mail,
   MessageSquareText,
-  Mic,
   MoreVertical,
   Pin,
   PinOff,
   Search,
   Trash2,
   UserMinus,
-  Video,
   X,
 } from "lucide-react";
 
@@ -78,6 +74,11 @@ import {
 } from "@/components/inbox/inbox-queue-model";
 import styles from "@/components/inbox/inbox-v3-workspace.module.css";
 import { matchesSearchQuery } from "@/lib/search/universal-search";
+import {
+  messagePreview,
+  type MessagePreviewIcon,
+} from "@/lib/inbox/message-preview";
+import { MessagePreviewGlyph } from "@/components/inbox/message-preview-glyph";
 
 const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread", "archived"];
 const WORKFLOW_FILTERS: WorkflowFilter[] = [
@@ -162,38 +163,14 @@ function matchesDeskFilters(
   return workflowFilter === "all" || status === workflowFilter;
 }
 
-/** Media-family glyph for the list preview (📷/🎤/📎 convention). */
-function PreviewGlyph({ type }: { type?: string | null }) {
-  switch (type) {
-    case "image":
-    case "sticker":
-      return (
-        <ImageIcon
-          className="size-3 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-      );
-    case "video":
-      return (
-        <Video
-          className="size-3 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-      );
-    case "audio":
-      return (
-        <Mic className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-      );
-    case "document":
-      return (
-        <FileText
-          className="size-3 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-      );
-    default:
-      return null;
-  }
+/** Icon of the last-message preview (the shared glyph set, small for the row). */
+function PreviewGlyph({ icon }: { icon: MessagePreviewIcon | null }) {
+  return (
+    <MessagePreviewGlyph
+      icon={icon}
+      className="size-3 shrink-0 text-muted-foreground"
+    />
+  );
 }
 
 const PRIORITY_FILTER_VALUES = ["", "urgent", "high", "medium", "low"] as const;
@@ -245,6 +222,15 @@ const ConversationRow = memo(function ConversationRow({
   const status = chat.workflow.status ?? "open";
   const priority = chat.workflow.priority;
   const chip = rowChipFor({ status, hasDraft: Boolean(draftPreview) });
+  // One line for the last message: its words, or what kind of message it was.
+  // A chat the list has no message data for (no text and no type at all) gets
+  // an empty line, never a stored-history phrase.
+  const preview = messagePreview(
+    chat.lastMessageText !== undefined || chat.lastMessageType != null
+      ? { body: chat.lastMessageText ?? "", messageType: chat.lastMessageType }
+      : null,
+    locale,
+  );
 
   return (
     <button
@@ -340,7 +326,7 @@ const ConversationRow = memo(function ConversationRow({
                   {copy("youPrefix")}:
                 </span>
               ) : null}
-              <PreviewGlyph type={chat.lastMessageType} />
+              <PreviewGlyph icon={preview.icon} />
               <bdi
                 data-inbox-preview="true"
                 data-sf-seller-label="true"
@@ -351,11 +337,9 @@ const ConversationRow = memo(function ConversationRow({
                     : "text-muted-foreground",
                 )}
               >
-                {chat.lastMessageText ? (
-                  <ArabicRuns text={chat.lastMessageText} locale={locale} />
-                ) : (
-                  copy("savedHistory")
-                )}
+                {preview.text ? (
+                  <ArabicRuns text={preview.text} locale={locale} />
+                ) : null}
               </bdi>
             </>
           )}
