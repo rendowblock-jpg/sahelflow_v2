@@ -51,7 +51,7 @@ function RuntimeHealthControl({ state, retry }: { state: RuntimeHealthState; ret
           className="h-8 w-8 shrink-0 gap-1.5 whitespace-nowrap border border-warning/25 bg-warning-soft px-0 text-warning-ink hover:bg-warning-strong md:w-auto md:px-2"
         >
           <Icon aria-hidden="true" className="size-4 shrink-0" />
-          <span className="hidden max-w-48 truncate text-caption font-medium md:inline">{title}</span>
+          <span className="hidden max-w-56 truncate text-caption font-medium md:inline">{title}</span>
         </Button>
       </PopoverTrigger>
 
