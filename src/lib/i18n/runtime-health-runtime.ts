@@ -14,7 +14,6 @@ export const RUNTIME_HEALTH_RUNTIME: Record<Locale, Record<string, string>> = {
     "runtimeHealth.retry": "إعادة المحاولة",
     "runtimeHealth.retrying": "جارٍ المحاولة…",
     "runtimeHealth.close": "إغلاق",
-    "runtimeHealth.reopen": "عرض التفاصيل",
   },
   fr: {
     "runtimeHealth.reconnecting.title": "Reconnexion à l'application",
@@ -24,7 +23,6 @@ export const RUNTIME_HEALTH_RUNTIME: Record<Locale, Record<string, string>> = {
     "runtimeHealth.retry": "Réessayer",
     "runtimeHealth.retrying": "Nouvelle tentative…",
     "runtimeHealth.close": "Fermer",
-    "runtimeHealth.reopen": "Afficher les détails",
   },
   en: {
     "runtimeHealth.reconnecting.title": "Reconnecting to the app service",
@@ -34,7 +32,6 @@ export const RUNTIME_HEALTH_RUNTIME: Record<Locale, Record<string, string>> = {
     "runtimeHealth.retry": "Try again",
     "runtimeHealth.retrying": "Trying again…",
     "runtimeHealth.close": "Close",
-    "runtimeHealth.reopen": "Show details",
   },
 };
 

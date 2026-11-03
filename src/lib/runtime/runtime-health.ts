@@ -21,16 +21,7 @@ export interface RuntimeHealthState {
   failures: number;
   /** A probe started by the seller (Retry) is running. */
   retrying: boolean;
-  /**
-   * The seller closed the notice for this episode. The status stays truthful
-   * (the problem is still there); the view shows only a small icon. It clears
-   * on a worse status, on full recovery, or when the seller reopens it.
-   */
-  dismissed: boolean;
 }
-
-/** How bad each status is; a dismissed notice returns only when this goes UP. */
-const SEVERITY: Record<RuntimeHealthStatus, number> = { ok: 0, reconnecting: 1, offline: 2 };
 
 /** While healthy, one cheap probe this often (only while the page is visible). */
 export const RUNTIME_HEALTHY_PROBE_MS = 20_000;
@@ -57,10 +48,6 @@ export interface RuntimeHealthMonitor {
   stop: () => void;
   /** The seller pressed Retry: probe now, even if one is already scheduled. */
   retryNow: () => Promise<void>;
-  /** The seller closed the notice: hidden for this episode (no effect while everything works). */
-  dismiss: () => void;
-  /** The seller asked for the notice again (the small icon). */
-  reopen: () => void;
   /** Tab became visible again, or the browser went online/offline: probe now if idle. */
   environmentChanged: () => void;
   getState: () => RuntimeHealthState;
@@ -70,24 +57,18 @@ export interface RuntimeHealthMonitor {
 export function createRuntimeHealthMonitor(
   options: RuntimeHealthMonitorOptions,
 ): RuntimeHealthMonitor {
-  let state: RuntimeHealthState = { status: "ok", failures: 0, retrying: false, dismissed: false };
+  let state: RuntimeHealthState = { status: "ok", failures: 0, retrying: false };
   let successes = 0;
-  /** Severity the seller dismissed at; 0 = not dismissed. */
-  let dismissedAt = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let inFlight: Promise<void> | null = null;
   let running = false;
   const listeners = new Set<(next: RuntimeHealthState) => void>();
 
-  const publish = (candidate: Omit<RuntimeHealthState, "dismissed">) => {
-    // A dismissal ends on full recovery or when things get worse, never on one more failed probe.
-    if (candidate.status === "ok" || SEVERITY[candidate.status] > dismissedAt) dismissedAt = 0;
-    const next: RuntimeHealthState = { ...candidate, dismissed: dismissedAt > 0 };
+  const publish = (next: RuntimeHealthState) => {
     if (
       next.status === state.status &&
       next.failures === state.failures &&
-      next.retrying === state.retrying &&
-      next.dismissed === state.dismissed
+      next.retrying === state.retrying
     ) {
       return;
     }
@@ -173,15 +154,6 @@ export function createRuntimeHealthMonitor(
   }
 
   return {
-    dismiss() {
-      if (state.status === "ok") return;
-      dismissedAt = SEVERITY[state.status];
-      publish(state);
-    },
-    reopen() {
-      dismissedAt = 0;
-      publish(state);
-    },
     start() {
       if (running) return;
       running = true;
