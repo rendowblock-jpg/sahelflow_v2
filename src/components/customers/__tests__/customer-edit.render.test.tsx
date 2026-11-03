@@ -185,7 +185,8 @@ describe("customer page: Edit", () => {
     await user.click(within(dialog).getByRole("button", { name: tr("common.saveChanges") }));
 
     const alert = await within(dialog).findByRole("alert");
-    expect(alert.textContent).toContain("already used by another customer");
+    // The raw server text on its own; with the duplicate-phone rule of #672 the dialog shows the translated sentence instead.
+    expect(alert.textContent).toMatch(/already used by another customer|already exists/);
     expect(writes()).toHaveLength(1);
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(toastSuccess).not.toHaveBeenCalled();
