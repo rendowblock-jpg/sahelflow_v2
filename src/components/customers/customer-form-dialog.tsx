@@ -89,6 +89,8 @@ interface CustomerFormDialogProps {
   open?: boolean;
   /** Called when the dialog requests to open/close (controlled mode). */
   onOpenChange?: (open: boolean) => void;
+  /** Called after a successful save (e.g. router.refresh() on a server-rendered page). */
+  onSaved?: () => void;
 }
 
 export function CustomerFormDialog({
@@ -96,6 +98,7 @@ export function CustomerFormDialog({
   trigger,
   open: openProp,
   onOpenChange,
+  onSaved,
 }: CustomerFormDialogProps) {
   const { t } = useI18n();
   const isEdit = !!customer;
@@ -141,11 +144,13 @@ export function CustomerFormDialog({
     setServerError(null);
     setSubmitting(true);
 
-    // Strip empty strings → undefined so the API's Zod schema (which expects
-    // null/undefined for optional fields, not "") accepts the payload.
+    // Strip empty strings so the API's Zod schema (which expects null/undefined
+    // for optional fields, not "") accepts the payload. Creating: undefined
+    // (the field is left out). Editing: null, because a field that is left out
+    // keeps its stored value, so a seller could never clear an address.
     const payload: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(values)) {
-      payload[k] = v === "" ? undefined : v;
+      payload[k] = v === "" ? (isEdit ? null : undefined) : v;
     }
     // The server schema (createCustomerSchema.dzPhone) accepts digits only —
     // strip the display mask before posting.
@@ -185,6 +190,7 @@ export function CustomerFormDialog({
       setOpen(false);
       mutatePrefix("/api/customers");
       toast.success(t(isEdit ? "customers.updated" : "customers.created"));
+      onSaved?.();
     } catch (err) {
       console.error("[CustomerFormDialog] submit error:", err);
       setServerError(t("error.networkFailure"));
