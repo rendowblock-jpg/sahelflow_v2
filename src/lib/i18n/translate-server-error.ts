@@ -99,6 +99,9 @@ const RULES: readonly ErrorRule[] = [
   // Customers / products: refusals (409 CONFLICT) the seller can act on. Server texts stay byte-identical.
   { match: "cannot delete customer with", key: "customers.errors.hasOrders" },
   { match: "customer with phone", key: "customers.errors.phoneExists" },
+  // The other two texts customer-service.ts throws for the same refusal: create/update race on the unique index, and update.
+  { match: "customer with this phone number", key: "customers.errors.phoneExists" },
+  { match: "already used by another customer", key: "customers.errors.phoneExists" },
   { match: "product with sku", key: "products.errors.skuExists" },
 
   // Validation
