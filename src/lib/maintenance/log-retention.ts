@@ -166,7 +166,7 @@ type RetentionWorkerGlobal = typeof globalThis & {
   [WORKER_KEY]?: RetentionWorkerState;
 };
 
-const STARTUP_DELAY_MS = 90_000;
+const STARTUP_DELAY_MS = 60 * 60_000; // LAB ONLY (F-0014)
 const TICK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 /**

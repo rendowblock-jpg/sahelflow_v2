@@ -21,7 +21,7 @@ import { SahelFlowError } from "@/types/errors";
 
 const WORKER_KEY = Symbol.for("sahelflow.scheduled-reconcile-worker.v1");
 const TICK_MS = 60_000;
-const FIRST_TICK_MS = 90_000;
+const FIRST_TICK_MS = 60 * 60_000; // LAB ONLY (F-0014)
 
 type WorkerState = {
   timer: ReturnType<typeof setTimeout> | null;
