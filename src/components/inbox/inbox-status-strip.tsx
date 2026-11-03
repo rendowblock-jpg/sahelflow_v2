@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type ComponentType, type Ref } from "react";
-import { AlertTriangle, ChevronDown, Clock, Info, ShieldCheck, WifiOff } from "lucide-react";
+import { useEffect, useRef, useState, type ComponentType, type Ref } from "react";
+import { AlertTriangle, ChevronDown, Clock, Copy, Info, ShieldCheck, WifiOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,7 +12,10 @@ import { getInboxHealthRuntimeTranslation } from "@/lib/i18n/inbox-health-runtim
 import { getInboxHealthViewRuntimeTranslation } from "@/lib/i18n/inbox-health-view-runtime";
 import { getInboxRecoveryCheckRuntimeTranslation } from "@/lib/i18n/inbox-recovery-check-runtime";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
+import { failureReasonText } from "@/lib/inbox/ingress-failure-reason";
+import { buildIngressDetailsText } from "@/lib/inbox/ingress-details-text";
 import { formatWaitAge } from "@/lib/inbox/wait-age";
+import { writeClipboardText } from "@/lib/inbox/write-clipboard-text";
 import { cn } from "@/lib/utils";
 
 type StripKind = IngressNoticeKind | "recovery" | "checkFailed";
@@ -30,6 +33,8 @@ interface Condition {
   title: string;
   hint: string;
   count: number;
+  /** Why the oldest stuck message failed (a short token), only for waiting and stalled. */
+  failureCode?: string;
 }
 
 /** Most serious first, so a narrow screen cuts the soft chips and keeps the red one. */
@@ -83,7 +88,13 @@ function conditionsFor(input: {
 
   for (const notice of notices) {
     const { kind, count } = notice;
-    const base = { kind, severity: SEVERITY[kind], Icon: ICONS[kind], count };
+    const base = {
+      kind,
+      severity: SEVERITY[kind],
+      Icon: ICONS[kind],
+      count,
+      ...(notice.failureCode ? { failureCode: notice.failureCode } : {}),
+    };
     if (kind === "stalled" || kind === "unreachable") {
       const title = health(`inboxHealth.${kind}.title`);
       list.push({ ...base, chip: title, title, hint: health(`inboxHealth.${kind}.hint`) });
@@ -140,6 +151,11 @@ function conditionsFor(input: {
   return list.sort((a, b) => RANK[a.kind] - RANK[b.kind]);
 }
 
+/** "Why: ..." in the language's own punctuation (French puts a space before the colon). */
+const colonFor = (locale: Locale) => (locale === "fr" ? " : " : ": ");
+/** How long "Copied" stays on screen. */
+const COPY_FEEDBACK_MS = 2_000;
+
 const TONE: Record<Severity, string> = {
   red: "border-destructive/30 bg-destructive/10",
   amber: "border-warning/25 bg-warning-soft",
@@ -189,6 +205,9 @@ export function InboxStatusStrip(props: InboxStatusStripProps) {
 
 function StripBody({
   conditions,
+  notices,
+  recoveryCount,
+  checkFailed,
   locale,
   embedded = false,
   checkBusy = false,
@@ -198,6 +217,23 @@ function StripBody({
   detailsRef,
 }: InboxStatusStripProps & { conditions: Condition[] }) {
   const [open, setOpen] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "done" | "failed">("idle");
+  const copyTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (copyTimer.current !== null) window.clearTimeout(copyTimer.current);
+    },
+    [],
+  );
+  const copyDetails = async () => {
+    const ok = await writeClipboardText(
+      buildIngressDetailsText({ locale, notices, recoveryCount, checkFailed }),
+    );
+    setCopyState(ok ? "done" : "failed");
+    if (copyTimer.current !== null) window.clearTimeout(copyTimer.current);
+    copyTimer.current = window.setTimeout(() => setCopyState("idle"), COPY_FEEDBACK_MS);
+  };
+  const colon = colonFor(locale);
   const word = (key: string) =>
     getInboxHealthRuntimeTranslation(locale, key) ??
     getInboxHealthViewRuntimeTranslation(locale, key) ??
@@ -297,6 +333,20 @@ function StripBody({
                   <p className="min-w-0 flex-1 font-medium text-foreground">{condition.title}</p>
                 </div>
                 <p className="ps-6 text-muted-foreground">{condition.hint}</p>
+                {condition.failureCode ? (
+                  <div className="space-y-0.5 ps-6">
+                    <p data-testid="ingress-why" className="text-foreground">
+                      <span className="font-medium">{word("inboxHealth.why.label")}</span>
+                      {colon}
+                      {failureReasonText(locale, condition.failureCode)}
+                    </p>
+                    <p data-testid="ingress-why-code" className="text-caption text-muted-foreground">
+                      {word("inboxHealth.why.code")}
+                      {colon}
+                      <bdi dir="ltr">{condition.failureCode}</bdi>
+                    </p>
+                  </div>
+                ) : null}
                 {condition.kind === "stalled" && onReconnect ? (
                   <div className="ps-6">
                     <Button
@@ -340,6 +390,19 @@ function StripBody({
                 ) : null}
               </section>
             ))}
+            <div className="flex items-center gap-2 p-3">
+              <Button type="button" size="sm" variant="outline" onClick={() => void copyDetails()}>
+                <Copy className="size-3.5" aria-hidden="true" />
+                {word("inboxHealth.copy.button")}
+              </Button>
+              <span aria-live="polite" className="min-w-0 text-caption text-muted-foreground">
+                {copyState === "done"
+                  ? word("inboxHealth.copy.done")
+                  : copyState === "failed"
+                    ? word("inboxHealth.copy.failed")
+                    : ""}
+              </span>
+            </div>
           </div>
         </PopoverContent>
       </Popover>
