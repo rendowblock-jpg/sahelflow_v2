@@ -29,7 +29,14 @@ const ZONE_RISK: Record<string, Omit<WilayaRisk, "wilaya">> = {
   south: { riskLevel: 5, confirmationRate: 0.50, returnRate: 0.28, notes: "South — highest risk (distance, logistics)" },
 };
 
-/** Seed the WilayaRiskProfile table from data/wilayas.json. Idempotent. */
+/**
+ * Seed the WilayaRiskProfile table from data/wilayas.json. Idempotent: a wilaya that already has a profile is left
+ * exactly as it is (the seller may have changed it).
+ *
+ * One read for what exists and one write for what is missing. The first version did a findUnique and a create per
+ * wilaya (69 of each), and every create was its own synced commit: the lab measured about 1,350 disk write operations
+ * and 4.7-12 s for the first-run PIN setup on a fast server disk, with almost no CPU (finding F-0015).
+ */
 export async function seedWilayaRiskProfiles(
   context: ServiceContext,
 ): Promise<{ seeded: number; skipped: number }> {
@@ -37,32 +44,44 @@ export async function seedWilayaRiskProfiles(
     name: string;
     zone: string;
   }>;
+
+  const missingNow = async () => {
+    const existing = await context.prisma.wilayaRiskProfile.findMany({
+      select: { wilaya: true },
+    });
+    const have = new Set(existing.map((row) => row.wilaya));
+    return wilayas
+      .filter((w) => !have.has(w.name))
+      .map((w) => {
+        const zoneRisk = ZONE_RISK[w.zone] ?? ZONE_RISK.center!;
+        return {
+          wilaya: w.name,
+          riskLevel: zoneRisk.riskLevel,
+          confirmationRate: zoneRisk.confirmationRate,
+          returnRate: zoneRisk.returnRate,
+          notes: zoneRisk.notes,
+        };
+      });
+  };
+
+  let missing = await missingNow();
   let seeded = 0;
-  let skipped = 0;
-
-  for (const w of wilayas) {
-    const existing = await context.prisma.wilayaRiskProfile.findUnique({
-      where: { wilaya: w.name },
-    });
-    if (existing) {
-      skipped++;
-      continue;
+  if (missing.length > 0) {
+    try {
+      seeded = (await context.prisma.wilayaRiskProfile.createMany({ data: missing })).count;
+    } catch (error) {
+      // SQLite has no skipDuplicates. A second seed running at the same moment (first-run setup and the risk page can
+      // both ask) may have written some of these between our read and our write; the batch then fails as a whole.
+      // Read again and write what is still missing, once.
+      if ((error as { code?: unknown }).code !== "P2002") throw error;
+      missing = await missingNow();
+      if (missing.length > 0) {
+        seeded = (await context.prisma.wilayaRiskProfile.createMany({ data: missing })).count;
+      }
     }
-
-    const zoneRisk = ZONE_RISK[w.zone] ?? ZONE_RISK.center!;
-    await context.prisma.wilayaRiskProfile.create({
-      data: {
-        wilaya: w.name,
-        riskLevel: zoneRisk.riskLevel,
-        confirmationRate: zoneRisk.confirmationRate,
-        returnRate: zoneRisk.returnRate,
-        notes: zoneRisk.notes,
-      },
-    });
-    seeded++;
   }
 
-  return { seeded, skipped };
+  return { seeded, skipped: wilayas.length - seeded };
 }
 
 /** Get the risk profile for a wilaya (or null if not seeded). */
