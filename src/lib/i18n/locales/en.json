@@ -314,6 +314,7 @@
   "auth.reauth.sessionExpired": "Your session expired.",
   "auth.reauth.signInAgain": "Sign in again.",
   "auth.reauth.invalid": "Enter your PIN, then try again.",
+  "auth.reauth.slow": "This is taking longer than usual. Wait a few seconds, then reload the page before trying again.",
   "auth.pinSecurityNote": "This PIN encrypts your shop data locally. Store it safely — it cannot be recovered.",
   "auth.resetEmailSent": "Password reset email sent — check your inbox.",
   "auth.samePin": "New PIN must be different from the current PIN.",

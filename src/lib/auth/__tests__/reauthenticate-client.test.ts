@@ -92,7 +92,7 @@ describe("reauthenticateWithPin: what the server said", () => {
     expect(await reauthenticateWithPin("24681357")).toEqual({ kind: "unavailable" });
   });
 
-  it("gives up after 15 seconds with unavailable and aborts the request", async () => {
+  it("gives up after 15 seconds with slow (the server may still finish), aborts the request and never retries by itself", async () => {
     vi.useFakeTimers();
     // A fetch that never answers and ignores the abort signal, like a stuck request on a slow machine.
     fetchMock.mockImplementationOnce(() => new Promise<Response>(() => undefined));
@@ -105,9 +105,17 @@ describe("reauthenticateWithPin: what the server said", () => {
     await Promise.resolve();
     expect(settled).toBe(false);
     await vi.advanceTimersByTimeAsync(2);
-    expect(await pending).toEqual({ kind: "unavailable" });
+    // Not "unavailable": the server can still finish and rotate the session, so the next attempt could read 401.
+    expect(await pending).toEqual({ kind: "slow" });
     const init = (fetchMock.mock.calls[0] as [string, RequestInit])[1];
     expect(init.signal?.aborted).toBe(true);
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a fetch that rejects with an abort-like error on its own, before the 15 s, is still unavailable", async () => {
+    fetchMock.mockImplementationOnce(() => Promise.reject(new DOMException("The operation was aborted.", "AbortError")));
+    expect(await reauthenticateWithPin("24681357")).toEqual({ kind: "unavailable" });
   });
 });
 
@@ -127,6 +135,17 @@ describe("reauthenticateWithPin: one request at a time", () => {
     expect(await first).toEqual({ kind: "ok" });
     expect(await second).toEqual({ kind: "ok" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets the next attempt through after a slow answer (the stuck request no longer holds the slot)", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementationOnce(() => new Promise<Response>(() => undefined));
+    const slow = reauthenticateWithPin("24681357");
+    await vi.advanceTimersByTimeAsync(15_001);
+    expect(await slow).toEqual({ kind: "slow" });
+    fetchMock.mockImplementationOnce(() => reply(200, { success: true }));
+    expect(await reauthenticateWithPin("24681357")).toEqual({ kind: "ok" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("lets the next attempt through once the first has settled, also after a failure", async () => {

@@ -9,6 +9,7 @@ export const REAUTH_FAILURE_COPY_KEYS: Record<ReauthFailure["kind"], string> = {
   locked: "aiKey.pinLocked",
   "session-expired": "auth.reauth.sessionExpired",
   unavailable: "onboarding.pin.unavailable",
+  slow: "auth.reauth.slow",
   invalid: "auth.reauth.invalid",
 };
 

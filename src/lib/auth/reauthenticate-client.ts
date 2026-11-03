@@ -16,6 +16,11 @@ export type ReauthResult =
   | { kind: "session-expired" }
   | { kind: "locked"; retryAfterSec?: number }
   | { kind: "unavailable" }
+  /**
+   * The client gave up waiting (15 s). Unlike "unavailable" the server may still finish and rotate the session, so the
+   * next attempt could read 401. The screen tells the seller to wait, then reload. Nothing retries by itself.
+   */
+  | { kind: "slow" }
   | { kind: "invalid" };
 
 /** Everything except success: what a screen has to explain to the seller. */
@@ -67,10 +72,12 @@ async function classify(response: Response): Promise<ReauthResult> {
 async function send(pin: string): Promise<ReauthResult> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
   const timeout = new Promise<ReauthResult>((resolve) => {
     timer = setTimeout(() => {
+      timedOut = true;
       controller.abort();
-      resolve({ kind: "unavailable" });
+      resolve({ kind: "slow" });
     }, REAUTHENTICATE_TIMEOUT_MS);
   });
   const request = fetch(REAUTHENTICATE_URL, {
@@ -82,7 +89,8 @@ async function send(pin: string): Promise<ReauthResult> {
   try {
     return await Promise.race([request, timeout]);
   } catch {
-    return { kind: "unavailable" };
+    // Only our own 15 s abort is "slow"; a network failure (including an abort-like error of its own) is "unavailable".
+    return timedOut ? { kind: "slow" } : { kind: "unavailable" };
   } finally {
     clearTimeout(timer);
   }
