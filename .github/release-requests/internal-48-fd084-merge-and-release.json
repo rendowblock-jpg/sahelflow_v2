@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.48 FD-084 merge of the reviewed pull requests and signed release",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.48",
+  "windowsMsiVersion": "1.0.0.48",
+  "channel": "internal",
+  "releaseMode": "customer-online",
+  "ownedHostSuffix": "sahelflow.com",
+  "authorityDecision": "FD-084",
+  "licenseServiceUrl": "https://license.sahelflow.com|https://activate.sahelflow.com",
+  "reason": "ADOPTED release authority — FD-084 (documentation/product/DECISIONS.md). One signed successor, app 1.0.0-internal.48 / MSI 1.0.0.48, mode customer-online, owned host sahelflow.com, built from the exact protected main tip after the Founder's directive of 2026-11-03 to complete the remaining work, merge everything to main and make the next signed release. The product tree is pull request #673: main (Internal.47) plus fourteen reviewed pull requests (#656 to #662, #664, #667 to #672) as merge commits, git tree 55cc43812fa19f859aa24d4e66c9b721db6520a6, byte-identical to the lab merge lab/final4b on which the Windows Rust run, the Linux quality gate, three cold first launches, the packaged-app click-through and an 820-visit walk were read before this request. This release pull request is that head plus this one authority commit; its certification block names the CI, Phase 5 and Phase 6-7 runs of #673 on that head, and it merges only after those three runs and its own Required battery are green. #663 and #665 are not included.",
+  "certification": {
+    "productSha": "d9d37d90ae9d0de41328796c86ba19a8b8d236d7",
+    "phase5RunId": 41611339165,
+    "phase67RunId": 41611338874,
+    "ciRunId": 41611339122
+  }
+}

@@ -5,7 +5,7 @@
       "maxBytes": 7900
     },
     "CHANGELOG.md": {
-      "maxBytes": 57400
+      "maxBytes": 61000
     },
     "README.md": {
       "maxBytes": 2800
@@ -35,7 +35,7 @@
       "maxBytes": 17300
     },
     "documentation/product/DECISIONS.md": {
-      "maxBytes": 93400
+      "maxBytes": 95200
     },
     "documentation/product/EXPERIENCE.md": {
       "maxBytes": 33500
