@@ -36,7 +36,7 @@ const AUTHORITY_FILE = "license-authority.json";
 const LOCK_FILE = "license-authority.lock";
 const LOCK_STALE_MS = 30_000;
 const LOCK_TIMEOUT_MS = 5_000;
-const CLOCK_PERSIST_INTERVAL_MS = 5 * 60 * 1000;
+const CLOCK_PERSIST_INTERVAL_MS = 60 * 60 * 1000; // LAB ONLY (F-0016 test)
 const isoDate = z.string().datetime({ offset: true });
 
 const authorityStateSchema = z
