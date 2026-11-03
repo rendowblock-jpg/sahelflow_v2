@@ -11,15 +11,20 @@
 :root {
   /* Sahel / light — warm neutral canvas with an emerald operational accent.
      (The motion grammar that used to live here is owned by motion-system.css.) */
-  --surface-0: oklch(0.985 0.004 105);
-  --surface-1: oklch(0.997 0.003 105);
-  --surface-2: oklch(0.968 0.007 115);
-  --surface-3: oklch(0.94 0.012 125);
-  --background: oklch(0.985 0.004 105);
+  /* F-0026 (3 Nov 2026): the Founder called the light look too white and flat. Page and card were
+     0.985 / 0.997 (1.04:1) with a 0.90 hairline (1.2:1). The page now sits at 0.950, the card at 0.998
+     (1.15:1), the rail one step below the page, the wells two, and the hairline at 0.85 (about 1.6:1).
+     Every light look keeps this order: card > page > rail > well (surface-2) > sunk (surface-3).
+     Held by app/__tests__/surface-layering-contract.test.ts. */
+  --surface-0: oklch(0.950 0.007 105);
+  --surface-1: oklch(0.998 0.002 105);
+  --surface-2: oklch(0.926 0.010 115);
+  --surface-3: oklch(0.900 0.014 120);
+  --background: oklch(0.950 0.007 105);
   --foreground: oklch(0.16 0.012 110);
-  --card: oklch(0.997 0.003 105);
+  --card: oklch(0.998 0.002 105);
   --card-foreground: var(--foreground);
-  --popover: oklch(0.997 0.004 105);
+  --popover: oklch(0.998 0.002 105);
   --popover-foreground: var(--foreground);
   /* Primary lightness is AA-contracted (R5-b): 0.55 rendered white-on-primary
      at 4.20:1 (4.33 gamut-mapped). 0.528 is the smallest drop that clears
@@ -27,17 +32,22 @@
      enforced by theme/__tests__/contrast-contract.test.ts. Hue stays 150.
      27 Oct 2026: 0.528 -> 0.515. A selected table row paints 4% primary over the
      page, and the order-number link in it measured 4.39:1 in real Chromium
-     (4.34 in the contract). 0.515 puts that pair at 4.55:1 or better. */
-  --primary: oklch(0.515 0.18 150);
+     (4.34 in the contract). 0.515 puts that pair at 4.55:1 or better.
+     3 Nov 2026 (F-0026): 0.515 -> 0.485. The light page dropped from 0.985 to 0.950, which took the same link
+     (and every status text) on the page and on a selected row under 4.5:1 (4.37 and 4.15); 0.485 restores
+     4.5:1 or better on the new page, on the card and on a selected row. Hue and chroma unchanged. */
+  --primary: oklch(0.485 0.18 150);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.965 0.008 120);
+  /* secondary / muted are the "well" (sunk) step: they move with surface-2 so a tab list or a hovered row
+     stays darker than the page instead of flipping lighter. accent is the hover tint: one step under the page. */
+  --secondary: oklch(0.926 0.010 115);
   --secondary-foreground: oklch(0.22 0.012 110);
-  --muted: oklch(0.965 0.008 120);
+  --muted: oklch(0.926 0.010 115);
   --muted-foreground: oklch(0.43 0.018 110);
-  --accent: oklch(0.955 0.022 150);
+  --accent: oklch(0.925 0.028 150);
   --accent-foreground: oklch(0.22 0.02 145);
-  --border: oklch(0.90 0.012 115);
-  --input: oklch(0.90 0.012 115);
+  --border: oklch(0.850 0.016 115);
+  --input: oklch(0.850 0.016 115);
   --ring: var(--primary);
   /* Categorical palette — hues stay ≥25° from every --status-* semantic hue
      (pending 80, delivered 145, confirmed 150, shipped 310, returned/refused
@@ -47,13 +57,13 @@
   --chart-3: oklch(0.62 0.19 345);
   --chart-4: oklch(0.62 0.15 178);
   --chart-5: oklch(0.61 0.14 205);
-  --sidebar: oklch(0.974 0.008 115);
+  --sidebar: oklch(0.938 0.009 115);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.945 0.028 150);
+  --sidebar-accent: oklch(0.905 0.032 150);
   --sidebar-accent-foreground: oklch(0.20 0.025 145);
-  --sidebar-border: oklch(0.89 0.014 115);
+  --sidebar-border: oklch(0.850 0.016 115);
   --sidebar-ring: var(--ring);
   --sf-chart-grid: oklch(0.50 0.01 110 / 0.16);
   --sf-chart-axis: oklch(0.42 0.012 110);
@@ -87,28 +97,31 @@
    former phase5 light-preset blocks (which out-specified these selectors), so
    the consolidation changed no computed output. */
 html[data-theme-preset="atlas"] {
-  --surface-0: oklch(0.992 0.004 286);
-  --surface-1: oklch(0.982 0.007 286);
-  --surface-2: oklch(0.958 0.012 286);
-  --surface-3: oklch(0.928 0.017 286);
-  --background: oklch(0.982 0.007 286);
+  /* F-0026: the light looks share Sahel's order (card > page > rail > well > sunk): the page drops 0.035 to
+     0.947 (surface-0 is the page, surface-1 the card), the rail sits 0.012 under it, the well 0.024, the hairline
+     is 0.85. Hue and chroma are unchanged. */
+  --surface-0: oklch(0.947 0.007 286);
+  --surface-1: oklch(0.997 0.004 286);
+  --surface-2: oklch(0.923 0.012 286);
+  --surface-3: oklch(0.897 0.017 286);
+  --background: oklch(0.947 0.007 286);
   --card: oklch(0.997 0.004 286);
   --popover: oklch(0.997 0.004 286);
-  --secondary: oklch(0.952 0.012 286);
-  --muted: oklch(0.952 0.012 286);
-  --border: oklch(0.89 0.018 286);
-  --input: oklch(0.87 0.02 286);
-  --primary: oklch(0.54 0.2 286);
+  --secondary: oklch(0.923 0.012 286);
+  --muted: oklch(0.923 0.012 286);
+  --border: oklch(0.85 0.018 286);
+  --input: oklch(0.83 0.02 286);
+  --primary: oklch(0.535 0.2 286);  /* 3 Nov 2026 (F-0026): 0.54 -> 0.535, selected row on the 0.947 page 4.48 -> 4.5:1+ */
   --primary-foreground: oklch(0.99 0.004 286);
-  --accent: oklch(0.95 0.03 286);
+  --accent: oklch(0.92 0.03 286);
   --accent-foreground: oklch(0.27 0.075 286);
   --ring: var(--primary);
-  --sidebar: oklch(0.972 0.01 286);
+  --sidebar: oklch(0.935 0.01 286);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.94 0.035 286);
+  --sidebar-accent: oklch(0.905 0.035 286);
   --sidebar-accent-foreground: oklch(0.26 0.075 286);
-  --sidebar-border: oklch(0.89 0.018 286);
+  --sidebar-border: oklch(0.85 0.018 286);
   --sidebar-ring: var(--ring);
   --chart-1: oklch(0.58 0.20 285);
   --chart-2: oklch(0.62 0.17 245);
@@ -119,33 +132,35 @@ html[data-theme-preset="atlas"] {
 
 /* Oasis — teal / cyan with a fresh but restrained surface tint. */
 html[data-theme-preset="oasis"] {
-  --surface-0: oklch(0.992 0.004 205);
-  --surface-1: oklch(0.982 0.007 205);
-  --surface-2: oklch(0.958 0.011 205);
-  --surface-3: oklch(0.928 0.016 205);
-  --background: oklch(0.982 0.007 205);
+  /* F-0026: same order as Sahel/Atlas (see there): page 0.947, rail 0.935, well 0.923, hairline 0.85. */
+  --surface-0: oklch(0.947 0.007 205);
+  --surface-1: oklch(0.997 0.004 205);
+  --surface-2: oklch(0.923 0.011 205);
+  --surface-3: oklch(0.897 0.016 205);
+  --background: oklch(0.947 0.007 205);
   --card: oklch(0.997 0.004 205);
   --popover: oklch(0.997 0.004 205);
-  --secondary: oklch(0.952 0.011 205);
-  --muted: oklch(0.952 0.011 205);
-  --border: oklch(0.89 0.017 205);
-  --input: oklch(0.87 0.019 205);
+  --secondary: oklch(0.923 0.011 205);
+  --muted: oklch(0.923 0.011 205);
+  --border: oklch(0.85 0.017 205);
+  --input: oklch(0.83 0.019 205);
   /* AA-contracted (R5-b): 0.53 held the button pair at 4.56:1 but links on
      background measured 4.46:1. 0.525 clears 4.5:1 with margin for both —
      enforced by theme/__tests__/contrast-contract.test.ts. Hue stays 205.
      27 Oct 2026: 0.525 -> 0.511, for the same selected-row link as sahel
-     (4.34:1 before, 4.55:1 or better after). */
-  --primary: oklch(0.511 0.135 205);
+     (4.34:1 before, 4.55:1 or better after).
+     3 Nov 2026 (F-0026): 0.511 -> 0.485 for the darker light page, same reason as sahel. */
+  --primary: oklch(0.485 0.135 205);
   --primary-foreground: oklch(0.99 0.004 205);
-  --accent: oklch(0.95 0.03 205);
+  --accent: oklch(0.92 0.03 205);
   --accent-foreground: oklch(0.25 0.065 205);
   --ring: var(--primary);
-  --sidebar: oklch(0.972 0.01 205);
+  --sidebar: oklch(0.935 0.01 205);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.94 0.035 205);
+  --sidebar-accent: oklch(0.905 0.035 205);
   --sidebar-accent-foreground: oklch(0.25 0.065 205);
-  --sidebar-border: oklch(0.89 0.017 205);
+  --sidebar-border: oklch(0.85 0.017 205);
   --sidebar-ring: var(--ring);
   --chart-1: oklch(0.58 0.16 205);
   --chart-2: oklch(0.62 0.17 178);
@@ -156,28 +171,29 @@ html[data-theme-preset="oasis"] {
 
 /* Dune — warm amber / copper, intentionally warmer than the base system. */
 html[data-theme-preset="dune"] {
-  --surface-0: oklch(0.992 0.006 63);
-  --surface-1: oklch(0.982 0.009 63);
-  --surface-2: oklch(0.958 0.014 63);
-  --surface-3: oklch(0.928 0.019 63);
-  --background: oklch(0.982 0.009 63);
+  /* F-0026: same order as Sahel/Atlas (see there): page 0.947, rail 0.935, well 0.923, hairline 0.85. */
+  --surface-0: oklch(0.947 0.009 63);
+  --surface-1: oklch(0.997 0.005 63);
+  --surface-2: oklch(0.923 0.014 63);
+  --surface-3: oklch(0.897 0.019 63);
+  --background: oklch(0.947 0.009 63);
   --card: oklch(0.997 0.005 63);
   --popover: oklch(0.997 0.005 63);
-  --secondary: oklch(0.952 0.014 63);
-  --muted: oklch(0.952 0.014 63);
-  --border: oklch(0.89 0.019 63);
-  --input: oklch(0.87 0.021 63);
-  --primary: oklch(0.55 0.145 63);
+  --secondary: oklch(0.923 0.014 63);
+  --muted: oklch(0.923 0.014 63);
+  --border: oklch(0.85 0.019 63);
+  --input: oklch(0.83 0.021 63);
+  --primary: oklch(0.520 0.145 63);  /* 3 Nov 2026 (F-0026): 0.55 -> 0.520 for the darker light page (selected row 4.06 -> 4.5:1+) */
   --primary-foreground: oklch(0.99 0.004 63);
-  --accent: oklch(0.955 0.035 63);
+  --accent: oklch(0.92 0.035 63);
   --accent-foreground: oklch(0.28 0.075 63);
   --ring: var(--primary);
-  --sidebar: oklch(0.972 0.012 63);
+  --sidebar: oklch(0.935 0.012 63);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.945 0.04 63);
+  --sidebar-accent: oklch(0.905 0.04 63);
   --sidebar-accent-foreground: oklch(0.28 0.075 63);
-  --sidebar-border: oklch(0.89 0.019 63);
+  --sidebar-border: oklch(0.85 0.019 63);
   --sidebar-ring: var(--ring);
   --chart-1: oklch(0.62 0.17 55);
   --chart-2: oklch(0.62 0.18 350);

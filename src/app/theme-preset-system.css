@@ -14,25 +14,30 @@
 html.dark,
 html.dark[data-theme-preset] {
   /* One neutral dark material stack for every preset. */
-  --surface-0: oklch(0.145 0.004 260);
-  --surface-1: oklch(0.178 0.004 260);
-  --surface-2: oklch(0.215 0.005 260);
-  --surface-3: oklch(0.255 0.006 260);
+  /* F-0026 (3 Nov 2026): the Founder called the dark look too black and flat. The steps were
+     0.145/0.178/0.215/0.255, so page vs card measured 1.05:1. They are now 0.190/0.242/0.280/0.320
+     (card vs page 1.13:1, hairline on the card about 1.6:1; a card at 0.240 rounds to 1.118:1, under the
+     1.12 bar). Held by app/__tests__/surface-layering-contract.test.ts. */
+  --surface-0: oklch(0.190 0.006 260);
+  --surface-1: oklch(0.242 0.007 260);
+  --surface-2: oklch(0.280 0.008 260);
+  --surface-3: oklch(0.320 0.009 260);
   --background: var(--surface-0);
   --foreground: oklch(0.955 0.006 90);
   --card: var(--surface-1);
   --card-foreground: var(--foreground);
-  --popover: oklch(0.188 0.005 260);
+  /* A popover floats above a card: it sits on the surface-2 step, never below the card. */
+  --popover: oklch(0.280 0.008 260);
   --popover-foreground: var(--foreground);
   --secondary: var(--surface-2);
   --secondary-foreground: var(--foreground);
   --muted: var(--surface-2);
   --muted-foreground: oklch(0.72 0.010 90);
-  --border: oklch(0.94 0.006 90 / 0.12);
+  --border: oklch(0.94 0.006 90 / 0.16);
   --input: oklch(0.94 0.006 90 / 0.16);
-  --sidebar: oklch(0.158 0.004 260);
+  --sidebar: oklch(0.205 0.006 260);
   --sidebar-foreground: oklch(0.93 0.006 90);
-  --sidebar-border: oklch(0.94 0.006 90 / 0.09);
+  --sidebar-border: oklch(0.94 0.006 90 / 0.12);
   --sf-chart-grid: oklch(0.90 0.006 90 / 0.105);
   --sf-chart-axis: oklch(0.72 0.010 90);
   --sf-surface-highlight: oklch(1 0 0 / 0.035);
