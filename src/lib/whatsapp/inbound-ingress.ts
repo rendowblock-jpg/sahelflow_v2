@@ -16,7 +16,11 @@ import {
   isSameWhatsAppAccount,
   normalizeWhatsAppAccountId,
 } from "../../../sidecars/whatsapp/auth-tokens";
-import { sidecar } from "./sidecar-client";
+import {
+  clearVerifiedWhatsAppAccount,
+  resolveVerifiedWhatsAppAccountId,
+  WHATSAPP_ACCOUNT_MISMATCH,
+} from "./verified-account";
 
 const INGRESS_SCOPE_PURPOSE = "sahelflow/whatsapp/ingress-scope/v1";
 const PROVIDER = "whatsapp";
@@ -103,24 +107,7 @@ async function resolveProviderAccountId(
   if (context.whatsAppProviderAccountId) {
     return context.whatsAppProviderAccountId;
   }
-  try {
-    const status = await sidecar.status();
-    if (status.status !== "connected" || !status.user?.id) {
-      throw new SahelFlowError(
-        "WhatsApp account identity is unavailable",
-        "WHATSAPP_ACCOUNT_UNAVAILABLE",
-        409,
-      );
-    }
-    return status.user.id;
-  } catch (error) {
-    if (error instanceof SahelFlowError) throw error;
-    throw new SahelFlowError(
-      "WhatsApp account identity could not be verified",
-      "WHATSAPP_ACCOUNT_UNAVAILABLE",
-      503,
-    );
-  }
+  return resolveVerifiedWhatsAppAccountId();
 }
 
 function deriveIngressAuthority(
@@ -241,8 +228,13 @@ export async function persistWhatsAppInbound(
   const input = whatsappInboundEnvelopeSchema.parse(rawInput);
   const expectedAccountId = await resolveProviderAccountId(context);
   if (!isSameWhatsAppAccount(input.accountId, expectedAccountId)) {
-    throw new ConflictError(
+    // The check is as strict with a remembered account as with a live answer.
+    // A mismatch also means the remembered account can no longer be trusted.
+    if (!context.whatsAppProviderAccountId) clearVerifiedWhatsAppAccount();
+    throw new SahelFlowError(
       "WhatsApp inbound event belongs to a different paired account",
+      WHATSAPP_ACCOUNT_MISMATCH,
+      409,
     );
   }
 
