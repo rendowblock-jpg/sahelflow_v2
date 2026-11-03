@@ -43,6 +43,14 @@ import {
 import { searchResultToChat } from "@/components/inbox/inbox-desk-types";
 import type { InboxChat } from "@/components/inbox/inbox-workspace-types";
 import {
+  SampleBadge,
+  SampleDataFooter,
+} from "@/components/inbox/inbox-sample-data";
+import {
+  isSampleChat,
+  sampleRowsLast,
+} from "@/components/inbox/inbox-sample-model";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -53,14 +61,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArabicRuns } from "@/components/inbox/arabic-runs";
-import {
-  SampleBadge,
-  SampleDataFooter,
-} from "@/components/inbox/inbox-sample-data";
-import {
-  isSampleChat,
-  sampleRowsLast,
-} from "@/components/inbox/inbox-sample-model";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

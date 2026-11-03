@@ -4,12 +4,12 @@ import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction
 import { ArrowLeft, Mail, PanelRight, Search, Sparkles } from "lucide-react";
 
 import { ArabicRuns } from "@/components/inbox/arabic-runs";
-import { SampleBadge } from "@/components/inbox/inbox-sample-data";
 import { StatusControl } from "@/components/inbox/conversation-controls";
 import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { registerOrderDraft, updateOrderDraft } from "@/components/inbox/inbox-order-draft-store";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
+import { SampleBadge } from "@/components/inbox/inbox-sample-data";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
