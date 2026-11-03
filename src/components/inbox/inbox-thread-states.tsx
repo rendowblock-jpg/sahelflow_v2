@@ -17,13 +17,13 @@ export function InboxThreadLoading() {
   );
 }
 
-/** A blank page (ruled under Carnet). No steps are invented. */
+/** A blank page. No steps are invented. */
 export function InboxThreadEmpty() {
   const { t } = useI18n();
   return (
     <div
       data-thread-state="empty"
-      className="carnet-ruled flex min-h-48 flex-col items-center justify-center gap-1 rounded-surface p-6 text-center"
+      className="flex min-h-48 flex-col items-center justify-center gap-1 rounded-surface p-6 text-center"
     >
       <p className="text-body-sm font-semibold">{t("inbox.thread.state.empty.title")}</p>
       <p className="max-w-sm text-caption text-muted-foreground">{t("inbox.thread.state.empty.lead")}</p>

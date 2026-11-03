@@ -19,12 +19,11 @@ import {
 } from "react";
 import {
   DEFAULT_PRESET,
-  LOOK_KEY,
-  LOOK_VERSION,
   PRESETS,
-  resolveLook,
+  parsePreset,
+  resolvePreset,
   type ThemePreset,
-} from "@/lib/appearance/look";
+} from "@/lib/appearance/preset";
 import { reportLaunchAppearance } from "@/lib/runtime/report-launch-appearance";
 
 export type { ThemePreset };
@@ -58,7 +57,6 @@ const PRESET_COOKIE_KEY = "sahelflow-theme-preset";
 const APPEARANCE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 2;
 const THEME_CHANGE_EVENT = "sahelflow:theme-change";
 const DEFAULT_THEME: ThemeMode = "dark";
-const LOOK_COOKIE_KEY = "sahelflow-look";
 const PRESET_LIST: ThemePreset[] = [...PRESETS];
 
 // Desktop production serves the packaged app from a localhost port selected at
@@ -87,10 +85,6 @@ function parseTheme(value: string | null | undefined): ThemeMode | null {
 
 function normalizeTheme(value: string | null | undefined): ThemeMode {
   return parseTheme(value) ?? DEFAULT_THEME;
-}
-
-function parsePreset(value: string | null | undefined): ThemePreset | null {
-  return PRESET_LIST.find((preset) => preset === value) ?? null;
 }
 
 function normalizePreset(value: string | null | undefined): ThemePreset {
@@ -242,7 +236,7 @@ function getThemeSnapshot(): ThemeMode {
 function getPresetSnapshot(): ThemePreset {
   if (runtimePresetOverride !== null) return runtimePresetOverride;
 
-  return readLookDecision().preset;
+  return readPresetDecision();
 }
 
 function persistTheme(theme: ThemeMode): void {
@@ -266,24 +260,12 @@ function readStorage(key: string): string | null {
   }
 }
 
-/** Which preset to show, and whether the one-time look migration still has to be written (see lib/appearance/look.ts). */
-function readLookDecision() {
-  return resolveLook({
+/** Which preset to show: the cookie, then storage, then the default (see lib/appearance/preset.ts). */
+function readPresetDecision(): ThemePreset {
+  return resolvePreset({
     presetCookie: readCookie(PRESET_COOKIE_KEY),
     presetStorage: readStorage(PRESET_STORAGE_KEY),
-    lookCookie: readCookie(LOOK_COOKIE_KEY),
-    lookStorage: readStorage(LOOK_KEY),
   });
-}
-
-/** The marker travels with the preset: from now on the saved preset is respected. */
-function persistLookMarker(): void {
-  persistCookie(LOOK_COOKIE_KEY, LOOK_VERSION);
-  try {
-    localStorage.setItem(LOOK_KEY, LOOK_VERSION);
-  } catch {
-    // The cookie still carries it across desktop restarts when localStorage fails.
-  }
 }
 
 function persistPreset(preset: ThemePreset): void {
@@ -351,10 +333,8 @@ export function ThemeProvider({
   // Reconcile initial hydration, migrate older localStorage-only preferences to
   // the host-scoped cookie, and respond to preset storage / OS scheme changes.
   useEffect(() => {
-    const migrate = readLookDecision().write;
     persistTheme(theme);
     persistPreset(preset);
-    if (migrate) persistLookMarker();
     applyAppearance(resolvedTheme, preset);
   }, [theme, resolvedTheme, preset]);
 
@@ -381,7 +361,6 @@ export function ThemeProvider({
 
     commitAppearanceTransition(() => {
       persistPreset(normalized);
-      persistLookMarker();
       applyAppearance(resolveTheme(currentTheme, systemPrefersDark), normalized);
       notifyAppearanceChanged();
     });

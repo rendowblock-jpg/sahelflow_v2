@@ -1,5 +1,4 @@
 import type { Locale } from "@/lib/i18n";
-import { getAppearanceCarnetRuntimeTranslation } from "@/lib/i18n/appearance-carnet-runtime";
 import { getNavigationGroupsRuntimeTranslation } from "@/lib/i18n/navigation-groups-runtime";
 import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
 import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
@@ -36,9 +35,9 @@ import { getOrdersDetailRuntimeTranslation } from "@/lib/i18n/orders-detail-runt
 import { getOrdersStatesRuntimeTranslation } from "@/lib/i18n/orders-states-runtime";
 import { getDeliveryReconcileRuntimeTranslation } from "@/lib/i18n/delivery-reconcile-runtime";
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
-import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";
+import { getInboxListRuntimeTranslation } from "@/lib/i18n/inbox-list-runtime";
 import { getInboxLivenessRuntimeTranslation } from "@/lib/i18n/inbox-liveness-runtime";
-import { getInboxThreadCarnetRuntimeTranslation } from "@/lib/i18n/inbox-thread-carnet-runtime";
+import { getInboxThreadStatesRuntimeTranslation } from "@/lib/i18n/inbox-thread-states-runtime";
 import { getInboxOrderStatusRuntimeTranslation } from "@/lib/i18n/inbox-order-status-runtime";
 import { getInboxVoiceNoteRuntimeTranslation } from "@/lib/i18n/inbox-voice-note-runtime";
 import { getLicenseLockoutRuntimeTranslation } from "@/lib/i18n/license-lockout-runtime";
@@ -180,7 +179,6 @@ export function getRuntimeTranslation(
 ): string | undefined {
   return (
     (SHARED_RUNTIME_COPY[locale] as Readonly<Record<string, string>>)[key] ??
-    getAppearanceCarnetRuntimeTranslation(locale, key) ??
     getNavigationGroupsRuntimeTranslation(locale, key) ??
     getAiCanvasRuntimeTranslation(locale, key) ??
     getWhatsAppSendGuardRuntimeTranslation(locale, key) ??
@@ -214,9 +212,9 @@ export function getRuntimeTranslation(
     getDeliveriesRuntimeTranslation(locale, key) ??
     getDeliveryReconcileRuntimeTranslation(locale, key) ??
     getEntityDetailRuntimeTranslation(locale, key) ??
-    getInboxCarnetRuntimeTranslation(locale, key) ??
+    getInboxListRuntimeTranslation(locale, key) ??
     getInboxLivenessRuntimeTranslation(locale, key) ??
-    getInboxThreadCarnetRuntimeTranslation(locale, key) ??
+    getInboxThreadStatesRuntimeTranslation(locale, key) ??
     getInboxOrderStatusRuntimeTranslation(locale, key) ??
     getInboxVoiceNoteRuntimeTranslation(locale, key) ??
     getLicenseLockoutRuntimeTranslation(locale, key) ??

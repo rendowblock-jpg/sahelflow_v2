@@ -11,7 +11,7 @@ import {
   rowChipFor,
   tabCounts,
 } from "@/components/inbox/inbox-queue-model";
-import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";
+import { getInboxListRuntimeTranslation } from "@/lib/i18n/inbox-list-runtime";
 
 const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
 const LOCALES = ["ar", "fr", "en"] as const;
@@ -33,7 +33,7 @@ describe("row state chip table", () => {
       expect(chip, `status "${s}" has no chip`).toBeDefined();
       expect(CHIP_SHAPES).toContain(chip!.shape);
       for (const l of LOCALES) {
-        expect(getInboxCarnetRuntimeTranslation(l, chip!.labelKey), `${l}:${chip!.labelKey}`).toBeTruthy();
+        expect(getInboxListRuntimeTranslation(l, chip!.labelKey), `${l}:${chip!.labelKey}`).toBeTruthy();
       }
     }
   });

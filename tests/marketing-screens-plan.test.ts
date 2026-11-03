@@ -106,12 +106,11 @@ describe("marketing screens plan: sizes, languages, cookies", () => {
     expect([...LOCALES]).toEqual(["ar", "fr", "en"]);
   });
 
-  it("uses the LIGHT Carnet look with the cookie names the app reads", () => {
+  it("uses the LIGHT Sahel preset with the cookie names the app reads", () => {
     expect(COOKIE_NAMES).toEqual({
       locale: "sahelflow-locale",
       theme: "sahelflow-theme",
       preset: "sahelflow-theme-preset",
-      look: "sahelflow-look",
     });
     for (const locale of LOCALES) {
       const cookies = screenCookies(locale, "http://localhost:4440");
@@ -119,15 +118,13 @@ describe("marketing screens plan: sizes, languages, cookies", () => {
       expect(byName, locale).toEqual({
         "sahelflow-locale": locale,
         "sahelflow-theme": "light",
-        "sahelflow-theme-preset": "carnet",
-        "sahelflow-look": "2",
+        "sahelflow-theme-preset": "sahel",
       });
       expect(cookies.every((cookie) => cookie.url === "http://localhost:4440"), locale).toBe(true);
       expect(JSON.stringify(cookies) + JSON.stringify(localStorageValues(locale))).not.toMatch(/dark|night/i);
       expect(localStorageValues(locale)).toEqual({
         theme: "light",
-        "sahelflow-theme-preset": "carnet",
-        "sahelflow-look": "2",
+        "sahelflow-theme-preset": "sahel",
         "sahelflow-locale": locale,
       });
     }

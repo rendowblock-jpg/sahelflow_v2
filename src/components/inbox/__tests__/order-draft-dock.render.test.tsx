@@ -6,12 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ThreadOrderDraft } from "@/components/inbox/inbox-order-draft-model";
 import { OrderDraftDock } from "@/components/inbox/order-draft-dock";
-import { getInboxThreadCarnetRuntimeTranslation } from "@/lib/i18n/inbox-thread-carnet-runtime";
+import { getInboxThreadStatesRuntimeTranslation } from "@/lib/i18n/inbox-thread-states-runtime";
 
 vi.mock("@/hooks/use-i18n", () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string | number>) =>
-      (getInboxThreadCarnetRuntimeTranslation("en", key) ?? key).replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
+      (getInboxThreadStatesRuntimeTranslation("en", key) ?? key).replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
         String(params?.[name] ?? ""),
       ),
     locale: "en",

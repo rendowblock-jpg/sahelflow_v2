@@ -27,10 +27,10 @@ const readOnline = () => navigator.onLine;
 const serverOnline = () => true;
 
 const REASON_KEY: Partial<Record<InboxLinkKind, string>> = {
-  disconnected: "inbox.carnet.link.reason.disconnected",
-  error: "inbox.carnet.link.reason.error",
-  offline: "inbox.carnet.link.reason.offline",
-  "unofficial-only": "inbox.carnet.link.reason.notLinked",
+  disconnected: "inbox.list.link.reason.disconnected",
+  error: "inbox.list.link.reason.error",
+  offline: "inbox.list.link.reason.offline",
+  "unofficial-only": "inbox.list.link.reason.notLinked",
 };
 
 /**
@@ -66,7 +66,7 @@ export function InboxLinkSurface({
       ? copy("transportConnected")
       : link.reason === "checking"
         ? copy("transportChecking")
-        : t(`inbox.carnet.link.${link.kind === "unofficial-only" ? "notLinked" : link.kind}`);
+        : t(`inbox.list.link.${link.kind === "unofficial-only" ? "notLinked" : link.kind}`);
   const tagBody = (
     <>
       <SignalShape shape={link.shape} />
@@ -74,7 +74,7 @@ export function InboxLinkSurface({
       {link.listStale ? (
         <span className="sr-only sm:not-sr-only sm:font-normal">
           {"· "}
-          {t("inbox.carnet.link.staleList")}
+          {t("inbox.list.link.staleList")}
         </span>
       ) : null}
     </>
@@ -99,7 +99,7 @@ export function InboxLinkSurface({
         type="button"
         aria-expanded={detailOpen}
         aria-controls="inbox-unofficial-detail"
-        aria-label={t("inbox.carnet.link.aboutUnofficial")}
+        aria-label={t("inbox.list.link.aboutUnofficial")}
         onClick={() => setDetailChoice(!detailOpen)}
         className={styles.helpButton}
       >
@@ -118,7 +118,7 @@ export function InboxLinkSurface({
           <p className="min-w-0 flex-1 font-medium">{t(reasonKey)}</p>
           {link.savedOnDevice ? (
             <p className="basis-full text-muted-foreground">
-              {t("inbox.carnet.link.saved")}
+              {t("inbox.list.link.saved")}
             </p>
           ) : null}
           {link.action === "pair" ? (
@@ -136,8 +136,8 @@ export function InboxLinkSurface({
             >
               {t(
                 link.action === "retry"
-                  ? "inbox.carnet.link.retry"
-                  : "inbox.carnet.link.reconnect",
+                  ? "inbox.list.link.retry"
+                  : "inbox.list.link.reconnect",
               )}
             </Button>
           ) : null}

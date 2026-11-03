@@ -138,10 +138,10 @@ export function OrderDraftCard({
             <td className="numeric-value py-1 text-end">{money(ledger.delivery)}</td>
           </tr>
           <tr>
-            <th scope="row" colSpan={3} className="carnet-total border-t border-foreground pt-1.5 text-start font-semibold">
+            <th scope="row" colSpan={3} className="border-t border-foreground pt-1.5 text-start font-semibold">
               {t("inbox.thread.draft.total")}
             </th>
-            <td className="carnet-total numeric-value border-t border-foreground pt-1.5 text-end font-semibold">
+            <td className="numeric-value border-t border-foreground pt-1.5 text-end font-semibold">
               {money(ledger.total)}
             </td>
           </tr>
@@ -159,11 +159,8 @@ export function OrderDraftCard({
 
       {approved ? (
         <div data-order-draft-done="" className="flex flex-wrap items-center gap-3">
-          <span data-plain-badge="" className={cn("inline-flex size-7 items-center justify-center rounded-full bg-success text-success-foreground", styles.plainBadge)}>
+          <span data-plain-badge="" className="inline-flex size-7 items-center justify-center rounded-full bg-success text-success-foreground">
             <Check className="size-4" aria-hidden="true" />
-          </span>
-          <span aria-hidden="true" className={cn("carnet-stamp", styles.stampOnly)}>
-            {t("inbox.thread.draft.stamp")}
           </span>
           <p className="text-body-sm">
             <span className="font-semibold">{t("inbox.thread.draft.approved")}</span>
