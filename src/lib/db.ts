@@ -25,7 +25,11 @@ import { withProtectedPiiEncryption } from "@/lib/crypto/with-protected-pii";
 import { withProtectedRaceSafeUpserts } from "@/lib/crypto/with-protected-upserts";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { processShopContext, type ShopContext } from "@/lib/shops/context";
-import { qlogAttach, qlogLogOption } from "@/lib/runtime/qlog";
+import {
+  qlogAttach,
+  qlogLogOption,
+  qlogWrapTransaction,
+} from "@/lib/runtime/qlog";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: unknown;
@@ -229,7 +233,7 @@ function applicationClient(raw: PrismaClient, context: ShopContext): DbClient {
 const boundShopContext = processShopContext();
 const processClient =
   (globalForPrisma.prisma as DbClient | undefined) ??
-  applicationClient(dbRaw, boundShopContext);
+  qlogWrapTransaction(applicationClient(dbRaw, boundShopContext), "raw");
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = processClient;
@@ -308,7 +312,10 @@ export function getShopClient(
     }),
     "shop",
   ) as unknown as PrismaClient;
-  const extended = applicationClient(raw, context);
+  const extended = qlogWrapTransaction(
+    applicationClient(raw, context),
+    "shop",
+  );
   globalForPrisma.shopClients.set(resolvedPath, extended);
   return extended;
 }

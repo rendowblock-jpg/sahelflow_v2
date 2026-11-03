@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import { dbRaw, shopContext } from "@/lib/db";
+import { qlogWrapTransaction } from "@/lib/runtime/qlog";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 
 const PRIVACY_ERASE_TRANSACTION_OPTIONS = {
@@ -22,5 +23,8 @@ export async function withPrivacyEraseTransaction<T>(
   operation: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
   assertProcessShopAuthority(shopContext);
-  return dbRaw.$transaction(operation, PRIVACY_ERASE_TRANSACTION_OPTIONS);
+  return qlogWrapTransaction(dbRaw, "rawdirect").$transaction(
+    operation,
+    PRIVACY_ERASE_TRANSACTION_OPTIONS,
+  );
 }
