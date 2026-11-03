@@ -759,15 +759,27 @@ export async function reauthenticateCurrentSession(
   return { reauthenticated: true };
 }
 
-/** Require a PIN proof issued within the bounded high-risk window. */
+/**
+ * Require a PIN proof issued within the high-risk window.
+ *
+ * Founder decision, 3 Nov 2026: a live signed-in session counts as PIN proof,
+ * so the default window is the sign-in's own lifetime and a request that gets
+ * past `requireAuthenticatedSession(true)` (not expired, not idle, not revoked,
+ * durable identity current) is never asked for the PIN again. A dead session
+ * still fails 401 there. A caller may pass a smaller window to ask again.
+ */
 export async function requireRecentReauthentication(
   maxAgeMs: number = SENSITIVE_REAUTH_WINDOW_MS,
 ): Promise<void> {
   if (!Number.isSafeInteger(maxAgeMs) || maxAgeMs <= 0) {
     throw new TypeError("Reauthentication age must be a positive integer");
   }
+  // Read the clock BEFORE the session is resolved: a session the authority just
+  // accepted (younger than the same 24 h) can then never look older than the
+  // default window here because a few milliseconds passed in between.
+  const requestedAtMs = Date.now();
   const authority = await requireAuthenticatedSession(true);
-  const ageMs = Date.now() - authority.issuedAt.getTime();
+  const ageMs = requestedAtMs - authority.issuedAt.getTime();
   if (ageMs < 0 || ageMs >= maxAgeMs) {
     throw new SahelFlowError(
       "Recent PIN verification is required",
