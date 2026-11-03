@@ -126,12 +126,16 @@ describe("where the conversation list and header draw a name or preview", () => 
 
   it("the queue row name and last-message preview go through ArabicRuns", () => {
     const queue = read("src/components/inbox/inbox-v3-queue.tsx");
-    expect(queue).toContain("<ArabicRuns text={chat.name} locale={locale} />");
+    // F-0028: the stored name can be a raw WhatsApp id, so the row draws the
+    // resolved title (the seller's own name when there is one), still through ArabicRuns.
+    expect(queue).toContain("<ArabicRuns text={title.text} locale={locale} />");
+    expect(queue).toContain("inboxChatTitleParts(chat, locale)");
     expect(queue).toContain("<ArabicRuns text={chat.lastMessageText} locale={locale} />");
   });
 
   it("the thread header name goes through ArabicRuns", () => {
     const header = read("src/components/inbox/inbox-thread-header.tsx");
-    expect(header).toContain("<ArabicRuns text={activeChat.name} locale={locale} />");
+    expect(header).toContain("<ArabicRuns text={title.text} locale={locale} />");
+    expect(header).toContain("inboxChatTitleParts(activeChat, locale)");
   });
 });

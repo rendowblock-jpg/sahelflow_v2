@@ -20,6 +20,7 @@ import type {
   InboxChat,
   InboxMessage,
 } from "@/components/inbox/inbox-workspace-types";
+import { inboxChatPhone, inboxChatTitleParts } from "@/components/inbox/inbox-chat-title";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,6 +115,9 @@ export function InboxCustomerWorkPanel({
     ) => getInboxWorkspaceCopy(locale, key, params),
     [locale],
   );
+  // F-0028: the stored name can be the raw WhatsApp id; never print it.
+  const title = inboxChatTitleParts(chat, locale);
+  const phoneLine = inboxChatPhone(chat, locale);
   const [context, setContext] = useState<ContextResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -161,13 +165,18 @@ export function InboxCustomerWorkPanel({
         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           {copy("conversationContext")}
         </p>
-        <p className="mt-1 truncate text-sm font-semibold">{chat.name}</p>
-        {chat.phone ? (
+        <p
+          dir={title.kind === "name" ? "auto" : locale === "ar" ? "rtl" : "ltr"}
+          className="mt-1 truncate text-sm font-semibold"
+        >
+          {title.text}
+        </p>
+        {phoneLine && title.kind !== "phone" ? (
           <p
             dir="ltr"
             className="mt-0.5 truncate text-xs tabular-nums text-muted-foreground"
           >
-            {chat.phone ? displayContactName(chat.phone) : null}
+            {phoneLine}
           </p>
         ) : null}
       </div>

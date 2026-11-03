@@ -18,6 +18,7 @@ import {
   Loader2,
   Mail,
   MessageSquareText,
+  User,
   Mic,
   MoreVertical,
   Pin,
@@ -53,6 +54,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArabicRuns } from "@/components/inbox/arabic-runs";
+import { inboxChatInitial, inboxChatTitleParts } from "@/components/inbox/inbox-chat-title";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -245,6 +247,8 @@ const ConversationRow = memo(function ConversationRow({
   const status = chat.workflow.status ?? "open";
   const priority = chat.workflow.priority;
   const chip = rowChipFor({ status, hasDraft: Boolean(draftPreview) });
+  // F-0028: the stored name can be the raw WhatsApp id; never print it.
+  const title = inboxChatTitleParts(chat, locale);
 
   return (
     <button
@@ -280,8 +284,8 @@ const ConversationRow = memo(function ConversationRow({
         </span>
       ) : (
         <span className={styles.rowAvatar} aria-hidden="true">
-          {chat.name.charAt(0).toUpperCase() || (
-            <MessageSquareText className="size-4" />
+          {inboxChatInitial(chat, locale) ?? (
+            <User className="size-4" />
           )}
         </span>
       )}
@@ -293,14 +297,14 @@ const ConversationRow = memo(function ConversationRow({
               ellipsizes at its own end. */}
           <span className="flex min-w-0 flex-1 justify-start overflow-hidden">
             <bdi
-              dir="auto"
+              dir={title.kind === "name" ? "auto" : locale === "ar" ? "rtl" : "ltr"}
               className={cn(
                 styles.rowName,
                 "block min-w-0 max-w-full truncate text-start text-base leading-6",
                 chat.unread > 0 ? "font-semibold text-foreground" : "font-medium",
               )}
             >
-              <ArabicRuns text={chat.name} locale={locale} />
+              <ArabicRuns text={title.text} locale={locale} />
             </bdi>
           </span>
           {chat.pinned ? (

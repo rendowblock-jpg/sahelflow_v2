@@ -17,7 +17,6 @@ import {
   mapConversationProjection,
 } from "./inbox-workspace-shared";
 import type { InboxSharedRefs } from "./use-inbox-shared-refs";
-import { displayContactName } from "@/lib/validation/phone";
 import { matchesSearchQuery } from "@/lib/search/universal-search";
 
 /**
@@ -125,7 +124,7 @@ export function useInboxChatQueue({
             id: chat.jid,
             conversationId: chat.conversationId,
             transportId: chat.jid,
-            name: displayContactName(chat.name),
+            name: chat.name,
             phone: chat.phone ?? undefined,
             channel: "whatsapp" as const,
             lastMessageText: chat.lastMessage?.text,

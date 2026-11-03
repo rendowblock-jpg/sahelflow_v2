@@ -51,6 +51,7 @@ export function searchResultToChat(
     conversationId: result.id,
     ...(transportId ? { transportId } : {}),
     name: result.contactName ?? restrictedContact,
+    ...(result.sourceId ? { sourceId: result.sourceId } : {}),
     ...(result.contactPhone ? { phone: result.contactPhone } : {}),
     channel: hasTransport ? "whatsapp" : "conversation",
     ...(result.lastMessage ? { lastMessageText: result.lastMessage.body } : {}),
