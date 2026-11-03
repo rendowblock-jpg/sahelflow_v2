@@ -47,7 +47,11 @@ import {
   isSealedAuthSecretValue,
 } from "@/lib/crypto/auth-secret-seal";
 import { SahelFlowError } from "@/types/errors";
-import { AUTH_COOKIE, SENSITIVE_REAUTH_WINDOW_MS } from "../config";
+import {
+  AUTH_COOKIE,
+  SENSITIVE_REAUTH_WINDOW_MS,
+  SESSION_OVERALL_TIMEOUT_MS,
+} from "../config";
 import {
   hashPin,
   LEGACY_PBKDF2_ITERATIONS,
@@ -313,22 +317,80 @@ describe("reauthenticateCurrentSession", () => {
 });
 
 describe("requireRecentReauthentication", () => {
-  it("rejects a session older than the sensitive proof window", async () => {
+  // Founder decision, 3 Nov 2026: the sign-in PIN opens the whole app. A live
+  // session is the PIN proof; nothing asks for the PIN again while it lives.
+  const MINUTE = 60_000;
+  const HOUR = 60 * MINUTE;
+
+  /** One signed-in session whose sign-in was `ageMs` ago and which is in use right now. */
+  async function signedInAgo(ageMs: number): Promise<string> {
     await setupAuth("12345678");
     await createSession();
     const session = await dbRaw.session.findFirstOrThrow();
-    const oldTime = new Date(
-      Date.now() - SENSITIVE_REAUTH_WINDOW_MS - 60_000,
-    );
     await dbRaw.session.update({
       where: { id: session.id },
-      data: { issuedAt: oldTime, lastSeenAt: oldTime },
+      data: { issuedAt: new Date(Date.now() - ageMs), lastSeenAt: new Date() },
     });
+    return session.id;
+  }
 
+  it("uses the whole sign-in lifetime as its default window", () => {
+    expect(SENSITIVE_REAUTH_WINDOW_MS).toBe(SESSION_OVERALL_TIMEOUT_MS);
+  });
+
+  it.each([
+    ["11 minutes", 11 * MINUTE],
+    ["3 hours", 3 * HOUR],
+    ["23 h 59 min", 23 * HOUR + 59 * MINUTE],
+  ])("lets a session signed in %s ago through without a PIN", async (_label, ageMs) => {
+    await signedInAgo(ageMs);
+    await expect(requireRecentReauthentication()).resolves.toBeUndefined();
+  });
+
+  it("still fails 401 (sign-in expired, not a PIN box) once the 24 h sign-in limit has passed", async () => {
+    await signedInAgo(24 * HOUR + 1_000);
+    const failure = await requireRecentReauthentication().then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toMatchObject({ code: "UNAUTHORIZED", statusCode: 401 });
+  });
+
+  it("still fails 401 for a session that sat idle past the 1 h inactivity limit", async () => {
+    const id = await signedInAgo(3 * HOUR);
+    await dbRaw.session.update({
+      where: { id },
+      data: { lastSeenAt: new Date(Date.now() - 2 * HOUR) },
+    });
     await expect(requireRecentReauthentication()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      statusCode: 401,
+    });
+  });
+
+  it("still fails 401 for a revoked session, however young", async () => {
+    const id = await signedInAgo(3 * HOUR);
+    await dbRaw.session.update({ where: { id }, data: { revokedAt: new Date() } });
+    await expect(requireRecentReauthentication()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+      statusCode: 401,
+    });
+  });
+
+  it("keeps the 403 body shape for an explicit tighter window (the rule is easy to tighten again)", async () => {
+    await signedInAgo(11 * MINUTE);
+    await expect(requireRecentReauthentication(10 * MINUTE)).rejects.toMatchObject({
+      message: "Recent PIN verification is required",
       code: "REAUTHENTICATION_REQUIRED",
       statusCode: 403,
     });
+    await expect(requireRecentReauthentication(12 * MINUTE)).resolves.toBeUndefined();
+  });
+
+  it("rejects a window that is not a positive integer", async () => {
+    await signedInAgo(MINUTE);
+    await expect(requireRecentReauthentication(0)).rejects.toThrow(TypeError);
+    await expect(requireRecentReauthentication(1.5)).rejects.toThrow(TypeError);
   });
 });
 

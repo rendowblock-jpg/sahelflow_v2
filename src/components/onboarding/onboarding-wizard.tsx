@@ -118,7 +118,7 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
     ai: false,
   });
   const [finishedAt, setFinishedAt] = useState<string | null>(null);
-  // The delivery and AI reads need a PIN confirmation younger than ten minutes; past that the checklist asks for it.
+  // Safety net only: since the Founder's decision of 3 Nov 2026 the delivery and AI reads never ask for a PIN while signed in.
   const [needsPin, setNeedsPin] = useState(false);
   const prefilledRef = useRef(false);
   // The persisted resume point applies exactly once (initial load) so it can

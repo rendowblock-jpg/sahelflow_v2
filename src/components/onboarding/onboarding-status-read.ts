@@ -1,9 +1,10 @@
 /**
  * Reads one "is it set up" answer for the onboarding checklist.
  *
- * Courier credentials and the Gemini key are read through routes that need a PIN confirmation younger than ten
- * minutes (SENSITIVE_REAUTH_WINDOW_MS). Past that window they answer 403 REAUTHENTICATION_REQUIRED. That is not
- * "not configured": the checklist must keep what it knew and ask for the PIN (lab finding F-0012).
+ * Courier credentials and the Gemini key are read through routes behind requireRecentReauthentication. Since the
+ * Founder's decision of 3 Nov 2026 (the sign-in PIN opens the whole app) a live session passes that gate, so these
+ * reads answer 200. If one ever answers 403 REAUTHENTICATION_REQUIRED again (an explicit tighter window), that is not
+ * "not configured": the checklist must keep what it knew and ask for the PIN (lab finding F-0012). A safety net now.
  */
 export type SetupFlagRead =
   | { kind: "known"; value: boolean }

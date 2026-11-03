@@ -24,16 +24,18 @@ describe("auth config constants", () => {
     expect(AUTH_PIN_SETTING_KEY).toBe("auth_pin_hash");
   });
 
-  it("separates cookie lifetime, session freshness and high-risk proof", () => {
+  it("separates cookie lifetime, session freshness and high-risk proof (a live session IS the PIN proof)", () => {
     expect(SESSION_TTL_MS).toBe(7 * 24 * 60 * 60 * 1000);
     expect(SESSION_OVERALL_TIMEOUT_MS).toBe(24 * 60 * 60 * 1000);
     expect(SESSION_INACTIVITY_TIMEOUT_MS).toBe(60 * 60 * 1000);
     expect(SESSION_ACTIVITY_WRITE_INTERVAL_MS).toBe(5 * 60 * 1000);
-    expect(SENSITIVE_REAUTH_WINDOW_MS).toBe(10 * 60 * 1000);
+    // Founder decision, 3 Nov 2026: the sign-in PIN opens the whole app, so the
+    // high-risk proof window is the sign-in's own lifetime, imported not copied.
+    expect(SENSITIVE_REAUTH_WINDOW_MS).toBe(SESSION_OVERALL_TIMEOUT_MS);
     expect(SESSION_ACTIVITY_WRITE_INTERVAL_MS).toBeLessThan(
       SESSION_INACTIVITY_TIMEOUT_MS,
     );
-    expect(SENSITIVE_REAUTH_WINDOW_MS).toBeLessThan(
+    expect(SENSITIVE_REAUTH_WINDOW_MS).toBeLessThanOrEqual(
       SESSION_OVERALL_TIMEOUT_MS,
     );
     expect(SESSION_OVERALL_TIMEOUT_MS).toBeLessThan(SESSION_TTL_MS);
