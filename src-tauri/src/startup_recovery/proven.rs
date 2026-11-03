@@ -20,7 +20,12 @@ const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
-const WORKSPACE_WINDOW_WAIT: Duration = Duration::from_secs(30);
+/// How long the startup thread waits for the main window before it gives up. The window is built on the main
+/// thread and that includes WebView2's start; on a machine that has not run WebView2 recently the lab saw it come
+/// 8 to 44 s after the runtime was ready (F-0010), and a 30 s limit produced the "Startup blocked" screen (F-0011).
+/// The launch card stays up meanwhile (its own hang limit is 30 minutes).
+const WORKSPACE_WINDOW_WAIT: Duration = Duration::from_secs(180);
+const WORKSPACE_WINDOW_POLL: Duration = Duration::from_millis(25);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
 
 #[derive(Serialize)]
@@ -119,24 +124,45 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     Ok(())
 }
 
+/// Polls `probe` until it yields a value or `limit` has passed on `elapsed`'s clock; `sleep` is the wait between
+/// probes. The clock and the sleep are passed in so the wait can be tested without waiting.
+fn wait_for_some<T>(
+    limit: Duration,
+    poll: Duration,
+    mut probe: impl FnMut() -> Option<T>,
+    mut elapsed: impl FnMut() -> Duration,
+    mut sleep: impl FnMut(Duration),
+) -> Option<T> {
+    loop {
+        if let Some(value) = probe() {
+            return Some(value);
+        }
+        if elapsed() >= limit {
+            return None;
+        }
+        sleep(poll);
+    }
+}
+
 /// The single configured workspace window. It is built on the main thread
 /// right after the startup thread begins, so WebView2 initialization overlaps
 /// migration and runtime startup; a startup thread that is faster than that
-/// waits here briefly instead of failing.
+/// waits here instead of failing (see `WORKSPACE_WINDOW_WAIT`).
 fn workspace_window(app: &tauri::AppHandle) -> Result<WebviewWindow, IoError> {
-    let deadline = Instant::now() + WORKSPACE_WINDOW_WAIT;
-    loop {
-        if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
-            return Ok(window);
-        }
-        if Instant::now() >= deadline {
-            return Err(IoError::new(
-                ErrorKind::NotFound,
-                "the configured main desktop window was not created",
-            ));
-        }
-        thread::sleep(Duration::from_millis(25));
-    }
+    let started = Instant::now();
+    wait_for_some(
+        WORKSPACE_WINDOW_WAIT,
+        WORKSPACE_WINDOW_POLL,
+        || app.get_webview_window(MAIN_WINDOW_LABEL),
+        || started.elapsed(),
+        thread::sleep,
+    )
+    .ok_or_else(|| {
+        IoError::new(
+            ErrorKind::NotFound,
+            "the configured main desktop window was not created",
+        )
+    })
 }
 
 pub fn reset_startup_trace(app_data_dir: &Path) {
@@ -879,6 +905,68 @@ mod tests {
             |delay| sleeps.push(delay.as_millis() as u64),
         );
         (attempts, result, calls, failed, sleeps)
+    }
+
+    // F-0011: on a machine that has not run WebView2 recently the main window is built 8 to 44 s after the runtime
+    // is ready (lab runs 41548641239, 41550825036, 41550827824, 41550831302). The startup thread used to give up
+    // after 30 s and the seller saw "Startup blocked" (code SF-WINDOW-NAVIGATION-BLOCKED).
+    fn run_scripted_wait(
+        limit: Duration,
+        window_ready_at: Option<Duration>,
+    ) -> (Option<Duration>, Duration, usize) {
+        let clock = std::cell::Cell::new(Duration::ZERO);
+        let sleeps = std::cell::Cell::new(0usize);
+        let found = wait_for_some(
+            limit,
+            WORKSPACE_WINDOW_POLL,
+            || match window_ready_at {
+                Some(at) if clock.get() >= at => Some(clock.get()),
+                _ => None,
+            },
+            || clock.get(),
+            |pause| {
+                clock.set(clock.get() + pause);
+                sleeps.set(sleeps.get() + 1);
+            },
+        );
+        (found, clock.get(), sleeps.get())
+    }
+
+    #[test]
+    fn the_wait_for_the_window_ends_at_once_when_the_window_exists() {
+        let (found, spent, sleeps) = run_scripted_wait(WORKSPACE_WINDOW_WAIT, Some(Duration::ZERO));
+        assert_eq!(found, Some(Duration::ZERO));
+        assert_eq!(spent, Duration::ZERO);
+        assert_eq!(sleeps, 0);
+    }
+
+    #[test]
+    fn the_wait_for_the_window_gives_up_only_after_its_limit() {
+        let limit = Duration::from_secs(2);
+        let (found, spent, sleeps) = run_scripted_wait(limit, None);
+        assert_eq!(found, None);
+        assert_eq!(spent, limit);
+        assert_eq!(sleeps, 80); // 2 s in 25 ms steps
+    }
+
+    #[test]
+    fn the_wait_for_the_window_outlasts_the_slowest_cold_webview2_start_seen_in_the_lab() {
+        // The runtime was ready at 7.5 s and the window was built at 44.4 s: a 36.9 s wait.
+        let window_at = Duration::from_millis(44_370);
+        let (found, _, _) = run_scripted_wait(WORKSPACE_WINDOW_WAIT, Some(window_at));
+        assert!(
+            found.is_some(),
+            "the startup thread gave up before the window existed"
+        );
+    }
+
+    #[test]
+    fn the_window_wait_has_a_wide_margin_over_the_worst_cold_start_seen() {
+        // 44.4 s was the worst of four cold starts on a fast server; a seller's PC with a slow disk and a
+        // virus scanner can be several times slower. Twice the worst is the least margin that makes sense.
+        assert!(WORKSPACE_WINDOW_WAIT >= Duration::from_secs(120));
+        // The launch card hangs up after 30 minutes; the wait must stay far below that.
+        assert!(WORKSPACE_WINDOW_WAIT <= Duration::from_secs(600));
     }
 
     #[test]
