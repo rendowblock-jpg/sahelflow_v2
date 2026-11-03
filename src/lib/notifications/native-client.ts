@@ -44,10 +44,17 @@ export async function listenForDesktopNotificationActions(
   onLink: (link: string) => void,
 ): Promise<() => void> {
   if (!isTauriEnv()) return () => undefined;
-  const { onAction } = await import("@tauri-apps/plugin-notification");
-  const listener = await onAction((notification) => {
-    const link = notification.extra?.link;
-    if (isSafeNotificationLink(link)) onLink(link);
-  });
-  return () => listener.unregister();
+  try {
+    const { onAction } = await import("@tauri-apps/plugin-notification");
+    const listener = await onAction((notification) => {
+      const link = notification.extra?.link;
+      if (isSafeNotificationLink(link)) onLink(link);
+    });
+    return () => listener.unregister();
+  } catch {
+    // The desktop build of the plugin has no `register_listener` command (it is a mobile one), so this rejects on
+    // every page load. Opening the page from a clicked toast is then not available here; the toast itself and the
+    // in-app list still work. Without this catch the rejection surfaced as an unhandled error on every page.
+    return () => undefined;
+  }
 }
