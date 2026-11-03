@@ -22,6 +22,11 @@ export interface InboxChat {
   conversationId: string;
   /** Provider address used only for WhatsApp transport/history endpoints. */
   transportId?: string;
+  /**
+   * Provider address when the row has no transport (the offline projection and
+   * search results). Classification only: it is never rendered (F-0028).
+   */
+  sourceId?: string;
   name: string;
   phone?: string;
   channel: InboxChatChannel;

@@ -24,6 +24,7 @@ export const GET = withErrorHandler(async () => {
       channel: true,
       contactName: true,
       contactPhone: true,
+      sourceId: true,
       lastMessageAt: true,
       unreadCount: true,
       status: true,

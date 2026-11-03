@@ -15,6 +15,7 @@ import {
   type UniversalSearchCandidate,
 } from "@/lib/search/universal-search";
 import { setWarmCapped } from "@/lib/search/warm-cap-state";
+import { conversationDisplayPhone, conversationSafeLabel } from "@/lib/inbox/conversation-title";
 import { deliveryProviderConfig } from "@/lib/shared";
 
 const DEFAULT_CANDIDATE_LIMIT = 48;
@@ -927,6 +928,7 @@ async function conversationRows(ids?: readonly string[]): Promise<ProjectedCandi
         channel: true,
         contactName: true,
         contactPhone: true,
+        sourceId: true,
         lastMessageAt: true,
         updatedAt: true,
       },
@@ -940,11 +942,17 @@ async function conversationRows(ids?: readonly string[]): Promise<ProjectedCandi
         id: `${CONVERSATION_ID_PREFIX}${conversation.id}`,
         entityId: conversation.id,
         kind: "conversation",
+        // F-0028: never the raw WhatsApp id; unnamed contacts keep the neutral fallback.
         label:
-          conversation.contactName?.trim() ||
-          conversation.contactPhone?.trim() ||
-          `Inbox · ${conversation.id.slice(-6)}`,
-        sublabel: conversation.contactPhone ?? conversation.channel,
+          conversationSafeLabel({
+            name: conversation.contactName,
+            sourceId: conversation.sourceId,
+          }) || `Inbox · ${conversation.id.slice(-6)}`,
+        sublabel:
+          conversationDisplayPhone({
+            phone: conversation.contactPhone,
+            sourceId: conversation.sourceId,
+          }) ?? conversation.channel,
         href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
         keywords: [conversation.channel],
         updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
