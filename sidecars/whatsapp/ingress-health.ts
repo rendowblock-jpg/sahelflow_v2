@@ -64,6 +64,15 @@ export interface IngressHealthBlock {
     quarantined: number;
     unreadable: number;
     lastFailureCode: string | null;
+    /**
+     * The spool's delivery circuit breaker. Absent while it is closed, so the
+     * payload of a healthy sidecar is exactly what it always was.
+     */
+    breaker?: {
+      state: "open" | "half-open";
+      openUntilMs: number | null;
+      consecutiveFailures: number;
+    };
   };
   lost: {
     sinceStart: { spoolFailed: number; noPairedAccount: number; unsupportedChat: number };
@@ -154,6 +163,25 @@ function readSaved(file: string): Saved {
   } catch {
     return emptySaved();
   }
+}
+
+/** The breaker field of the health block: only while the breaker is not closed, and only these three numbers. */
+function breakerField(
+  breaker: WhatsAppInboundSpoolSnapshot["breaker"],
+): { breaker?: NonNullable<IngressHealthBlock["spool"]["breaker"]> } {
+  if (!breaker || (breaker.state !== "open" && breaker.state !== "half-open")) return {};
+  const whole = (value: unknown): number =>
+    typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+  return {
+    breaker: {
+      state: breaker.state,
+      openUntilMs:
+        typeof breaker.openUntilMs === "number" && Number.isFinite(breaker.openUntilMs)
+          ? Math.floor(breaker.openUntilMs)
+          : null,
+      consecutiveFailures: whole(breaker.consecutiveFailures),
+    },
+  };
 }
 
 const ZERO_SPOOL: IngressHealthBlock["spool"] = {
@@ -251,6 +279,7 @@ export function createIngressHealth(options: IngressHealthOptions): IngressHealt
         quarantined: snapshot.quarantined,
         unreadable: snapshot.unreadable,
         lastFailureCode: typeof code === "string" && FAILURE_CODE.test(code) ? code : null,
+        ...breakerField(snapshot.breaker),
       };
       cached = { at: t, spool };
       return spool;
