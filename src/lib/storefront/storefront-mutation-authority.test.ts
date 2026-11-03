@@ -32,7 +32,9 @@ describe("Storefront mutation authority", () => {
     expect(page).toContain("canDelete={canDelete}");
     expect(list).toContain("canDelete: boolean");
     expect(list).toContain('payload.code === "REAUTHENTICATION_REQUIRED"');
-    expect(list).toContain('fetch("/api/auth/reauthenticate"');
+    // The PIN call moved into the shared client helper (F-0023); the list must use it and the helper must own the endpoint.
+    expect(list).toContain("reauthenticateWithPin(pin)");
+    expect(read("src/lib/auth/reauthenticate-client.ts")).toContain('"/api/auth/reauthenticate"');
     expect(list).toContain("verifyPinAndDelete");
   });
 

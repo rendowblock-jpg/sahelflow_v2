@@ -74,7 +74,7 @@ describe("OnboardingPinNotice", () => {
 
   it("shows the wrong-PIN sentence on 401 and the locked sentence on 429, and does not refresh", async () => {
     const onConfirmed = setup();
-    fetchMock.mockImplementationOnce(() => reply(401, {}));
+    fetchMock.mockImplementationOnce(() => reply(401, { error: "Incorrect PIN", code: "INVALID_CREDENTIALS" }));
     fireEvent.change(pinField(), { target: { value: "00000000" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await flush();
@@ -83,6 +83,17 @@ describe("OnboardingPinNotice", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await flush();
     expect(screen.getByRole("alert").textContent).toBe("Too many attempts. Wait a moment, then try again.");
+    expect(onConfirmed).not.toHaveBeenCalled();
+  });
+
+  it("says the session expired, not wrong PIN, when the server answers 401 UNAUTHORIZED (F-0023)", async () => {
+    const onConfirmed = setup();
+    fetchMock.mockImplementationOnce(() => reply(401, { error: "Unauthorized", code: "UNAUTHORIZED" }));
+    fireEvent.change(pinField(), { target: { value: "24681357" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await flush();
+    expect(screen.getByRole("alert").textContent).toBe("Your session expired. Sign in again.");
+    expect(screen.getByRole("link", { name: "Sign in again." }).getAttribute("href")).toBe("/login");
     expect(onConfirmed).not.toHaveBeenCalled();
   });
 

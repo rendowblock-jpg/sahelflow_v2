@@ -1,5 +1,7 @@
 "use client";
 
+import { ReauthFailureMessage } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin, type ReauthFailure } from "@/lib/auth/reauthenticate-client";
 import { useMemo, useState } from "react";
 import { KeyRound, Loader2, Search } from "lucide-react";
 
@@ -65,7 +67,7 @@ export function StorefrontsListClient({
   const [reauthRequired, setReauthRequired] = useState(false);
   const [pin, setPin] = useState("");
   const [reauthBusy, setReauthBusy] = useState(false);
-  const [reauthError, setReauthError] = useState<string | null>(null);
+  const [reauthError, setReauthError] = useState<ReauthFailure | null>(null);
 
   function resetDeleteFlow() {
     setDeleteTarget(null);
@@ -129,21 +131,16 @@ export function StorefrontsListClient({
     setReauthBusy(true);
     setReauthError(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as ApiPayload;
-      if (!response.ok) {
-        setReauthError(payload.error ?? studioCopy("verificationFailed"));
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setReauthError(result);
         return;
       }
       setReauthRequired(false);
       setPin("");
       await confirmDelete(true);
     } catch {
-      setReauthError(studioCopy("verificationFailed"));
+      setReauthError({ kind: "unavailable" });
     } finally {
       setReauthBusy(false);
     }
@@ -292,9 +289,7 @@ export function StorefrontsListClient({
                 }}
               />
               {reauthError ? (
-                <p role="alert" className="text-xs text-destructive">
-                  {reauthError}
-                </p>
+                <ReauthFailureMessage failure={reauthError} />
               ) : null}
             </div>
           ) : null}

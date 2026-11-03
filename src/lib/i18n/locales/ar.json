@@ -313,7 +313,6 @@
   "auth.pinPlaceholder": "أدخل رمز التعريف الشخصي",
   "auth.reauth.sessionExpired": "انتهت جلستك.",
   "auth.reauth.signInAgain": "سجّل الدخول من جديد.",
-  "auth.reauth.unavailable": "تعذّر تأكيد رمز PIN. حاول مرة أخرى.",
   "auth.reauth.invalid": "أدخل رمز PIN ثم حاول مرة أخرى.",
   "auth.pinSecurityNote": "هذا الرمز يشفر بيانات متجرك محليًا. احتفظ به بأمان — لا يمكن استعادته.",
   "auth.resetEmailSent": "تم إرسال رسالة إعادة تعيين كلمة المرور — تحقق من صندوق الوارد.",

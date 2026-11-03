@@ -1,5 +1,7 @@
 "use client";
 
+import { ReauthFailureMessage } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin, type ReauthFailure } from "@/lib/auth/reauthenticate-client";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 
@@ -16,32 +18,22 @@ export function OnboardingPinNotice({ onConfirmed }: { onConfirmed: () => Promis
   const { t } = useI18n();
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReauthFailure | null>(null);
 
   async function confirm() {
     if (!pin.trim() || busy) return;
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      if (!response.ok) {
-        setError(
-          response.status === 401
-            ? t("aiKey.pinIncorrect")
-            : response.status === 429
-              ? t("aiKey.pinLocked")
-              : t("onboarding.pin.unavailable"),
-        );
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setError(result);
         return;
       }
       setPin("");
       await onConfirmed();
     } catch {
-      setError(t("onboarding.pin.unavailable"));
+      setError({ kind: "unavailable" });
     } finally {
       setBusy(false);
     }
@@ -87,9 +79,7 @@ export function OnboardingPinNotice({ onConfirmed }: { onConfirmed: () => Promis
         </Button>
       </form>
       {error ? (
-        <p role="alert" className="text-xs text-destructive">
-          {error}
-        </p>
+        <ReauthFailureMessage failure={error} />
       ) : null}
     </section>
   );

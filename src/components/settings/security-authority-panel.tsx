@@ -1,5 +1,7 @@
 "use client";
 
+import { ReauthFailureMessage } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin, type ReauthFailure } from "@/lib/auth/reauthenticate-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { KeyRound, MonitorSmartphone, RefreshCw, ShieldCheck } from "lucide-react";
 
@@ -60,7 +62,7 @@ export function SecurityAuthorityPanel() {
   const [busySessionId, setBusySessionId] = useState<string | null>(null);
   const [reauthSessionId, setReauthSessionId] = useState<string | null>(null);
   const [pin, setPin] = useState("");
-  const [pinError, setPinError] = useState<string | null>(null);
+  const [pinError, setPinError] = useState<ReauthFailure | null>(null);
 
   const dateFormatter = useMemo(
     () =>
@@ -159,14 +161,9 @@ export function SecurityAuthorityPanel() {
     setBusySessionId(reauthSessionId);
     setPinError(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      const body = (await response.json()) as ApiError;
-      if (!response.ok) {
-        setPinError(body.error ?? t("settings.security.incorrectPin"));
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setPinError(result);
         return;
       }
       const target = reauthSessionId;
@@ -174,11 +171,11 @@ export function SecurityAuthorityPanel() {
       setPin("");
       await revokeSession(target, true);
     } catch {
-      setPinError(t("settings.security.incorrectPin"));
+      setPinError({ kind: "unavailable" });
     } finally {
       setBusySessionId(null);
     }
-  }, [t, pin, reauthSessionId, revokeSession]);
+  }, [pin, reauthSessionId, revokeSession]);
 
   return (
     <section className="space-y-5" aria-labelledby="security-authority-title">
@@ -365,9 +362,7 @@ export function SecurityAuthorityPanel() {
             </Button>
           </div>
           {pinError ? (
-            <p role="alert" className="mt-2 text-sm text-destructive">
-              {pinError}
-            </p>
+            <ReauthFailureMessage failure={pinError} className="mt-2 text-sm text-destructive" />
           ) : null}
         </div>
       ) : null}

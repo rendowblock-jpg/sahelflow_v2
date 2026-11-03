@@ -1,5 +1,7 @@
 "use client";
 
+import { ReauthFailureMessage } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin, type ReauthFailure } from "@/lib/auth/reauthenticate-client";
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
@@ -137,7 +139,7 @@ export function BackupRestorePanel({
   const [reauthPending, setReauthPending] = useState<SensitiveAction | null>(null);
   const [pin, setPin] = useState("");
   const [reauthBusy, setReauthBusy] = useState(false);
-  const [reauthError, setReauthError] = useState<string | null>(null);
+  const [reauthError, setReauthError] = useState<ReauthFailure | null>(null);
 
   const reload = useCallback(() => setReloadKey((value) => value + 1), []);
 
@@ -288,14 +290,9 @@ export function BackupRestorePanel({
     setReauthBusy(true);
     setReauthError(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as ApiPayload;
-      if (!response.ok) {
-        setReauthError(payload.error ?? workspaceCopy("verificationDescription"));
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setReauthError(result);
         return;
       }
       setReauthPending(null);
@@ -308,7 +305,7 @@ export function BackupRestorePanel({
         await deleteBackup(pending.backup, true);
       }
     } catch {
-      setReauthError(workspaceCopy("unavailableDescription"));
+      setReauthError({ kind: "unavailable" });
     } finally {
       setReauthBusy(false);
     }
@@ -682,9 +679,7 @@ export function BackupRestorePanel({
               }}
             />
             {reauthError ? (
-              <p id="backup-reauth-error" role="alert" className="text-sm text-destructive">
-                {reauthError}
-              </p>
+              <ReauthFailureMessage id="backup-reauth-error" failure={reauthError} className="text-sm text-destructive" />
             ) : null}
             <div className="flex justify-end gap-2">
               <Button

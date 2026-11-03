@@ -313,7 +313,6 @@
   "auth.pinPlaceholder": "Saisissez votre code PIN",
   "auth.reauth.sessionExpired": "Votre session a expiré.",
   "auth.reauth.signInAgain": "Reconnectez-vous.",
-  "auth.reauth.unavailable": "Impossible de confirmer le PIN. Réessayez.",
   "auth.reauth.invalid": "Saisissez votre PIN, puis réessayez.",
   "auth.pinSecurityNote": "Ce PIN chiffre les données de votre boutique localement. Conservez-le en sécurité — il ne peut pas être récupéré.",
   "auth.resetEmailSent": "E-mail de réinitialisation envoyé — vérifiez votre boîte de réception.",
