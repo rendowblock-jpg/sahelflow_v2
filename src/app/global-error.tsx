@@ -116,8 +116,8 @@ export default function GlobalError({
           fontFamily: isRtl
             ? "'Noto Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif"
             : "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
-          // oklch(0.145 0.004 260) — dark surface-0 (sahel dark canvas)
-          background: "oklch(0.145 0.004 260)",
+          // oklch(0.190 0.006 260) — dark surface-0 (the dark canvas, same for every preset)
+          background: "oklch(0.190 0.006 260)",
           // oklch(0.955 0.006 90) — dark foreground
           color: "oklch(0.955 0.006 90)",
           minHeight: "100vh",
@@ -171,10 +171,10 @@ export default function GlobalError({
               style={{
                 padding: "0.6rem 1.25rem",
                 borderRadius: 8,
-                // oklch(0.94 0.006 90 / 0.16) / oklch(0.215 0.005 260) / oklch(0.955 0.006 90)
+                // oklch(0.94 0.006 90 / 0.16) / oklch(0.280 0.008 260) / oklch(0.955 0.006 90)
                 // — dark input border, surface-2 and foreground tokens
                 border: "1px solid oklch(0.94 0.006 90 / 0.16)",
-                background: "oklch(0.215 0.005 260)",
+                background: "oklch(0.280 0.008 260)",
                 color: "oklch(0.955 0.006 90)",
                 fontSize: "0.9rem",
                 fontWeight: 600,

@@ -280,7 +280,7 @@ struct Tokens {
 const fn tokens(theme: Theme, preset: Preset) -> Tokens {
     match (theme, preset) {
         (Theme::Light, Preset::Sahel) => Tokens {
-            top: 0xFFFEFD,
+            top: 0xFFFFFF,
             bottom: 0xEFEFE9,
             ink: 0x0D0E08,
             muted: 0x505146,
@@ -296,7 +296,7 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
             border: (0xEDEBE7, 16),
         },
         (Theme::Light, Preset::Atlas) => Tokens {
-            top: 0xFEFEFF,
+            top: 0xFFFFFF,
             bottom: 0xEDEDF2,
             ink: 0x0D0E08,
             muted: 0x505146,
@@ -312,7 +312,7 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
             border: (0xEDEBE7, 16),
         },
         (Theme::Light, Preset::Oasis) => Tokens {
-            top: 0xFBFFFF,
+            top: 0xFFFFFF,
             bottom: 0xE8EFF0,
             ink: 0x0D0E08,
             muted: 0x505146,
@@ -328,7 +328,7 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
             border: (0xEDEBE7, 16),
         },
         (Theme::Light, Preset::Dune) => Tokens {
-            top: 0xFFFDFB,
+            top: 0xFFFFFF,
             bottom: 0xF2ECE7,
             ink: 0x0D0E08,
             muted: 0x505146,

@@ -12,19 +12,19 @@
   /* Sahel / light — warm neutral canvas with an emerald operational accent.
      (The motion grammar that used to live here is owned by motion-system.css.) */
   /* F-0026 (3 Nov 2026): the Founder called the light look too white and flat. Page and card were
-     0.985 / 0.997 (1.04:1) with a 0.90 hairline (1.2:1). The page now sits at 0.950, the card at 0.998
+     0.985 / 0.997 (1.04:1) with a 0.90 hairline (1.2:1). The page now sits at 0.950, the card is pure white
      (1.15:1), the rail one step below the page, the wells two, and the hairline at 0.85 (about 1.6:1).
      Every light look keeps this order: card > page > rail > well (surface-2) > sunk (surface-3).
      Held by app/__tests__/surface-layering-contract.test.ts. */
   --surface-0: oklch(0.950 0.007 105);
-  --surface-1: oklch(0.998 0.002 105);
+  --surface-1: oklch(1 0 0);
   --surface-2: oklch(0.926 0.010 115);
   --surface-3: oklch(0.900 0.014 120);
   --background: oklch(0.950 0.007 105);
   --foreground: oklch(0.16 0.012 110);
-  --card: oklch(0.998 0.002 105);
+  --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
-  --popover: oklch(0.998 0.002 105);
+  --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
   /* Primary lightness is AA-contracted (R5-b): 0.55 rendered white-on-primary
      at 4.20:1 (4.33 gamut-mapped). 0.528 is the smallest drop that clears
@@ -99,14 +99,14 @@
 html[data-theme-preset="atlas"] {
   /* F-0026: the light looks share Sahel's order (card > page > rail > well > sunk): the page drops 0.035 to
      0.947 (surface-0 is the page, surface-1 the card), the rail sits 0.012 under it, the well 0.024, the hairline
-     is 0.85. Hue and chroma are unchanged. */
+     is 0.85. Hue and chroma are unchanged; the card is pure white in all four light looks. */
   --surface-0: oklch(0.947 0.007 286);
-  --surface-1: oklch(0.997 0.004 286);
+  --surface-1: oklch(1 0 0);
   --surface-2: oklch(0.923 0.012 286);
   --surface-3: oklch(0.897 0.017 286);
   --background: oklch(0.947 0.007 286);
-  --card: oklch(0.997 0.004 286);
-  --popover: oklch(0.997 0.004 286);
+  --card: oklch(1 0 0);
+  --popover: oklch(1 0 0);
   --secondary: oklch(0.923 0.012 286);
   --muted: oklch(0.923 0.012 286);
   --border: oklch(0.85 0.018 286);
@@ -134,12 +134,12 @@ html[data-theme-preset="atlas"] {
 html[data-theme-preset="oasis"] {
   /* F-0026: same order as Sahel/Atlas (see there): page 0.947, rail 0.935, well 0.923, hairline 0.85. */
   --surface-0: oklch(0.947 0.007 205);
-  --surface-1: oklch(0.997 0.004 205);
+  --surface-1: oklch(1 0 0);
   --surface-2: oklch(0.923 0.011 205);
   --surface-3: oklch(0.897 0.016 205);
   --background: oklch(0.947 0.007 205);
-  --card: oklch(0.997 0.004 205);
-  --popover: oklch(0.997 0.004 205);
+  --card: oklch(1 0 0);
+  --popover: oklch(1 0 0);
   --secondary: oklch(0.923 0.011 205);
   --muted: oklch(0.923 0.011 205);
   --border: oklch(0.85 0.017 205);
@@ -173,12 +173,12 @@ html[data-theme-preset="oasis"] {
 html[data-theme-preset="dune"] {
   /* F-0026: same order as Sahel/Atlas (see there): page 0.947, rail 0.935, well 0.923, hairline 0.85. */
   --surface-0: oklch(0.947 0.009 63);
-  --surface-1: oklch(0.997 0.005 63);
+  --surface-1: oklch(1 0 0);
   --surface-2: oklch(0.923 0.014 63);
   --surface-3: oklch(0.897 0.019 63);
   --background: oklch(0.947 0.009 63);
-  --card: oklch(0.997 0.005 63);
-  --popover: oklch(0.997 0.005 63);
+  --card: oklch(1 0 0);
+  --popover: oklch(1 0 0);
   --secondary: oklch(0.923 0.014 63);
   --muted: oklch(0.923 0.014 63);
   --border: oklch(0.85 0.019 63);
