@@ -23,6 +23,17 @@ import { storedMessageTime } from "./message-time";
 import { messageText, normalizeWhatsAppMessageContent } from "./types";
 
 export const AUTOMATION_TRIGGER_EFFECT_TYPE = "automation.trigger.v1";
+
+/**
+ * Prisma's interactive transaction defaults (wait 2 s for a connection, roll
+ * back after 5 s) are too tight for a PC several times slower than the lab: on
+ * the Founder's Celeron the claim and the failure record rolled back with P2028
+ * and the sidecar's retry cost more CPU (F-0031). A longer allowance makes a
+ * rollback storm less likely; the SQLite writer lock can be held longer while a
+ * slow transaction finishes. The work inside is unchanged. Same numbers as the
+ * conversation search index (WRITE_TRANSACTION).
+ */
+const INGRESS_TRANSACTION = { maxWait: 10_000, timeout: 30_000 } as const;
 const WHATSAPP_INGRESS_COMMAND_TYPE = "whatsapp_message.receive.v1";
 const MAX_ATTEMPTS_PER_BUDGET = 6;
 const LEASE_MS = 90_000;
@@ -328,7 +339,7 @@ async function claimIngress(
       attemptId,
       activeLeaseToken,
     };
-  });
+  }, INGRESS_TRANSACTION);
 }
 
 function isClaim(value: ClaimedIngress | IngressRow): value is ClaimedIngress {
@@ -413,7 +424,7 @@ async function markFailure(
         deadLetteredAt: state === "dead_letter" ? now : undefined,
       },
     });
-  });
+  }, INGRESS_TRANSACTION);
 
   return {
     ingressEventId: claim.id,
