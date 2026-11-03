@@ -48,10 +48,11 @@ export const RUNTIME_FLUSH_DELAYS_MS = [90_000, 10 * 60_000] as const;
 
 /**
  * F-0014. Node's module.flushCompileCache() is synchronous. Measured in a
- * Windows lab (datacenter runner, fresh install, cold cache): the flush wrote
- * about 1,330-1,440 files and blocked the event loop for 1.5-3.1 s, so a click
- * that landed in that window waited that long. With the periodic flush removed
- * the worst request was 0.13-0.16 s. The flush is kept, because it is what
+ * Windows lab (datacenter runner, fresh install, cold cache): the flush did
+ * about 1,330-1,440 write operations in a 1.4-2.8 s stretch (7 probes) and held
+ * up the worst request for 1.5-6.7 s, so a click that landed in that window
+ * waited that long. With the periodic flush removed the worst request was
+ * 0.13-0.16 s (2 probes). The flush is kept, because it is what
  * protects the cache when the app is not closed normally, but it now waits for
  * a quiet event loop: it runs once the loop has been below QUIET_FLUSH_DEFAULTS
  * .quietThreshold for quietWindowsRequired windows in a row, and at the latest

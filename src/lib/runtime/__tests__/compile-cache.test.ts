@@ -11,8 +11,8 @@ import {
 } from "../compile-cache";
 
 // F-0014: Node's module.flushCompileCache() is synchronous. On a cold cache it
-// wrote about 1,400 files and froze the Node event loop for 1.5-3 s, 90 s after
-// launch. The periodic flush stays (it protects the cache when the app is not
+// did about 1,400 write operations and held up the Node event loop for 1.5-6.7 s,
+// 90 s after launch. The periodic flush stays (it protects the cache when the app is not
 // closed normally), but each flush now waits until the event loop has been
 // quiet, and flushes anyway after a latest-time limit.
 //
