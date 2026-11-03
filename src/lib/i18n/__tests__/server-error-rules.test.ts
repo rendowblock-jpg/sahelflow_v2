@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import ar from "@/lib/i18n/locales/ar.json";
 import en from "@/lib/i18n/locales/en.json";
 import fr from "@/lib/i18n/locales/fr.json";
-import { translateServerError } from "@/lib/i18n/translate-server-error";
+import { matchKnownServerError, translateServerError } from "@/lib/i18n/translate-server-error";
 
 /** Identity t(): returns the key so tests pin the mapping contract. */
 const t = (key: string) => key;
@@ -170,6 +170,50 @@ describe("other 409 texts a seller can hit from the customers and products scree
       }
       expect(sentences[2], key).toMatch(/[\u0600-\u06FF]/);
       expect(sentences[1], key).not.toBe(sentences[0]);
+    }
+  });
+});
+
+describe("every server text that refuses a duplicate customer phone reads in en, fr and ar", () => {
+  const PHONE_KEY = "customers.errors.phoneExists";
+  const catalogs: Record<"en" | "fr" | "ar", Record<string, string>> = { en, fr, ar };
+  // The exact texts customer-service.ts throws (create; create race on the unique index; update; update race).
+  const SERVER_TEXTS: ReadonlyArray<readonly [string, string]> = [
+    ["create", "Customer with phone 0550123456 already exists"],
+    ["create or update, unique index race", "A customer with this phone number already exists."],
+    ["update", "Phone 0550123456 already used by another customer"],
+  ];
+
+  for (const [label, text] of SERVER_TEXTS) {
+    for (const locale of ["en", "fr", "ar"] as const) {
+      it(`${label}: "${text}" shows the ${locale} sentence`, () => {
+        const catalog = catalogs[locale];
+        const shown = matchKnownServerError(text, (key) => catalog[key] ?? key);
+        expect(shown).toBe(catalog[PHONE_KEY]);
+      });
+    }
+  }
+
+  it("keeps matching every phone refusal customer-service.ts really throws (byte-identical contract)", () => {
+    const root = join(__dirname, "..", "..", "..", "..");
+    const source = readFileSync(join(root, "src/lib/data/customer-service.ts"), "utf8");
+    const thrown = (source.match(/new ConflictError\((["`])[^\n]*?\1\)/g) ?? []).filter((call) => /phone/i.test(call));
+    expect(thrown.length).toBeGreaterThanOrEqual(4);
+    for (const call of thrown) {
+      const sample = call.replace(/^new ConflictError\(["`]|["`]\)$/g, "").replace(/\$\{[^}]+\}/, "0550123456");
+      expect(matchKnownServerError(sample, (key) => key), call).toBe(PHONE_KEY);
+    }
+  });
+
+  it("does not touch an unrelated message that only mentions phone or customer", () => {
+    for (const text of [
+      "Customer 'Phone Planet' saved",
+      "Phone number copied",
+      "Another customer",
+      "Invitation already used",
+      "Phone Planet",
+    ]) {
+      expect(matchKnownServerError(text, (key) => key), text).toBeNull();
     }
   });
 });
