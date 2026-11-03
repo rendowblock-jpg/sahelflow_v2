@@ -2,10 +2,12 @@
  * @vitest-environment happy-dom
  */
 // S05a-03 / S05a-10. The recovery dock shows what the sidecar could not hand
-// over, in ar (RTL), fr and en, and never says "delivered". Real code: the
-// dock, the notices, the hook, the copy file. Stand-ins: fetch (status +
+// over, in ar (RTL), fr and en, and never says "delivered". F-0027: the notices
+// are now chips of ONE status strip; the full sentence and its hint are in the
+// Details popover (same words as before). Real code: the dock, the strip, the
+// hook, the copy file. Stand-ins: fetch (status +
 // inbound), the locale hook, fake timers. NOT covered: a real sidecar, a browser.
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let locale: "ar" | "fr" | "en" = "en";
@@ -59,10 +61,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const DETAILS = { en: "Details", fr: "Détails", ar: "التفاصيل" } as const;
+
+// `chip` = what the strip itself shows; en/fr/ar = the full sentence, now in Details.
 const CASES = [
   {
     state: "lost",
     body: () => ingress({ lost: { spoolFailed: 2, noPairedAccount: 1 } }),
+    chip: {
+      en: "3 messages could not be received",
+      fr: "3 messages n’ont pas pu être reçus",
+      ar: "رسائل تعذّر استلامها: 3",
+    },
     en: "3 messages could not be received",
     fr: "3 messages n’ont pas pu être reçus",
     ar: "رسائل تعذّر استلامها: 3",
@@ -70,6 +80,11 @@ const CASES = [
   {
     state: "waiting",
     body: () => ingress({ spool: { pending: 2, oldestPendingSec: 660 } }),
+    chip: {
+      en: "2 messages waiting",
+      fr: "2 messages en attente",
+      ar: "رسائل تنتظر الاستلام: 2",
+    },
     en: "2 messages are waiting to be received",
     fr: "2 messages attendent d’être reçus",
     ar: "رسائل تنتظر الاستلام: 2",
@@ -77,6 +92,11 @@ const CASES = [
   {
     state: "unsupported",
     body: () => ingress({ lost: { unsupportedChat: 4 } }),
+    chip: {
+      en: "4 group messages skipped",
+      fr: "4 messages de groupe ignorés",
+      ar: "رسائل مجموعات تم تخطيها: 4",
+    },
     en: "4 messages from groups or broadcast lists were skipped",
     fr: "4 messages de groupes ou de listes de diffusion ont été ignorés",
     ar: "رسائل من مجموعات أو قوائم بث تم تخطيها: 4",
@@ -94,8 +114,15 @@ describe("recovery dock: reception notices", () => {
         const region = screen.getByTestId("ingress-health-notices");
         expect(region.getAttribute("dir")).toBe(lang === "ar" ? "rtl" : "ltr");
         expect(region.querySelector(`[data-notice="${item.state}"]`)).not.toBeNull();
-        expect(region.textContent).toContain(item[lang]);
-        expect(region.textContent ?? "").not.toMatch(/deliver|livr[ée]|تم التسليم|سُلّمت/i);
+        expect(region.textContent).toContain(item.chip[lang]);
+        // The full sentence is in Details, which starts closed.
+        expect(screen.queryByTestId("ingress-strip-details-panel")).toBeNull();
+        fireEvent.click(within(region).getByRole("button", { name: DETAILS[lang] }));
+        await settle(1);
+        const panel = screen.getByTestId("ingress-strip-details-panel");
+        expect(panel.getAttribute("dir")).toBe(lang === "ar" ? "rtl" : "ltr");
+        expect(panel.textContent).toContain(item[lang]);
+        expect(`${region.textContent}${panel.textContent}`).not.toMatch(/deliver|livr[ée]|تم التسليم|سُلّمت/i);
       });
     }
   }
