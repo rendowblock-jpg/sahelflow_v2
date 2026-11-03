@@ -362,6 +362,131 @@ export async function createSession(ip?: string): Promise<void> {
   await setSessionCookie(secret, session.id);
 }
 
+/**
+ * Session activity touch (lastSeenAt), best effort, off the request path.
+ *
+ * It used to be awaited inside every request that saw a lastSeenAt older than
+ * SESSION_ACTIVITY_WRITE_INTERVAL_MS. The row only changes after the first
+ * write commits, so every concurrent request in that window issued its own
+ * identical write on the single SQLite connection and waited for its turn;
+ * on a slow disk (synced commit of 130-1400 ms in the lab) N requests queued
+ * N writes and all of them stalled, and a failed write refused a request that
+ * was already authenticated (HTTP 503).
+ *
+ * Now, per process and per session: at most one write is started per
+ * interval (the memo is set synchronously, so concurrent requests see it), the
+ * request never waits for the write, and a failed or slow write never changes
+ * the answer. A failure only moves the next attempt out by a short back-off.
+ * If the write finds no live row (count 0: revoked or deleted) the session is
+ * refused at its next request. Revocation is still read from the database on
+ * every request; the only thing given up is noticing a revocation in the few
+ * milliseconds between that read and this write.
+ *
+ * A write that never settles must not stop touches for good (the inactivity
+ * limit is 60 minutes), so the memo, not the pending promise, gates the next
+ * attempt: a new write may start once the interval has passed.
+ */
+const SESSION_TOUCH_RETRY_BACKOFF_MS = 30 * 1000;
+const SESSION_TOUCH_TRACKER_MAX_ENTRIES = 1024;
+
+type SessionTouchMemo = { nextAttemptAtMs: number; attempt: number };
+
+const sessionTouchMemo = new Map<string, SessionTouchMemo>();
+/** sessionId -> time after which the entry is no longer needed. */
+const sessionsRevokedByTouch = new Map<string, number>();
+let sessionTouchAttempt = 0;
+
+/** Tests only: forget every recorded touch and revocation. */
+export function __resetSessionTouchTracker(): void {
+  sessionTouchMemo.clear();
+  sessionsRevokedByTouch.clear();
+  sessionTouchAttempt = 0;
+}
+
+function pruneSessionTouchTracker(nowMs: number): void {
+  if (sessionTouchMemo.size >= SESSION_TOUCH_TRACKER_MAX_ENTRIES) {
+    for (const [id, memo] of sessionTouchMemo) {
+      if (memo.nextAttemptAtMs <= nowMs) sessionTouchMemo.delete(id);
+    }
+    // Still full: drop the oldest entries (Map keeps insertion order).
+    for (const id of sessionTouchMemo.keys()) {
+      if (sessionTouchMemo.size < SESSION_TOUCH_TRACKER_MAX_ENTRIES) break;
+      sessionTouchMemo.delete(id);
+    }
+  }
+  if (sessionsRevokedByTouch.size >= SESSION_TOUCH_TRACKER_MAX_ENTRIES) {
+    for (const [id, forgetAtMs] of sessionsRevokedByTouch) {
+      if (forgetAtMs <= nowMs) sessionsRevokedByTouch.delete(id);
+    }
+    for (const id of sessionsRevokedByTouch.keys()) {
+      if (sessionsRevokedByTouch.size < SESSION_TOUCH_TRACKER_MAX_ENTRIES) break;
+      sessionsRevokedByTouch.delete(id);
+    }
+  }
+}
+
+function isSessionRevokedByTouch(sessionId: string, nowMs: number): boolean {
+  const forgetAtMs = sessionsRevokedByTouch.get(sessionId);
+  if (forgetAtMs === undefined) return false;
+  if (nowMs >= forgetAtMs) {
+    sessionsRevokedByTouch.delete(sessionId);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Start the touch for this session unless one was started (or failed) too
+ * recently. Returns true when a write was started by this call.
+ */
+function startSessionTouch(sessionId: string, now: Date): boolean {
+  const nowMs = now.getTime();
+  const memo = sessionTouchMemo.get(sessionId);
+  if (memo && nowMs < memo.nextAttemptAtMs) return false;
+
+  pruneSessionTouchTracker(nowMs);
+  sessionTouchAttempt += 1;
+  const attempt = sessionTouchAttempt;
+  sessionTouchMemo.set(sessionId, {
+    nextAttemptAtMs: nowMs + SESSION_ACTIVITY_WRITE_INTERVAL_MS,
+    attempt,
+  });
+
+  let write: Promise<{ count: number }>;
+  try {
+    write = Promise.resolve(
+      authContext.prisma.session.updateMany({
+        where: { id: sessionId, revokedAt: null },
+        data: { lastSeenAt: now },
+      }),
+    );
+  } catch (error) {
+    write = Promise.reject(error);
+  }
+  void write.then(
+    (refreshed) => {
+      if (refreshed.count !== 1) {
+        // Revoked or deleted between the read and this write: refuse the
+        // session from its next request on. A session cannot authenticate
+        // after the overall timeout, so the entry can be forgotten then.
+        sessionsRevokedByTouch.set(
+          sessionId,
+          nowMs + SESSION_OVERALL_TIMEOUT_MS,
+        );
+      }
+    },
+    () => {
+      // Best effort: retry after a short back-off, unless a newer attempt
+      // has already replaced this one.
+      const current = sessionTouchMemo.get(sessionId);
+      if (current && current.attempt === attempt) {
+        current.nextAttemptAtMs = Date.now() + SESSION_TOUCH_RETRY_BACKOFF_MS;
+      }
+    },
+  );
+  return true;
+}
+
 async function resolveCurrentSessionAuthority(): Promise<SessionAuthorityResult> {
   if (process.env.NODE_ENV === "production") {
     assertProcessShopAuthority(shopContext);
@@ -398,23 +523,19 @@ async function resolveCurrentSessionAuthority(): Promise<SessionAuthorityResult>
       }),
   });
 
+  if (authority.status !== "authenticated") return authority;
+
+  const nowMs = now.getTime();
+  if (isSessionRevokedByTouch(authority.sessionId, nowMs)) {
+    return { status: "rejected", code: "SESSION_REVOKED" };
+  }
   if (
-    authority.status === "authenticated" &&
-    now.getTime() - authority.lastSeenAt.getTime() >=
-      SESSION_ACTIVITY_WRITE_INTERVAL_MS
+    nowMs - authority.lastSeenAt.getTime() >= SESSION_ACTIVITY_WRITE_INTERVAL_MS &&
+    startSessionTouch(authority.sessionId, now)
   ) {
-    try {
-      const refreshed = await authContext.prisma.session.updateMany({
-        where: { id: authority.sessionId, revokedAt: null },
-        data: { lastSeenAt: now },
-      });
-      if (refreshed.count !== 1) {
-        return { status: "rejected", code: "SESSION_REVOKED" };
-      }
-      return { ...authority, lastSeenAt: now };
-    } catch {
-      return { status: "rejected", code: "SESSION_AUTHORITY_UNAVAILABLE" };
-    }
+    // The request does not wait for the write and its answer does not depend
+    // on it: the authority above was read from the database a moment ago.
+    return { ...authority, lastSeenAt: now };
   }
 
   return authority;
