@@ -167,27 +167,34 @@ const SHADOW_DROP: f32 = 10.0;
 const SHADOW_FALLOFF: f32 = 2.4;
 const CARD_RADIUS: f32 = 14.0;
 const MARK_SIZE: f32 = 124.0;
-const MARK_TOP: f32 = 46.0;
+const MARK_TOP: f32 = 35.0;
 const MARK_CENTER_Y: f32 = MARK_TOP + MARK_SIZE / 2.0;
 const GLOW_RADIUS: f32 = 260.0;
-const WORDMARK_TOP: f32 = 193.0;
-const WORDMARK_WIDTH: f32 = 144.0;
+const WORDMARK_TOP: f32 = 184.0;
+const WORDMARK_WIDTH: f32 = 168.0;
 #[cfg(test)]
-const WORDMARK_HEIGHT: f32 = 24.0;
-const TAGLINE_TOP: f32 = 234.0;
-const STATUS_TOP: f32 = 284.0;
-const HINT_TOP: f32 = 312.0;
-const VERSION_TOP: f32 = 334.0;
+const WORDMARK_HEIGHT: f32 = 28.0;
+const TAGLINE_TOP: f32 = 221.0;
+const STATUS_TOP: f32 = 265.0;
+const HINT_TOP: f32 = 293.0;
+const VERSION_TOP: f32 = 323.0;
 /// Distance of the slow hint from the card's start and end edges.
-const EDGE_INSET: f32 = 60.0;
-const PERCENT_WIDTH: f32 = 38.0;
+const EDGE_INSET: f32 = 40.0;
+const PERCENT_WIDTH: f32 = 44.0;
 const STATUS_GAP: f32 = 10.0;
 const STATUS_DOT: f32 = 4.0;
 /// The dot's centre below the top of the status line: half the text line
 /// (an eyeballed value, not yet checked on a Windows screen).
-const STATUS_DOT_CENTER_Y: f32 = 9.5;
+const STATUS_DOT_CENTER_Y: f32 = 10.5;
 const ENTRANCE_MS: f32 = 220.0;
 const ENTRANCE_FLOOR: f32 = 0.55;
+/// The type scale, in card pixels: the name (the 28 px wordmark) is the
+/// first step, the status line the second, then the tagline, the slow hint
+/// and the version line (F-0005).
+const BODY_FONT_PX: f32 = 15.0;
+const TAGLINE_FONT_PX: f32 = 14.0;
+const HINT_FONT_PX: f32 = 13.0;
+const VERSION_FONT_PX: f32 = 12.0;
 const SLOW_HINT_AFTER_MS: f32 = launch_screen::SLOW_HINT_AFTER_SECS as f32 * 1_000.0;
 const FADE_OUT_MS: f32 = 170.0;
 /// Every entrance animation has finished by this time. The static part of the
@@ -416,10 +423,10 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             faint: 0x5C665D,
             border: (0x446F47, 18),
             edge: (0xFFFFFF, 90),
-            sky: (0x61C649, 0x02942E),
+            sky: (0x319212, 0x02942E),
             deep: (0x03773B, 0x014D2B),
-            ghost: (0x014D2B, 10),
-            dot: 0x02942E,
+            ghost: (0x014D2B, 48),
+            dot: 0x03691F,
             accent: 0x02942E,
         },
         (Theme::Light, Preset::Atlas) => Look {
@@ -431,10 +438,10 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             faint: 0x62626E,
             border: (0x5F5C8F, 18),
             edge: (0xFFFFFF, 90),
-            sky: (0x9BA0FF, 0x7661E3),
+            sky: (0x7275CF, 0x7661E3),
             deep: (0x684BB6, 0x472F74),
-            ghost: (0x472F74, 10),
-            dot: 0x7661E3,
+            ghost: (0x472F74, 47),
+            dot: 0x5C42C2,
             accent: 0x7661E3,
         },
         (Theme::Light, Preset::Oasis) => Look {
@@ -446,10 +453,10 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             faint: 0x57676A,
             border: (0x186F7D, 18),
             edge: (0xFFFFFF, 90),
-            sky: (0x41BECB, 0x018A9C),
+            sky: (0x0A8B97, 0x018A9C),
             deep: (0x046F84, 0x064758),
-            ghost: (0x064758, 10),
-            dot: 0x018A9C,
+            ghost: (0x064758, 48),
+            dot: 0x056270,
             accent: 0x018A9C,
         },
         (Theme::Light, Preset::Dune) => Look {
@@ -461,10 +468,10 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             faint: 0x6C6158,
             border: (0x865733, 18),
             edge: (0xFFFFFF, 90),
-            sky: (0xEE922C, 0xB66001),
+            sky: (0xB76C10, 0xB66001),
             deep: (0x9B4800, 0x662D0B),
-            ghost: (0x662D0B, 10),
-            dot: 0xB66001,
+            ghost: (0x662D0B, 47),
+            dot: 0x894700,
             accent: 0xB66001,
         },
         (Theme::Dark, Preset::Sahel) => Look {
@@ -477,8 +484,8 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             border: (0xA3C9AA, 14),
             edge: (0xC8E8CD, 10),
             sky: (0x7AEC7B, 0x22BD5C),
-            deep: (0x049255, 0x025636),
-            ghost: (0x7AEC7B, 10),
+            deep: (0x15AD67, 0x00935F),
+            ghost: (0x7AEC7B, 34),
             dot: 0x7AEC7B,
             accent: 0x22BD5C,
         },
@@ -492,8 +499,8 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             border: (0xB9B9E4, 14),
             edge: (0xDADAFF, 10),
             sky: (0xC3C9FF, 0x968DFE),
-            deep: (0x7C67C9, 0x4D397A),
-            ghost: (0xC3C9FF, 10),
+            deep: (0x9985EA, 0x886FC6),
+            ghost: (0xC3C9FF, 35),
             dot: 0xC3C9FF,
             accent: 0x968DFE,
         },
@@ -507,8 +514,8 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             border: (0x91CBC6, 14),
             edge: (0xB9E9E5, 10),
             sky: (0x2FECD8, 0x00B6AF),
-            deep: (0x088C8D, 0x045256),
-            ghost: (0x2FECD8, 10),
+            deep: (0x2BA6A7, 0x128D94),
+            ghost: (0x2FECD8, 34),
             dot: 0x2FECD8,
             accent: 0x00B6AF,
         },
@@ -522,8 +529,8 @@ const fn look(theme: Theme, preset: Preset) -> Look {
             border: (0xD7B894, 14),
             edge: (0xF4D9BB, 10),
             sky: (0xFFC165, 0xD78C1D),
-            deep: (0xAC6818, 0x6A3A07),
-            ghost: (0xFFC165, 10),
+            deep: (0xCB853C, 0xB26E2F),
+            ghost: (0xFFC165, 35),
             dot: 0xFFC165,
             accent: 0xD78C1D,
         },
@@ -654,6 +661,197 @@ const MARK_FULL_Y: f32 = 6.0;
 const MARK_WAVE_FROM: f32 = 14.0;
 const MARK_WAVE_TO: f32 = 52.0;
 
+/// The square of the card that holds the mark: the S, its dot and a margin for
+/// the settle animation (which starts at 96 % of the size), in card pixels.
+const MARK_BOX_PAD: f32 = 6.0;
+const MARK_UNIT: f32 = MARK_SIZE / 50.0;
+const MARK_ORIGIN_X: f32 = CARD_WIDTH / 2.0 - MARK_SIZE / 2.0 - 9.0 * MARK_UNIT;
+const MARK_ORIGIN_Y: f32 = MARK_TOP - 7.0 * MARK_UNIT;
+/// The S spans x 17 to 46.5 and y 6 to 57 in the mark's units; its dot reaches x 50.6.
+const MARK_BOX_X: f32 = MARK_ORIGIN_X + 17.0 * MARK_UNIT - MARK_BOX_PAD;
+const MARK_BOX_Y: f32 = MARK_ORIGIN_Y + 6.0 * MARK_UNIT - MARK_BOX_PAD;
+const MARK_BOX_W: f32 = (50.8 - 17.0) * MARK_UNIT + MARK_BOX_PAD * 2.0;
+const MARK_BOX_H: f32 = (57.0 - 6.0) * MARK_UNIT + MARK_BOX_PAD * 2.0;
+
+/// The screen scale from the system DPI (96 is 100 %). A failed query (0) counts as 100 %.
+pub(crate) fn scale_from_dpi(dpi: u32) -> f32 {
+    if dpi == 0 {
+        1.0
+    } else {
+        dpi as f32 / 96.0
+    }
+}
+
+/// A test build may pretend to be on a denser screen (`SF_CARD_SCALE`), because the lab runner is fixed at
+/// 96 DPI. Only a number from 1 to 4 is believed; anything else is ignored.
+#[cfg(test)]
+pub(crate) fn scale_override(value: Option<&str>) -> Option<f32> {
+    let scale: f32 = value?.trim().parse().ok()?;
+    (scale.is_finite() && (1.0..=4.0).contains(&scale)).then_some(scale)
+}
+
+/// Where the card's window opens: centred in the work area of a monitor (left, top, right, bottom: the screen
+/// minus the taskbar, wherever it sits; a second monitor may have negative coordinates). The card is a fixed
+/// size, so the size of the screen only decides this; a work area smaller than the window lets the shadow
+/// margin hang over equally on both sides and the card itself stays centred.
+pub(crate) fn centered_in(area: (i32, i32, i32, i32), width: i32, height: i32) -> (i32, i32) {
+    (
+        area.0 + ((area.2 - area.0) - width) / 2,
+        area.1 + ((area.3 - area.1) - height) / 2,
+    )
+}
+
+/// Test builds only (the lab harness): a comma-separated list of moments in milliseconds, 0 to 5000, in the
+/// order given. Anything else in the list is ignored.
+#[cfg(test)]
+pub(crate) fn parse_ms_list(text: &str) -> Vec<u32> {
+    text.split(',')
+        .filter_map(|part| part.trim().parse::<u32>().ok())
+        .filter(|ms| *ms <= 5_000)
+        .collect()
+}
+
+/// Test builds only: a window-button look as `(hovered, pressed)`. A pressed button is under the pointer too.
+#[cfg(test)]
+pub(crate) fn chip_look(name: &str) -> Option<(Option<Chip>, Option<Chip>)> {
+    match name {
+        "none" => Some((None, None)),
+        "hover-min" => Some((Some(Chip::Minimize), None)),
+        "hover-close" => Some((Some(Chip::Close), None)),
+        "press-min" => Some((Some(Chip::Minimize), Some(Chip::Minimize))),
+        "press-close" => Some((Some(Chip::Close), Some(Chip::Close))),
+        _ => None,
+    }
+}
+
+/// Test builds only: whether `name` is in a comma-separated font list, whatever the case.
+#[cfg(test)]
+pub(crate) fn names_font(list: &str, name: &str) -> bool {
+    let name = name.trim();
+    !name.is_empty()
+        && list
+            .split(',')
+            .any(|entry| entry.trim().eq_ignore_ascii_case(name))
+}
+
+/// GDI+ fills the S through regions, and regions ignore the anti-aliasing mode:
+/// every curve came out as a staircase. The mark is therefore drawn `k` times
+/// larger into a layer of its own and averaged down. GDI+ paints that layer in
+/// software, so its cost grows with the square of `k` (F-0006): 3 on an
+/// ordinary screen, 2 at 125-175 %, and none at 200 % and over, where a device
+/// pixel is already half a card pixel and the staircase is too fine to see.
+pub(crate) fn supersample_factor(scale: f32) -> u32 {
+    if !scale.is_finite() || scale < 1.2 {
+        3
+    } else if scale < 1.9 {
+        2
+    } else {
+        1
+    }
+}
+
+/// A rectangle of the card window in whole device pixels.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct LayerRect {
+    pub(crate) x: i32,
+    pub(crate) y: i32,
+    pub(crate) w: i32,
+    pub(crate) h: i32,
+}
+
+/// Where the mark layer lands on the card window. Whole pixels, so the averaged
+/// blocks line up with the screen's own pixels.
+pub(crate) fn mark_layer_rect(scale: f32) -> LayerRect {
+    let scale = if scale.is_finite() && scale > 0.0 {
+        scale
+    } else {
+        1.0
+    };
+    let left = ((MARK_BOX_X + SHADOW_MARGIN) * scale).floor();
+    let top = ((MARK_BOX_Y + SHADOW_MARGIN) * scale).floor();
+    let right = ((MARK_BOX_X + MARK_BOX_W + SHADOW_MARGIN) * scale).ceil();
+    let bottom = ((MARK_BOX_Y + MARK_BOX_H + SHADOW_MARGIN) * scale).ceil();
+    LayerRect {
+        x: left as i32,
+        y: top as i32,
+        w: (right - left) as i32,
+        h: (bottom - top) as i32,
+    }
+}
+
+/// Average every `k` x `k` block of a premultiplied 32-bit picture into one
+/// pixel (every channel, alpha included). Premultiplied pictures can be
+/// averaged channel by channel, which is why the layer uses them.
+pub(crate) fn box_downsample(src: &[u8], width: usize, height: usize, k: usize) -> Vec<u8> {
+    assert!(k >= 1 && width % k == 0 && height % k == 0);
+    assert_eq!(src.len(), width * height * 4);
+    let (out_w, out_h) = (width / k, height / k);
+    let mut out = vec![0_u8; out_w * out_h * 4];
+    let blocks = (k * k) as u32;
+    for oy in 0..out_h {
+        for ox in 0..out_w {
+            let mut sum = [0_u32; 4];
+            for dy in 0..k {
+                let row = ((oy * k + dy) * width + ox * k) * 4;
+                for dx in 0..k {
+                    for (channel, total) in sum.iter_mut().enumerate() {
+                        *total += u32::from(src[row + dx * 4 + channel]);
+                    }
+                }
+            }
+            let at = (oy * out_w + ox) * 4;
+            for (channel, total) in sum.iter().enumerate() {
+                out[at + channel] = ((total + blocks / 2) / blocks) as u8;
+            }
+        }
+    }
+    out
+}
+
+/// Lay a premultiplied picture over another one with its top-left corner at
+/// (`x`, `y`): `dst = src + dst * (1 - src alpha)` per channel. Whatever falls
+/// outside the destination is ignored.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn over_premultiplied(
+    dst: &mut [u8],
+    dst_w: usize,
+    dst_h: usize,
+    src: &[u8],
+    src_w: usize,
+    src_h: usize,
+    x: i32,
+    y: i32,
+) {
+    for sy in 0..src_h {
+        let ty = y + sy as i32;
+        if ty < 0 || ty >= dst_h as i32 {
+            continue;
+        }
+        for sx in 0..src_w {
+            let tx = x + sx as i32;
+            if tx < 0 || tx >= dst_w as i32 {
+                continue;
+            }
+            let from = (sy * src_w + sx) * 4;
+            let alpha = u32::from(src[from + 3]);
+            if alpha == 0 {
+                continue;
+            }
+            let to = (ty as usize * dst_w + tx as usize) * 4;
+            if alpha == 255 {
+                dst[to..to + 4].copy_from_slice(&src[from..from + 4]);
+                continue;
+            }
+            let rest = 255 - alpha;
+            for channel in 0..4 {
+                let blended = u32::from(src[from + channel])
+                    + (u32::from(dst[to + channel]) * rest + 127) / 255;
+                dst[to + channel] = blended.min(255) as u8;
+            }
+        }
+    }
+}
+
 /// Where the surface of the fill sits, in the mark's units, for a progress of
 /// 0 to 1: below the S when empty, above it when full.
 pub(crate) fn mark_fill_level(progress: f32) -> f32 {
@@ -684,6 +882,25 @@ pub(crate) fn glow_alpha(progress: f32, dark: bool) -> f32 {
         0.05 + 0.12 * p
     } else {
         0.035 + 0.07 * p
+    }
+}
+
+/// The dot never fades below this opacity, so it can always be seen.
+pub(crate) const DOT_MIN_ALPHA: f32 = 0.72;
+
+/// How opaque the dot is: it breathes between `DOT_MIN_ALPHA` and 1 while the
+/// card waits, rests a little under full when the ripple is off, and is full
+/// when the workspace is ready.
+pub(crate) fn dot_alpha(seconds: f32, calm: bool, finishing: bool) -> f32 {
+    // Halfway between the floor and full, and the swing that reaches each end.
+    let rest = (1.0 + DOT_MIN_ALPHA) / 2.0;
+    let swing = (1.0 - DOT_MIN_ALPHA) / 2.0;
+    if finishing {
+        1.0
+    } else if calm {
+        rest
+    } else {
+        rest + swing * (seconds * 2.6).sin()
     }
 }
 
@@ -931,6 +1148,15 @@ pub(crate) fn stage_swap(stage_ms: f32, has_previous: bool) -> StageSwap {
             dy: STAGE_SHIFT * (1.0 - k),
         }
     }
+}
+
+/// The width to give a text that GDI+ will draw with its default string format.
+/// `measured` is the text width without side padding (the typographic format).
+/// The drawing format keeps about a sixth of an em at the start and a quarter at
+/// the end, so a slot of `measured + 2` px made character trimming drop the last
+/// letter ("Preparing your dat"). Two pixels of slack stay for rounding.
+pub(crate) fn label_slot_width(measured: f32, font_px: f32) -> f32 {
+    measured + font_px * (1.0 / 6.0 + 1.0 / 4.0) + 2.0
 }
 
 /// The room the status text takes in the row. When the text changes, the room
@@ -1202,6 +1428,7 @@ mod imp {
         family: *mut GpFontFamily,
         body: *mut GpFont,
         percent: *mut GpFont,
+        tagline: *mut GpFont,
         small: *mut GpFont,
         tiny: *mut GpFont,
         center: *mut GpStringFormat,
@@ -1210,9 +1437,26 @@ mod imp {
         typographic: *mut GpStringFormat,
     }
 
+    /// A test build may pretend some fonts are not installed (`SF_CARD_FONT_MISSING`, a comma-separated list),
+    /// to see the card as a PC without "Segoe UI Variable" draws it (Windows 10). A real build never does.
+    #[cfg(test)]
+    fn font_is_missing(name: &str) -> bool {
+        names_font(
+            &std::env::var("SF_CARD_FONT_MISSING").unwrap_or_default(),
+            name,
+        )
+    }
+    #[cfg(not(test))]
+    fn font_is_missing(_name: &str) -> bool {
+        false
+    }
+
     impl Fonts {
         unsafe fn create(locale: Locale) -> Option<Self> {
             let family_named = |name: &str| {
+                if font_is_missing(name) {
+                    return std::ptr::null_mut();
+                }
                 let mut family: *mut GpFontFamily = std::ptr::null_mut();
                 let name = wide(name);
                 let status =
@@ -1251,6 +1495,9 @@ mod imp {
                     flags |= StringFormatFlagsDirectionRightToLeft;
                 }
                 GdipCreateStringFormat(flags, 0, &mut format);
+                // Never drop a letter: the default trimming cuts the last
+                // character that does not fit ("Preparing your dat").
+                GdipSetStringFormatTrimming(format, StringTrimmingNone);
                 GdipSetStringFormatAlign(format, align);
                 GdipSetStringFormatLineAlign(format, StringAlignmentNear);
                 format
@@ -1261,16 +1508,18 @@ mod imp {
             }
             let fonts = Self {
                 family,
-                body: font(family, 13.5, FontStyleRegular),
-                percent: font(family, 13.5, FontStyleBold),
-                small: font(family, 12.0, FontStyleRegular),
-                tiny: font(family, 12.0, FontStyleRegular),
+                body: font(family, BODY_FONT_PX, FontStyleRegular),
+                percent: font(family, BODY_FONT_PX, FontStyleBold),
+                tagline: font(family, TAGLINE_FONT_PX, FontStyleRegular),
+                small: font(family, HINT_FONT_PX, FontStyleRegular),
+                tiny: font(family, VERSION_FONT_PX, FontStyleRegular),
                 center: format(false, StringAlignmentCenter),
                 center_rtl: format(true, StringAlignmentCenter),
                 typographic,
             };
             if fonts.percent.is_null()
                 || fonts.body.is_null()
+                || fonts.tagline.is_null()
                 || fonts.small.is_null()
                 || fonts.tiny.is_null()
                 || fonts.center.is_null()
@@ -1283,7 +1532,7 @@ mod imp {
         }
 
         unsafe fn destroy(&self) {
-            for font in [self.body, self.percent, self.small, self.tiny] {
+            for font in [self.body, self.percent, self.tagline, self.small, self.tiny] {
                 if !font.is_null() {
                     GdipDeleteFont(font);
                 }
@@ -1301,6 +1550,97 @@ mod imp {
 
     /// What a steady frame draws, so an unchanged frame is not redrawn.
     type Signature = (i32, u32, u8, u8, u8, u8, bool, u32, u8);
+
+    /// How a drawing is mapped onto its surface: `k` times larger than the
+    /// screen, with device pixel (`dx`, `dy`) of the card window as the surface's
+    /// top-left corner. The card window itself is `View::CARD`.
+    #[derive(Clone, Copy)]
+    struct View {
+        k: f32,
+        dx: f32,
+        dy: f32,
+    }
+
+    impl View {
+        const CARD: View = View {
+            k: 1.0,
+            dx: 0.0,
+            dy: 0.0,
+        };
+    }
+
+    /// The mark's own drawing surface, `k` times larger than its place on the
+    /// card. GDI+ draws into `pixels` (premultiplied BGRA); the picture is then
+    /// averaged down and laid over the card (see `supersample_factor`).
+    struct MarkLayer {
+        rect: LayerRect,
+        k: u32,
+        pixels: *mut u8,
+        len: usize,
+        bitmap: *mut GpBitmap,
+        graphics: *mut GpGraphics,
+    }
+
+    impl MarkLayer {
+        unsafe fn create(scale: f32) -> Option<Self> {
+            Self::with_factor(scale, supersample_factor(scale))
+        }
+
+        /// The layer at an explicit factor (the benchmark compares factors).
+        unsafe fn with_factor(scale: f32, k: u32) -> Option<Self> {
+            if k <= 1 {
+                return None;
+            }
+            let rect = mark_layer_rect(scale);
+            let (width, height) = (rect.w * k as i32, rect.h * k as i32);
+            if width <= 0 || height <= 0 {
+                return None;
+            }
+            let len = width as usize * height as usize * 4;
+            let pixels = Box::into_raw(vec![0_u8; len].into_boxed_slice()).cast::<u8>();
+            let mut bitmap: *mut GpBitmap = std::ptr::null_mut();
+            let mut graphics: *mut GpGraphics = std::ptr::null_mut();
+            let ready = GdipCreateBitmapFromScan0(
+                width,
+                height,
+                width * 4,
+                PIXEL_FORMAT_32BPP_PARGB,
+                pixels as *const u8,
+                &mut bitmap,
+            ) == Ok
+                && GdipGetImageGraphicsContext(bitmap.cast(), &mut graphics) == Ok;
+            let layer = Self {
+                rect,
+                k,
+                pixels,
+                len,
+                bitmap,
+                graphics,
+            };
+            if !ready {
+                layer.destroy();
+                return None;
+            }
+            GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
+            GdipSetPixelOffsetMode(graphics, PixelOffsetModeHighQuality);
+            GdipSetCompositingQuality(graphics, CompositingQualityHighQuality);
+            Some(layer)
+        }
+
+        /// Frees the drawing surface; the layer must not be used afterwards.
+        unsafe fn destroy(&self) {
+            if !self.graphics.is_null() {
+                GdipDeleteGraphics(self.graphics);
+            }
+            if !self.bitmap.is_null() {
+                GdipDisposeImage(self.bitmap.cast());
+            }
+            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
+                self.pixels,
+                self.len,
+            )));
+        }
+    }
 
     struct Renderer {
         window: HWND,
@@ -1342,10 +1682,15 @@ mod imp {
         /// The width of each status text, measured once.
         label_widths: RefCell<Vec<(&'static str, f32)>>,
         last_signature: Option<Signature>,
+        /// The mark's own larger drawing surface (none on very dense screens).
+        mark_layer: Option<MarkLayer>,
     }
 
     impl Renderer {
         unsafe fn destroy(&mut self) {
+            if let Some(layer) = self.mark_layer.take() {
+                layer.destroy();
+            }
             if !self.graphics.is_null() {
                 GdipDeleteGraphics(self.graphics);
             }
@@ -1446,12 +1791,12 @@ mod imp {
             }
             match measure_width(g, text, self.fonts.body, self.fonts.typographic) {
                 Some(width) => {
-                    let width = width + 2.0;
+                    let width = label_slot_width(width, BODY_FONT_PX);
                     self.label_widths.borrow_mut().push((text, width));
                     width
                 }
                 // GDI+ could not measure it: a rough per-letter guess, not remembered.
-                None => text.chars().count() as f32 * 7.0 + 2.0,
+                None => label_slot_width(text.chars().count() as f32 * 7.0, BODY_FONT_PX),
             }
         }
 
@@ -1552,7 +1897,18 @@ mod imp {
 
         /// Card space: logical pixels with the card's top-left at the origin.
         unsafe fn reset_to_card_space(&self, g: *mut GpGraphics) {
+            self.reset_to_view(g, View::CARD);
+        }
+
+        /// Card space as seen by a surface that is `view.k` times larger than the
+        /// screen and starts at device pixel (`view.dx`, `view.dy`) of the card
+        /// window. Operations are prepended, so they apply last-written first:
+        /// card pixel -> plus shadow margin -> screen scale -> minus the
+        /// surface's corner -> times `k`.
+        unsafe fn reset_to_view(&self, g: *mut GpGraphics, view: View) {
             GdipResetWorldTransform(g);
+            GdipScaleWorldTransform(g, view.k, view.k, MatrixOrderPrepend);
+            GdipTranslateWorldTransform(g, -view.dx, -view.dy, MatrixOrderPrepend);
             GdipScaleWorldTransform(g, self.scale, self.scale, MatrixOrderPrepend);
             GdipTranslateWorldTransform(g, SHADOW_MARGIN, SHADOW_MARGIN, MatrixOrderPrepend);
         }
@@ -1660,7 +2016,7 @@ mod imp {
             draw_text(
                 g,
                 self.copy.tagline,
-                self.fonts.body,
+                self.fonts.tagline,
                 if rtl {
                     self.fonts.center_rtl
                 } else {
@@ -1913,12 +2269,65 @@ mod imp {
             }
         }
 
+        /// The mark, anti-aliased: drawn on its own larger layer, averaged down and
+        /// laid over the card (see `supersample_factor`). With no layer (a very
+        /// dense screen, or GDI+ could not make one) it is drawn straight onto the
+        /// card, as it always was.
+        unsafe fn paint_mark(&self, g: *mut GpGraphics, t: f32, fill: f32, finishing: bool) {
+            if timeline(t, 0.0, 700.0) <= 0.0 {
+                return;
+            }
+            let Some(layer) = &self.mark_layer else {
+                // No layer on a very dense screen: the mark goes straight onto the card. GDI+'s
+                // high-quality compositing blends in linear light, which made the empty S about
+                // 1.4x brighter than on the layered path (lab run 41526402555, F-0008). The
+                // palette is tuned for plain sRGB blending, so use that here too.
+                GdipSetCompositingQuality(g, CompositingQualityHighSpeed);
+                self.draw_mark(g, View::CARD, t, fill, finishing);
+                GdipSetCompositingQuality(g, CompositingQualityHighQuality);
+                return;
+            };
+            GdipGraphicsClear(layer.graphics, 0);
+            let view = View {
+                k: layer.k as f32,
+                dx: layer.rect.x as f32,
+                dy: layer.rect.y as f32,
+            };
+            self.draw_mark(layer.graphics, view, t, fill, finishing);
+            GdipFlush(layer.graphics, FlushIntentionSync);
+            let k = layer.k as usize;
+            let (width, height) = (layer.rect.w as usize, layer.rect.h as usize);
+            let large = std::slice::from_raw_parts(layer.pixels, layer.len);
+            let small = box_downsample(large, width * k, height * k, k);
+            // What the card drew before the mark must have landed before the
+            // mark goes over it.
+            GdipFlush(g, FlushIntentionSync);
+            let card = std::slice::from_raw_parts_mut(self.bits, self.byte_len);
+            over_premultiplied(
+                card,
+                self.width as usize,
+                self.height as usize,
+                &small,
+                width,
+                height,
+                layer.rect.x,
+                layer.rect.y,
+            );
+        }
+
         /// The mark is the progress: a faint S that fills from the bottom as the
         /// launch really advances (the deep lower arc first, the sky upper arc
         /// last), with a slow low ripple on the surface and a thin bright line
         /// along it. The dot lands last and breathes while the card waits.
         /// Geometry mirrors public/brand/sahelflow-logo.svg (viewBox 9 7 50 50).
-        unsafe fn paint_mark(&self, g: *mut GpGraphics, t: f32, fill: f32, finishing: bool) {
+        unsafe fn draw_mark(
+            &self,
+            g: *mut GpGraphics,
+            view: View,
+            t: f32,
+            fill: f32,
+            finishing: bool,
+        ) {
             let appear = ease_out_cubic(timeline(t, 0.0, 700.0));
             if appear <= 0.0 {
                 return;
@@ -1954,7 +2363,7 @@ mod imp {
             });
 
             let place = || {
-                self.reset_to_card_space(g);
+                self.reset_to_view(g, view);
                 GdipTranslateWorldTransform(g, CARD_WIDTH / 2.0, MARK_CENTER_Y, MatrixOrderPrepend);
                 GdipScaleWorldTransform(g, settle, settle, MatrixOrderPrepend);
                 GdipTranslateWorldTransform(
@@ -2064,13 +2473,7 @@ mod imp {
             let land = timeline(t, 900.0, 550.0);
             if land > 0.0 {
                 let radius = 3.1 * ease_out_back(land);
-                let breathing = if finishing {
-                    1.0
-                } else if calm {
-                    0.6
-                } else {
-                    0.45 + 0.25 * (seconds * 2.6).sin()
-                };
+                let breathing = dot_alpha(seconds, calm, finishing);
                 place();
                 let mut dot: *mut GpSolidFill = std::ptr::null_mut();
                 GdipCreateSolidFill(
@@ -2087,7 +2490,7 @@ mod imp {
                 );
                 GdipDeleteBrush(dot.cast());
             }
-            self.reset_to_card_space(g);
+            self.reset_to_view(g, view);
         }
     }
 
@@ -2347,10 +2750,12 @@ mod imp {
                     bottom: 728,
                 }
             };
-            POINT {
-                x: area.left + ((area.right - area.left) - width) / 2,
-                y: area.top + ((area.bottom - area.top) - height) / 2,
-            }
+            let (x, y) = centered_in(
+                (area.left, area.top, area.right, area.bottom),
+                width,
+                height,
+            );
+            POINT { x, y }
         }
     }
 
@@ -2416,8 +2821,11 @@ mod imp {
             return false;
         }
 
-        let dpi = GetDpiForSystem();
-        let scale = if dpi == 0 { 1.0 } else { dpi as f32 / 96.0 };
+        #[cfg(test)]
+        let scale = scale_override(std::env::var("SF_CARD_SCALE").ok().as_deref())
+            .unwrap_or_else(|| scale_from_dpi(GetDpiForSystem()));
+        #[cfg(not(test))]
+        let scale = scale_from_dpi(GetDpiForSystem());
         let width = ((CARD_WIDTH + SHADOW_MARGIN * 2.0) * scale).round() as i32;
         let height = ((CARD_HEIGHT + SHADOW_MARGIN * 2.0) * scale).round() as i32;
         let position = placement(width, height);
@@ -2534,6 +2942,7 @@ mod imp {
         GdipSetPixelOffsetMode(graphics, PixelOffsetModeHighQuality);
         GdipSetCompositingQuality(graphics, CompositingQualityHighQuality);
         GdipSetTextRenderingHint(graphics, TextRenderingHintAntiAliasGridFit);
+        let mark_layer = MarkLayer::create(scale);
 
         HIT_SCALE_MILLI.store((scale * 1_000.0).round() as u32, Ordering::Relaxed);
         HIT_RTL.store(locale == Locale::Ar, Ordering::Relaxed);
@@ -2575,6 +2984,7 @@ mod imp {
             gauge: CalmGauge::default(),
             label_widths: RefCell::new(Vec::new()),
             last_signature: None,
+            mark_layer,
         };
         // Paint the first frame before the window becomes visible, so the
         // very first pixels are the card, never an empty rectangle.
@@ -2595,6 +3005,261 @@ mod imp {
             None,
         );
         true
+    }
+
+    /// Paints the REAL card (the code the seller sees) for one look, one
+    /// language, every launch phase and a list of progress values, and writes
+    /// the pixels to disk, so a design is judged on a picture and not on a
+    /// guess. It opens a real window, so it only runs when asked; the lab
+    /// workflow `render-card` does.
+    ///
+    /// Environment: SF_CARD_PREVIEW_DIR (required), SF_CARD_THEME dark|light,
+    /// SF_CARD_PRESET sahel|atlas|oasis|dune, SF_CARD_LOCALE en|fr|ar,
+    /// SF_CARD_PERCENTS "8,34,72,99", SF_CARD_PHASES "preparing,starting,
+    /// retrying,opening", SF_CARD_HINT "0,1" (1 = the slow-start sentence is
+    /// showing), SF_CARD_BENCH N (also time the first paint and N steady
+    /// frames, with the ripple on), SF_CARD_SCALE 1 to 4 (pretend the screen
+    /// is that much denser than 96 DPI, e.g. 1.5 for 150 %).
+    /// Output: `<theme>-<preset>-<locale>-<phase>-p<percent>[-hint]-<w>x<h>.bgra`,
+    /// raw premultiplied BGRA, top row first; `bench-*.txt` for the timings.
+    #[cfg(test)]
+    mod preview {
+        use super::*;
+        use std::fs;
+        use std::time::Duration;
+
+        fn setting(name: &str, fallback: &str) -> String {
+            std::env::var(name)
+                .ok()
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| fallback.to_string())
+        }
+
+        fn list(name: &str, fallback: &str) -> Vec<String> {
+            setting(name, fallback)
+                .split(',')
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .collect()
+        }
+
+        fn phase_named(name: &str) -> Phase {
+            match name {
+                "starting" => Phase::Starting,
+                "retrying" => Phase::Retrying,
+                "opening" => Phase::Opening,
+                _ => Phase::Preparing,
+            }
+        }
+
+        #[test]
+        #[ignore = "opens a real window; run by the lab workflow render-card"]
+        fn render_the_card_for_a_picture() {
+            let out = PathBuf::from(
+                std::env::var("SF_CARD_PREVIEW_DIR").expect("SF_CARD_PREVIEW_DIR is required"),
+            );
+            let theme = setting("SF_CARD_THEME", "dark");
+            let preset = setting("SF_CARD_PRESET", "sahel");
+            let locale = setting("SF_CARD_LOCALE", "en");
+            let percents: Vec<u32> = list("SF_CARD_PERCENTS", "8,34,72,99")
+                .iter()
+                .filter_map(|value| value.parse().ok())
+                .collect();
+            let phases = list("SF_CARD_PHASES", "preparing");
+            let hints = list("SF_CARD_HINT", "0");
+            let bench: u32 = setting("SF_CARD_BENCH", "0").parse().unwrap_or(0);
+            // The first moments of a live card (ms), the window-button looks, the hand-over state and a free
+            // tag for the file names (to tell font runs apart).
+            let times = parse_ms_list(&setting("SF_CARD_TIMES", ""));
+            let chips = list("SF_CARD_CHIPS", "none");
+            let finish = setting("SF_CARD_FINISH", "0") == "1";
+            let tag = setting("SF_CARD_TAG", "");
+            assert!(!percents.is_empty(), "SF_CARD_PERCENTS has no number");
+            let data_dir = out.join(format!("appdata-{theme}-{preset}-{locale}"));
+            fs::create_dir_all(&data_dir).expect("create the app data folder");
+            fs::write(
+                data_dir.join("launch-appearance.json"),
+                format!(r#"{{"locale":"{locale}","theme":"{theme}","preset":"{preset}"}}"#),
+            )
+            .expect("write the launch appearance record");
+
+            let mut token: usize = 0;
+            let input = GdiplusStartupInput {
+                GdiplusVersion: 1,
+                DebugEventCallback: 0,
+                SuppressBackgroundThread: 0,
+                SuppressExternalCodecs: 1,
+            };
+            unsafe {
+                assert_eq!(GdiplusStartup(&mut token, &input, std::ptr::null_mut()), Ok);
+                assert!(
+                    create(&data_dir, unix_milliseconds()),
+                    "the card window was not created"
+                );
+                RENDERER.with(|cell| {
+                    let mut guard = cell.borrow_mut();
+                    let renderer = guard.as_mut().expect("the renderer exists after create");
+                    // Everything settled, nothing animating: a still picture. SF_CARD_TIMES paints the
+                    // first moments of a live card instead, SF_CARD_CHIPS the window-button states and
+                    // SF_CARD_FINISH=1 the card as it hands over to the workspace.
+                    let moments: Vec<Option<u32>> = if times.is_empty() {
+                        vec![None]
+                    } else {
+                        times.iter().map(|ms| Some(*ms)).collect()
+                    };
+                    if finish {
+                        super::super::WORKSPACE_READY.store(true, Ordering::SeqCst);
+                        renderer.closing_since = Some(Instant::now());
+                    }
+                    for chip in &chips {
+                        let (hovered, pressed) = chip_look(chip)
+                            .unwrap_or_else(|| panic!("SF_CARD_CHIPS: unknown look {chip:?}"));
+                        HOVERED.store(chip_code(hovered), Ordering::Relaxed);
+                        PRESSED.store(chip_code(pressed), Ordering::Relaxed);
+                        for hint in &hints {
+                            for phase in &phases {
+                                for percent in &percents {
+                                    for moment in &moments {
+                                        let fraction = *percent as f32 / 100.0;
+                                        renderer.progress.shown = fraction;
+                                        renderer.progress.target = fraction;
+                                        renderer.progress.phase = phase_named(phase);
+                                        // No cross-fade: the label of THIS phase, whole.
+                                        renderer.stage_text = "";
+                                        renderer.stage_prev = "";
+                                        renderer.reduced_motion = moment.is_none();
+                                        let age = match (hint == "1", moment) {
+                                            (true, _) => Duration::from_secs(60),
+                                            (false, Some(ms)) => Duration::from_millis(u64::from(*ms)),
+                                            (false, None) => Duration::ZERO,
+                                        };
+                                        renderer.shown_at =
+                                            Instant::now().checked_sub(age).unwrap_or_else(Instant::now);
+                                        renderer.settled.clear();
+                                        renderer.steady = false;
+                                        renderer.last_signature = None;
+                                        let t = match moment {
+                                            Some(ms) => *ms as f32,
+                                            None => renderer.elapsed_ms(),
+                                        };
+                                        renderer.paint(t);
+                                        GdipFlush(renderer.graphics, FlushIntentionSync);
+                                        let slow = if hint == "1" { "-hint" } else { "" };
+                                        let at = moment.map(|ms| format!("-t{ms:04}")).unwrap_or_default();
+                                        let pointer = if chip == "none" {
+                                            String::new()
+                                        } else {
+                                            format!("-chip-{chip}")
+                                        };
+                                        let done = if finish { "-finish" } else { "" };
+                                        let label = if tag.is_empty() {
+                                            String::new()
+                                        } else {
+                                            format!("-{tag}")
+                                        };
+                                        let name = format!(
+                                            "{theme}-{preset}-{locale}-{phase}-p{percent:02}{slow}{at}{pointer}{done}{label}-{}x{}.bgra",
+                                            renderer.width, renderer.height
+                                        );
+                                        fs::write(out.join(name), renderer.copy_out())
+                                            .expect("write the picture");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    HOVERED.store(NO_CHIP, Ordering::Relaxed);
+                    PRESSED.store(NO_CHIP, Ordering::Relaxed);
+                    if bench > 0 {
+                        // The ripple on, 34 %: what a seller's PC does every frame. The same frame is
+                        // timed with no layer (the old direct drawing) and with layers of 2x2, 3x3 and
+                        // 4x4 samples, one after the other in this process, because the runner's speed
+                        // changes from one run to the next.
+                        renderer.reduced_motion = false;
+                        renderer.progress.shown = 0.34;
+                        renderer.progress.target = 0.34;
+                        renderer.progress.phase = Phase::Preparing;
+                        let mut report = format!(
+                            "window={}x{}\nframes={bench}\nproduction_factor={}\n",
+                            renderer.width,
+                            renderer.height,
+                            supersample_factor(renderer.scale)
+                        );
+                        for (name, factor) in [
+                            ("direct", 1_u32),
+                            ("k2", 2),
+                            ("k3", 3),
+                            ("k4", 4),
+                            ("direct", 1),
+                        ] {
+                            if let Some(old) = renderer.mark_layer.take() {
+                                old.destroy();
+                            }
+                            renderer.mark_layer = MarkLayer::with_factor(renderer.scale, factor);
+                            renderer.shown_at = Instant::now();
+                            renderer.settled.clear();
+                            renderer.steady = false;
+                            renderer.last_signature = None;
+                            let first = Instant::now();
+                            renderer.paint(5_000.0);
+                            GdipFlush(renderer.graphics, FlushIntentionSync);
+                            let first_ms = first.elapsed().as_secs_f64() * 1_000.0;
+                            let started = Instant::now();
+                            for _ in 0..bench {
+                                renderer.paint(5_000.0);
+                                GdipFlush(renderer.graphics, FlushIntentionSync);
+                            }
+                            let per_frame =
+                                started.elapsed().as_secs_f64() * 1_000.0 / bench as f64;
+                            report.push_str(&format!(
+                                "{name}: first_paint_ms={first_ms:.2} steady_frame_ms={per_frame:.2}\n"
+                            ));
+                        }
+                        // The Rust half of a layered frame on its own (average down, lay over), at
+                        // the real layer sizes. GDI+ is a system library, so its share is the same in
+                        // a release build; only this half gets faster there. frame - rust = GDI+.
+                        let (card_w, card_h) = (renderer.width as usize, renderer.height as usize);
+                        let rect = mark_layer_rect(renderer.scale);
+                        let mut card_scratch = vec![0_u8; card_w * card_h * 4];
+                        for factor in [2_usize, 3, 4] {
+                            let (w, h) = (rect.w as usize, rect.h as usize);
+                            let big: Vec<u8> = (0..w * factor * h * factor * 4)
+                                .map(|i| (i * 31 % 251) as u8)
+                                .collect();
+                            let started = Instant::now();
+                            for _ in 0..bench {
+                                let small = box_downsample(&big, w * factor, h * factor, factor);
+                                over_premultiplied(
+                                    &mut card_scratch,
+                                    card_w,
+                                    card_h,
+                                    &small,
+                                    w,
+                                    h,
+                                    rect.x,
+                                    rect.y,
+                                );
+                            }
+                            report.push_str(&format!(
+                                "rust_half_k{factor}: ms={:.2}\n",
+                                started.elapsed().as_secs_f64() * 1_000.0 / bench as f64
+                            ));
+                        }
+                        fs::write(
+                            out.join(format!(
+                                "bench-{theme}-{preset}-{locale}-s{}.txt",
+                                (renderer.scale * 100.0).round() as u32
+                            )),
+                            report,
+                        )
+                        .expect("write the timings");
+                    }
+                    renderer.destroy();
+                    DestroyWindow(renderer.window);
+                });
+                GdiplusShutdown(token);
+            }
+        }
     }
 }
 
@@ -2805,7 +3470,9 @@ pub(crate) mod glow_layer_tests {
                 let green = (channel(*pixel, 8) + 1) / 3 * 3;
                 *pixel = (*pixel & !0x0000_FF00) | (green << 8);
             }
-            for y in [60_usize, 108, 250] {
+            // The middle row is the one through the glow's centre. It was the literal 108 while the
+            // mark's centre was 108; it now follows the mark (moved up by F-0005).
+            for y in [60_usize, MARK_CENTER_Y as usize, 250] {
                 let (from, to) = inner_span(y);
                 grain_worst = grain_worst.max(local_deviation(&green_row(&good, y), from, to));
                 staircase_best =
@@ -3338,6 +4005,455 @@ mod tests {
     use super::*;
     use std::fs;
 
+    // F-0004 (Founder's lab run 41407479045): the mark was the dimmest thing on
+    // the card (2.4:1 empty, 2.9:1 filled, against 18:1 for the name), and in the
+    // light theme the empty upper arc was 1.1:1, i.e. not there. These tests pin
+    // what the S must achieve against what is really behind it: the card's own
+    // gradient plus the glow, mixed in plain sRGB the way `blend_glow` mixes it.
+
+    /// The colour behind the S at `progress`, `fraction` of the glow's radius away from its centre.
+    fn behind_the_mark(p: Palette, progress: f32, fraction: f32) -> u32 {
+        let t = MARK_CENTER_Y / CARD_HEIGHT;
+        let channel_at = |shift: u32| {
+            let top = ((p.card_top >> shift) & 0xFF) as f32;
+            let bottom = ((p.card_bottom >> shift) & 0xFF) as f32;
+            (top + (bottom - top) * t).round() as u32
+        };
+        let card = 0xFF00_0000 | (channel_at(16) << 16) | (channel_at(8) << 8) | channel_at(0);
+        let strength = glow_alpha(progress, p.dark) * glow_profile(fraction);
+        over(with_alpha(p.glow, strength), card)
+    }
+
+    /// Every place the S can be seen against: no glow yet, half, full; at the
+    /// glow's centre and at the edge of the S (about a quarter of its radius).
+    fn backdrops(p: Palette) -> Vec<u32> {
+        let mut all = Vec::new();
+        for progress in [0.0_f32, 0.5, 1.0] {
+            for fraction in [0.0_f32, 0.25] {
+                all.push(behind_the_mark(p, progress, fraction));
+            }
+        }
+        all
+    }
+
+    /// WCAG asks 3:1 for a graphic that carries meaning; the unfilled S carries
+    /// "this is where it will fill", so it gets a little less.
+    const UNFILLED_MIN: f32 = 2.0;
+    const FILLED_MIN: f32 = 3.0;
+
+    #[test]
+    fn the_unfilled_s_can_be_seen_in_every_look() {
+        for appearance in looks() {
+            let p = palette(appearance);
+            for backdrop in backdrops(p) {
+                let seen = contrast(over(p.ghost, backdrop), backdrop);
+                assert!(
+                    seen >= UNFILLED_MIN,
+                    "{appearance:?}: the unfilled S is {seen:.2}:1 on {backdrop:06X}, under {UNFILLED_MIN}:1"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_filled_s_clears_three_to_one_in_every_look() {
+        for appearance in looks() {
+            let p = palette(appearance);
+            for backdrop in backdrops(p) {
+                for (name, color) in [
+                    ("sky start", p.sky.0),
+                    ("sky end", p.sky.1),
+                    ("deep start", p.deep.0),
+                    ("deep end", p.deep.1),
+                ] {
+                    let seen = contrast(color, backdrop);
+                    assert!(
+                        seen >= FILLED_MIN,
+                        "{appearance:?}: the {name} of the filled S is {seen:.2}:1 on {backdrop:06X}, under {FILLED_MIN}:1"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_filled_s_is_clearly_brighter_than_the_unfilled_s() {
+        // Otherwise the fill (the progress) cannot be read.
+        for appearance in looks() {
+            let p = palette(appearance);
+            for backdrop in backdrops(p) {
+                let empty = contrast(over(p.ghost, backdrop), backdrop);
+                let full = [p.sky.0, p.sky.1, p.deep.0, p.deep.1]
+                    .into_iter()
+                    .map(|color| contrast(color, backdrop))
+                    .fold(f32::MAX, f32::min);
+                assert!(
+                    full >= empty * 1.25,
+                    "{appearance:?}: filled {full:.2}:1 is not clearly above unfilled {empty:.2}:1 on {backdrop:06X}"
+                );
+            }
+        }
+    }
+
+    // F-0004 again: the dot is drawn at 60 % opacity and the new layer mixes it
+    // in plain sRGB, which is darker than GDI+'s linear mix. In the light theme
+    // it was 2.0:1. Its opacity now has a floor, and the floor is tested.
+    #[test]
+    fn the_dot_never_fades_below_its_floor() {
+        for calm in [false, true] {
+            for step in 0..400 {
+                let seconds = step as f32 * 0.05;
+                let alpha = dot_alpha(seconds, calm, false);
+                assert!(
+                    (DOT_MIN_ALPHA - 1e-6..=1.0).contains(&alpha),
+                    "alpha {alpha} at {seconds} s (calm {calm})"
+                );
+            }
+        }
+        assert_eq!(dot_alpha(3.0, false, true), 1.0);
+        assert_eq!(dot_alpha(3.0, true, true), 1.0);
+    }
+
+    #[test]
+    fn the_dot_still_breathes_while_the_card_waits() {
+        let alphas: Vec<f32> = (0..200)
+            .map(|i| dot_alpha(i as f32 * 0.05, false, false))
+            .collect();
+        let low = alphas.iter().cloned().fold(f32::MAX, f32::min);
+        let high = alphas.iter().cloned().fold(f32::MIN, f32::max);
+        assert!(high - low >= 0.12, "the dot barely moves: {low}..{high}");
+    }
+
+    #[test]
+    fn the_dot_clears_three_to_one_at_its_dimmest_in_every_look() {
+        for appearance in looks() {
+            let p = palette(appearance);
+            for backdrop in backdrops(p) {
+                let dimmest = over(with_alpha(p.dot, DOT_MIN_ALPHA), backdrop);
+                let seen = contrast(dimmest, backdrop);
+                assert!(
+                    seen >= FILLED_MIN,
+                    "{appearance:?}: the dot at its dimmest is {seen:.2}:1 on {backdrop:06X}, under {FILLED_MIN}:1"
+                );
+            }
+        }
+    }
+
+    // F-0003 (Founder's lab run 41407479045): every curve of the mark was a
+    // staircase, because GDI+ regions and clips ignore the anti-aliasing mode.
+    // The mark is drawn several times larger and averaged down; these tests pin
+    // the averaging and the laying-over, which are plain pixel maths.
+    fn bgra(blue: u8, green: u8, red: u8, alpha: u8) -> [u8; 4] {
+        [blue, green, red, alpha]
+    }
+
+    // The card has never been checked on a screen above 100 %: the lab runner is
+    // fixed at 96 DPI. A test build may therefore be told which scale to use
+    // (SF_CARD_SCALE); the real build always asks the system.
+    #[test]
+    fn the_screen_scale_follows_the_system_dpi() {
+        assert_eq!(scale_from_dpi(0), 1.0, "a failed DPI query means 100 %");
+        assert_eq!(scale_from_dpi(96), 1.0);
+        assert_eq!(scale_from_dpi(120), 1.25);
+        assert_eq!(scale_from_dpi(144), 1.5);
+        assert_eq!(scale_from_dpi(168), 1.75);
+        assert_eq!(scale_from_dpi(192), 2.0);
+        assert_eq!(scale_from_dpi(288), 3.0);
+    }
+
+    #[test]
+    fn a_scale_override_accepts_only_a_sensible_number() {
+        assert_eq!(scale_override(None), None);
+        assert_eq!(scale_override(Some("1.5")), Some(1.5));
+        assert_eq!(scale_override(Some(" 2 ")), Some(2.0));
+        for bad in ["", "abc", "0", "0.5", "-1", "NaN", "inf", "4.5", "100"] {
+            assert_eq!(scale_override(Some(bad)), None, "{bad:?} must be refused");
+        }
+    }
+
+    // 1080p and every other screen: the card is a fixed size, so the screen size only decides WHERE it opens.
+    // `centered_in` takes a monitor's work area (left, top, right, bottom: the screen minus the taskbar,
+    // which may sit on any edge, and a second monitor may have negative coordinates) and the window size.
+    #[test]
+    fn the_card_opens_centred_in_the_work_area_of_any_screen() {
+        // 1080p with a 40 px taskbar at the bottom; the 680x440 window (600x360 card + 40 px shadow all round).
+        assert_eq!(centered_in((0, 0, 1920, 1040), 680, 440), (620, 300));
+        // The same screen at 150 %: the window is 1020x660 device pixels.
+        assert_eq!(centered_in((0, 0, 1920, 1040), 1020, 660), (450, 190));
+        // A 1366x768 laptop with its taskbar.
+        assert_eq!(centered_in((0, 0, 1366, 728), 680, 440), (343, 144));
+        // A taskbar on top moves the centre down with the work area.
+        assert_eq!(centered_in((0, 40, 1920, 1080), 680, 440), (620, 340));
+        // A second monitor to the left of the main one has negative coordinates.
+        assert_eq!(centered_in((-1920, 0, 0, 1040), 680, 440), (-1300, 300));
+        // A work area smaller than the window (a 200 % laptop): the shadow margin hangs over equally on both
+        // sides, so the card itself stays centred.
+        assert_eq!(centered_in((0, 0, 600, 400), 680, 440), (-40, -20));
+        for area in [
+            (0, 0, 1920, 1040),
+            (0, 0, 1366, 728),
+            (-1920, 0, 0, 1040),
+            (0, 40, 2560, 1440),
+        ] {
+            for (w, h) in [(680, 440), (850, 550), (1020, 660), (1360, 880)] {
+                let (x, y) = centered_in(area, w, h);
+                let (cx, cy) = (x + w / 2, y + h / 2);
+                let (ax, ay) = ((area.0 + area.2) / 2, (area.1 + area.3) / 2);
+                assert!(
+                    (cx - ax).abs() <= 1 && (cy - ay).abs() <= 1,
+                    "{area:?} {w}x{h}"
+                );
+            }
+        }
+    }
+
+    // The lab can now show the first moments of the card, the chip states and the fallback fonts.
+    #[test]
+    fn a_list_of_moments_keeps_only_sensible_times() {
+        assert_eq!(parse_ms_list(""), Vec::<u32>::new());
+        assert_eq!(parse_ms_list("0, 150,700"), vec![0, 150, 700]);
+        assert_eq!(parse_ms_list("x,5,-3,99999,2000"), vec![5, 2000]);
+        assert_eq!(
+            parse_ms_list("300,100"),
+            vec![300, 100],
+            "the order given is kept"
+        );
+    }
+
+    #[test]
+    fn a_chip_look_says_what_the_pointer_is_doing() {
+        assert_eq!(chip_look("none"), Some((None, None)));
+        assert_eq!(chip_look("hover-min"), Some((Some(Chip::Minimize), None)));
+        assert_eq!(chip_look("hover-close"), Some((Some(Chip::Close), None)));
+        // A pressed chip is under the pointer too.
+        assert_eq!(
+            chip_look("press-min"),
+            Some((Some(Chip::Minimize), Some(Chip::Minimize)))
+        );
+        assert_eq!(
+            chip_look("press-close"),
+            Some((Some(Chip::Close), Some(Chip::Close)))
+        );
+        assert_eq!(chip_look("hover"), None);
+        assert_eq!(chip_look(""), None);
+    }
+
+    #[test]
+    fn a_missing_font_list_matches_names_whatever_their_case() {
+        assert!(names_font(
+            "Segoe UI Variable Text",
+            "segoe ui variable text"
+        ));
+        assert!(names_font("Segoe UI Variable Text, Segoe UI", "Segoe UI"));
+        assert!(!names_font("Segoe UI Variable Text", "Segoe UI"));
+        assert!(!names_font("", "Segoe UI"));
+        assert!(!names_font("Segoe UI", ""));
+    }
+
+    #[test]
+    fn the_mark_is_drawn_larger_on_ordinary_screens_and_not_on_very_dense_ones() {
+        assert_eq!(supersample_factor(1.0), 3);
+        assert_eq!(supersample_factor(1.1), 3);
+        assert_eq!(supersample_factor(1.25), 2);
+        assert_eq!(supersample_factor(1.5), 2);
+        assert_eq!(supersample_factor(1.75), 2);
+        assert_eq!(supersample_factor(2.0), 1);
+        assert_eq!(supersample_factor(3.0), 1);
+        assert_eq!(supersample_factor(4.0), 1);
+        // A broken scale must not give 0 (a zero-size surface) or a huge one.
+        for scale in [0.0_f32, -1.0, f32::NAN, f32::INFINITY, 0.01, 100.0] {
+            let k = supersample_factor(scale);
+            assert!((1..=3).contains(&k), "scale {scale} gave {k}");
+        }
+    }
+
+    #[test]
+    fn the_mark_layer_holds_the_whole_mark_at_every_screen_scale() {
+        // The S spans x 17..46 and y 6..57 in the mark's own units (its dot reaches
+        // x 50.4); the unit is MARK_SIZE / 50, the mark is centred on the card.
+        let unit = MARK_SIZE / 50.0;
+        let origin_x = CARD_WIDTH / 2.0 - MARK_SIZE / 2.0 - 9.0 * unit;
+        let origin_y = MARK_TOP - 7.0 * unit;
+        for scale in [1.0_f32, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0] {
+            let rect = mark_layer_rect(scale);
+            let (left, top) = (rect.x as f32, rect.y as f32);
+            let (right, bottom) = ((rect.x + rect.w) as f32, (rect.y + rect.h) as f32);
+            // The settle animation starts at 96 % of the size around the mark's centre.
+            for (mark_x, mark_y) in [(17.0, 6.0), (50.7, 6.0), (17.0, 57.0), (50.7, 57.0)] {
+                let card_x = origin_x + mark_x * unit;
+                let card_y = origin_y + mark_y * unit;
+                let device_x = (card_x + SHADOW_MARGIN) * scale;
+                let device_y = (card_y + SHADOW_MARGIN) * scale;
+                assert!(
+                    le(left, device_x) && le(device_x, right),
+                    "x {device_x} outside {left}..{right} at scale {scale}"
+                );
+                assert!(
+                    le(top, device_y) && le(device_y, bottom),
+                    "y {device_y} outside {top}..{bottom} at scale {scale}"
+                );
+            }
+            assert!(rect.w > 0 && rect.h > 0);
+        }
+    }
+
+    #[test]
+    fn the_mark_layer_is_no_bigger_than_the_mark_needs() {
+        // F-0006: GDI+ paints the layer in software and its cost grows with the
+        // number of pixels, so the layer is the S and its dot, not a square.
+        let rect = mark_layer_rect(1.0);
+        assert!(rect.w <= 100, "layer is {} px wide", rect.w);
+        assert!(rect.h <= 140, "layer is {} px tall", rect.h);
+        assert!(
+            rect.w * rect.h * 9 <= 130_000,
+            "layer holds too many pixels"
+        );
+    }
+
+    #[test]
+    fn averaging_blocks_gives_the_mean_of_every_channel() {
+        // One 4x4 block: eight black pixels and eight half-transparent white ones
+        // (premultiplied, so a 50 % white pixel is 128,128,128,128).
+        let mut block = Vec::new();
+        for row in 0..4 {
+            for _ in 0..4 {
+                block.extend_from_slice(&if row < 2 {
+                    bgra(0, 0, 0, 255)
+                } else {
+                    bgra(128, 128, 128, 128)
+                });
+            }
+        }
+        let small = box_downsample(&block, 4, 4, 4);
+        assert_eq!(small.len(), 4);
+        assert_eq!(small, vec![64, 64, 64, 192]);
+    }
+
+    #[test]
+    fn a_slanted_edge_becomes_a_soft_edge_when_averaged_down() {
+        // 40x40 picture of an opaque white shape whose edge is a hard staircase.
+        let (width, height, k) = (40_usize, 40_usize, 4_usize);
+        let mut big = vec![0_u8; width * height * 4];
+        for y in 0..height {
+            for x in 0..width {
+                if x * 3 > y * 4 + 7 {
+                    let i = (y * width + x) * 4;
+                    big[i..i + 4].copy_from_slice(&bgra(255, 255, 255, 255));
+                }
+            }
+        }
+        let small = box_downsample(&big, width, height, k);
+        let (sw, sh) = (width / k, height / k);
+        let mut crossing_rows = 0;
+        let mut soft = 0;
+        for y in 0..sh {
+            let alphas: Vec<u8> = (0..sw).map(|x| small[(y * sw + x) * 4 + 3]).collect();
+            let has_edge = alphas.contains(&0) && alphas.contains(&255);
+            if has_edge {
+                crossing_rows += 1;
+                if alphas.iter().any(|a| *a > 0 && *a < 255) {
+                    soft += 1;
+                }
+            }
+        }
+        assert!(crossing_rows >= 4, "the test picture has no edge to test");
+        assert_eq!(
+            soft, crossing_rows,
+            "a row crossed the edge with a hard 0 to 255 step"
+        );
+    }
+
+    #[test]
+    fn averaging_refuses_a_picture_that_is_not_a_whole_number_of_blocks() {
+        let result = std::panic::catch_unwind(|| box_downsample(&[0_u8; 5 * 4 * 4], 5, 4, 2));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn laying_a_picture_over_another_follows_premultiplied_over() {
+        let mut card = vec![0_u8; 3 * 4];
+        card[0..4].copy_from_slice(&bgra(10, 20, 30, 255));
+        card[4..8].copy_from_slice(&bgra(10, 20, 30, 255));
+        card[8..12].copy_from_slice(&bgra(10, 20, 30, 255));
+        // Opaque, transparent and half-transparent source pixels.
+        let mut layer = Vec::new();
+        layer.extend_from_slice(&bgra(200, 100, 50, 255));
+        layer.extend_from_slice(&bgra(0, 0, 0, 0));
+        layer.extend_from_slice(&bgra(50, 50, 50, 128));
+        over_premultiplied(&mut card, 3, 1, &layer, 3, 1, 0, 0);
+        assert_eq!(&card[0..4], &bgra(200, 100, 50, 255));
+        assert_eq!(&card[4..8], &bgra(10, 20, 30, 255));
+        // 50 + 10 * (255 - 128) / 255 = 55 (rounded), alpha 128 + 255 * 127 / 255 = 255.
+        assert_eq!(&card[8..12], &bgra(55, 60, 65, 255));
+    }
+
+    #[test]
+    fn laying_a_picture_over_another_only_touches_the_overlap() {
+        let original = vec![7_u8; 4 * 4 * 4];
+        let mut card = original.clone();
+        let layer = vec![255_u8; 3 * 3 * 4];
+        // Hanging off the top-left corner by two pixels, then off the bottom-right.
+        over_premultiplied(&mut card, 4, 4, &layer, 3, 3, -2, -2);
+        assert_eq!(&card[0..4], &[255, 255, 255, 255]);
+        assert_eq!(&card[4..8], &original[4..8]);
+        over_premultiplied(&mut card, 4, 4, &layer, 3, 3, 3, 3);
+        assert_eq!(
+            &card[(3 * 4 + 3) * 4..(3 * 4 + 3) * 4 + 4],
+            &[255, 255, 255, 255]
+        );
+        assert_eq!(card.len(), original.len());
+        // Entirely outside: nothing changes, nothing panics.
+        let before = card.clone();
+        over_premultiplied(&mut card, 4, 4, &layer, 3, 3, 40, 40);
+        over_premultiplied(&mut card, 4, 4, &layer, 3, 3, -40, -40);
+        assert_eq!(card, before);
+    }
+
+    // F-0002 (Founder's lab run 41407479045): the status read "Preparing your
+    // dat". The slot was measured WITHOUT GDI+'s side padding and drawn WITH it,
+    // so the last letter did not fit and character trimming dropped it.
+    #[test]
+    fn a_label_slot_clears_the_padding_gdi_plus_adds_when_it_draws() {
+        for font_px in [12.0_f32, 13.5, 16.0] {
+            for measured in [40.0_f32, 100.0, 173.0] {
+                let slot = label_slot_width(measured, font_px);
+                // GDI+'s default string format keeps about a sixth of an em at
+                // the start and a quarter at the end.
+                let padding = font_px * (1.0 / 6.0 + 1.0 / 4.0);
+                assert!(
+                    le(measured + padding, slot),
+                    "slot {slot} is narrower than text {measured} + padding {padding} at {font_px} px"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_label_slot_never_wastes_more_than_a_few_pixels() {
+        // A wider slot moves the dot and the percent; it must stay tight.
+        let slot = label_slot_width(100.0, 13.5);
+        assert!(
+            lt(slot, 100.0 + 13.5 * 0.5 + 3.0),
+            "slot {slot} is too loose"
+        );
+    }
+
+    // The same bug class in the other direction: whatever the measure says, a
+    // drawing format must never drop a letter. The needle is built from two
+    // pieces so this test does not find itself.
+    #[test]
+    fn the_drawing_formats_never_trim_a_letter() {
+        let source = include_str!("native_splash.rs");
+        let needle = concat!(
+            "GdipSetStringFormatTrimming(",
+            "format, StringTrimmingNone)"
+        );
+        assert!(
+            source.contains(needle),
+            "the drawing format must switch trimming off"
+        );
+    }
+
     const PRESETS: [Preset; 4] = [Preset::Sahel, Preset::Atlas, Preset::Oasis, Preset::Dune];
     const THEMES: [Theme; 2] = [Theme::Light, Theme::Dark];
 
@@ -3463,6 +4579,111 @@ mod tests {
         fs::remove_dir_all(&directory).unwrap();
     }
 
+    // F-0005 (Founder: "looks like shit, not premium"): the name was 24 px and
+    // everything else 12-13.5 px, so below the name there was no second step;
+    // the mark's top margin was 51 px and the version line sat 13 px from the
+    // bottom edge. These tests pin a type scale and a vertical rhythm. The
+    // offsets below were MEASURED on the lab's Windows renders of Segoe UI:
+    // the top of a capital sits 0.37 em under the line's top, the baseline
+    // 1.07 em, and a descender ends 1.26 em.
+    fn cap_top(top: f32, font_px: f32) -> f32 {
+        top + 0.37 * font_px
+    }
+    fn baseline(top: f32, font_px: f32) -> f32 {
+        top + 1.07 * font_px
+    }
+    fn descender_bottom(top: f32, font_px: f32) -> f32 {
+        top + 1.26 * font_px
+    }
+
+    #[test]
+    fn the_type_has_clear_steps() {
+        // Read through black_box: they are constants, and clippy refuses
+        // assertions that it can decide at compile time.
+        let size = std::hint::black_box;
+        let (name, status) = (size(WORDMARK_HEIGHT), size(BODY_FONT_PX));
+        let (tagline, hint, version) = (
+            size(TAGLINE_FONT_PX),
+            size(HINT_FONT_PX),
+            size(VERSION_FONT_PX),
+        );
+        assert!(name >= 27.0, "the name is {name} px tall");
+        assert!(status >= 15.0, "the status is {status} px");
+        assert!(
+            tagline >= 14.0 && tagline < status,
+            "the tagline is {tagline} px"
+        );
+        assert!(hint >= 12.5 && hint < tagline, "the hint is {hint} px");
+        assert!(
+            version >= 11.5 && version <= hint,
+            "the version is {version} px"
+        );
+        assert!(name >= 1.8 * status);
+    }
+
+    #[test]
+    fn the_card_is_balanced_top_to_bottom() {
+        let ink_top = MARK_ORIGIN_Y + 9.0 * MARK_UNIT;
+        let bottom_margin = CARD_HEIGHT - baseline(VERSION_TOP, VERSION_FONT_PX);
+        assert!(
+            (32.0..=46.0).contains(&ink_top),
+            "the mark starts {ink_top} px from the top"
+        );
+        assert!(
+            bottom_margin >= 20.0,
+            "the version line is {bottom_margin} px from the bottom"
+        );
+        assert!(
+            ink_top <= 2.0 * bottom_margin,
+            "top margin {ink_top} against bottom margin {bottom_margin}"
+        );
+    }
+
+    #[test]
+    fn the_name_and_tagline_read_as_one_group() {
+        let mark_bottom = MARK_ORIGIN_Y + 55.0 * MARK_UNIT;
+        let mark_to_name = WORDMARK_TOP - mark_bottom;
+        let name_to_tagline =
+            cap_top(TAGLINE_TOP, TAGLINE_FONT_PX) - (WORDMARK_TOP + WORDMARK_HEIGHT);
+        let tagline_to_status =
+            cap_top(STATUS_TOP, BODY_FONT_PX) - baseline(TAGLINE_TOP, TAGLINE_FONT_PX);
+        assert!(
+            (24.0..=36.0).contains(&mark_to_name),
+            "mark to name is {mark_to_name} px"
+        );
+        assert!(
+            (10.0..=18.0).contains(&name_to_tagline),
+            "name to tagline is {name_to_tagline} px"
+        );
+        assert!(
+            tagline_to_status >= 2.0 * name_to_tagline,
+            "tagline to status is {tagline_to_status} px, name to tagline {name_to_tagline} px"
+        );
+    }
+
+    #[test]
+    fn the_longest_slow_hint_keeps_a_tenth_of_slack_in_its_box() {
+        // Measured on Windows (lab run 41520342342, Segoe UI Variable, 13 px): the French
+        // sentence is 463 px wide. If the PC falls back to another face the text can run wider;
+        // the box must absorb that, because a second line would land on the version.
+        let size = std::hint::black_box;
+        let measured = 463.0 * size(HINT_FONT_PX) / 13.0;
+        let box_width = size(CARD_WIDTH) - size(EDGE_INSET) * 2.0;
+        assert!(
+            box_width >= measured * 1.10,
+            "the French hint needs {measured} px, its box is {box_width} px"
+        );
+    }
+
+    #[test]
+    fn the_slow_hint_has_room_between_the_status_and_the_version() {
+        let above = cap_top(HINT_TOP, HINT_FONT_PX) - descender_bottom(STATUS_TOP, BODY_FONT_PX);
+        let below =
+            cap_top(VERSION_TOP, VERSION_FONT_PX) - descender_bottom(HINT_TOP, HINT_FONT_PX);
+        assert!(above >= 10.0, "hint is {above} px under the status");
+        assert!(below >= 10.0, "hint is {below} px above the version");
+    }
+
     #[test]
     fn the_layout_reads_top_to_bottom_without_overlap() {
         let stack = [
@@ -3478,10 +4699,10 @@ mod tests {
             assert!(pair[0] < pair[1], "layout out of order: {stack:?}");
         }
         // Each text block has room for its line (font size x 1.4).
-        assert!(lt(TAGLINE_TOP + 13.5 * 1.4, STATUS_TOP));
-        assert!(lt(STATUS_TOP + 13.5 * 1.4, HINT_TOP));
-        assert!(lt(HINT_TOP + 12.0 * 1.4, VERSION_TOP));
-        assert!(lt(VERSION_TOP + 12.0 * 1.4, CARD_HEIGHT));
+        assert!(lt(TAGLINE_TOP + TAGLINE_FONT_PX * 1.4, STATUS_TOP));
+        assert!(lt(STATUS_TOP + BODY_FONT_PX * 1.4, HINT_TOP));
+        assert!(lt(HINT_TOP + HINT_FONT_PX * 1.4, VERSION_TOP));
+        assert!(lt(VERSION_TOP + VERSION_FONT_PX * 1.4, CARD_HEIGHT));
         // The longest status line (French, about 190 px) and the percent fit.
         assert!(lt(
             PERCENT_WIDTH + STATUS_GAP * 2.0 + STATUS_DOT + 260.0,
