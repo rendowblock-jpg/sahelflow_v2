@@ -58,6 +58,7 @@ import {
   type RejectionReasonKey,
 } from "@/lib/orders/rejection-reasons";
 import { mutatePrefix } from "@/lib/swr/mutate";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { toast } from "@/lib/toast";
 import { cn, formatDZD, formatOperationalAge } from "@/lib/utils";
 import type {
@@ -335,6 +336,10 @@ export function ConfirmationQueueTable({
   const rowsById = new Map(queue.map((row) => [row.id, row]));
   const bulkBusyWithRow = bulkBusy || actingOrderId !== null;
 
+  // A legacy order refused by the server (for example not enough stock) is shown in the seller's language, not as raw English.
+  const translateLegacyError = (raw: string): string =>
+    translateServerError(raw, t, t("orders.statusActions.updateFailed"));
+
   async function refreshAfterDecisions(): Promise<void> {
     await Promise.all([mutate(), mutatePrefix("/api/orders")]);
     router.refresh();
@@ -367,6 +372,7 @@ export function ConfirmationQueueTable({
             reason,
             fallbackMessage: t("orders.statusActions.updateFailed"),
             blockedMessage: t("confirmationQueue.bulk.blockedReason"),
+            legacyErrorTranslator: translateLegacyError,
           });
           if (!outcome.ok) {
             throw new Error(
@@ -414,6 +420,7 @@ export function ConfirmationQueueTable({
         reason,
         fallbackMessage: t("orders.statusActions.updateFailed"),
         blockedMessage: t("confirmationQueue.bulk.blockedReason"),
+        legacyErrorTranslator: translateLegacyError,
       });
       if (result.failed.length === 0) {
         toast.success(
