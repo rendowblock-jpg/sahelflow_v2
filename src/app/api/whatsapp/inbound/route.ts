@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db, shopContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import {
   assertTrustedAction,
   requireTrustedAction,
 } from "@/lib/identity/authorization";
+import {
+  asDatabaseBusyError,
+  DATABASE_BUSY_RETRY_AFTER_SECONDS,
+} from "@/lib/whatsapp/database-busy";
 import { persistWhatsAppInbound } from "@/lib/whatsapp/inbound-ingress";
 import { parseIngressStatusFilter } from "@/lib/whatsapp/ingress-status-filter";
 import { processWhatsAppInbound } from "@/lib/whatsapp/inbound-processor";
+import { ingressErrorCode } from "@/lib/whatsapp/ingress-error-code";
 import {
   isWhatsAppPhoneOutboundEnvelope,
   persistWhatsAppPhoneOutbound,
@@ -80,8 +86,47 @@ export function acknowledgeWhatsAppSpoolRemoval(state: string): boolean {
   return state === "applied" || state === "chat_deleted";
 }
 
-/** Private sidecar commit-before-acknowledgement boundary. */
+/**
+ * Private sidecar commit-before-acknowledgement boundary.
+ *
+ * A busy local database (a Prisma timeout, a locked SQLite file) is answered as
+ * 503 DATABASE_BUSY with a Retry-After hint instead of the anonymous 500 the
+ * generic error wrapper would give it (F-0031). Nothing is acknowledged, so the
+ * sidecar keeps the message and tries again. Every other error is left to the
+ * wrapper exactly as before.
+ */
 export const POST = withErrorHandler(async (request: NextRequest) => {
+  try {
+    return await receiveSidecarDelivery(request);
+  } catch (error) {
+    const busy = asDatabaseBusyError(error);
+    if (!busy) throw error;
+    // The cause stays in the app log as a content-free code (never the message).
+    logger.warn("api.POST /api/whatsapp/inbound", {
+      code: busy.code,
+      statusCode: busy.statusCode,
+      cause: ingressErrorCode(error),
+    });
+    return NextResponse.json(
+      {
+        ok: false,
+        acknowledged: false,
+        publish: false,
+        error: busy.message,
+        code: busy.code,
+      },
+      {
+        status: busy.statusCode,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(DATABASE_BUSY_RETRY_AFTER_SECONDS),
+        },
+      },
+    );
+  }
+}, "POST /api/whatsapp/inbound");
+
+async function receiveSidecarDelivery(request: NextRequest): Promise<NextResponse> {
   if (!authenticateWhatsAppSidecar(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -150,4 +195,4 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       headers: { "Cache-Control": "no-store" },
     },
   );
-}, "POST /api/whatsapp/inbound");
+}
