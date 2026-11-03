@@ -1001,7 +1001,9 @@ export class WhatsAppInboundSpool {
       BREAKER_BASE_COOL_DOWN_MS * Math.pow(2, this.breakerOpenings - 1),
       BREAKER_MAX_COOL_DOWN_MS,
     );
-    const draw = Math.min(1, Math.max(0, this.random()));
+    // A broken random source must not be able to leave the breaker open for good.
+    const raw = this.random();
+    const draw = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0.5;
     const jitter = 1 + (draw * 2 - 1) * BREAKER_JITTER;
     // The maximum is a maximum: the jitter never carries it past 5 minutes.
     this.breakerCoolDownMs = Math.min(
@@ -1026,10 +1028,13 @@ export class WhatsAppInboundSpool {
    * becomes half-open here: the pass may then ask the app with ONE record.
    */
   private breakerPhase(now: number): WhatsAppInboundBreakerState {
+    // An end further away than any cool-down can be means the PC's clock was
+    // set back: the breaker must not stay open for hours because of it.
     if (
       this.breakerState === "open" &&
       this.breakerOpenUntil !== null &&
-      now >= this.breakerOpenUntil
+      (now >= this.breakerOpenUntil ||
+        this.breakerOpenUntil - now > BREAKER_MAX_COOL_DOWN_MS)
     ) {
       this.breakerState = "half-open";
       this.breakerOpenUntil = null;

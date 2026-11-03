@@ -402,6 +402,35 @@ describe("spool circuit breaker: jitter", () => {
   });
 });
 
+describe("spool circuit breaker: it can never get stuck", () => {
+  it("survives a random source that returns nonsense", async () => {
+    const t = arrange(5, () => fail(), { random: () => Number.NaN });
+
+    await pass(t.spool);
+
+    const coolDownMs = breakerEvents(t.events)[0]?.fields.coolDownMs as number;
+    expect(coolDownMs).toBeGreaterThanOrEqual(12_000);
+    expect(coolDownMs).toBeLessThanOrEqual(18_000);
+    await vi.advanceTimersByTimeAsync(18_000);
+    await pass(t.spool);
+    expect(t.app.calls).toHaveLength(4); // the half-open probe
+  });
+
+  it("goes half-open at once when the PC's clock is set back past the longest cool-down", async () => {
+    const t = arrange(5, () => fail());
+    await pass(t.spool); // open for 15 s
+    expect(t.spool.snapshot().breaker?.state).toBe("open");
+    expect(t.app.calls).toHaveLength(3);
+
+    vi.setSystemTime(Date.now() - 6 * 60_000);
+    await pass(t.spool);
+
+    // Half-open, one probe (a record never tried, so it is due), failed: open again.
+    expect(breakerEvents(t.events).map((e) => e.fields.state)).toEqual(["open", "half-open", "open"]);
+    expect(t.app.calls).toHaveLength(4);
+  });
+});
+
 describe("spool circuit breaker: nothing is lost", () => {
   it("keeps every record, unmarked, across open and close, and delivers each exactly once", async () => {
     const t = arrange(10, (call) => (call.n <= 3 ? fail() : ok()));
