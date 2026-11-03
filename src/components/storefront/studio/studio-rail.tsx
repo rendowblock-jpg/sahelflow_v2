@@ -72,7 +72,7 @@ export function StudioRail({
             className={cn(
               "relative flex w-14 flex-col items-center gap-1 max-md:min-h-11 max-md:w-auto max-md:flex-1 rounded-control px-1 py-2 text-[11px] font-medium leading-3 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
               active
-                ? "bg-primary-subtle text-primary"
+                ? "bg-primary-subtle text-primary-ink"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >

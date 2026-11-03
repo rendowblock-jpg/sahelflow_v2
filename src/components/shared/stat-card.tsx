@@ -133,7 +133,7 @@ const toneClasses: Record<
   },
   accent: {
     surface: "border-primary/20 bg-primary-subtle",
-    icon: "border-primary/20 bg-primary-soft text-primary",
+    icon: "border-primary/20 bg-primary-soft text-primary-ink",
   },
   success: {
     surface: "border-success/20 bg-success-subtle",

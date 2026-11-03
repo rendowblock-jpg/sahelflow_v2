@@ -275,7 +275,7 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
                   <span className="text-xs font-semibold capitalize">{release.templateId}</span>
                   <span className="text-caption uppercase text-muted-foreground">{release.locale}</span>
                   {release.isActive ? (
-                    <span className="ms-auto rounded-full bg-primary-soft px-2 py-0.5 text-caption font-semibold text-primary">
+                    <span className="ms-auto rounded-full bg-primary-soft px-2 py-0.5 text-caption font-semibold text-primary-ink">
                       {t("storefront.releaseHistory.current")}
                     </span>
                   ) : null}

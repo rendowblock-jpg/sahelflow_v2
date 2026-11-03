@@ -47,7 +47,7 @@ export function SearchScopeBar({
             className={cn(
               "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-caption transition-colors duration-150 motion-reduce:transition-none",
               selected
-                ? "border-primary/30 bg-primary-soft font-medium text-primary"
+                ? "border-primary/30 bg-primary-soft font-medium text-primary-ink"
                 : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >

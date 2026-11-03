@@ -161,7 +161,7 @@ export function InboxThreadHeader({
         ) : null}
 
         <Avatar className="size-9 border border-border/70 bg-background">
-          <AvatarFallback className="bg-primary-soft text-[13px] font-semibold text-primary">
+          <AvatarFallback className="bg-primary-soft text-[13px] font-semibold text-primary-ink">
             {activeChat.name.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
@@ -274,7 +274,7 @@ export function InboxThreadHeader({
           >
             <DialogHeader className="shrink-0 border-b border-border px-5 py-4 pe-14 text-start">
               <DialogTitle className="flex items-center gap-2.5 text-title-3">
-                <span className="flex size-8 items-center justify-center rounded-control bg-primary-soft text-primary">
+                <span className="flex size-8 items-center justify-center rounded-control bg-primary-soft text-primary-ink">
                   <Sparkles className="size-4" aria-hidden="true" />
                 </span>
                 {t("inbox.aiOrderAssistant")}
