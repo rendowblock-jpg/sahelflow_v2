@@ -260,7 +260,7 @@ export function AutomationBuilder({
           <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
         </Link>
         <div className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary-subtle text-primary max-sm:hidden">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary-subtle text-primary-ink max-sm:hidden">
           <TriggerGlyph trigger={flow.trigger} className="size-4" />
         </span>
         <label htmlFor="automation-name-v2" className="sr-only">{c("builder.name")}</label>

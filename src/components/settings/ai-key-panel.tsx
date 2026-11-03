@@ -387,7 +387,7 @@ export function AiKeyPanel({
                 {authorityState === "loading" ? (
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 ) : authorityState === "ready" && configured === true ? (
-                  <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-success dark:text-emerald-400">
+                  <Badge className="gap-1 border-emerald-500/20 bg-emerald-500/10 text-success-ink dark:text-emerald-400">
                     <CheckCircle2 className="size-3" aria-hidden="true" />
                     {t("aiKey.configured")}
                   </Badge>

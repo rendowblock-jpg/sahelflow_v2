@@ -821,7 +821,7 @@ export function InboxV3Queue({
             className={cn(
               "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
               queueFilter === "unassigned"
-                ? "border-primary/25 bg-primary-soft text-primary"
+                ? "border-primary/25 bg-primary-soft text-primary-ink"
                 : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
             )}
           >
@@ -845,7 +845,7 @@ export function InboxV3Queue({
                   priorityFilter !== "" ||
                   labelFilter !== "" ||
                   workflowFilter !== "all"
-                    ? "border-primary/25 bg-primary-soft text-primary"
+                    ? "border-primary/25 bg-primary-soft text-primary-ink"
                     : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
               >
@@ -871,7 +871,7 @@ export function InboxV3Queue({
                     className={cn(
                       "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       workflowFilter === filter
-                        ? "border-primary/25 bg-primary-soft text-primary"
+                        ? "border-primary/25 bg-primary-soft text-primary-ink"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                     )}
                   >
@@ -892,7 +892,7 @@ export function InboxV3Queue({
                     className={cn(
                       "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       priorityFilter === value
-                        ? "border-primary/25 bg-primary-soft text-primary"
+                        ? "border-primary/25 bg-primary-soft text-primary-ink"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                     )}
                   >
@@ -915,7 +915,7 @@ export function InboxV3Queue({
                       className={cn(
                         "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                         labelFilter === ""
-                          ? "border-primary/25 bg-primary-soft text-primary"
+                          ? "border-primary/25 bg-primary-soft text-primary-ink"
                           : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                       )}
                     >
@@ -934,7 +934,7 @@ export function InboxV3Queue({
                         className={cn(
                           "inline-flex h-7 max-w-36 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                           labelFilter === label
-                            ? "border-primary/25 bg-primary-soft text-primary"
+                            ? "border-primary/25 bg-primary-soft text-primary-ink"
                             : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                         )}
                       >
