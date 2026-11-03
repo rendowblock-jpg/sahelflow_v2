@@ -25,6 +25,7 @@ import { withProtectedPiiEncryption } from "@/lib/crypto/with-protected-pii";
 import { withProtectedRaceSafeUpserts } from "@/lib/crypto/with-protected-upserts";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { processShopContext, type ShopContext } from "@/lib/shops/context";
+import { qlogAttach, qlogLogOption } from "@/lib/runtime/qlog";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: unknown;
@@ -72,12 +73,14 @@ process.env.DATABASE_URL = resolveDatabaseUrl();
 
 export const dbRaw =
   globalForPrisma.prismaRaw ??
-  new PrismaClient({
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["warn", "error"]
-        : ["error"],
-  });
+  (qlogAttach(
+    new PrismaClient({
+      log: qlogLogOption(
+        process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+      ),
+    }),
+    "raw",
+  ) as unknown as PrismaClient);
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prismaRaw = dbRaw;
@@ -296,13 +299,15 @@ export function getShopClient(
     resolvedPath.toLowerCase() === boundPath.toLowerCase()
       ? boundShopContext
       : developmentContextForPath(resolvedPath);
-  const raw = new PrismaClient({
-    datasourceUrl: `file:${resolvedPath}`,
-    log:
-      process.env.NODE_ENV === "development"
-        ? ["warn", "error"]
-        : ["error"],
-  });
+  const raw = qlogAttach(
+    new PrismaClient({
+      datasourceUrl: `file:${resolvedPath}`,
+      log: qlogLogOption(
+        process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+      ),
+    }),
+    "shop",
+  ) as unknown as PrismaClient;
   const extended = applicationClient(raw, context);
   globalForPrisma.shopClients.set(resolvedPath, extended);
   return extended;

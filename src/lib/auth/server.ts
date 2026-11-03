@@ -5,6 +5,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { logAudit } from "@/lib/audit";
+import { qlogRecord } from "@/lib/runtime/qlog";
 import {
   openAuthSecretValue,
   sealAuthSecretValue,
@@ -403,16 +404,19 @@ async function resolveCurrentSessionAuthority(): Promise<SessionAuthorityResult>
     now.getTime() - authority.lastSeenAt.getTime() >=
       SESSION_ACTIVITY_WRITE_INTERVAL_MS
   ) {
+    const qlogT0 = Date.now(); // LAB ONLY (F-0016 qlog)
     try {
       const refreshed = await authContext.prisma.session.updateMany({
         where: { id: authority.sessionId, revokedAt: null },
         data: { lastSeenAt: now },
       });
+      qlogRecord({ kind: "session-touch", dur: Date.now() - qlogT0 });
       if (refreshed.count !== 1) {
         return { status: "rejected", code: "SESSION_REVOKED" };
       }
       return { ...authority, lastSeenAt: now };
     } catch {
+      qlogRecord({ kind: "session-touch", dur: Date.now() - qlogT0, err: true });
       return { status: "rejected", code: "SESSION_AUTHORITY_UNAVAILABLE" };
     }
   }
