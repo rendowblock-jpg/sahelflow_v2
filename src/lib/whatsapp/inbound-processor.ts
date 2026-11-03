@@ -9,6 +9,7 @@ import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { providerBusinessPrincipal } from "@/lib/business-truth/principal";
 import { openBusinessCommandResultWithKey } from "@/lib/business-truth/result-codec";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { conversationKnownName } from "@/lib/inbox/conversation-title";
 import { ConflictError, SahelFlowError } from "@/types/errors";
 import {
   whatsappInboundEnvelopeSchema,
@@ -658,7 +659,8 @@ async function applyClaim(
               ingressEventId: claim.id,
               conversationId: conversation.id,
               messageId: claim.id,
-              customerName: contactName,
+              // F-0028: the stored name can be the raw WhatsApp id; automations get a real name or none.
+              customerName: conversationKnownName({ name: contactName, sourceId }) || undefined,
               customerPhone: contactPhone,
               messageText: body,
               source: "whatsapp",
