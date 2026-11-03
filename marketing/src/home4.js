@@ -58,8 +58,10 @@
       cur = i;
       steps.forEach((el, k) => (k === i ? el.setAttribute("data-on", "") : el.removeAttribute("data-on")));
       shots.forEach((el, k) => (k === i ? el.setAttribute("data-on", "") : el.removeAttribute("data-on")));
+      shots.forEach((el, k) => el.toggleAttribute("inert", k !== i)); /* a figure at opacity 0 must not be reachable by Tab or read out */
       btns.forEach((b, k) => (k === i ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current")));
     };
+    set(0);
     storyUpdate = () => {
       const r = track.getBoundingClientRect();
       const span = Math.max(1, r.height - innerHeight);
