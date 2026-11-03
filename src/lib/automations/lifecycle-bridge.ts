@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
@@ -111,24 +112,49 @@ function retryDelay(attemptCount: number): number {
   );
 }
 
-async function claimLifecycleMarker(
+/**
+ * The one definition of "a lifecycle marker is claimable now". The idle
+ * pre-check and the claim transaction both use it, so they cannot drift apart.
+ */
+function claimableLifecycleMarkerWhere(
+  now: Date,
+  expiredBefore: Date,
+): Prisma.OutboxIntentWhereInput {
+  return {
+    effectType: { in: [...LIFECYCLE_BRIDGE_EFFECT_TYPES] },
+    OR: [
+      { status: "queued" },
+      {
+        status: "retrying",
+        OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+      },
+      { status: "processing", lockedAt: { lte: expiredBefore } },
+    ],
+  };
+}
+
+/** Exported for the idle-queue contract tests; the drain below is the caller. */
+export async function claimLifecycleMarker(
   context: ServiceContext,
 ): Promise<ClaimedBridge | null> {
+  // Idle pre-check (F-0031), OUTSIDE the transaction: when nothing is claimable
+  // the 2 s worker tick must not open an interactive transaction at all. A row
+  // that becomes due just after this probe is claimed on the next tick.
+  const probeAt = new Date();
+  const due = await context.prisma.outboxIntent.findFirst({
+    where: claimableLifecycleMarkerWhere(
+      probeAt,
+      new Date(probeAt.getTime() - BRIDGE_LEASE_MS),
+    ),
+    select: { id: true },
+  });
+  if (!due) return null;
+
   return context.prisma.$transaction(async (tx) => {
     const now = new Date();
     const expiredBefore = new Date(now.getTime() - BRIDGE_LEASE_MS);
     const current = await tx.outboxIntent.findFirst({
-      where: {
-        effectType: { in: [...LIFECYCLE_BRIDGE_EFFECT_TYPES] },
-        OR: [
-          { status: "queued" },
-          {
-            status: "retrying",
-            OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-          },
-          { status: "processing", lockedAt: { lte: expiredBefore } },
-        ],
-      },
+      where: claimableLifecycleMarkerWhere(now, expiredBefore),
       orderBy: { createdAt: "asc" },
     });
     if (!current) return null;

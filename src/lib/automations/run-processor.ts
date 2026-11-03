@@ -3,6 +3,7 @@ import "server-only";
 import { logger } from "@/lib/logger";
 import { WhatsAppSendGuardError } from "@/lib/whatsapp/send-guard";
 import { createHash, randomUUID } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { systemBusinessPrincipal } from "@/lib/business-truth/principal";
@@ -218,29 +219,56 @@ function isRetryable(error: unknown): boolean {
   return true;
 }
 
-async function claimRun(context: ServiceContext): Promise<ClaimedRun | null> {
+/**
+ * The one definition of "an automation run is claimable now". The idle
+ * pre-check and the claim transaction both use it, so they cannot drift apart.
+ */
+function claimableRunWhere(
+  now: Date,
+  expiredBefore: Date,
+): Prisma.AutomationRunWhereInput {
+  return {
+    OR: [
+      { status: "queued" },
+      {
+        status: "retrying",
+        OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+      },
+      {
+        status: "waiting",
+        OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+      },
+      {
+        status: "waiting_effect",
+        OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+      },
+      { status: "processing", lockedAt: { lte: expiredBefore } },
+    ],
+  };
+}
+
+/** Exported for the idle-queue contract tests; the drain below is the caller. */
+export async function claimRun(
+  context: ServiceContext,
+): Promise<ClaimedRun | null> {
+  // Idle pre-check (F-0031), OUTSIDE the transaction: when nothing is claimable
+  // the 2 s worker tick must not open an interactive transaction at all. A run
+  // that becomes due just after this probe is claimed on the next tick.
+  const probeAt = new Date();
+  const due = await context.prisma.automationRun.findFirst({
+    where: claimableRunWhere(
+      probeAt,
+      new Date(probeAt.getTime() - RUN_LEASE_MS),
+    ),
+    select: { id: true },
+  });
+  if (!due) return null;
+
   return context.prisma.$transaction(async (tx) => {
     const now = new Date();
     const expiredBefore = new Date(now.getTime() - RUN_LEASE_MS);
     const current = await tx.automationRun.findFirst({
-      where: {
-        OR: [
-          { status: "queued" },
-          {
-            status: "retrying",
-            OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-          },
-          {
-            status: "waiting",
-            OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-          },
-          {
-            status: "waiting_effect",
-            OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-          },
-          { status: "processing", lockedAt: { lte: expiredBefore } },
-        ],
-      },
+      where: claimableRunWhere(now, expiredBefore),
       orderBy: { createdAt: "asc" },
     });
     if (!current || isRunTerminal(current.status)) return null;

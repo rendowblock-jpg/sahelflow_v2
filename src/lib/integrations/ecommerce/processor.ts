@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 
 import type { ServiceContext } from "@/lib/data/service-base";
 import { SahelFlowError, ValidationError } from "@/types/errors";
@@ -69,23 +70,45 @@ function terminalFetchAuthorityError(error: unknown): boolean {
   );
 }
 
-async function claimCommerceRun(
+/**
+ * The one definition of "a commerce fetch run is claimable now". The idle
+ * pre-check and the claim transaction both use it, so they cannot drift apart.
+ */
+function claimableCommerceRunWhere(
+  now: Date,
+  staleBefore: Date,
+): Prisma.CommerceSyncRunWhereInput {
+  return {
+    fetchComplete: false,
+    OR: [
+      {
+        status: { in: ["queued", "retrying"] },
+        OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+      },
+      { status: "fetching", lockedAt: { lt: staleBefore } },
+    ],
+  };
+}
+
+/** Exported for the idle-queue contract tests; processNextCommerceFetch calls it. */
+export async function claimCommerceRun(
   context: ServiceContext,
 ): Promise<ClaimedRun | null> {
   const now = new Date();
   const staleBefore = leaseCutoff();
+  // Idle pre-check (F-0031), OUTSIDE the transaction and with the same `now` and
+  // `staleBefore`: a seller with no store connected (or nothing due) must not
+  // open an interactive transaction on every 2 s tick. A run that becomes due
+  // just after this probe is claimed on the next tick.
+  const due = await context.prisma.commerceSyncRun.findFirst({
+    where: claimableCommerceRunWhere(now, staleBefore),
+    select: { id: true },
+  });
+  if (!due) return null;
+
   return context.prisma.$transaction(async (tx) => {
     const candidate = await tx.commerceSyncRun.findFirst({
-      where: {
-        fetchComplete: false,
-        OR: [
-          {
-            status: { in: ["queued", "retrying"] },
-            OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-          },
-          { status: "fetching", lockedAt: { lt: staleBefore } },
-        ],
-      },
+      where: claimableCommerceRunWhere(now, staleBefore),
       orderBy: [{ nextAttemptAt: "asc" }, { createdAt: "asc" }],
     });
     if (!candidate) return null;
@@ -403,22 +426,42 @@ export async function processNextCommerceFetch(
   return true;
 }
 
-async function claimCommerceItem(
+/**
+ * The one definition of "a commerce item is claimable now". The idle pre-check
+ * and the claim transaction both use it, so they cannot drift apart.
+ */
+function claimableCommerceItemWhere(
+  now: Date,
+  staleBefore: Date,
+): Prisma.CommerceSyncItemWhereInput {
+  return {
+    OR: [
+      {
+        status: { in: ["queued", "retrying"] },
+        OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+      },
+      { status: "processing", lockedAt: { lt: staleBefore } },
+    ],
+  };
+}
+
+/** Exported for the idle-queue contract tests; processNextCommerceItem calls it. */
+export async function claimCommerceItem(
   context: ServiceContext,
 ): Promise<ClaimedItem | null> {
   const now = new Date();
   const staleBefore = leaseCutoff();
+  // Idle pre-check (F-0031): same reasoning as claimCommerceRun. No `include`,
+  // no ordering: it only asks whether any item is claimable.
+  const due = await context.prisma.commerceSyncItem.findFirst({
+    where: claimableCommerceItemWhere(now, staleBefore),
+    select: { id: true },
+  });
+  if (!due) return null;
+
   return context.prisma.$transaction(async (tx) => {
     const candidate = await tx.commerceSyncItem.findFirst({
-      where: {
-        OR: [
-          {
-            status: { in: ["queued", "retrying"] },
-            OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-          },
-          { status: "processing", lockedAt: { lt: staleBefore } },
-        ],
-      },
+      where: claimableCommerceItemWhere(now, staleBefore),
       include: { run: { select: { sourceIdentity: true } } },
       orderBy: [{ nextAttemptAt: "asc" }, { createdAt: "asc" }],
     });

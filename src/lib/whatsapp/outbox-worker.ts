@@ -3,6 +3,21 @@ import "server-only";
 const WORKER_KEY = Symbol.for("sahelflow.whatsapp.outbox-worker.v1");
 const POLL_INTERVAL_MS = 10_000;
 
+/**
+ * `reconcileWhatsAppMediaEraseAfterRestart` reads its message count only as
+ * "none" (0) versus "at least one" (> 0), and only after it finds a crash-left
+ * erase tombstone. A one-row probe gives the same decision as a COUNT over the
+ * whole Message table at a constant cost (F-0031: this ran every 10 s).
+ */
+export async function messageCountForMediaEraseDecision(client: {
+  message: {
+    findFirst: (args: { select: { id: true } }) => PromiseLike<unknown>;
+  };
+}): Promise<0 | 1> {
+  const anyMessage = await client.message.findFirst({ select: { id: true } });
+  return anyMessage ? 1 : 0;
+}
+
 type WorkerState = {
   running: boolean;
   timer: ReturnType<typeof setTimeout> | null;
@@ -58,7 +73,7 @@ export function startWhatsAppOutboxWorker(): void {
       // licensed WhatsApp work can observe it as a permanent write barrier.
       reconcileWhatsAppMediaEraseAfterRestart(
         whatsAppMediaRoot(context),
-        await db.message.count(),
+        await messageCountForMediaEraseDecision(db),
       );
 
       await requireLicenseEntitlement(undefined, shopContext);
