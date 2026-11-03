@@ -242,7 +242,9 @@ describe("Settings Class-AAA control-center contract", () => {
       mediaErase.indexOf("commitWhatsAppMediaErase(stage)"),
     );
     expect(panel).toContain("REAUTHENTICATION_REQUIRED");
-    expect(panel).toContain("/api/auth/reauthenticate");
+    // The PIN call moved into the shared client helper (F-0023); the panel must use it and the helper must own the endpoint.
+    expect(panel).toContain("reauthenticateWithPin(pin)");
+    expect(read("src/lib/auth/reauthenticate-client.ts")).toContain("/api/auth/reauthenticate");
     expect(panel).toContain('copy("ordersExport")');
     expect(panel).not.toContain('t("settings.dangerZone.exportAll")');
   });
