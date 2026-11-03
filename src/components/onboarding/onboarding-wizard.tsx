@@ -35,6 +35,8 @@ import {
   type OnboardingProgress,
 } from "@/components/onboarding/onboarding-progress";
 import { OnboardingPairingPanel } from "@/components/onboarding/onboarding-pairing-panel";
+import { OnboardingPinNotice } from "@/components/onboarding/onboarding-pin-notice";
+import { readSetupFlag } from "@/components/onboarding/onboarding-status-read";
 import { OnboardingChatGptOption } from "@/components/onboarding/chatgpt-onboarding-option";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
@@ -116,6 +118,8 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
     ai: false,
   });
   const [finishedAt, setFinishedAt] = useState<string | null>(null);
+  // The delivery and AI reads need a PIN confirmation younger than ten minutes; past that the checklist asks for it.
+  const [needsPin, setNeedsPin] = useState(false);
   const prefilledRef = useRef(false);
   // The persisted resume point applies exactly once (initial load) so it can
   // never fight deliberate checklist navigation afterwards.
@@ -205,8 +209,6 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
 
     let shopConfigured = false;
     let whatsappConnected = false;
-    let couriersConfigured = false;
-    let aiConfigured = false;
     let resume: OnboardingProgress | null = null;
 
     if (settingsResult.status === "fulfilled" && settingsResult.value.ok) {
@@ -242,27 +244,25 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
       const data: unknown = await whatsappResult.value.json().catch(() => null);
       whatsappConnected = isWhatsAppReportedConnected(data);
     }
-    if (deliveryResult.status === "fulfilled" && deliveryResult.value.ok) {
-      const data = (await deliveryResult.value.json().catch(() => ({}))) as {
-        providers?: Record<string, Record<string, boolean>>;
-      };
-      couriersConfigured = Object.values(data.providers ?? {}).some((fields) =>
-        Object.values(fields ?? {}).some(Boolean),
-      );
-    }
-    if (geminiResult.status === "fulfilled" && geminiResult.value.ok) {
-      const data = (await geminiResult.value.json().catch(() => ({}))) as {
-        configured?: unknown;
-      };
-      aiConfigured = data.configured === true;
-    }
+    const [deliveryRead, geminiRead] = await Promise.all([
+      readSetupFlag(deliveryResult, (data) => {
+        const providers = (data as { providers?: Record<string, Record<string, boolean>> }).providers;
+        return Object.values(providers ?? {}).some((fields) => Object.values(fields ?? {}).some(Boolean));
+      }),
+      readSetupFlag(geminiResult, (body) => {
+        const data = body as { configured?: unknown };
+        return data.configured === true;
+      }),
+    ]);
 
-    setStatus({
+    // A read that needs the PIN says nothing about the truth: keep what the checklist knew and ask for the PIN.
+    setStatus((current) => ({
       shop: shopConfigured,
       whatsapp: whatsappConnected,
-      couriers: couriersConfigured,
-      ai: aiConfigured,
-    });
+      couriers: deliveryRead.kind === "known" ? deliveryRead.value : current.couriers,
+      ai: geminiRead.kind === "known" ? geminiRead.value : current.ai,
+    }));
+    setNeedsPin(deliveryRead.kind === "needs-pin" || geminiRead.kind === "needs-pin");
 
     if (resume) {
       setFinishedAt(resume.finishedAt);
@@ -480,7 +480,8 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
       className="min-h-full bg-surface-0"
     >
       <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 pt-6 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:pt-10">
-        <div className="min-w-0 lg:col-span-4">
+        <div className="min-w-0 space-y-4 lg:col-span-4">
+          {needsPin ? <OnboardingPinNotice onConfirmed={refreshStatus} /> : null}
           <OnboardingChecklist
             items={checklistItems}
             currentStep={step}
