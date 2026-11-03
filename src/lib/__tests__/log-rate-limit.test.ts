@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createLogRateLimiter } from "@/lib/log-rate-limit";
 
 /**
- * F-0033: a 2-core PC must never pay for logging. At most 30 lines a minute in
+ * F-0034: a 2-core PC must never pay for logging. At most 30 lines a minute in
  * total and 5 per distinct msg; the line over the limit is dropped and counted,
  * and the next minute's first line is preceded by ONE summary.
  */

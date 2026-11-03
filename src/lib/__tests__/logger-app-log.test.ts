@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * F-0033: in the installed app, warn and error lines of the structured logger
+ * F-0034: in the installed app, warn and error lines of the structured logger
  * also land in <SF_DATA_DIR>/logs/app.log (sanitized, rate limited). info and
  * debug never do. A broken file sink must never stop the console line or throw.
  */

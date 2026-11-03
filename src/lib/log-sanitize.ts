@@ -1,5 +1,5 @@
 /**
- * What may reach the seller's app.log (F-0033). Pure and table-tested.
+ * What may reach the seller's app.log (F-0034). Pure and table-tested.
  *
  * The packaged desktop discards the Next server's console, so before the app
  * log existed an unexpected error on a seller's PC left no trace. The file is

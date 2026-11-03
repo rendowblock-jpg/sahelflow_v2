@@ -1,5 +1,5 @@
 /**
- * Bounded error history on disk (F-0033).
+ * Bounded error history on disk (F-0034).
  *
  * The packaged desktop discards the Next server's console, so an unexpected
  * error on a seller's PC left no trace (260 `HTTP_500` answers on the Founder's

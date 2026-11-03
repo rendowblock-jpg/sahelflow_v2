@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { appLogEnabled, appendAppLog, createAppLogFile } from "@/lib/log-file";
 
 /**
- * F-0033: the installed app keeps an error history on disk. Mirrors
+ * F-0034: the installed app keeps an error history on disk. Mirrors
  * sidecars/whatsapp/diagnostics-log.ts: best effort, bounded, 0o600, and it
  * stops trying after the first I/O failure. It must never throw.
  */

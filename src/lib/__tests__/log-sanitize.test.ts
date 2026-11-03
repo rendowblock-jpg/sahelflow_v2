@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { redactLogText, sanitizeForFile } from "@/lib/log-sanitize";
 
 /**
- * F-0033: what may reach the seller's app.log. Table-tested on purpose: every
+ * F-0034: what may reach the seller's app.log. Table-tested on purpose: every
  * row is a thing support must be able to read (or must never see).
  */
 

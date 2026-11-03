@@ -1,5 +1,5 @@
 /**
- * Rate limit for the app log (F-0033). A slow PC must not pay for logging, so
+ * Rate limit for the app log (F-0034). A slow PC must not pay for logging, so
  * the file gets at most 30 lines per minute in total and at most 5 per minute
  * per distinct msg. The line over a limit is dropped and counted; the first
  * line of the next minute is preceded by ONE `log.suppressed` summary (the

@@ -4,7 +4,7 @@
  * In development: pretty-prints to stdout (colored).
  * In production: JSON to stdout (machine-parseable, Tauri syslog-compatible).
  * In production, warn and error lines ALSO go to <SF_DATA_DIR>/logs/app.log
- * (F-0033): the packaged app discards the console, so without that file an
+ * (F-0034): the packaged app discards the console, so without that file an
  * error on a seller's PC leaves no trace. The file copy is sanitized
  * (log-sanitize.ts: no bodies, no secrets, no personal data), rate limited
  * (log-rate-limit.ts) and bounded to 1 MiB x 2 (log-file.ts). info and debug
