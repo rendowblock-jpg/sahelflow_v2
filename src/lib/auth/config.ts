@@ -17,7 +17,7 @@ export const SESSION_OVERALL_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 export const SESSION_INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
 
 /** Avoid a database write on every authenticated request. */
-export const SESSION_ACTIVITY_WRITE_INTERVAL_MS = 5 * 60 * 1000;
+export const SESSION_ACTIVITY_WRITE_INTERVAL_MS = 60 * 60 * 1000; // LAB ONLY (F-0016 split test)
 
 /** Maximum age of PIN proof accepted for a high-risk action. */
 export const SENSITIVE_REAUTH_WINDOW_MS = 10 * 60 * 1000;
