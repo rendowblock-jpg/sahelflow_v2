@@ -22,18 +22,18 @@ export function InboxQueueEmpty() {
   const { t } = useI18n();
   return (
     <div data-inbox-queue-empty="" className={styles.emptyPage}>
-      <h3 className="text-base font-semibold">{t("inbox.carnet.empty.title")}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{t("inbox.carnet.empty.lead")}</p>
+      <h3 className="text-base font-semibold">{t("inbox.list.empty.title")}</h3>
+      <p className="mt-1 text-sm text-muted-foreground">{t("inbox.list.empty.lead")}</p>
       <ol className="mt-3 list-decimal space-y-2 ps-5 text-sm">
-        <li>{t("inbox.carnet.empty.step.link")}</li>
+        <li>{t("inbox.list.empty.step.link")}</li>
         <li>
           <Link href="/imports" className="underline underline-offset-2">
-            {t("inbox.carnet.empty.step.import")}
+            {t("inbox.list.empty.step.import")}
           </Link>
         </li>
         <li>
           <Link href="/storefronts" className="underline underline-offset-2">
-            {t("inbox.carnet.empty.step.storefront")}
+            {t("inbox.list.empty.step.storefront")}
           </Link>
         </li>
       </ol>
@@ -46,10 +46,10 @@ export function InboxQueueError({ onRetry }: { onRetry: () => void }) {
   const { t } = useI18n();
   return (
     <div role="alert" data-inbox-queue-error="" className={styles.emptyPage}>
-      <h3 className="text-base font-semibold">{t("inbox.carnet.error.title")}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{t("inbox.carnet.error.body")}</p>
+      <h3 className="text-base font-semibold">{t("inbox.list.error.title")}</h3>
+      <p className="mt-1 text-sm text-muted-foreground">{t("inbox.list.error.body")}</p>
       <Button type="button" variant="outline" className={styles.action} onClick={onRetry}>
-        {t("inbox.carnet.error.retry")}
+        {t("inbox.list.error.retry")}
       </Button>
     </div>
   );

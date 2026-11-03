@@ -16,13 +16,13 @@ export interface RowChip {
 /** One table: conversation status -> shape + label. A new status must be added here. */
 export const INBOX_ROW_CHIPS: Readonly<Record<ConversationStatus, RowChip>> &
   Readonly<Record<string, RowChip | undefined>> = {
-  open: { shape: "ring", labelKey: "inbox.carnet.chip.open" },
-  pending: { shape: "diamond", labelKey: "inbox.carnet.chip.pending" },
-  resolved: { shape: "dot", labelKey: "inbox.carnet.chip.resolved" },
-  snoozed: { shape: "ring", labelKey: "inbox.carnet.chip.snoozed" },
+  open: { shape: "ring", labelKey: "inbox.list.chip.open" },
+  pending: { shape: "diamond", labelKey: "inbox.list.chip.pending" },
+  resolved: { shape: "dot", labelKey: "inbox.list.chip.resolved" },
+  snoozed: { shape: "ring", labelKey: "inbox.list.chip.snoozed" },
 };
 
-const DRAFT_CHIP: RowChip = { shape: "diamond", labelKey: "inbox.carnet.chip.draft" };
+const DRAFT_CHIP: RowChip = { shape: "diamond", labelKey: "inbox.list.chip.draft" };
 
 /** A reply waiting in the composer needs the seller whatever the status says. */
 export function rowChipFor(input: { status: string; hasDraft: boolean }): RowChip {

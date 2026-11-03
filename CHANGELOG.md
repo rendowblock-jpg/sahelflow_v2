@@ -8,6 +8,14 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-11-02 — The Carnet look is removed
+
+- **Founder's order (2 November):** the cream "Carnet" look, its fonts and its styles are gone. Settings > Appearance offers Sahel, Atlas, Oasis and Dune again; Sahel is the default.
+  - **Saved choice:** every install had "carnet" saved (the wave 2 migration moved everyone to it). A saved name that is no longer offered now counts as not chosen: the install shows Sahel and the next save replaces it. The look marker is no longer written or read. Earlier Atlas, Oasis or Dune picks are not restored.
+  - **Removed:** the Carnet stylesheet and colour blocks, six IBM Plex and Amiri font files with their three licence texts, and the inbox's Carnet-only decoration. The inbox text keys `inbox.carnet.*` are now `inbox.list.*`. The app ships Inter and Noto Sans Arabic only.
+  - **Tests:** one source file holds the preset rule, with a test table; a contract test keeps the name, files and fonts out of the app source. The dark-mode contrast check for the blacklist button now counts the translucent input colour and runs on all four presets.
+  - **Not touched:** the marketing site, the phone app, earlier entries.
+
 ### 2026-11-01 — FD-083 adopts the Internal.47 release authority
 
 - FD-083 authorizes one signed successor: app `1.0.0-internal.47` / MSI `1.0.0.47`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.46 (`db68bfe2…`):

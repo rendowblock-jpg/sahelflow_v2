@@ -222,49 +222,7 @@ button.linkTag:focus-visible,
   }
 }
 
-/* Carnet only: written index letter, ruled hairline, mono figures. */
-:global(html[data-theme-preset="carnet"]) .rowAvatar {
-  font-family: Amiri, var(--font-display, serif);
-  font-weight: 700;
-}
-
-:global(html[data-theme-preset="carnet"]) .row {
-  border-block-end: 1px solid var(--carnet-rule);
-}
-
-:global(html[data-theme-preset="carnet"]) .unreadBadge {
-  font-family: var(--font-mono, ui-monospace, monospace);
-}
-
-:global(html[data-theme-preset="carnet"]) .banner {
-  border-inline-start: 5px double var(--carnet-red);
-}
-
-:global(html[data-theme-preset="carnet"]) .banner[data-inbox-link-kind="unofficial-only"] {
-  border-inline-start: 4px solid var(--primary);
-}
-
-/* Thread (wave 1 track I2): the order draft slip, the stamp and the seller slip wash. */
+/* Thread (wave 1 track I2): the order draft slip. */
 .draftSlip {
   scroll-margin-block-start: 4rem;
-}
-
-.stampOnly {
-  display: none;
-}
-
-.plainBadge {
-  display: inline-flex;
-}
-
-:global(html[data-theme-preset="carnet"]) .stampOnly {
-  display: inline-block;
-}
-
-:global(html[data-theme-preset="carnet"]) .plainBadge {
-  display: none;
-}
-
-:global(html[data-theme-preset="carnet"]) .slipOut {
-  background: var(--carnet-slip-out, var(--primary-soft));
 }

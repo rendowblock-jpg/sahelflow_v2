@@ -330,11 +330,10 @@ describe("text200Method", () => {
 });
 
 describe("theme and locale cookies", () => {
-  it("sets the four cookies the product reads", () => {
+  it("sets the three cookies the product reads", () => {
     expect(themeStorage("dark", "ar")).toEqual({
       "sahelflow-theme": "dark",
-      "sahelflow-theme-preset": "carnet",
-      "sahelflow-look": "2",
+      "sahelflow-theme-preset": "sahel",
       "sahelflow-locale": "ar",
     });
     expect(themeStorage("light", "fr")["sahelflow-theme"]).toBe("light");

@@ -431,8 +431,7 @@ export function modeSetup(mode: Mode, locale: Locale, method: Text200Method = "b
 export function themeStorage(theme: Theme, locale: Locale): Record<string, string> {
   return {
     "sahelflow-theme": theme,
-    "sahelflow-theme-preset": "carnet",
-    "sahelflow-look": "2",
+    "sahelflow-theme-preset": "sahel",
     "sahelflow-locale": locale,
   };
 }

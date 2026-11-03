@@ -6,13 +6,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { OrderDraftCard } from "@/components/inbox/order-draft-card";
 import type { ThreadOrderDraft } from "@/components/inbox/inbox-order-draft-model";
-import { getInboxThreadCarnetRuntimeTranslation } from "@/lib/i18n/inbox-thread-carnet-runtime";
+import { getInboxThreadStatesRuntimeTranslation } from "@/lib/i18n/inbox-thread-states-runtime";
 import { render } from "@/test-utils/render";
 
 vi.mock("@/hooks/use-i18n", () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string | number>) =>
-      (getInboxThreadCarnetRuntimeTranslation("en", key) ?? key).replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
+      (getInboxThreadStatesRuntimeTranslation("en", key) ?? key).replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
         String(params?.[name] ?? ""),
       ),
     locale: "en",
@@ -47,7 +47,7 @@ const noop = () => undefined;
 const props = { busy: false, error: null, editor: null, onApprove: noop, onEdit: noop, onDismiss: noop, onUndo: noop };
 
 describe("pending draft is a pencilled slip", () => {
-  it("is dashed, has a ledger table with a double-rule total, and three actions", () => {
+  it("is dashed, has a ledger table with a ruled total, and three actions", () => {
     const { container } = render(<OrderDraftCard draft={base} {...props} />);
     const root = container.querySelector("[data-order-draft]") as HTMLElement;
     expect(root.getAttribute("data-draft-state")).toBe("pending");
@@ -56,7 +56,7 @@ describe("pending draft is a pencilled slip", () => {
     const table = within(root).getByRole("table");
     for (const head of ["Item", "Qty", "Price", "Amount"]) expect(within(table).getByRole("columnheader", { name: head })).toBeTruthy();
     expect(within(table).getByText("Robe")).toBeTruthy();
-    expect(table.querySelector("tfoot .carnet-total")).not.toBeNull();
+    expect(table.querySelector("tfoot tr:last-child th")?.className).toContain("border-t");
     expect(table.querySelector("tfoot")?.textContent).toMatch(/6[,.\s]?800/);
     expect(table.querySelector(".numeric-value")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy();
@@ -100,13 +100,13 @@ describe("pending draft is a pencilled slip", () => {
 });
 
 describe("approved draft", () => {
-  it("turns solid, stamps, and shows the id and status the API returned", () => {
+  it("turns solid, shows the check badge, and shows the id and status the API returned", () => {
     const draft = { ...base, status: "approved" as const, created: { id: "ORD-1042", status: "pending_confirmation" } };
     const { container } = render(<OrderDraftCard draft={draft} {...props} />);
     const root = container.querySelector("[data-order-draft]") as HTMLElement;
     expect(root.getAttribute("data-draft-state")).toBe("approved");
     expect(root.className).not.toContain("border-dashed");
-    expect(root.querySelector(".carnet-stamp")).not.toBeNull();
+    expect(root.querySelector('[class*="stamp"]')).toBeNull();
     expect(root.querySelector("[data-plain-badge]")).not.toBeNull();
     expect(root.textContent).toContain("ORD-1042");
     expect(root.textContent).toContain("pending_confirmation");

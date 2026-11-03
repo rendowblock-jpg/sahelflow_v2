@@ -168,6 +168,6 @@ describe("the 'saved on this device' sentence is backed by code", () => {
   it("the surface prints the sentence only when the state says savedOnDevice", () => {
     const surface = read("src/components/inbox/inbox-link-surface.tsx");
     expect(surface).toMatch(/link\.savedOnDevice\s*\?/);
-    expect(surface).toContain("inbox.carnet.link.saved");
+    expect(surface).toContain("inbox.list.link.saved");
   });
 });
