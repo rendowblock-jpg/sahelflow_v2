@@ -144,6 +144,24 @@ describe("GET /api/conversations/unread-summary", () => {
     expect(payload.latest?.preview).toBe("Salam, is the parcel ready?");
   });
 
+  it("never returns a raw WhatsApp id as the latest contact name (F-0028)", async () => {
+    harness.findMany.mockResolvedValue([
+      latestRow({ contactName: "202460866064562@lid", contactPhone: null, sourceId: "202460866064562@lid" }),
+    ]);
+    const lid = (await (await GET(new NextRequest("http://localhost/api/conversations/unread-summary"))).json()) as {
+      latest: { name: string | null };
+    };
+    expect(lid.latest.name).toBeNull();
+
+    harness.findMany.mockResolvedValue([
+      latestRow({ contactName: "213791999157", contactPhone: "213791999157", sourceId: "213791999157@s.whatsapp.net" }),
+    ]);
+    const pn = (await (await GET(new NextRequest("http://localhost/api/conversations/unread-summary"))).json()) as {
+      latest: { name: string | null };
+    };
+    expect(pn.latest.name).toContain("+213 791 99 91 57");
+  });
+
   it("returns a title-only summary when contact identity is restricted", async () => {
     harness.project.mockImplementation((conversation: unknown) => ({
       ...(conversation as Record<string, unknown>),

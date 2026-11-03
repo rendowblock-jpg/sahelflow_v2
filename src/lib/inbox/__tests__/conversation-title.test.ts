@@ -4,6 +4,7 @@ import {
   conversationAvatarInitial,
   conversationDisplayPhone,
   conversationDisplayTitle,
+  conversationKnownName,
   conversationSafeLabel,
 } from "@/lib/inbox/conversation-title";
 
@@ -145,5 +146,20 @@ describe("conversationDisplayPhone / conversationSafeLabel", () => {
     expect(conversationSafeLabel({ name: LID, sourceId: LID })).toBeNull();
     expect(conversationSafeLabel({ name: "", sourceId: PN })).toBe("+213 791 99 91 57");
     expect(conversationSafeLabel({ name: "202460866064562", sourceId: LID })).toBeNull();
+  });
+});
+
+describe("conversationKnownName / isolatePhone (server surfaces)", () => {
+  it("returns the stored name only when it is a real name, else an empty string", () => {
+    expect(conversationKnownName({ name: "Amina B.", sourceId: LID })).toBe("Amina B.");
+    expect(conversationKnownName({ name: LID, sourceId: LID })).toBe("");
+    expect(conversationKnownName({ name: "202460866064562", sourceId: LID })).toBe("");
+    expect(conversationKnownName({ name: "213791999157", sourceId: PN })).toBe("");
+    expect(conversationKnownName({ name: "", sourceId: GROUP })).toBe("");
+  });
+
+  it("isolates the phone left-to-right on request (Arabic toast)", () => {
+    expect(conversationSafeLabel({ name: "", sourceId: PN, isolatePhone: true })).toBe(`${LRI}+213 791 99 91 57${PDI}`);
+    expect(conversationSafeLabel({ name: "Amina", sourceId: PN, isolatePhone: true })).toBe("Amina");
   });
 });

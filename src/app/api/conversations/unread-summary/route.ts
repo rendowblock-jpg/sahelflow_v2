@@ -4,6 +4,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { projectConversationForTrustedActor } from "@/lib/identity/conversation-projection";
+import { conversationSafeLabel } from "@/lib/inbox/conversation-title";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,7 @@ export const GET = withErrorHandler(async (_req: NextRequest) => {
         id: true,
         contactName: true,
         contactPhone: true,
+        sourceId: true,
         unreadCount: true,
         lastMessageAt: true,
         status: true,
@@ -82,7 +84,16 @@ export const GET = withErrorHandler(async (_req: NextRequest) => {
         );
         return {
           conversationId: projected.id,
-          name: projected.contactName,
+          // F-0028: a real name or a phone; an unnamed contact gives no name
+          // (the toast then stays generic) instead of a raw WhatsApp id.
+          name:
+            projected.contactName === null
+              ? null
+              : conversationSafeLabel({
+                  name: projected.contactName,
+                  sourceId: latestRow.sourceId,
+                  isolatePhone: true,
+                }),
           preview: projected.fieldAccess.contact
             ? toPreviewLine(latestRow.messages[0]?.body)
             : null,

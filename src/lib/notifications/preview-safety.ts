@@ -1,3 +1,5 @@
+import { conversationSafeLabel } from "@/lib/inbox/conversation-title";
+
 const SECRET_LABEL_PATTERN =
   /\b(?:api[ _-]?key|authorization|bearer|cookie|credential|diagnostic|jwt|one[ _-]?time|otp|passcode|password|private[ _-]?key|secret|session|stack[ _-]?trace|token)\b|(?:كلمة\s*المرور|رمز\s*التحقق|رمز\s*سري|مفتاح\s*سري|mot\s+de\s+passe|code\s+secret|jeton)/iu;
 const NUMERIC_CODE_PATTERN = /(?<!\d)\d{4,8}(?!\d)/u;
@@ -14,6 +16,7 @@ const CONTROL_CHARACTER_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F
 export function sanitizeNativePreview(
   contactName: string,
   body: string,
+  sourceId?: string | null,
 ): { contactName: string; body: string } | null {
   if (
     SECRET_LABEL_PATTERN.test(body) ||
@@ -26,7 +29,12 @@ export function sanitizeNativePreview(
     return null;
   }
 
-  const safeContactName = contactName.replace(/\s+/gu, " ").trim().slice(0, 80);
+  // F-0028: the stored name can be the raw WhatsApp id. A real name or the phone of
+  // a phone-number contact is shown; otherwise the generic localized notification is used.
+  const safeContactName = (conversationSafeLabel({ name: contactName, sourceId }) ?? "")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .slice(0, 80);
   const safeBody = body.replace(/\s+/gu, " ").trim().slice(0, 240);
   return safeContactName && safeBody
     ? { contactName: safeContactName, body: safeBody }

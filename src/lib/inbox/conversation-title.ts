@@ -248,7 +248,24 @@ export function conversationDisplayPhone(input: {
 export function conversationSafeLabel(input: {
   name?: string | null;
   sourceId?: string | null;
+  /** Wrap a phone in a left-to-right isolate (text that may land in an Arabic sentence). */
+  isolatePhone?: boolean;
 }): string | null {
-  const parts = conversationTitleParts({ ...input, locale: "en" });
-  return parts.kind === "name" || parts.kind === "phone" ? parts.text : null;
+  const parts = conversationTitleParts({ name: input.name, sourceId: input.sourceId, locale: "en" });
+  if (parts.kind === "name") return parts.text;
+  if (parts.kind === "phone") return input.isolatePhone ? `${LRI}${parts.text}${PDI}` : parts.text;
+  return null;
+}
+
+/**
+ * The stored name when it is a real name, otherwise an empty string. API
+ * answers use it so a raw id is never sent as a `name`; the client forms the
+ * localized title from the empty name and the address.
+ */
+export function conversationKnownName(input: {
+  name?: string | null;
+  sourceId?: string | null;
+}): string {
+  const parts = conversationTitleParts({ name: input.name, sourceId: input.sourceId, locale: "en" });
+  return parts.kind === "name" ? parts.text : "";
 }
