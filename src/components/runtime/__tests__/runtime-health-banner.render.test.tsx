@@ -12,6 +12,7 @@ import fr from "@/lib/i18n/locales/fr.json";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { DESKTOP_RUNTIME_RECOVERED_EVENT } from "@/lib/runtime/desktop-recovery";
 import { RuntimeHealthBanner } from "@/components/runtime/runtime-health-banner";
+import { RUNTIME_HEALTH_RUNTIME } from "@/lib/i18n/runtime-health-runtime";
 
 let locale: "ar" | "fr" | "en" = "en";
 const refresh = vi.fn();
@@ -67,7 +68,7 @@ describe("RuntimeHealthBanner", () => {
     const banner = screen.getByTestId("runtime-health-banner");
     expect(banner.getAttribute("role")).toBe("status");
     expect(banner.getAttribute("data-runtime-health")).toBe("reconnecting");
-    expect(banner.textContent).toContain("Reconnecting to the app's service on this device");
+    expect(banner.textContent).toContain("Reconnecting to the app service");
 
     runtimeUp = true;
     const recovered = vi.fn();
@@ -111,5 +112,144 @@ describe("RuntimeHealthBanner", () => {
     await advance(22_000);
     expect(screen.getByTestId("runtime-health-banner").textContent).toMatch(pattern);
     expect(screen.getByTestId("runtime-health-banner").textContent).not.toContain("runtimeHealth.");
+  });
+});
+
+/**
+ * F-0022: the notice can be closed (button or Esc), a small icon stays while the
+ * problem lasts, and neither covers the sidebar, the topbar or the composer.
+ */
+describe("RuntimeHealthBanner dismissal", () => {
+  const classesOf = (element: HTMLElement) => (element.getAttribute("class") ?? "").split(/\s+/).filter(Boolean);
+
+  async function shownNotice() {
+    render(<RuntimeHealthBanner />);
+    runtimeUp = false;
+    await advance(22_000);
+    return screen.getByTestId("runtime-health-banner");
+  }
+
+  it.each([
+    ["en", "Close"],
+    ["fr", "Fermer"],
+    ["ar", "إغلاق"],
+  ] as const)("has a visible, labelled close control (%s)", async (code, label) => {
+    locale = code;
+    await shownNotice();
+    const close = screen.getByTestId("runtime-health-dismiss");
+    expect(close.tagName).toBe("BUTTON");
+    expect(close.getAttribute("type")).toBe("button");
+    expect(close.getAttribute("aria-label")).toBe(label);
+    expect(close.querySelector("svg")).not.toBeNull();
+  });
+
+  it("closing hides the notice, leaves a small labelled icon, and failed probes of the same episode do not bring the notice back", async () => {
+    await shownNotice();
+    fireEvent.click(screen.getByTestId("runtime-health-dismiss"));
+    await advance(0);
+    expect(screen.queryByTestId("runtime-health-banner")).toBeNull();
+
+    const indicator = screen.getByTestId("runtime-health-indicator");
+    expect(indicator.tagName).toBe("BUTTON");
+    expect(indicator.getAttribute("aria-label")).toContain("Reconnecting to the app service");
+    expect((indicator.textContent ?? "").trim()).toBe(""); // icon only
+    const size = classesOf(indicator).find((token) => /^size-\d+(\.\d+)?$/.test(token));
+    expect(size, "the icon needs an explicit size token").toBeDefined();
+    expect(Number(size?.slice(5)) * 4).toBeLessThanOrEqual(32);
+
+    await advance(60_000);
+    expect(screen.queryByTestId("runtime-health-banner")).toBeNull();
+    expect(screen.queryByTestId("runtime-health-indicator")).not.toBeNull();
+  });
+
+  it("Esc inside the notice closes it and keeps the keyboard on the icon", async () => {
+    await shownNotice();
+    const retry = screen.getByTestId("runtime-health-retry");
+    retry.focus();
+    fireEvent.keyDown(retry, { key: "Escape" });
+    await advance(0);
+    expect(screen.queryByTestId("runtime-health-banner")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByTestId("runtime-health-indicator"));
+  });
+
+  it("activating the icon opens the notice again", async () => {
+    await shownNotice();
+    fireEvent.click(screen.getByTestId("runtime-health-dismiss"));
+    await advance(0);
+    fireEvent.click(screen.getByTestId("runtime-health-indicator"));
+    await advance(0);
+    expect(screen.queryByTestId("runtime-health-indicator")).toBeNull();
+    expect(screen.getByTestId("runtime-health-banner").getAttribute("data-runtime-health")).toBe("reconnecting");
+  });
+
+  it("a worse state brings the notice back", async () => {
+    await shownNotice();
+    fireEvent.click(screen.getByTestId("runtime-health-dismiss"));
+    await advance(0);
+    browserOnline = false;
+    await advance(12_000);
+    expect(screen.getByTestId("runtime-health-banner").getAttribute("data-runtime-health")).toBe("offline");
+    expect(screen.queryByTestId("runtime-health-indicator")).toBeNull();
+  });
+
+  it("after a full recovery the icon is gone, and a new outage shows the notice again", async () => {
+    await shownNotice();
+    fireEvent.click(screen.getByTestId("runtime-health-dismiss"));
+    await advance(0);
+    runtimeUp = true;
+    await advance(10_000);
+    expect(screen.queryByTestId("runtime-health-banner")).toBeNull();
+    expect(screen.queryByTestId("runtime-health-indicator")).toBeNull();
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    runtimeUp = false;
+    await advance(22_000);
+    expect(screen.queryByTestId("runtime-health-banner")).not.toBeNull();
+    expect(screen.queryByTestId("runtime-health-indicator")).toBeNull();
+  });
+
+  it("is placed with logical properties, at the top under the topbar (never the bottom edge, never the sidebar side)", async () => {
+    const notice = await shownNotice();
+    const noticeClasses = classesOf(notice);
+    fireEvent.click(screen.getByTestId("runtime-health-dismiss"));
+    await advance(0);
+    const indicatorClasses = classesOf(screen.getByTestId("runtime-health-indicator"));
+
+    for (const classes of [noticeClasses, indicatorClasses]) {
+      expect(classes).toContain("fixed");
+      expect(classes.filter((token) => /^-?(left|right)-/.test(token) || /^(sm:|md:|lg:)(-?)(left|right)-/.test(token))).toEqual([]);
+      expect(classes.filter((token) => /(^|:)(ml|mr|pl|pr)-/.test(token))).toEqual([]);
+      // Bottom edge: the Inbox composer (send button) lives there at every width.
+      expect(classes.filter((token) => /(^|:)(bottom|inset-b|inset-y)-/.test(token))).toEqual([]);
+      // Sidebar sits at the START edge in both directions: anchor to the END edge.
+      expect(classes.filter((token) => /(^|:)start-/.test(token))).toEqual([]);
+      expect(classes.some((token) => /(^|:)end-\d/.test(token))).toBe(true);
+      // Under the topbar (h-14 below lg, h-12 from lg).
+      expect(classes).toContain("top-14");
+    }
+  });
+});
+
+describe("runtime health copy", () => {
+  const locales = ["ar", "fr", "en"] as const;
+  const words = (text: string) => text.split(/[\s'’]+/).filter(Boolean);
+
+  it("has the same keys in ar, fr and en", () => {
+    const keys = (code: (typeof locales)[number]) => Object.keys(RUNTIME_HEALTH_RUNTIME[code]).sort();
+    expect(keys("fr")).toEqual(keys("en"));
+    expect(keys("ar")).toEqual(keys("en"));
+    expect(keys("en")).toEqual(expect.arrayContaining(["runtimeHealth.close", "runtimeHealth.reopen"]));
+  });
+
+  it.each(locales)("keeps titles to 5 words and bodies to one short sentence (%s)", (code) => {
+    const table = RUNTIME_HEALTH_RUNTIME[code];
+    for (const kind of ["reconnecting", "offline"] as const) {
+      const title = table[`runtimeHealth.${kind}.title`] ?? "";
+      const body = table[`runtimeHealth.${kind}.body`] ?? "";
+      expect(words(title).length, `${code} ${kind} title: ${title}`).toBeGreaterThan(0);
+      expect(words(title).length, `${code} ${kind} title: ${title}`).toBeLessThanOrEqual(5);
+      expect(body.split(/[.!?؟]\s+\S/).length, `${code} ${kind} body is one sentence: ${body}`).toBe(1);
+      expect(words(body).length, `${code} ${kind} body: ${body}`).toBeLessThanOrEqual(14);
+    }
   });
 });

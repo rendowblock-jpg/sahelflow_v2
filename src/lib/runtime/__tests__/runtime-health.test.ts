@@ -243,3 +243,104 @@ describe("runtime health monitor", () => {
     expect(probe).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * F-0022: the seller can close the notice. Closing means "dismissed for this
+ * episode": it stays closed through further failed probes, and comes back only
+ * when things get worse (reconnecting -> offline) or after a full recovery
+ * followed by a NEW outage. The state lives in the monitor, not in the view.
+ */
+describe("dismissing the notice for one episode", () => {
+  async function reconnectingEpisode() {
+    const context = setup();
+    context.monitor.start();
+    context.world.healthy = false;
+    await tick(RUNTIME_HEALTHY_PROBE_MS + 2_000);
+    expect(status(context.monitor)).toBe("reconnecting");
+    expect(context.monitor.getState().dismissed).toBe(false);
+    return context;
+  }
+
+  it("dismiss() keeps the status (the problem is real) and marks the notice as dismissed", async () => {
+    const { monitor } = await reconnectingEpisode();
+    monitor.dismiss();
+    expect(monitor.getState().status).toBe("reconnecting");
+    expect(monitor.getState().dismissed).toBe(true);
+    monitor.stop();
+  });
+
+  it("further failed probes of the same episode never bring it back", async () => {
+    const { monitor } = await reconnectingEpisode();
+    monitor.dismiss();
+    const afterDismiss: boolean[] = [];
+    monitor.subscribe((state) => afterDismiss.push(state.dismissed));
+    await tick(60_000);
+    expect(monitor.getState().failures).toBeGreaterThan(2);
+    expect(monitor.getState().dismissed).toBe(true);
+    expect(afterDismiss).not.toContain(false);
+    monitor.stop();
+  });
+
+  it("a worse state (reconnecting -> offline) brings it back", async () => {
+    const { world, monitor } = await reconnectingEpisode();
+    monitor.dismiss();
+    world.online = false;
+    await tick(12_000);
+    expect(status(monitor)).toBe("offline");
+    expect(monitor.getState().dismissed).toBe(false);
+    monitor.stop();
+  });
+
+  it("a better state (offline -> reconnecting) stays dismissed, and so does going offline again", async () => {
+    const { world, monitor } = setup({ online: false, healthy: false });
+    monitor.start();
+    await tick(RUNTIME_HEALTHY_PROBE_MS + 2_000);
+    expect(status(monitor)).toBe("offline");
+    monitor.dismiss();
+
+    world.online = true;
+    monitor.environmentChanged();
+    await tick(0);
+    expect(status(monitor)).toBe("reconnecting");
+    expect(monitor.getState().dismissed).toBe(true);
+
+    world.online = false;
+    await tick(12_000);
+    expect(status(monitor)).toBe("offline");
+    expect(monitor.getState().dismissed).toBe(true);
+    monitor.stop();
+  });
+
+  it("a full recovery clears it, still reloads the pages, and a NEW outage shows the notice again", async () => {
+    const { world, monitor, onRecovered } = await reconnectingEpisode();
+    monitor.dismiss();
+
+    world.healthy = true;
+    await tick(10_000);
+    expect(status(monitor)).toBe("ok");
+    expect(monitor.getState().dismissed).toBe(false);
+    expect(onRecovered).toHaveBeenCalledTimes(1);
+
+    world.healthy = false;
+    await tick(RUNTIME_HEALTHY_PROBE_MS + 2_000);
+    expect(status(monitor)).toBe("reconnecting");
+    expect(monitor.getState().dismissed).toBe(false);
+    monitor.stop();
+  });
+
+  it("dismiss() while everything works does nothing, and reopen() brings a dismissed notice back", async () => {
+    const quiet = setup();
+    quiet.monitor.start();
+    quiet.monitor.dismiss();
+    expect(quiet.monitor.getState().dismissed).toBe(false);
+    quiet.monitor.stop();
+
+    const { monitor } = await reconnectingEpisode();
+    monitor.dismiss();
+    expect(monitor.getState().dismissed).toBe(true);
+    monitor.reopen();
+    expect(monitor.getState().dismissed).toBe(false);
+    expect(status(monitor)).toBe("reconnecting");
+    monitor.stop();
+  });
+});

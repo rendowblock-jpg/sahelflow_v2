@@ -9,7 +9,7 @@ import {
 } from "@/lib/runtime/runtime-health";
 
 const PROBE_TIMEOUT_MS = 4_000;
-const INITIAL_STATE: RuntimeHealthState = { status: "ok", failures: 0, retrying: false };
+const INITIAL_STATE: RuntimeHealthState = { status: "ok", failures: 0, retrying: false, dismissed: false };
 
 /** One cheap request to the local runtime's own health route. Any failure or timeout is "not healthy". */
 export async function probeLocalRuntime(): Promise<boolean> {
@@ -32,6 +32,10 @@ export async function probeLocalRuntime(): Promise<boolean> {
 export function useRuntimeHealth(onRecovered?: () => void): {
   state: RuntimeHealthState;
   retry: () => void;
+  /** Close the notice for this episode (the monitor decides when it may return). */
+  dismiss: () => void;
+  /** Open a dismissed notice again. */
+  reopen: () => void;
 } {
   const [state, setState] = useState<RuntimeHealthState>(INITIAL_STATE);
   const monitorRef = useRef<RuntimeHealthMonitor | null>(null);
@@ -69,5 +73,13 @@ export function useRuntimeHealth(onRecovered?: () => void): {
     void monitorRef.current?.retryNow();
   }, []);
 
-  return { state, retry };
+  const dismiss = useCallback(() => {
+    monitorRef.current?.dismiss();
+  }, []);
+
+  const reopen = useCallback(() => {
+    monitorRef.current?.reopen();
+  }, []);
+
+  return { state, retry, dismiss, reopen };
 }
