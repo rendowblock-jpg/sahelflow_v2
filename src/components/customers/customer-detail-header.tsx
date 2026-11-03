@@ -2,6 +2,8 @@ import Link from "next/link";
 import { AlertTriangle, Calendar, MapPin, Phone, Sparkles } from "lucide-react";
 
 import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
+import { CustomerEditButton } from "@/components/customers/customer-edit-button";
+import type { CustomerFormDialogCustomer } from "@/components/customers/customer-form-dialog";
 import { OfflineWriteGate } from "@/components/orders/offline-write-gate";
 import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
 import { PageHeader } from "@/components/shared/page-header";
@@ -23,12 +25,14 @@ export interface CustomerDetailHeaderProps {
   risk: { variant: "secondary" | "outline" | "destructive"; label: string; score: number } | null;
   /** Present only for sellers who may manage risk. */
   blacklist: { customerId: string; isBlacklisted: boolean } | null;
+  /** The stored values for the Edit button; null/absent when the seller may not edit this customer. */
+  edit?: CustomerFormDialogCustomer | null;
 }
 
 /**
  * The header of customers/[id]. Presentational so it can be mounted in a test. The WhatsApp deep link is not a
- * write (it opens the seller's own app), so it stays on offline; blocking and unblocking are writes and go behind
- * the offline gate. The kit Button already carries the touch-target minimum (--sf-touch-target).
+ * write (it opens the seller's own app), so it stays on offline; editing, blocking and unblocking are writes and go
+ * behind the offline gate. The kit Button already carries the touch-target minimum (--sf-touch-target).
  */
 export function CustomerDetailHeader({
   label,
@@ -40,6 +44,7 @@ export function CustomerDetailHeader({
   askAi,
   risk,
   blacklist,
+  edit = null,
 }: CustomerDetailHeaderProps) {
   return (
     <PageHeader
@@ -86,6 +91,11 @@ export function CustomerDetailHeader({
             customerName={name}
             testId="customer-header-whatsapp"
           />
+          {edit ? (
+            <OfflineWriteGate>
+              <CustomerEditButton customer={edit} />
+            </OfflineWriteGate>
+          ) : null}
           {risk ? (
             <Badge variant={risk.variant}>
               <AlertTriangle className="size-3.5" aria-hidden="true" />
