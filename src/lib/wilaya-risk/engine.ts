@@ -34,7 +34,7 @@ const ZONE_RISK: Record<string, Omit<WilayaRisk, "wilaya">> = {
  * exactly as it is (the seller may have changed it).
  *
  * One read for what exists and one write for what is missing. The first version did a findUnique and a create per
- * wilaya (69 of each), and every create was its own synced commit: the lab measured about 1,350 disk write operations
+ * wilaya (69 of each), and every create was its own synced commit: the lab measured about 1,270 disk write operations
  * and 4.7-12 s for the first-run PIN setup on a fast server disk, with almost no CPU (finding F-0015).
  */
 export async function seedWilayaRiskProfiles(

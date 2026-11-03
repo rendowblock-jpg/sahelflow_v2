@@ -61,7 +61,7 @@ describe("seedWilayaRiskProfiles", () => {
     expect(count).toBe(result.seeded);
   });
 
-  // F-0015: first-run setup waited 4.7-12 s on a lab runner; the sampler showed ~1,350 disk write operations for
+  // F-0015: first-run setup waited 4.7-12 s on a lab runner; the sampler showed ~1,270 disk write operations for
   // POST /api/auth/setup and almost no CPU. One findUnique + one create per wilaya = one synced commit each.
   /** A context whose WilayaRiskProfile delegate counts every call made on it, per method. */
   function countingContext() {
