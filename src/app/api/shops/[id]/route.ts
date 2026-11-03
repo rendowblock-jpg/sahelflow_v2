@@ -97,7 +97,12 @@ export const DELETE = withErrorHandler(
       payload: {
         operation: "delete",
         confirmationShopId: id,
-        reauthenticatedAtUnixMs: session.issuedAt.getTime(),
+        // Founder decision, 3 Nov 2026: a live signed-in session is the PIN proof,
+        // so the proof is "now", not the sign-in time (which may be hours old).
+        // The signed command and the Rust shell still refuse a proof older than
+        // ten minutes (src/lib/shops/native-lifecycle-command.ts,
+        // src-tauri/src/shop_lifecycle_command.rs); they are left as they are.
+        reauthenticatedAtUnixMs: Date.now(),
       },
       target,
       recentOwnerReauthentication: true,

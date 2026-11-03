@@ -352,4 +352,42 @@ describe("native shop route authorization behavior", () => {
       }),
     );
   });
+
+  it("states the live session as fresh PIN proof, not the hours-old sign-in time (Founder decision 3 Nov 2026)", async () => {
+    // The signed delete command (src/lib/shops/native-lifecycle-command.ts and
+    // the Rust shell, src-tauri/src/shop_lifecycle_command.rs) refuses a proof
+    // older than ten minutes. A seller signed in 3 hours ago has passed the
+    // server gate (a live session is the PIN proof), so the command must carry
+    // the time of that check, or the delete would die later as "stale".
+    const now = new Date("2026-11-03T12:00:00.000Z");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
+    try {
+      harness.getCurrentSessionAuthority.mockResolvedValue({
+        status: "authenticated",
+        sessionId: "session-owner",
+        issuedAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
+      });
+      const response = await deleteShop(
+        request(
+          "/api/shops/shop-b",
+          "DELETE",
+          JSON.stringify({ confirmationShopId: "shop-b" }),
+        ),
+        { params: Promise.resolve({ id: "shop-b" }) },
+      );
+      expect(response.status).toBe(202);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(harness.enqueueLifecycle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: {
+          operation: "delete",
+          confirmationShopId: "shop-b",
+          reauthenticatedAtUnixMs: now.getTime(),
+        },
+      }),
+    );
+  });
 });
