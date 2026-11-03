@@ -79,7 +79,8 @@ const VARIANTS = [
   { id: "demo-variant-07", productId: "demo-product-10", name: "Camel", sku: "DZ-MODE-002-CM", price: 5300, stock: 12, sortOrder: 1 },
 ] as const;
 
-const CUSTOMERS = [
+/** The demo customers: name, phone, wilaya, commune, address. Wilaya and commune are the names data/wilayas.json and data/communes.json use (pinned by a test). */
+export const ALGERIAN_DEMO_CUSTOMERS = [
   ["Fatima Zohra Benamar", "0550001101", "Alger", "Bab Ezzouar", "Cité AADL, Bâtiment 14"],
   ["Yacine Boudiaf", "0660001102", "Oran", "Bir El Djir", "Hai Sabah, îlot 18"],
   ["Amel Khelifi", "0770001103", "Sétif", "El Eulma", "Cité 1000 logements"],
@@ -353,7 +354,7 @@ export async function seedAlgerianDemoData(
     });
 
     await client.customer.createMany({
-      data: CUSTOMERS.map(([name, phone, wilaya, commune, address], index) => ({
+      data: ALGERIAN_DEMO_CUSTOMERS.map(([name, phone, wilaya, commune, address], index) => ({
         id: `demo-customer-${String(index + 1).padStart(2, "0")}`,
         name,
         phone,
@@ -387,7 +388,7 @@ export async function seedAlgerianDemoData(
     }> = [];
 
     for (let index = 0; index < 48; index += 1) {
-      const customerIndex = index % CUSTOMERS.length;
+      const customerIndex = index % ALGERIAN_DEMO_CUSTOMERS.length;
       const customerId = `demo-customer-${String(customerIndex + 1).padStart(2, "0")}`;
       const productA = PRODUCTS[(index * 3) % PRODUCTS.length]!;
       const productB = PRODUCTS[(index * 5 + 2) % PRODUCTS.length]!;
@@ -409,7 +410,7 @@ export async function seedAlgerianDemoData(
       const deliveredAt = ["delivered", "returned"].includes(status)
         ? daysAfter(createdAt, 1 + (index % 3))
         : null;
-      const customer = CUSTOMERS[customerIndex]!;
+      const customer = ALGERIAN_DEMO_CUSTOMERS[customerIndex]!;
       const orderId = `demo-order-${String(index + 1).padStart(3, "0")}`;
       const orderNumber = `DZ-DEMO-${String(index + 1).padStart(4, "0")}`;
       const collected = status === "delivered" || status === "returned";
@@ -673,7 +674,7 @@ export async function seedAlgerianDemoData(
 
     for (let index = 0; index < conversationCustomers.length; index += 1) {
       const customerIndex = conversationCustomers[index]!;
-      const customer = CUSTOMERS[customerIndex]!;
+      const customer = ALGERIAN_DEMO_CUSTOMERS[customerIndex]!;
       const conversationId = `demo-conversation-${String(index + 1).padStart(2, "0")}`;
       const order = createdOrders.find((candidate) => candidate.customerId === `demo-customer-${String(customerIndex + 1).padStart(2, "0")}`);
       await client.conversation.create({
