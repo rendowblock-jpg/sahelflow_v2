@@ -123,7 +123,7 @@ export function AutomationCard({ data, canManage, order = 0 }: { data: Automatio
       ) : null}
 
       <div className="mx-4 mb-4 flex flex-wrap items-center gap-1.5 text-caption" aria-label={`${c("workspace.when")} ${data.triggerLabel}`}>
-        <FlowChip tone="bg-primary-subtle text-primary" icon={<TriggerGlyph trigger={data.trigger} className="size-3.5" />}>
+        <FlowChip tone="bg-primary-subtle text-primary-ink" icon={<TriggerGlyph trigger={data.trigger} className="size-3.5" />}>
           {data.triggerLabel}
         </FlowChip>
         <ArrowRight className="size-3 shrink-0 text-muted-foreground icon-rtl-flip" aria-hidden="true" />

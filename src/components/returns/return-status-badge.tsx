@@ -22,7 +22,7 @@ type ReturnStatus = "requested" | "approved" | "rejected" | "completed";
 
 const STATUS_STYLES: Record<ReturnStatus, { i18nKey: string; dot: string; bg: string; text: string; border: string }> = {
   requested: { i18nKey: "returns.status.requested", dot: "bg-warning", bg: "bg-warning-soft", text: "text-warning-ink", border: "border-warning/25" },
-  approved: { i18nKey: "returns.status.approved", dot: "bg-primary", bg: "bg-primary-soft", text: "text-primary", border: "border-primary/25" },
+  approved: { i18nKey: "returns.status.approved", dot: "bg-primary", bg: "bg-primary-soft", text: "text-primary-ink", border: "border-primary/25" },
   rejected: { i18nKey: "returns.status.rejected", dot: "bg-destructive", bg: "bg-destructive-soft", text: "text-destructive-ink", border: "border-destructive/25" },
   completed: { i18nKey: "returns.status.completed", dot: "bg-success", bg: "bg-success-soft", text: "text-success-ink", border: "border-success/25" },
 };

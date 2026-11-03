@@ -139,7 +139,7 @@ const MessageBubble = memo(function MessageBubble({
               title={copy("feedbackUp")}
               disabled={message.feedback === "up"}
               onClick={() => onFeedback(message.id, "up")}
-              className={cn(actionButton, message.feedback === "up" && "bg-primary-soft text-primary")}
+              className={cn(actionButton, message.feedback === "up" && "bg-primary-soft text-primary-ink")}
             >
               <ThumbsUp className="size-3.5" aria-hidden="true" />
             </button>

@@ -235,7 +235,7 @@ export function StepEditor({
                 className={cn(
                   "rounded-full border px-2.5 py-1 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   step.config.delayMinutes === minutes
-                    ? "border-primary bg-primary-subtle text-primary"
+                    ? "border-primary bg-primary-subtle text-primary-ink"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
