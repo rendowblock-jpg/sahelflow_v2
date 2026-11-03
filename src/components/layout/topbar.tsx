@@ -42,6 +42,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { RuntimeHealthIndicator } from "@/components/runtime/runtime-health-indicator";
 import { UpdateChip } from "@/components/updater/update-chip";
 import { useI18n } from "@/hooks/use-i18n";
 import { useMobile } from "@/hooks/use-mobile";
@@ -454,6 +455,8 @@ export function Topbar({
           </DropdownMenuContent>
         </DropdownMenu>
         ) : null}
+
+        <RuntimeHealthIndicator />
 
         <UpdateChip />
 

@@ -2,7 +2,7 @@ import "@/app/rtl-form-controls.css";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LicenseBoundary } from "@/components/license/license-boundary";
-import { RuntimeHealthBanner } from "@/components/runtime/runtime-health-banner";
+import { RuntimeHealthProvider } from "@/components/runtime/runtime-health-provider";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
 import { isAuthenticated, isAuthSetup } from "@/lib/auth/server";
 import { currentActorPermissions } from "@/lib/identity/authorization";
@@ -60,28 +60,29 @@ export default async function DashboardRouteLayout({
           : undefined
       }
     >
-      <DashboardLayout permissions={permissions}>
-        {/*
-          Authentication, setup and entitlement authority have resolved above.
-          Signal the hydrated workspace shell before slower page aggregates
-          finish behind their route loading surface.
-        */}
-        <RuntimeUiReadyBeacon />
-        <RuntimeHealthBanner />
-        {children}
-        {/*
-          The route template wraps EVERY slot, so the empty `@modal` slot
-          still arrives as a full-height transition box. Left in flow it
-          doubled #main-content's scroll height: document pages gained a
-          blank screen below their content and the Inbox/Agents
-          scroll-to-latest pulled the workspace up into that void. The
-          Settings modal portals to <body>, so its slot box never needs
-          layout space.
-        */}
-        <div hidden data-shell-slot="modal">
-          {modal}
-        </div>
-      </DashboardLayout>
+      <RuntimeHealthProvider>
+        <DashboardLayout permissions={permissions}>
+          {/*
+            Authentication, setup and entitlement authority have resolved above.
+            Signal the hydrated workspace shell before slower page aggregates
+            finish behind their route loading surface.
+          */}
+          <RuntimeUiReadyBeacon />
+          {children}
+          {/*
+            The route template wraps EVERY slot, so the empty `@modal` slot
+            still arrives as a full-height transition box. Left in flow it
+            doubled #main-content's scroll height: document pages gained a
+            blank screen below their content and the Inbox/Agents
+            scroll-to-latest pulled the workspace up into that void. The
+            Settings modal portals to <body>, so its slot box never needs
+            layout space.
+          */}
+          <div hidden data-shell-slot="modal">
+            {modal}
+          </div>
+        </DashboardLayout>
+      </RuntimeHealthProvider>
     </LicenseBoundary>
   );
 }
