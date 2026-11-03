@@ -38,6 +38,32 @@ const MAX_RETRY_DELAY_MS = 5 * 60_000;
 // finishes the commit, and a retry is an exact replay of the same event.
 const DELIVERY_TIMEOUT_MS = 30_000;
 
+// Circuit breaker (F-0024/F-0025). Measured on the Founder's PC, a 2-core
+// Celeron: 107 messages waited up to 2.3 days and 381 deliveries failed in 25
+// days. Every pass used to ask the app for EVERY due record, one after the
+// other, and each retry made the app decrypt, save, process and index on a CPU
+// that was already starving, so a failure made the next record fail too and
+// the backlog itself kept the app slow. The breaker makes the pass stop asking
+// while the app is failing, and ask again with ONE record before it resumes.
+// It never drops, reorders or marks a record: it only decides whether the
+// spool asks the app right now.
+const BREAKER_OPEN_AFTER = 3;
+const BREAKER_BASE_COOL_DOWN_MS = 15_000;
+const BREAKER_MAX_COOL_DOWN_MS = 5 * 60_000;
+// The cool-down is spread by this fraction either way so that several
+// sidecars (or a sidecar and a retrying app) do not ask in the same instant.
+const BREAKER_JITTER = 0.2;
+// A delivery slower than this succeeded, but the app is struggling.
+const SLOW_DELIVERY_MS = 10_000;
+// Pacing: once a delivery took longer than PACE_SLOW_MS the app is treated as
+// slow for PACE_MEMORY_MS, and a pass starts at most PACE_MAX_ATTEMPTS
+// deliveries per PACE_WINDOW_MS. (Read literally, "the previous delivery was
+// slow" would hold for one attempt only: the next, fast, answer would lift it.)
+const PACE_SLOW_MS = 2_000;
+const PACE_MEMORY_MS = 10_000;
+const PACE_WINDOW_MS = 1_000;
+const PACE_MAX_ATTEMPTS = 5;
+
 // A record the sidecar cannot read is moved here (never deleted on the spot)
 // so one bad file cannot keep WhatsApp from running. The folder is bounded:
 // files older than the age limit go first, then the oldest beyond the count.
@@ -71,6 +97,17 @@ export type WhatsAppInboundQuarantineReason =
   | "record_unsupported"
   | "not_a_file";
 
+export type WhatsAppInboundBreakerState = "closed" | "open" | "half-open";
+
+/** The delivery circuit breaker, as numbers and a state name. */
+export interface WhatsAppInboundBreakerSnapshot {
+  state: WhatsAppInboundBreakerState;
+  /** When the cool-down ends (epoch ms); null unless the breaker is open. */
+  openUntilMs: number | null;
+  /** Failures and slow successes in a row since the last clean success. */
+  consecutiveFailures: number;
+}
+
 /** Counts only. Safe to write to the diagnostics file. */
 export interface WhatsAppInboundSpoolSnapshot {
   /** Records waiting for the app (pending delivery or publication). */
@@ -87,6 +124,8 @@ export interface WhatsAppInboundSpoolSnapshot {
   /** Files currently in the quarantine folder. */
   quarantined: number;
   quarantinedSinceStart: number;
+  /** Always set by the spool itself; optional so a stand-in snapshot stays valid. */
+  breaker?: WhatsAppInboundBreakerSnapshot;
 }
 
 export interface WhatsAppInboundSpoolEnvelope {
@@ -130,6 +169,8 @@ export interface WhatsAppInboundSpoolOptions {
   quarantineMaxAgeMs?: number;
   /** How often the idle spool restates its depth in the diagnostics (default 5 min). */
   statusEveryMs?: number;
+  /** Source of the cool-down jitter, in [0, 1). Defaults to Math.random; tests pass a fixed one. */
+  random?: () => number;
   /** Called with how many quarantined files were just removed for good (age or count limit). */
   onQuarantinePruned?: (removed: number) => void;
   onCommitted: (
@@ -369,6 +410,7 @@ export class WhatsAppInboundSpool {
   private readonly quarantineMaxRecords: number;
   private readonly quarantineMaxAgeMs: number;
   private readonly statusEveryMs: number;
+  private readonly random: () => number;
   private readonly onCommitted: WhatsAppInboundSpoolOptions["onCommitted"];
   private readonly onQuarantinePruned: WhatsAppInboundSpoolOptions["onQuarantinePruned"];
   private flushPromise: Promise<void> | null = null;
@@ -385,6 +427,22 @@ export class WhatsAppInboundSpool {
   private quarantinedSinceStart = 0;
   private lastStatusAt = 0;
   private lastPruneAt = 0;
+  // Circuit breaker. Memory only: after a restart it starts closed, and the
+  // first failures open it again within seconds.
+  private breakerState: WhatsAppInboundBreakerState = "closed";
+  // Failures and slow successes in a row since the last clean success; the
+  // second number is how many of them were slow successes.
+  private breakerFailures = 0;
+  private breakerSlow = 0;
+  // Openings since the breaker last closed: the cool-down doubles with it.
+  private breakerOpenings = 0;
+  private breakerOpenUntil: number | null = null;
+  private breakerCoolDownMs = 0;
+  // Pacing: requests sent, the start of the recent ones, and until when the
+  // app counts as slow.
+  private requestsSent = 0;
+  private recentAttempts: number[] = [];
+  private paceUntil = 0;
 
   constructor(options: WhatsAppInboundSpoolOptions) {
     this.directory = resolve(options.directory ?? defaultSpoolDirectory());
@@ -409,6 +467,7 @@ export class WhatsAppInboundSpool {
       10,
       options.statusEveryMs ?? DEFAULT_STATUS_EVERY_MS,
     );
+    this.random = options.random ?? Math.random;
     this.encryptionKey = options.encryptionKey
       ? Buffer.from(options.encryptionKey)
       : resolveWhatsAppInboundSpoolKey(this.directory);
@@ -760,6 +819,12 @@ export class WhatsAppInboundSpool {
       unreadable: this.unreadable.size,
       quarantined: this.quarantineCount(),
       quarantinedSinceStart: this.quarantinedSinceStart,
+      breaker: {
+        state: this.breakerState,
+        openUntilMs:
+          this.breakerState === "open" ? this.breakerOpenUntil : null,
+        consecutiveFailures: this.breakerFailures,
+      },
     };
   }
 
@@ -793,7 +858,10 @@ export class WhatsAppInboundSpool {
     ) {
       return;
     }
-    this.diagnostics.record("spool.status", { ...snapshot, why });
+    // The breaker is an object and has its own event (spool.breaker); the
+    // diagnostics file only takes flat scalars.
+    const { breaker: _breaker, ...counts } = snapshot;
+    this.diagnostics.record("spool.status", { ...counts, why });
   }
 
   /** Persist encrypted, synchronously, before browser or application delivery. */
@@ -917,6 +985,100 @@ export class WhatsAppInboundSpool {
     this.removeRecord(record);
   }
 
+  private breakerChanged(): void {
+    // Counts and a state name only: no record id, no content.
+    this.diagnostics.record("spool.breaker", {
+      state: this.breakerState,
+      failures: this.breakerFailures,
+      slow: this.breakerSlow,
+      coolDownMs: this.breakerCoolDownMs,
+    });
+  }
+
+  private breakerOpen(): void {
+    this.breakerOpenings += 1;
+    const nominal = Math.min(
+      BREAKER_BASE_COOL_DOWN_MS * Math.pow(2, this.breakerOpenings - 1),
+      BREAKER_MAX_COOL_DOWN_MS,
+    );
+    // A broken random source must not be able to leave the breaker open for good.
+    const raw = this.random();
+    const draw = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0.5;
+    const jitter = 1 + (draw * 2 - 1) * BREAKER_JITTER;
+    // The maximum is a maximum: the jitter never carries it past 5 minutes.
+    this.breakerCoolDownMs = Math.min(
+      BREAKER_MAX_COOL_DOWN_MS,
+      Math.round(nominal * jitter),
+    );
+    this.breakerOpenUntil = Date.now() + this.breakerCoolDownMs;
+    this.breakerState = "open";
+    this.breakerChanged();
+  }
+
+  private breakerClose(): void {
+    this.breakerState = "closed";
+    this.breakerOpenings = 0;
+    this.breakerOpenUntil = null;
+    this.breakerCoolDownMs = 0;
+    this.breakerChanged();
+  }
+
+  /**
+   * The state the pass should act on. An open breaker whose cool-down has ended
+   * becomes half-open here: the pass may then ask the app with ONE record.
+   */
+  private breakerPhase(now: number): WhatsAppInboundBreakerState {
+    // An end further away than any cool-down can be means the PC's clock was
+    // set back: the breaker must not stay open for hours because of it.
+    if (
+      this.breakerState === "open" &&
+      this.breakerOpenUntil !== null &&
+      (now >= this.breakerOpenUntil ||
+        this.breakerOpenUntil - now > BREAKER_MAX_COOL_DOWN_MS)
+    ) {
+      this.breakerState = "half-open";
+      this.breakerOpenUntil = null;
+      this.breakerChanged();
+    }
+    return this.breakerState;
+  }
+
+  /**
+   * What one answer from the app says about the app (not about the record).
+   * "ok" is a success; "failure" is any failed delivery except the app's own
+   * permanent refusal of this record ("refused"), which says nothing about the
+   * app's health: it neither counts nor resets the count.
+   */
+  private breakerNote(signal: "ok" | "failure" | "refused", ms: number): void {
+    if (signal === "refused") return;
+    const slow = signal === "ok" && ms > SLOW_DELIVERY_MS;
+    if (signal === "ok" && !slow) {
+      this.breakerFailures = 0;
+      this.breakerSlow = 0;
+      if (this.breakerState !== "closed") this.breakerClose();
+      return;
+    }
+    // A failure, or a success so slow that the app is clearly struggling.
+    this.breakerFailures += 1;
+    if (slow) this.breakerSlow += 1;
+    if (
+      this.breakerState === "half-open" ||
+      (this.breakerState === "closed" &&
+        this.breakerFailures >= BREAKER_OPEN_AFTER)
+    ) {
+      this.breakerOpen();
+    }
+  }
+
+  /** True while the app counts as slow and this second's share of requests is used up. */
+  private pacedOut(now: number): boolean {
+    if (now >= this.paceUntil) return false;
+    this.recentAttempts = this.recentAttempts.filter(
+      (startedAt) => now - startedAt < PACE_WINDOW_MS,
+    );
+    return this.recentAttempts.length >= PACE_MAX_ATTEMPTS;
+  }
+
   private async deliver(record: StoredInboundRecord): Promise<void> {
     if (record.state === "committed") {
       try {
@@ -934,6 +1096,22 @@ export class WhatsAppInboundSpool {
     record.updatedAt = new Date().toISOString();
     this.writeRecord(record);
 
+    const startedAt = Date.now();
+    this.requestsSent += 1;
+    this.recentAttempts.push(startedAt);
+    if (this.recentAttempts.length > PACE_MAX_ATTEMPTS * 4) {
+      this.recentAttempts.splice(0, this.recentAttempts.length - PACE_MAX_ATTEMPTS);
+    }
+    // The answer is judged once, as soon as it is known and before anything is
+    // written: a later disk fault must not change what the app did.
+    let judged = false;
+    const judge = (signal: "ok" | "failure" | "refused"): void => {
+      if (judged) return;
+      judged = true;
+      const ended = Date.now();
+      if (ended - startedAt > PACE_SLOW_MS) this.paceUntil = ended + PACE_MEMORY_MS;
+      this.breakerNote(signal, ended - startedAt);
+    };
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), DELIVERY_TIMEOUT_MS);
     try {
@@ -974,15 +1152,20 @@ export class WhatsAppInboundSpool {
           typeof body?.status === "string" && APP_STATUSES.has(body.status)
             ? body.status
             : null;
+        const failureCode = responseErrorCode(response.status, body);
+        judge(
+          failureCode === "REQUEST_VALIDATION_FAILED" ? "refused" : "failure",
+        );
         this.scheduleFailure(
           record,
-          responseErrorCode(response.status, body),
+          failureCode,
           appStatus,
           rejectedFieldsOf(response.status, body),
         );
         return;
       }
 
+      judge("ok");
       record.state = "committed";
       record.ingressEventId = body.ingressEventId;
       record.publish = body.publish !== false;
@@ -996,20 +1179,28 @@ export class WhatsAppInboundSpool {
         error instanceof Error && error.name === "AbortError"
           ? "APP_INGRESS_TIMEOUT"
           : "APP_INGRESS_UNAVAILABLE";
+      // No effect when the answer was already judged (the fault came after it).
+      judge("failure");
       this.scheduleFailure(record, code);
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  /** The oldest record that is due and has not been tried in this pass. */
+  /**
+   * The oldest record that is due and has not been tried in this pass. With
+   * `askApp` false only committed records qualify: they need no request, so
+   * the breaker and the pacing never hold them.
+   */
   private nextDue(
     now: number,
     attempted: ReadonlySet<string>,
+    askApp = true,
   ): SpoolIndexEntry | null {
     let best: SpoolIndexEntry | null = null;
     for (const entry of this.index.values()) {
       if (attempted.has(entry.spoolId)) continue;
+      if (!askApp && entry.state === "pending") continue;
       // A committed record only needs publishing and removal, so it is never
       // held back by a delivery backoff.
       if (
@@ -1065,11 +1256,24 @@ export class WhatsAppInboundSpool {
     // delivery, so a message enqueued while the pass is running is delivered
     // by this pass (in its place in the order) instead of waiting for a tick.
     const attempted = new Set<string>();
+    let probed = false;
     for (;;) {
-      const entry = this.nextDue(now, attempted);
+      // Asked again before every record: the answer to the last one may have
+      // opened or closed the breaker.
+      const phase = this.breakerPhase(Date.now());
+      const askApp =
+        (phase === "closed" || (phase === "half-open" && !probed)) &&
+        !this.pacedOut(Date.now());
+      const entry = this.nextDue(now, attempted, askApp);
       if (!entry) break;
       attempted.add(entry.spoolId);
+      const sentBefore = this.requestsSent;
       await this.deliverIndexed(entry.spoolId);
+      // Half-open lets ONE request through. A record that was never sent (it
+      // could not be read, or was committed already) is not that probe.
+      if (phase === "half-open" && this.requestsSent !== sentBefore) {
+        probed = true;
+      }
     }
     if (now - this.lastPruneAt >= QUARANTINE_PRUNE_EVERY_MS) {
       this.pruneQuarantine(now);
