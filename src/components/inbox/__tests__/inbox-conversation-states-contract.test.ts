@@ -58,7 +58,12 @@ describe("inbox conversation states (INB-12)", () => {
   it("sorts pinned first and isolates the archive queue", () => {
     // INB-27: the queue projection lives in the chat-queue hook module.
     const hook = source("src/hooks/inbox/use-inbox-chat-queue.ts");
-    expect(hook).toContain("Number(b.pinned) - Number(a.pinned)");
+    // F-0030: the pinned-first comparator now lives in the shared queue model
+    // (`compareQueueRows`: real before sample, then pinned first) and the hook
+    // sorts through it; the pinned-first rule itself is unchanged.
+    expect(hook).toContain(".sort(compareQueueRows)");
+    const model = source("src/components/inbox/inbox-sample-model.ts");
+    expect(model).toContain("Number(b.pinned) - Number(a.pinned)");
     expect(hook).toContain('queueFilter === "archived"');
     expect(hook).toContain("const setConversationState = useCallback(");
     const workspace = source("src/components/inbox/inbox-v3-workspace.tsx");
