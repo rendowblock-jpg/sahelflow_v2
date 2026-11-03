@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -31,11 +31,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/hooks/use-i18n";
+import { ReauthFailureMessage } from "@/components/auth/reauth-failure-message";
 import { BrandLogo } from "@/components/brand/brand-icons";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
+import {
+  reauthenticateWithPin,
+  type ReauthFailure,
+} from "@/lib/auth/reauthenticate-client";
 import { toast } from "@/lib/toast";
 
 export type AiKeyProvider = "gemini" | "groq";
@@ -137,7 +142,9 @@ export function AiKeyPanel({
   const [consentSaving, setConsentSaving] = useState(false);
   const [pin, setPin] = useState("");
   const [reauthBusy, setReauthBusy] = useState(false);
-  const [reauthError, setReauthError] = useState<string | null>(null);
+  const [reauthFailure, setReauthFailure] = useState<ReauthFailure | null>(null);
+  // A ref, not state: two submits in the same tick both see the same render, so state alone cannot stop the second.
+  const reauthInFlight = useRef(false);
   const [pendingAction, setPendingAction] = useState<
     "save" | "delete" | null
   >(null);
@@ -145,7 +152,7 @@ export function AiKeyPanel({
   const loadKeyStatus = useCallback(async () => {
     if (!canManageKey) return;
     setAuthorityState("loading");
-    setReauthError(null);
+    setReauthFailure(null);
     try {
       const response = await fetch(KEY_ENDPOINTS[provider], {
         method: "GET",
@@ -197,24 +204,16 @@ export function AiKeyPanel({
   }, [canManageKey, loadConsent, loadKeyStatus]);
 
   const verifyPin = async () => {
-    if (!canManageKey || !pin.trim() || reauthBusy) return;
+    if (!canManageKey || !pin.trim() || reauthBusy || reauthInFlight.current) {
+      return;
+    }
+    reauthInFlight.current = true;
     setReauthBusy(true);
-    setReauthError(null);
+    setReauthFailure(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      const body = (await response.json().catch(() => ({}))) as SaveResult;
-      if (!response.ok) {
-        setReauthError(
-          response.status === 401
-            ? t("aiKey.pinIncorrect")
-            : response.status === 429
-              ? t("aiKey.pinLocked")
-              : body.error ?? copy("verificationDescription"),
-        );
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setReauthFailure(result);
         return;
       }
       setPin("");
@@ -230,8 +229,9 @@ export function AiKeyPanel({
         await performDelete();
       }
     } catch {
-      setReauthError(copy("unavailableDescription"));
+      setReauthFailure({ kind: "unavailable" });
     } finally {
+      reauthInFlight.current = false;
       setReauthBusy(false);
     }
   };
@@ -443,10 +443,8 @@ export function AiKeyPanel({
                         {copy("verify")}
                       </Button>
                     </div>
-                    {reauthError ? (
-                      <p role="alert" className="text-xs text-destructive">
-                        {reauthError}
-                      </p>
+                    {reauthFailure ? (
+                      <ReauthFailureMessage failure={reauthFailure} />
                     ) : null}
                   </AlertDescription>
                 </Alert>
