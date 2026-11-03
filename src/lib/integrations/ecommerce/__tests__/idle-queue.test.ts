@@ -125,6 +125,27 @@ const CLAIMABLE: RowState[] = [
   { label: "retrying, retry time reached", status: "retrying", next: "past" },
 ];
 
+/**
+ * A context whose `$transaction` first lets `beforeTransaction` run, i.e. a
+ * competitor that claims the row AFTER the pre-check saw it and BEFORE the
+ * transaction starts.
+ */
+function racingContext(beforeTransaction: () => Promise<void>): ServiceContext {
+  const client = new Proxy(rawDb, {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      if (property === "$transaction") {
+        return async (...args: unknown[]) => {
+          await beforeTransaction();
+          return (value as (...inner: unknown[]) => unknown).apply(target, args);
+        };
+      }
+      return value;
+    },
+  });
+  return { prisma: client as never, shop: TEST_SHOP_CONTEXT };
+}
+
 interface ClaimKind {
   name: string;
   claim: (context: ServiceContext) => Promise<unknown>;
@@ -134,6 +155,8 @@ interface ClaimKind {
   /** status a claimed row must have, and the stale-lease state that is claimable */
   claimedStatus: string;
   staleStatus: string;
+  /** What a competing worker does to the row: claims it with a fresh lease. */
+  steal: (id: string) => Promise<unknown>;
   extraNotClaimable: RowState[];
 }
 
@@ -150,6 +173,11 @@ const KINDS: ClaimKind[] = [
       }),
     claimedStatus: "fetching",
     staleStatus: "fetching",
+    steal: (id) =>
+      rawDb.commerceSyncRun.update({
+        where: { id },
+        data: { status: "fetching", attemptCount: 1, lockedAt: new Date(), leaseToken: "rival" },
+      }),
     extraNotClaimable: [
       {
         label: "queued but the fetch is already complete",
@@ -170,6 +198,11 @@ const KINDS: ClaimKind[] = [
       }),
     claimedStatus: "processing",
     staleStatus: "processing",
+    steal: (id) =>
+      rawDb.commerceSyncItem.update({
+        where: { id },
+        data: { status: "processing", attemptCount: 1, lockedAt: new Date(), leaseToken: "rival" },
+      }),
     extraNotClaimable: [{ label: "quarantined", status: "quarantined" }],
   },
 ];
@@ -235,6 +268,20 @@ describe.each(KINDS)("idle queue: $name claim", (kind) => {
     const results = await Promise.all([kind.claim(context), kind.claim(context)]);
 
     expect(results.filter((claimed) => claimed !== null)).toHaveLength(1);
+    expect(await kind.read(id)).toEqual({
+      status: kind.claimedStatus,
+      attemptCount: 1,
+    });
+  });
+
+  it("the transaction re-checks inside: a row claimed by a rival after the pre-check is not claimed again", async () => {
+    const id = await kind.seed({ label: "queued", status: "queued" });
+    const context = racingContext(async () => {
+      await kind.steal(id);
+    });
+
+    expect(await kind.claim(context)).toBeNull();
+
     expect(await kind.read(id)).toEqual({
       status: kind.claimedStatus,
       attemptCount: 1,
