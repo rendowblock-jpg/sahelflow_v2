@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+// Windows checks sources out with CRLF line endings; the assertions below spell multi-line source with \n.
+const read = (path: string) => readFileSync(resolve(root, path), "utf8").replace(/\r\n/g, "\n");
 
 describe("Inbox Class-AAA operations desk contract", () => {
   it("routes Inbox through the live V3 workspace with bounded recovery", () => {
@@ -256,7 +257,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(thread).toContain('locale === "ar"');
     expect(thread).toContain('? "auto"');
     expect(thread).toContain('? "rtl"');
-    expect(thread).toContain("text-start");
+    expect(read("src/components/inbox/inbox-composer-style.ts")).toContain("text-start");
   });
 
   it("compacts the v3 composer into one attach menu and closes the message-list dead space", () => {
@@ -285,9 +286,10 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(header).toContain("<StatusControl");
     expect(header).toContain("conversationId={activeChat.conversationId}");
     expect(header).toContain('size="icon-sm"');
-    expect(header).toContain(
-      'aria-label={t("inbox.extractOrderProfessionally")}',
-    );
+    // The primary action says what it does in words (visible label = name);
+    // the long explanation stays in the tooltip.
+    expect(header).toContain('aria-label={copy("threadOrderAction")}');
+    expect(header).toContain('{t("inbox.extractOrderProfessionally")}');
     expect(header).toContain("<TooltipContent");
     expect(header).toContain("<MessageExtraction");
     expect(header).toContain("messageId={selectedCandidate.id}");

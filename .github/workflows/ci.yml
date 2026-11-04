@@ -98,7 +98,9 @@ jobs:
     needs: classify
     if: ${{ github.event.pull_request.draft == false && needs.classify.outputs.run_quality == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # 60 minutes (was 40, set 17 Oct): this job runs the whole vitest suite twice (the quality gate, then --coverage), about 20 minutes each.
+    # Internal.49's integration run took 36.5 of the 40; Internal.50's took 20.5 + more than 19.4 and was cancelled at the cap (run 41790899951).
+    timeout-minutes: 60
 
     env:
       SF_TEST_ROOT: "/tmp/sahelflow-ci-test"

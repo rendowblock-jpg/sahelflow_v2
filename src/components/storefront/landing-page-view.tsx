@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, Loader2, ShieldCheck, Truck } from "lucide-react";
 
+import { UserText } from "@/components/i18n/user-text";
 import { StorefrontLanguageSwitcher } from "@/components/storefront/storefront-language-switcher";
 import {
   StorefrontLocaleProvider,
@@ -210,7 +211,7 @@ function LandingPageBody({
 
   if (result?.ok) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-4 px-4 py-12 text-center">
+      <main className="max-sm:[--control-height:2.75rem] mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-4 px-4 py-12 text-center">
         <CheckCircle2 className="size-14 text-emerald-600" aria-hidden="true" />
         <h1 className="text-2xl font-semibold">{t("storefront.view.orderConfirmed")}</h1>
         {result.orderNumber ? (
@@ -236,7 +237,7 @@ function LandingPageBody({
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 pb-16">
+    <main className="max-sm:[--control-height:2.75rem] mx-auto w-full max-w-3xl px-4 pb-16">
       {/* FD-061 EX-4: the image stack — full-width, single spacing setting. */}
       {stackImages.length > 0 ? (
         <section aria-label={page.name} className="pt-4">
@@ -257,7 +258,7 @@ function LandingPageBody({
       ) : null}
 
       <section className="mt-6">
-        <h1 className="text-2xl font-semibold">{page.product.name}</h1>
+        <h1 className="text-2xl font-semibold"><UserText text={page.product.name} /></h1>
         <p className="mt-1 text-xl font-semibold text-primary">{formatDZD(unitPrice, locale)}</p>
         {available ? null : (
           <p className="mt-1 text-sm font-medium text-destructive">
@@ -332,7 +333,7 @@ function LandingPageBody({
               id="lp-variant"
               value={variantId}
               onChange={(event) => setVariantId(event.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs max-sm:h-11 max-sm:text-base"
               disabled={page.product.variants.length === 0}
             >
               <option value="">{t("storefront.view.landing.variantStandard")}</option>
@@ -364,7 +365,7 @@ function LandingPageBody({
               onChange={(event) =>
                 updateForm("deliveryMode", event.target.value)
               }
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs max-sm:h-11 max-sm:text-base"
             >
               <option value="home">{t("storefront.view.deliveryHome")}</option>
               <option value="desk">{t("storefront.view.deliveryDesk")}</option>

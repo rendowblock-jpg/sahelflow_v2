@@ -50,6 +50,8 @@ export function EntityLink({
       href={href}
       className={cn(
         "group inline-flex min-w-0 items-center gap-1 rounded-control text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring",
+        // Phone: a 40 px target (R50 sweep: order links 67x20 on /deliveries/[id]).
+        "max-sm:min-h-10",
         compact ? "text-xs" : "text-sm",
         className,
       )}

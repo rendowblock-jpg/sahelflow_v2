@@ -18,7 +18,6 @@ export type HeldSendDiscardStatus =
 const IDLE: HeldSendDiscardStatus = { status: "idle" };
 const BOX =
   "flex max-w-80 flex-col items-end gap-1.5 rounded-control border border-dashed border-border px-3 py-2 text-end";
-const BUTTON = "min-h-9 [@media(pointer:coarse)]:min-h-11";
 
 /**
  * Shown under a message the send guard held. The label has an icon and words
@@ -78,7 +77,7 @@ export function HeldSendNotice({
                 type="button"
                 variant="outline"
                 size="sm"
-                className={`${BUTTON} text-destructive hover:text-destructive`}
+                className="min-h-9 max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11 text-destructive hover:text-destructive"
                 disabled={busy}
                 onClick={onDiscard}
               >
@@ -90,7 +89,7 @@ export function HeldSendNotice({
               type="button"
               variant="outline"
               size="sm"
-              className={BUTTON}
+              className="min-h-9 max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11"
               disabled={busy}
               onClick={onApprove}
             >

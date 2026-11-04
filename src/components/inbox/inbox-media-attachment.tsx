@@ -265,7 +265,7 @@ function DownloadButton({
       disabled={downloading}
       aria-busy={downloading}
       className={cn(
-        "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-surface border border-border/70 bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-65",
+        "inline-flex min-h-9 max-sm:min-h-10 items-center justify-center gap-1.5 rounded-surface border border-border/70 bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-65",
         compact && "min-h-8 px-2.5",
       )}
     >
@@ -344,7 +344,7 @@ function InboxMediaLightbox({
           autoFocus
           aria-label={getInboxWorkspaceCopy(locale, "closeFullscreen")}
           onClick={onClose}
-          className="inline-flex size-9 items-center justify-center rounded-full text-white/90 outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
+          className="inline-flex size-9 max-sm:size-11 items-center justify-center rounded-full text-white/90 outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
         >
           <X className="size-5" aria-hidden="true" />
         </button>
@@ -717,7 +717,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
               aria-label={getInboxWorkspaceCopy(locale, "viewFullSize")}
               title={getInboxWorkspaceCopy(locale, "viewFullSize")}
               className={cn(
-                "block cursor-zoom-in rounded-surface text-start outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "block cursor-zoom-in max-sm:min-h-10 rounded-surface text-start outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 message.messageType === "sticker" ? "w-fit" : "w-full",
               )}
             >

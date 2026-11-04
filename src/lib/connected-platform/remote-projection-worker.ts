@@ -2,6 +2,8 @@ import "server-only";
 
 import { logger } from "@/lib/logger";
 
+import { isConnectedIdleState } from "./worker-idle";
+
 const WORKER_KEY = Symbol.for("sahelflow.connected-projection-worker.v1");
 const REFRESH_INTERVAL_MS = 8 * 60 * 1000;
 const KICK_DELAY_MS = 500;
@@ -36,6 +38,8 @@ export function startConnectedProjectionWorker(): void {
   const state: WorkerState = { running: false, timer: null, kick: null };
   workerGlobal[WORKER_KEY] = state;
   let consecutiveFailures = 0;
+  // Resting state: no connected capability on the licence, or no phone enrolled. Say so once, not every tick.
+  let idle = false;
 
   const schedule = () => {
     state.timer = setTimeout(() => void tick(), REFRESH_INTERVAL_MS);
@@ -68,6 +72,8 @@ export function startConnectedProjectionWorker(): void {
         import("./device-approvals"),
       ]);
       await requireLicenseEntitlement("sahelflow.connected", shopContext);
+      if (idle) logger.info("connected.projection_worker.resumed");
+      idle = false;
       const runtime = await loadConnectedRuntimeIfEnrolled({ prisma: db, shop: shopContext });
       if (!runtime) return;
       const enrolled = await runtime.client.listDevices(shopContext.workspaceId);
@@ -123,6 +129,14 @@ export function startConnectedProjectionWorker(): void {
       });
       consecutiveFailures = 0;
     } catch (error) {
+      if (isConnectedIdleState(error)) {
+        // Not entitled or not enrolled is the normal resting state (worker-idle.ts), as for the command worker.
+        if (!idle) logger.info("connected.projection_worker.idle");
+        idle = true;
+        consecutiveFailures = 0;
+        return;
+      }
+      idle = false;
       // C2: the silent catch made projection drift invisible. Connected
       // operation stays optional for permanent local work and the next tick
       // retries; the classified log keeps persistent failures visible.

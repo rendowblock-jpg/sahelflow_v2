@@ -172,7 +172,7 @@ export function StorefrontView({
         data-storefront-root="true"
         data-storefront-public="true"
         data-sf-scheme={storefrontScheme(config.theme)}
-        className="min-h-dvh"
+        className="min-h-dvh max-sm:[--control-height:2.75rem]"
         style={storefrontThemeStyle(config.theme)}
       >
         <StorefrontViewBody config={config} products={products} reviews={reviews} />
@@ -693,7 +693,7 @@ function StorefrontViewBody({
                     <Button size="icon" variant="outline" className="h-11 w-11" onClick={() => updateQuantity(item.key, 1)} aria-label={t("storefront.view.increaseQty")}>
                       <Plus className="h-3 w-3" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.key)} aria-label={t("storefront.view.removeItem")}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 max-sm:h-11 max-sm:w-11 text-destructive" onClick={() => removeFromCart(item.key)} aria-label={t("storefront.view.removeItem")}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
@@ -767,7 +767,7 @@ function StorefrontViewBody({
               />
               <div className="space-y-1">
                 <Label htmlFor="delivery-mode">{t("storefront.view.deliveryMode")}</Label>
-                <select id="delivery-mode" value={form.deliveryMode} onChange={(event) => changeForm("deliveryMode", event.target.value as "home" | "desk")} className="h-11 w-full rounded-control border bg-background px-3 text-sm">
+                <select id="delivery-mode" value={form.deliveryMode} onChange={(event) => changeForm("deliveryMode", event.target.value as "home" | "desk")} className="h-11 w-full rounded-control border bg-background px-3 text-sm max-sm:text-base">
                   <option value="home">{t("storefront.view.deliveryHome")}</option>
                   <option value="desk">{t("storefront.view.deliveryDesk")}</option>
                 </select>
@@ -881,7 +881,7 @@ function StorefrontViewBody({
                     invalidateSubmission();
                     setSelectedVariants((current) => ({ ...current, [product.id]: event.target.value }));
                   }}
-                  className="h-11 w-full rounded-control border bg-background px-3 text-sm"
+                  className="h-11 w-full rounded-control border bg-background px-3 text-sm max-sm:text-base"
                 >
                   <option value="">—</option>
                   {variants.map((variant) => (
@@ -1087,7 +1087,7 @@ function OrderReviewForm({
             id="review-product"
             value={productId}
             onChange={(event) => setProductId(event.target.value)}
-            className="h-11 w-full rounded-control border bg-background px-3 text-sm"
+            className="h-11 w-full rounded-control border bg-background px-3 text-sm max-sm:text-base"
           >
             {review.items.map((item) => (
               <option key={item.productId} value={item.productId}>
@@ -1136,7 +1136,7 @@ function OrderReviewForm({
           value={body}
           onChange={(event) => setBody(event.target.value)}
           placeholder={t("storefront.view.reviews.bodyPlaceholder")}
-          className="w-full rounded-control border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-control border bg-background px-3 py-2 text-sm max-sm:text-base"
         />
       </div>
       {error ? (

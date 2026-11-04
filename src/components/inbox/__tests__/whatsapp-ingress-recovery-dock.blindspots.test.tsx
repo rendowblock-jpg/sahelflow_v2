@@ -28,7 +28,7 @@ const TITLE = {
 
 const CHIP = {
   en: "Recovery check failed",
-  fr: "Vérification impossible",
+  fr: "Vérification de la récupération impossible",
   ar: "تعذّر فحص الاستعادة",
 } as const;
 const DETAILS = { en: "Details", fr: "Détails", ar: "التفاصيل" } as const;

@@ -77,7 +77,7 @@ export function AutomationsListClient({
             onChange={(event) => setQuery(event.target.value)}
             placeholder={c("workspace.searchPlaceholder")}
             aria-label={c("workspace.searchPlaceholder")}
-            className="ps-9"
+            className="ps-9 max-sm:h-11"
           />
         </div>
         <div role="radiogroup" aria-label={c("workspace.filterAll")} className="flex rounded-control border bg-muted/40 p-0.5">
@@ -89,7 +89,7 @@ export function AutomationsListClient({
               aria-checked={filter === item.id}
               onClick={() => setFilter(item.id)}
               className={cn(
-                "flex h-8 items-center gap-1.5 rounded-[calc(var(--radius-control)-2px)] px-3 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                "flex h-8 max-sm:h-11 max-sm:px-2 items-center gap-1.5 rounded-[calc(var(--radius-control)-2px)] px-3 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 filter === item.id ? "bg-background text-foreground shadow-(--elevation-1)" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -107,7 +107,7 @@ export function AutomationsListClient({
           {c("workspace.noMatch")}
         </p>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {visible.map((automation, index) => (
             <AutomationCard key={automation.id} data={automation} canManage={canManage} order={index} />
           ))}

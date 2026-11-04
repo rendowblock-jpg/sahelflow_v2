@@ -246,19 +246,19 @@ export default async function AutomationsPage({
 
       <Tabs value={activeTab} className="w-full space-y-5">
         <TabsList variant="line" scroll className="w-full justify-start border-b">
-          <TabsTrigger value="my" asChild>
+          <TabsTrigger value="my" asChild className="max-sm:min-h-11">
             <Link href="/automations?tab=my">
               <Bot className="me-1.5 size-4" />
               {c("workspace.my")}
             </Link>
           </TabsTrigger>
-          <TabsTrigger value="templates" asChild>
+          <TabsTrigger value="templates" asChild className="max-sm:min-h-11">
             <Link href="/automations?tab=templates">
               <Sparkles className="me-1.5 size-4" />
               {c("workspace.templates")}
             </Link>
           </TabsTrigger>
-          <TabsTrigger value="activity" asChild>
+          <TabsTrigger value="activity" asChild className="max-sm:min-h-11">
             <Link href="/automations?tab=activity">
               <Activity className="me-1.5 size-4" />
               {c("workspace.activity")}

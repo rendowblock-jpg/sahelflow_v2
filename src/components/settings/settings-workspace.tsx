@@ -332,7 +332,16 @@ export function SettingsWorkspace({
           >
             {/* The full page already carries a "Settings" page header. */}
             {inModal ? (
-              <p className={cn("mb-3 px-2.5 text-foreground", mobile ? "text-title-2" : "text-body font-semibold")}>
+              <p
+                className={cn(
+                  "mb-3 px-2.5 text-foreground",
+                  // On a phone the window's Close button sits in the top corner, one control high:
+                  // the title row is as high, so the search below always starts under Close.
+                  mobile
+                    ? "flex min-h-(--control-height) items-center pe-14 text-title-2"
+                    : "text-body font-semibold",
+                )}
+              >
                 {copy("settingsTitle")}
               </p>
             ) : null}
@@ -358,14 +367,14 @@ export function SettingsWorkspace({
                 placeholder={copy("searchSettings")}
                 aria-label={copy("searchSettings")}
                 data-settings-search="true"
-                className="h-9 [@media(pointer:coarse)]:h-11 w-full rounded-control border border-border bg-card ps-8 pe-8 text-body-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 [&::-webkit-search-cancel-button]:hidden"
+                className="h-9 [@media(pointer:coarse)]:h-11 max-sm:h-11 w-full rounded-control border border-border bg-card ps-8 pe-8 text-body-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 [&::-webkit-search-cancel-button]:hidden"
               />
               {query ? (
                 <button
                   type="button"
                   aria-label={copy("searchSettings")}
                   onClick={() => setQuery("")}
-                  className="absolute end-1.5 top-1/2 inline-flex size-6 [@media(pointer:coarse)]:size-11 -translate-y-1/2 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="absolute end-1.5 top-1/2 inline-flex size-6 [@media(pointer:coarse)]:size-11 max-sm:size-11 -translate-y-1/2 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <X className="size-3.5" aria-hidden="true" />
                 </button>

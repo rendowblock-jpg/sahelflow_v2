@@ -20,15 +20,15 @@ function rule(source: string, selector: string): string {
 }
 
 describe("selected row is more than a faint tint (luminance 1.4:1 is lead-measured, NOT asserted here)", () => {
-  it("5px primary bar on the inline-start edge, logical properties", () => {
+  it("thin (3px) rounded primary marker on the inline-start edge, logical properties (s42: was a 5px bar)", () => {
     const bar = rule(css(), '.row[aria-current="true"]::before');
-    expect(bar).toMatch(/inline-size:\s*5px/);
+    expect(bar).toMatch(/inline-size:\s*3px/);
     expect(bar).toMatch(/inset-inline-start:\s*0/);
     expect(bar).toContain("var(--primary)");
   });
-  it("1px inline-start outline in primary at 40%", () => {
+  it("no 1px primary outline on the selected row any more (s42: one marker, not two)", () => {
     const sel = rule(css(), '.row[aria-current="true"] {');
-    expect(sel).toMatch(/border-inline-start:\s*1px solid color-mix\(in oklab, var\(--primary\) 40%, transparent\)/);
+    expect(sel).not.toMatch(/border-inline-start/);
   });
   it("row steps one surface up (background on the muted list) and the name goes to weight 600", () => {
     expect(rule(css(), ".list {")).toContain("var(--muted)");

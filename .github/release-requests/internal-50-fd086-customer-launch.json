@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.50 FD-086 customer launch publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.50",
+  "windowsMsiVersion": "1.0.0.50",
+  "channel": "internal",
+  "releaseMode": "customer-online",
+  "ownedHostSuffix": "sahelflow.com",
+  "authorityDecision": "FD-086",
+  "licenseServiceUrl": "https://license.sahelflow.com|https://activate.sahelflow.com",
+  "certification": {
+    "productSha": "329cc1037113ca0b79ccfd684b2c504e95d77383",
+    "phase5RunId": 41808350942,
+    "phase67RunId": 41808351222,
+    "ciRunId": 41808350976
+  },
+  "reason": "ADOPTED release authority — FD-086 (documentation/product/DECISIONS.md). One signed customer launch successor, app 1.0.0-internal.50 / MSI 1.0.0.50, mode customer-online, owned host sahelflow.com, built from the exact protected main tip Complete all the work that Internal.49 listed as left out of its release (phone tap targets and covered controls, Arabic customer-name letter-spacing, Arabic text clipping, phone overlaps, pages that do not report hydration, the Settings close-button overlap, the inbox list and thread, French and Arabic wording, a Windows run of the new tests), then release; on 4 November he added the single-order page to the same release. (Internal.50). Certification is recorded at the last product pull request's reviewed head 329cc1037113ca0b79ccfd684b2c504e95d77383: CI 41808350976, Phase 5 41808350942, Phase 6-7 41808351222. Paid licences stay offline-signed. This is a Founder-authorized launch release, not a Stable claim; it converts no ledger row. Published is not installed."
+}

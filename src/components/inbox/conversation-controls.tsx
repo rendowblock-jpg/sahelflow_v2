@@ -135,9 +135,9 @@ export function StatusControl({
           <button
             type="button"
             className={cn(
-              "flex items-center gap-1 rounded-control text-xs font-medium transition-colors",
+              "flex items-center gap-1 rounded-control text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
               appearance === "badge"
-                ? "border-0 bg-transparent p-0 hover:opacity-80"
+                ? "border-0 bg-transparent p-0 hover:opacity-80 max-sm:min-h-10 max-sm:px-1"
                 : "border px-2 py-1 hover:bg-muted",
             )}
           >
@@ -176,6 +176,7 @@ export function StatusControl({
               <Button
                 key={preset.label}
                 variant="outline"
+                className="max-sm:h-10"
                 onClick={() => {
                   setSnoozeOpen(false);
                   void change("snoozed", preset.until());
@@ -201,10 +202,11 @@ export function StatusControl({
                   setCustomSnooze(event.target.value);
                   setCustomSnoozeError(false);
                 }}
-                className="h-9 text-xs"
+                className="h-9 text-xs max-sm:h-10 max-sm:text-base"
               />
               <Button
                 variant="outline"
+                className="max-sm:h-10"
                 disabled={!customSnooze}
                 onClick={() => {
                   const when = new Date(customSnooze);
@@ -226,7 +228,7 @@ export function StatusControl({
             ) : null}
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setSnoozeOpen(false)}>
+            <Button variant="ghost" className="max-sm:h-10" onClick={() => setSnoozeOpen(false)}>
               {t("inbox.snooze.cancel")}
             </Button>
           </DialogFooter>
@@ -275,7 +277,7 @@ export function PriorityControl({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted">
+        <button className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted max-sm:min-h-10">
           {priority ? (
             <>
               <span
@@ -518,7 +520,7 @@ export function AssigneeControl({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-60 max-sm:min-h-10"
           disabled={loading}
         >
           {loading ? (
@@ -538,7 +540,7 @@ export function AssigneeControl({
               type="button"
               size="sm"
               variant="ghost"
-              className="mt-1 h-7 px-2"
+              className="mt-1 h-7 px-2 max-sm:h-10"
               onClick={() => void hydrate()}
             >
               <RefreshCw className="me-1 h-3 w-3" />
@@ -552,7 +554,7 @@ export function AssigneeControl({
             type="button"
             size="sm"
             variant="secondary"
-            className="mb-2 w-full justify-start"
+            className="mb-2 w-full justify-start max-sm:min-h-10"
             disabled={submitting}
             onClick={() => void submit("claim")}
           >
@@ -565,7 +567,7 @@ export function AssigneeControl({
             type="button"
             size="sm"
             variant="ghost"
-            className="mb-2 w-full justify-start"
+            className="mb-2 w-full justify-start max-sm:min-h-10"
             disabled={submitting}
             onClick={() => void submit("release")}
           >
@@ -593,7 +595,7 @@ export function AssigneeControl({
                     variant={
                       member.memberId === assigneeId ? "secondary" : "ghost"
                     }
-                    className="w-full justify-between"
+                    className="w-full justify-between max-sm:min-h-10"
                     disabled={submitting || member.memberId === assigneeId}
                     onClick={() => void submit("assign", member.memberId)}
                   >
@@ -616,7 +618,7 @@ export function AssigneeControl({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="mt-2 w-full justify-start text-destructive hover:text-destructive"
+                className="mt-2 w-full justify-start max-sm:min-h-10 text-destructive hover:text-destructive"
                 disabled={submitting}
                 onClick={() => void submit("unassign")}
               >
@@ -677,7 +679,7 @@ export function LabelsControl({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted">
+        <button className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted max-sm:min-h-10">
           <Tag className="h-3 w-3 opacity-50" />
           {labels.length > 0
             ? t("inbox.labels.count", { count: labels.length })
@@ -695,7 +697,7 @@ export function LabelsControl({
                   onClick={() =>
                     void putLabels(labels.filter((entry) => entry !== label))
                   }
-                  className="hover:text-destructive"
+                  className="hover:text-destructive max-sm:-m-2 max-sm:inline-flex max-sm:size-10 max-sm:items-center max-sm:justify-center"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -708,7 +710,7 @@ export function LabelsControl({
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder={t("inbox.labels.placeholder")}
-            className="h-8 text-xs"
+            className="h-8 text-xs max-sm:h-10 max-sm:text-base"
             onKeyDown={(event) => {
               if (event.key === "Enter") addLabel();
             }}
@@ -716,7 +718,7 @@ export function LabelsControl({
           <Button
             size="sm"
             variant="secondary"
-            className="h-8 px-2"
+            className="h-8 px-2 max-sm:h-10"
             disabled={!draft.trim()}
             onClick={addLabel}
           >

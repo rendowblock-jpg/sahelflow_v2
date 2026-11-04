@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, Clock3, Filter, FlaskConical } from "lucide-react";
 
 import { Sparkline } from "@/components/charts/sparkline";
+import { UserText } from "@/components/i18n/user-text";
 import { useI18n } from "@/hooks/use-i18n";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -63,15 +64,15 @@ export function AutomationCard({ data, canManage, order = 0 }: { data: Automatio
           <TriggerGlyph trigger={data.trigger} className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-body font-semibold leading-6">
+          <h2 className="truncate text-body font-semibold leading-6 max-sm:[&_a]:min-h-10 max-sm:[&_a]:leading-10">
             {canManage ? (
               // A block with a 24px floor: an inline link is only as tall as its
               // font box, which is under the WCAG 2.5.8 minimum target.
               <Link href={href} data-automation-edit={data.id} className="block min-h-6 truncate outline-none after:absolute after:inset-0 after:rounded-surface focus-visible:underline">
-                <span dir="auto">{data.name}</span>
+                <span dir="auto"><UserText text={data.name} /></span>
               </Link>
             ) : (
-              <span dir="auto">{data.name}</span>
+              <span dir="auto"><UserText text={data.name} /></span>
             )}
           </h2>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted-foreground">

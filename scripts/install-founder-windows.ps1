@@ -3,8 +3,8 @@ param(
     [switch]$SelfTest,
     [string]$MsiPath,
     [string]$ExpectedMsiSha256,
-    [string]$ExpectedDisplayVersion = '1.0.0.49',
-    [string]$ExpectedAppVersion = '1.0.0-internal.49'
+    [string]$ExpectedDisplayVersion = '1.0.0.50',
+    [string]$ExpectedAppVersion = '1.0.0-internal.50'
 )
 
 $ErrorActionPreference = 'Stop'

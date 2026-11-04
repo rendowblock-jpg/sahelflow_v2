@@ -323,6 +323,13 @@ describe("row click, link and touch contract", () => {
     }
   });
 
+  it("a link inside a field row sits above the stretched title link and keeps a 40 px target (R50: 40 covered phone links in the sweep)", () => {
+    mount({ onRowClick: () => undefined });
+    const card = cards()[0] as HTMLElement;
+    const dd = card.querySelector("dd") as HTMLElement;
+    for (const cls of ["[&_a]:relative", "[&_a]:z-10", "[&_a]:min-h-10"]) expect(dd.className).toContain(cls);
+  });
+
   it("a card is not a click target when the table has no row action", () => {
     mount({ onRowClick: undefined });
     expect((cards()[0] as HTMLElement).className).not.toContain("cursor-pointer");

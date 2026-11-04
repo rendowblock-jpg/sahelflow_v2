@@ -168,7 +168,7 @@ export function InboxThreadHeader({
           </Button>
         ) : null}
 
-        <Avatar className="size-9 border border-border/70 bg-background">
+        <Avatar className="size-9 border border-border/70 bg-background max-[480px]:hidden">
           <AvatarFallback className="bg-primary-soft text-[13px] font-semibold text-primary-ink">
             {inboxChatInitial(activeChat, locale) ?? (
               <User className="size-4" aria-hidden="true" />
@@ -180,7 +180,7 @@ export function InboxThreadHeader({
           <div className="flex min-w-0 items-center gap-2">
             <h3
               dir={title.kind === "name" ? "auto" : locale === "ar" ? "rtl" : "ltr"}
-              className="truncate text-[13px] font-semibold"
+              className="min-w-0 truncate text-[15px] font-semibold leading-6"
             >
               <ArabicRuns text={title.text} locale={locale} />
             </h3>
@@ -220,46 +220,7 @@ export function InboxThreadHeader({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={copy("searchInChat")}
-              aria-pressed={threadSearchOpen}
-              onClick={() => setThreadSearchOpen((open) => !open)}
-            >
-              <Search className="size-4" aria-hidden="true" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={6}>
-            {copy("searchInChat")}
-          </TooltipContent>
-        </Tooltip>
-        {canUpdateConversation ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={copy("markUnread")}
-                onClick={() => {
-                  void markUnread(activeChat).then((updated) => {
-                    if (updated) onBackToQueue();
-                  });
-                }}
-              >
-                <Mail className="size-4" aria-hidden="true" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={6}>
-              {copy("markUnread")}
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
+      <div className="flex shrink-0 items-center gap-2">
         {/* The order review is a workspace, not a side drawer: the customer's
             message and the order being built sit side by side, so the
             conversation is never hidden behind a cramped form. */}
@@ -270,12 +231,17 @@ export function InboxThreadHeader({
                 <DialogTrigger asChild>
                   <Button
                     type="button"
-                    variant="outline"
-                    size="icon-sm"
+                    variant="default"
+                    size="sm"
+                    className="max-sm:size-10 max-sm:px-0"
                     disabled={!selectedCandidate || !activeChat.transportId}
-                    aria-label={t("inbox.extractOrderProfessionally")}
+                    aria-label={copy("threadOrderAction")}
+                    data-inbox-primary-action="true"
                   >
                     <Sparkles className="size-4" aria-hidden="true" />
+                    <span className="hidden @min-[36rem]/inbox-thread:inline">
+                      {copy("threadOrderAction")}
+                    </span>
                   </Button>
                 </DialogTrigger>
               </span>
@@ -334,38 +300,87 @@ export function InboxThreadHeader({
           </DialogContent>
         </Dialog>
 
-        <Sheet>
+        <div
+          role="toolbar"
+          aria-label={copy("threadActions")}
+          data-inbox-thread-actions="true"
+          className="flex items-center gap-0.5 rounded-control bg-muted/50 p-0.5"
+        >
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="max-sm:size-10"
+              aria-label={copy("searchInChat")}
+              aria-pressed={threadSearchOpen}
+              onClick={() => setThreadSearchOpen((open) => !open)}
+            >
+              <Search className="size-4" aria-hidden="true" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={6}>
+            {copy("searchInChat")}
+          </TooltipContent>
+        </Tooltip>
+        {canUpdateConversation ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <SheetTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={copy("conversationContext")}
-                >
-                  <PanelRight
-                    className="size-4 icon-rtl-flip"
-                    aria-hidden="true"
-                  />
-                </Button>
-              </SheetTrigger>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+              className="max-sm:size-10"
+                aria-label={copy("markUnread")}
+                onClick={() => {
+                  void markUnread(activeChat).then((updated) => {
+                    if (updated) onBackToQueue();
+                  });
+                }}
+              >
+                <Mail className="size-4" aria-hidden="true" />
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={6}>
-              {copy("conversationContext")}
+              {copy("markUnread")}
             </TooltipContent>
           </Tooltip>
-          <SheetContent
-            side="end"
-            className="w-[min(400px,94vw)] p-0 sm:max-w-none"
-          >
-            <SheetHeader className="sr-only">
-              <SheetTitle>{copy("conversationContext")}</SheetTitle>
-              <SheetDescription>{title.text}</SheetDescription>
-            </SheetHeader>
-            {contextPanel}
-          </SheetContent>
-        </Sheet>
+        ) : null}
+          <Sheet>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SheetTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="max-sm:size-10"
+                    aria-label={copy("conversationContext")}
+                  >
+                    <PanelRight
+                      className="size-4 icon-rtl-flip"
+                      aria-hidden="true"
+                    />
+                  </Button>
+                </SheetTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={6}>
+                {copy("conversationContext")}
+              </TooltipContent>
+            </Tooltip>
+            <SheetContent
+              side="end"
+              className="w-[min(400px,94vw)] p-0 sm:max-w-none"
+            >
+              <SheetHeader className="sr-only">
+                <SheetTitle>{copy("conversationContext")}</SheetTitle>
+                <SheetDescription>{title.text}</SheetDescription>
+              </SheetHeader>
+              {contextPanel}
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );

@@ -275,7 +275,7 @@ test.describe.serial("Founder visual correction evidence", () => {
     await expect(page.locator('[data-inbox-workspace="v2"]')).toBeVisible({
       timeout: 60_000,
     });
-    const allInboxQueue = page.getByRole("button", { name: /^الكل/ });
+    const allInboxQueue = page.getByRole("tab", { name: /^الكل/ }); // a real tablist since R50 (inbox lane)
     await expect(allInboxQueue).toBeVisible();
     await allInboxQueue.click();
     await expect(page.locator('[data-inbox-conversation]').first()).toBeVisible();

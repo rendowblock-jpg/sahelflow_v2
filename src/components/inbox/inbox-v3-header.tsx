@@ -59,6 +59,7 @@ function AlertPreferencesMenu({
           variant="ghost"
           size="icon-sm"
           aria-label={t("inbox.liveness.alertsMenu")}
+          title={t("inbox.liveness.alertsMenu")}
         >
           <EllipsisVertical className="size-3.5" aria-hidden="true" />
         </Button>
@@ -125,7 +126,7 @@ export function InboxV3Header({
           {/* The unread count lives on the queue's Unread tab (and the
               sidebar badge, which counts the same chats); repeating it beside
               the title made three different surfaces show a number. */}
-          <h2 className="truncate text-title-3 tracking-tight">
+          <h2 className="truncate text-title-3 leading-8 tracking-tight rtl:tracking-normal">
             {t("nav.inbox")}
           </h2>
         </div>
@@ -136,7 +137,12 @@ export function InboxV3Header({
           canRetryIngress={canRetryIngress}
         />
 
-        <div className="ms-auto flex shrink-0 items-center gap-1.5">
+        <div
+          role="group"
+          aria-label={copy("queueTools")}
+          data-inbox-header-tools=""
+          className="ms-auto flex shrink-0 items-center gap-1.5"
+        >
           <Button
             type="button"
             variant="ghost"
@@ -147,6 +153,7 @@ export function InboxV3Header({
               void refreshChats();
             }}
             aria-label={t("common.refresh")}
+            title={t("common.refresh")}
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />
           </Button>
@@ -158,6 +165,7 @@ export function InboxV3Header({
               size="icon-sm"
               onClick={() => setLogoutConfirmOpen(true)}
               aria-label={copy("disconnect")}
+              title={copy("disconnect")}
             >
               <PlugZap className="size-3.5" aria-hidden="true" />
             </Button>

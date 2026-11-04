@@ -111,7 +111,7 @@ export function EntryShell({
   return (
     <main
       data-sf-entry=""
-      className={cn("grid min-h-dvh bg-surface-0 lg:grid-cols-12", className)}
+      className={cn("grid min-h-dvh bg-surface-0 max-sm:[--control-height:2.75rem] lg:grid-cols-12", className)}
     >
       <a
         href="#entry-content"

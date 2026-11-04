@@ -76,7 +76,10 @@ import {
   InboxQueueEmpty,
   InboxQueueError,
   InboxQueueLoading,
+  InboxQueueNoResults,
+  InboxQueueOffline,
 } from "@/components/inbox/inbox-queue-states";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import {
   deriveListFooter,
   rowChipFor,
@@ -232,6 +235,9 @@ const ConversationRow = memo(function ConversationRow({
   const status = chat.workflow.status ?? "open";
   const priority = chat.workflow.priority;
   const chip = rowChipFor({ status, hasDraft: Boolean(draftPreview) });
+  const hasTags = Boolean(
+    chip || priority || chat.workflow.assigneeId || isSampleChat(chat),
+  );
   // F-0028: the stored name can be the raw WhatsApp id; never print it.
   const title = inboxChatTitleParts(chat, locale);
   // One line for the last message: its words, or what kind of message it was.
@@ -268,7 +274,7 @@ const ConversationRow = memo(function ConversationRow({
       {selectMode ? (
         <span
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full border",
+            "flex size-10 shrink-0 items-center justify-center rounded-full border",
             checked
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border bg-background text-transparent group-hover:border-primary/60",
@@ -291,6 +297,7 @@ const ConversationRow = memo(function ConversationRow({
               ellipsizes at its own end. */}
           <span className="flex min-w-0 flex-1 justify-start overflow-hidden">
             <bdi
+              data-inbox-name=""
               dir={title.kind === "name" ? "auto" : locale === "ar" ? "rtl" : "ltr"}
               className={cn(
                 styles.rowName,
@@ -314,10 +321,8 @@ const ConversationRow = memo(function ConversationRow({
             />
           ) : null}
           <span
-            className={cn(
-              "shrink-0 font-mono text-xs tabular-nums",
-              chat.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground",
-            )}
+            data-inbox-time=""
+            className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground"
           >
             {relativeTime(chat.lastMessageAt, locale, relativeNow)}
           </span>
@@ -342,12 +347,7 @@ const ConversationRow = memo(function ConversationRow({
               <bdi
                 data-inbox-preview="true"
                 data-sf-seller-label="true"
-                className={cn(
-                  "block min-w-0 max-w-full flex-1 truncate text-sm leading-5",
-                  chat.unread > 0
-                    ? "font-medium text-foreground/90"
-                    : "text-muted-foreground",
-                )}
+                className="block min-w-0 max-w-full flex-1 truncate text-sm leading-5 text-muted-foreground"
               >
                 {preview.text ? (
                   <ArabicRuns text={preview.text} locale={locale} />
@@ -357,7 +357,10 @@ const ConversationRow = memo(function ConversationRow({
           )}
 
           {chat.unread > 0 ? (
-            <span className={cn(styles.unreadBadge, "shrink-0 font-mono")}>
+            <span
+              data-inbox-unread-count=""
+              className={cn(styles.unreadBadge, "shrink-0 font-mono")}
+            >
               <span aria-hidden="true">{chat.unread > 99 ? "99+" : chat.unread}</span>
               <span className="sr-only">
                 {t("inbox.list.row.unreadCount", { count: chat.unread })}
@@ -366,43 +369,53 @@ const ConversationRow = memo(function ConversationRow({
           ) : null}
         </span>
 
-        <span className="flex min-w-0 items-center gap-2 overflow-hidden">
+        {/* The tag line exists only when something needs the seller: a status
+            that needs a reply, an assignee, a priority or a sample mark. A
+            quiet row is two lines; the row height stays the same. */}
+        {hasTags ? (
           <span
-            data-inbox-row-chip=""
-            data-shape={chip.shape}
-            className={styles.chip}
+            data-inbox-row-tags=""
+            className="flex min-w-0 items-center gap-2 overflow-hidden"
           >
-            <SignalShape shape={chip.shape} />
-            <span className="truncate">{t(chip.labelKey)}</span>
+            {chip ? (
+              <span
+                data-inbox-row-chip=""
+                data-shape={chip.shape}
+                className={styles.chip}
+              >
+                <SignalShape shape={chip.shape} />
+                <span className="truncate">{t(chip.labelKey)}</span>
+              </span>
+            ) : null}
+
+            <SampleBadge conversationId={chat.conversationId} t={t} />
+
+            {priority ? (
+              <Flag
+                className={cn(
+                  "size-3 shrink-0",
+                  priority === "urgent"
+                    ? "text-destructive"
+                    : priority === "high"
+                      ? "text-warning"
+                      : priority === "medium"
+                        ? "text-primary"
+                        : "text-muted-foreground",
+                )}
+                aria-label={t(`inbox.priority.${priority}`)}
+              />
+            ) : null}
+
+            {chat.workflow.assigneeId ? (
+              <span
+                data-inbox-assignee={mine ? "mine" : "other"}
+                className="ms-auto shrink-0 text-xs leading-5 text-muted-foreground"
+              >
+                {t(mine ? "inbox.list.assignee.mine" : "inbox.list.assignee.other")}
+              </span>
+            ) : null}
           </span>
-
-          <SampleBadge conversationId={chat.conversationId} t={t} />
-
-          {priority ? (
-            <Flag
-              className={cn(
-                "size-3 shrink-0",
-                priority === "urgent"
-                  ? "text-destructive"
-                  : priority === "high"
-                    ? "text-warning"
-                    : priority === "medium"
-                      ? "text-primary"
-                      : "text-muted-foreground",
-              )}
-              aria-label={t(`inbox.priority.${priority}`)}
-            />
-          ) : null}
-
-          {chat.workflow.assigneeId ? (
-            <span
-              data-inbox-assignee={mine ? "mine" : "other"}
-              className="ms-auto shrink-0 text-xs leading-5 text-muted-foreground"
-            >
-              {t(mine ? "inbox.list.assignee.mine" : "inbox.list.assignee.other")}
-            </span>
-          ) : null}
-        </span>
+        ) : null}
       </span>
     </button>
   );
@@ -428,6 +441,7 @@ export function InboxV3Queue({
   onWorkflowFilterChange: (filter: WorkflowFilter) => void;
 }) {
   const router = useRouter();
+  const online = useOnlineStatus();
   const {
     copy,
     t,
@@ -781,6 +795,27 @@ export function InboxV3Queue({
 
   // The list request returns no total, so the footer only says what is loaded.
   const footer = deriveListFooter({ loaded: chats.length, total: null });
+
+  // Tabs: roving tabindex + arrow keys that follow the reading direction.
+  const tabSelected = PRIMARY_QUEUES.includes(queueFilter);
+  const handleTabKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const rtl = locale === "ar";
+      const last = PRIMARY_QUEUES.length - 1;
+      const at = PRIMARY_QUEUES.indexOf(queueFilter);
+      let next = -1;
+      if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = last;
+      else if (event.key === (rtl ? "ArrowLeft" : "ArrowRight")) next = at >= last ? 0 : at + 1;
+      else if (event.key === (rtl ? "ArrowRight" : "ArrowLeft")) next = at <= 0 ? last : at - 1;
+      if (next < 0) return;
+      event.preventDefault();
+      const target = PRIMARY_QUEUES[next]!;
+      onQueueFilterChange(target);
+      document.getElementById(`inbox-queue-tab-${target}`)?.focus();
+    },
+    [locale, queueFilter, onQueueFilterChange],
+  );
   const footerText =
     footer.kind === "of-total"
       ? t("inbox.list.footer.loadedOf", { count: footer.loaded, total: footer.total })
@@ -814,8 +849,8 @@ export function InboxV3Queue({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               aria-label={copy("searchConversations")}
-              placeholder={copy("searchConversations")}
-              className="h-9 rounded-surface bg-muted/20 ps-8 pe-8 text-[13px]"
+              placeholder={copy("searchPlaceholder")}
+              className="h-9 max-sm:h-10 rounded-surface bg-muted/20 ps-8 pe-8 text-[13px]"
             />
             {searchState.query === normalizedQuery && searchState.loading ? (
               <Loader2
@@ -825,6 +860,12 @@ export function InboxV3Queue({
             ) : null}
           </div>
 
+          <div
+            role="group"
+            aria-label={copy("queueTools")}
+            data-inbox-queue-tools=""
+            className="flex shrink-0 items-center gap-1"
+          >
           <button
             type="button"
             aria-pressed={queueFilter === "unassigned"}
@@ -832,7 +873,7 @@ export function InboxV3Queue({
             title={`${queueLabel("unassigned", copy)} · ${queueCounts.unassigned}`}
             onClick={() => onQueueFilterChange("unassigned")}
             className={cn(
-              "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex size-8 max-sm:size-10 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
               queueFilter === "unassigned"
                 ? "border-primary/25 bg-primary-soft text-primary-ink"
                 : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -854,7 +895,7 @@ export function InboxV3Queue({
                   workflowFilter !== "all"
                 }
                 className={cn(
-                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  "inline-flex size-8 max-sm:size-10 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   priorityFilter !== "" ||
                   labelFilter !== "" ||
                   workflowFilter !== "all"
@@ -882,7 +923,7 @@ export function InboxV3Queue({
                     aria-pressed={workflowFilter === filter}
                     onClick={() => onWorkflowFilterChange(filter)}
                     className={cn(
-                      "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      "inline-flex h-7 max-sm:h-10 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       workflowFilter === filter
                         ? "border-primary/25 bg-primary-soft text-primary-ink"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -903,7 +944,7 @@ export function InboxV3Queue({
                     aria-pressed={priorityFilter === value}
                     onClick={() => setPriorityFilter(value)}
                     className={cn(
-                      "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      "inline-flex h-7 max-sm:h-10 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       priorityFilter === value
                         ? "border-primary/25 bg-primary-soft text-primary-ink"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -926,7 +967,7 @@ export function InboxV3Queue({
                       aria-pressed={labelFilter === ""}
                       onClick={() => setLabelFilter("")}
                       className={cn(
-                        "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                        "inline-flex h-7 max-sm:h-10 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                         labelFilter === ""
                           ? "border-primary/25 bg-primary-soft text-primary-ink"
                           : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -945,7 +986,7 @@ export function InboxV3Queue({
                           )
                         }
                         className={cn(
-                          "inline-flex h-7 max-w-36 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                          "inline-flex h-7 max-sm:h-10 max-w-36 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                           labelFilter === label
                             ? "border-primary/25 bg-primary-soft text-primary-ink"
                             : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -969,11 +1010,12 @@ export function InboxV3Queue({
               onClick={() => {
                 setSelectMode(true);
               }}
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex size-8 max-sm:size-10 shrink-0 items-center justify-center rounded-full border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             >
               <ListChecks className="size-3.5" aria-hidden="true" />
             </button>
           ) : null}
+          </div>
         </div>
 
         {/* Selection mode morphs the queue-pills row in place — same height,
@@ -1087,8 +1129,9 @@ export function InboxV3Queue({
         <div className="mt-2 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div
             className="flex w-max min-w-full gap-1 rounded-full bg-muted/25 p-0.5"
-            role="group"
+            role="tablist"
             aria-label={copy("workQueue")}
+            onKeyDown={handleTabKeyDown}
           >
             {PRIMARY_QUEUES.map((filter) => {
               const selected = queueFilter === filter;
@@ -1096,11 +1139,16 @@ export function InboxV3Queue({
                 <button
                   key={filter}
                   type="button"
-                  aria-pressed={selected}
+                  role="tab"
+                  id={`inbox-queue-tab-${filter}`}
+                  aria-selected={selected}
+                  aria-controls="inbox-queue-panel"
+                  tabIndex={selected || (!tabSelected && filter === PRIMARY_QUEUES[0]) ? 0 : -1}
+                  data-inbox-queue-tab={filter}
                   onClick={() => onQueueFilterChange(filter)}
                   className={cn(
                     styles.tab,
-                    "inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex h-8 max-sm:h-10 shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                     selected
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -1130,6 +1178,10 @@ export function InboxV3Queue({
       </div>
 
       <div
+        id="inbox-queue-panel"
+        role="tabpanel"
+        aria-labelledby={tabSelected ? `inbox-queue-tab-${queueFilter}` : undefined}
+        aria-label={tabSelected ? undefined : queueLabel(queueFilter, copy)}
         onKeyDown={handleQueueKeyDown}
         className="flex min-h-0 flex-1 flex-col outline-none"
       >
@@ -1138,10 +1190,12 @@ export function InboxV3Queue({
           <div role="status" aria-label={t("common.loading")}>
             <InboxQueueLoading />
           </div>
-        ) : chats.length === 0 && dataDegraded ? (
-          <InboxQueueError onRetry={() => void refreshChats()} />
+        ) : chats.length === 0 && (dataDegraded || !online) ? (
+          <InboxQueueError offline={!online} onRetry={() => void refreshChats()} />
         ) : chats.length === 0 && !normalizedQuery ? (
           <InboxQueueEmpty />
+        ) : rows.length === 0 && normalizedQuery ? (
+          <InboxQueueNoResults query={query.trim()} onClear={() => setQuery("")} />
         ) : rows.length === 0 ? (
           <div className="flex min-h-56 items-center justify-center p-6 text-center">
             <div className="max-w-56">
@@ -1168,6 +1222,7 @@ export function InboxV3Queue({
           </div>
         ) : (
           <div>
+            {!online ? <InboxQueueOffline /> : null}
             {normalizedQuery &&
             searchState.query === normalizedQuery &&
             searchState.results.length > 0 ? (

@@ -299,7 +299,7 @@ function ToolButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex size-7 items-center justify-center rounded-[calc(var(--radius-control)-2px)] text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30 [&_svg]:size-3.5",
+        "flex size-7 max-sm:size-11 items-center justify-center rounded-[calc(var(--radius-control)-2px)] text-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30 [&_svg]:size-3.5",
         destructive ? "hover:bg-destructive-soft hover:text-destructive" : "hover:bg-muted hover:text-foreground",
       )}
     >
@@ -310,7 +310,7 @@ function ToolButton({
 
 function Connector({ live, children }: { live: boolean; children?: React.ReactNode }) {
   return (
-    <div className="relative flex h-12 w-full items-center justify-center" aria-hidden={children ? undefined : true}>
+    <div className="relative flex h-12 max-sm:h-14 w-full items-center justify-center" aria-hidden={children ? undefined : true}>
       <span className="sf-flow-line absolute inset-y-0 start-1/2 w-0.5 -translate-x-1/2 rtl:translate-x-1/2" data-live={live ? "true" : undefined} aria-hidden="true" />
       {children}
     </div>
@@ -344,9 +344,9 @@ function InsertButton({
           aria-label={index === steps.length ? c("flow.addStep") : c("flow.insertStep")}
           title={index === steps.length ? c("flow.addStep") : c("flow.insertStep")}
           data-flow-insert={index}
-          className="relative z-10 flex size-7 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-(--elevation-1) outline-none transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
+          className="relative z-10 flex size-7 max-sm:size-11 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-(--elevation-1) outline-none transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
         >
-          <Plus className="size-3.5" aria-hidden="true" />
+          <Plus className="size-3.5 max-sm:size-5" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center" className="w-72">

@@ -110,7 +110,7 @@ export function StudioTopBar({
         href="/storefronts"
         aria-label={t("storefront.builder.back")}
         title={t("storefront.builder.back")}
-        className="flex size-9 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex size-9 max-sm:size-11 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
       </Link>
@@ -199,7 +199,7 @@ export function StudioTopBar({
               type="button"
               aria-label={t("storefront.list.more")}
               title={t("storefront.list.more")}
-              className="flex size-9 shrink-0 items-center justify-center rounded-control border text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex size-9 max-sm:size-11 shrink-0 items-center justify-center rounded-control border text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             >
               <MoreHorizontal className="size-4" aria-hidden="true" />
             </button>
@@ -244,7 +244,7 @@ export function StudioTopBar({
           onClick={onPublish}
           data-studio-publish="true"
           aria-busy={publishing}
-          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-control bg-primary px-3.5 text-body-sm font-semibold text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45"
+          className="inline-flex h-9 max-sm:h-11 shrink-0 items-center gap-2 rounded-control bg-primary px-3.5 text-body-sm font-semibold text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45"
         >
           <UploadCloud className="size-4" aria-hidden="true" />
           {publishing ? t("storefront.studioStates.publish.publishing") : t("storefront.studio.publish")}
@@ -299,7 +299,7 @@ function IconAction({
           aria-keyshortcuts={shortcut?.replace("Ctrl", "Control")}
           disabled={disabled}
           onClick={onClick}
-          className="flex size-9 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-35 [&_svg]:size-4"
+          className="flex size-9 max-sm:size-11 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-35 [&_svg]:size-4"
         >
           {children}
         </button>
@@ -351,7 +351,7 @@ function SaveStatus({
       type="button"
       onClick={onRetry}
       data-studio-save-status={state}
-      className="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-control px-2 text-caption font-medium text-destructive outline-none hover:bg-destructive-soft focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex h-9 max-sm:h-11 min-w-0 items-center gap-1.5 rounded-control px-2 text-caption font-medium text-destructive outline-none hover:bg-destructive-soft focus-visible:ring-2 focus-visible:ring-ring"
     >
       {content}
     </button>
