@@ -42,6 +42,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.list.error.title": "Conversations could not be loaded",
     "inbox.list.error.body": "Nothing was deleted. Check the connection and try again.",
     "inbox.list.error.retry": "Try again",
+    "inbox.list.noResults.title": "No conversation matches “{{query}}”",
+    "inbox.list.noResults.body": "Check the spelling or search a phone number.",
+    "inbox.list.noResults.clear": "Clear search",
+    "inbox.list.offline.title": "You are offline",
+    "inbox.list.offline.body": "These conversations were saved on this device. They update when the connection returns.",
+    "inbox.list.offline.errorBody": "Conversations load when the connection returns.",
   },
   fr: {
     "inbox.list.link.connecting": "Connexion",
@@ -78,6 +84,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.list.error.title": "Impossible de charger les conversations",
     "inbox.list.error.body": "Rien n'a été supprimé. Vérifiez la connexion et réessayez.",
     "inbox.list.error.retry": "Réessayer",
+    "inbox.list.noResults.title": "Aucune conversation ne correspond à « {{query}} »",
+    "inbox.list.noResults.body": "Vérifiez l’orthographe ou cherchez un numéro de téléphone.",
+    "inbox.list.noResults.clear": "Effacer la recherche",
+    "inbox.list.offline.title": "Vous êtes hors ligne",
+    "inbox.list.offline.body": "Ces conversations sont enregistrées sur cet appareil. Elles se mettent à jour au retour de la connexion.",
+    "inbox.list.offline.errorBody": "Les conversations se chargent au retour de la connexion.",
   },
   ar: {
     "inbox.list.link.connecting": "جارٍ الاتصال",
@@ -114,6 +126,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.list.error.title": "تعذّر تحميل المحادثات",
     "inbox.list.error.body": "لم يُحذف شيء. تحقق من الاتصال وأعد المحاولة.",
     "inbox.list.error.retry": "أعد المحاولة",
+    "inbox.list.noResults.title": "لا توجد محادثة تطابق «{{query}}»",
+    "inbox.list.noResults.body": "تحقق من الإملاء أو ابحث برقم الهاتف.",
+    "inbox.list.noResults.clear": "مسح البحث",
+    "inbox.list.offline.title": "أنت غير متصل بالإنترنت",
+    "inbox.list.offline.body": "هذه المحادثات محفوظة على هذا الجهاز وتتحدّث عند عودة الاتصال.",
+    "inbox.list.offline.errorBody": "تُحمَّل المحادثات عند عودة الاتصال.",
   },
 };
 
