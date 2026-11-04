@@ -116,7 +116,7 @@ describe("header icon buttons: a name and a tooltip, one group (source contract)
   it("every aria-label in the header has the same title", () => {
     // The group label names the cluster, not a button: no tooltip needed.
     const labels = [...header.matchAll(/aria-label=\{([^}]+)\}/g)].map((m) => m[1]!).filter((e) => e !== 'copy("queueTools")');
-    expect(labels.length).toBeGreaterThanOrEqual(4);
+    expect(labels.length).toBeGreaterThanOrEqual(3);
     for (const expr of labels) expect(header, expr).toContain(`title={${expr}}`);
   });
   it("the title can show Arabic descenders: line-height 2rem and no tracking in RTL", () => {

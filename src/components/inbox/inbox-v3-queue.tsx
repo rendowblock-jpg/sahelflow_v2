@@ -76,7 +76,10 @@ import {
   InboxQueueEmpty,
   InboxQueueError,
   InboxQueueLoading,
+  InboxQueueNoResults,
+  InboxQueueOffline,
 } from "@/components/inbox/inbox-queue-states";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import {
   deriveListFooter,
   rowChipFor,
@@ -438,6 +441,7 @@ export function InboxV3Queue({
   onWorkflowFilterChange: (filter: WorkflowFilter) => void;
 }) {
   const router = useRouter();
+  const online = useOnlineStatus();
   const {
     copy,
     t,
@@ -1186,10 +1190,12 @@ export function InboxV3Queue({
           <div role="status" aria-label={t("common.loading")}>
             <InboxQueueLoading />
           </div>
-        ) : chats.length === 0 && dataDegraded ? (
-          <InboxQueueError onRetry={() => void refreshChats()} />
+        ) : chats.length === 0 && (dataDegraded || !online) ? (
+          <InboxQueueError offline={!online} onRetry={() => void refreshChats()} />
         ) : chats.length === 0 && !normalizedQuery ? (
           <InboxQueueEmpty />
+        ) : rows.length === 0 && normalizedQuery ? (
+          <InboxQueueNoResults query={query.trim()} onClear={() => setQuery("")} />
         ) : rows.length === 0 ? (
           <div className="flex min-h-56 items-center justify-center p-6 text-center">
             <div className="max-w-56">
@@ -1216,6 +1222,7 @@ export function InboxV3Queue({
           </div>
         ) : (
           <div>
+            {!online ? <InboxQueueOffline /> : null}
             {normalizedQuery &&
             searchState.query === normalizedQuery &&
             searchState.results.length > 0 ? (
