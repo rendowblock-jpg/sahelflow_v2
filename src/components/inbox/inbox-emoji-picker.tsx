@@ -263,6 +263,7 @@ export function EmojiPicker({
               disabled={disabled}
               aria-label={copy("emojiTitle")}
               data-inbox-emoji-picker="true"
+              className="max-sm:size-10"
             >
               <Smile className="size-4" aria-hidden="true" />
             </Button>
@@ -284,7 +285,7 @@ export function EmojiPicker({
           onChange={(event) => setQuery(event.target.value)}
           placeholder={copy("emojiSearch")}
           aria-label={copy("emojiSearch")}
-          className="h-8 bg-muted/20 text-[13px]"
+          className="h-8 bg-muted/20 text-[13px] max-sm:h-10 max-sm:text-base"
         />
         {!visible ? (
           <div className="mt-1.5 flex gap-0.5 overflow-x-auto pb-0.5" role="tablist" aria-label={copy("emojiTitle")}>
@@ -296,7 +297,7 @@ export function EmojiPicker({
                 aria-selected={index === activeCategory}
                 onClick={() => setActiveCategory(index)}
                 className={cn(
-                  "inline-flex h-7 shrink-0 items-center rounded-control px-1.5 text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
+                  "inline-flex h-7 max-sm:h-10 max-sm:min-w-10 max-sm:justify-center shrink-0 items-center rounded-control px-1.5 text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
                   index === activeCategory && "bg-muted",
                 )}
               >
@@ -306,13 +307,13 @@ export function EmojiPicker({
           </div>
         ) : null}
         <div
-          className="mt-1.5 grid max-h-56 grid-cols-8 gap-0.5 overflow-y-auto"
+          className="mt-1.5 grid max-h-56 grid-cols-8 max-sm:grid-cols-7 gap-0.5 overflow-y-auto"
           role="listbox"
           aria-label={copy("emojiTitle")}
         >
           {!visible && recents.length > 0 ? (
             <>
-              <p className="col-span-8 px-1 pb-0.5 pt-1 text-caption font-medium text-muted-foreground">
+              <p className="col-span-full px-1 pb-0.5 pt-1 text-caption font-medium text-muted-foreground">
                 {copy("emojiRecent")}
               </p>
               {recents.map((emoji) => (
@@ -322,12 +323,12 @@ export function EmojiPicker({
                   role="option"
                   aria-label={emoji}
                   onClick={() => pick(emoji)}
-                  className="flex size-8 items-center justify-center rounded-control text-lg outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex size-8 max-sm:h-10 max-sm:w-full items-center justify-center rounded-control text-lg outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {emoji}
                 </button>
               ))}
-              <p className="col-span-8 px-1 pb-0.5 pt-1 text-caption font-medium text-muted-foreground">
+              <p className="col-span-full px-1 pb-0.5 pt-1 text-caption font-medium text-muted-foreground">
                 {copy(CATEGORIES[activeCategory]?.key ?? "emojiCatSmileys")}
               </p>
             </>
@@ -339,13 +340,13 @@ export function EmojiPicker({
               role="option"
               aria-label={entry.n}
               onClick={() => pick(entry.e)}
-              className="flex size-8 items-center justify-center rounded-control text-lg outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex size-8 max-sm:h-10 max-sm:w-full items-center justify-center rounded-control text-lg outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
             >
               {entry.e}
             </button>
           ))}
           {categoryEntries.length === 0 ? (
-            <p className="col-span-8 px-1 py-4 text-center text-xs text-muted-foreground">
+            <p className="col-span-full px-1 py-4 text-center text-xs text-muted-foreground">
               {copy("searchNoMatches")}
             </p>
           ) : null}

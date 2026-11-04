@@ -588,7 +588,7 @@ export function InboxV3Thread({
             }}
             aria-label={copy("searchInChat")}
             placeholder={copy("searchInChat")}
-            className="h-8 flex-1 bg-muted/20 text-[13px]"
+            className="h-8 flex-1 bg-muted/20 text-[13px] max-sm:h-10 max-sm:text-base"
           />
           {normalizedThreadQuery.length >= 2 ? (
             threadMatchCount > 0 ? (
@@ -613,6 +613,7 @@ export function InboxV3Thread({
             size="icon-sm"
             disabled={threadMatchCount === 0}
             aria-label={copy("searchPrevious")}
+            className="max-sm:size-10"
             onClick={() => gotoThreadMatch(-1)}
           >
             <ChevronUp className="size-4" aria-hidden="true" />
@@ -623,6 +624,7 @@ export function InboxV3Thread({
             size="icon-sm"
             disabled={threadMatchCount === 0}
             aria-label={copy("searchNext")}
+            className="max-sm:size-10"
             onClick={() => gotoThreadMatch(1)}
           >
             <ChevronDown className="size-4" aria-hidden="true" />
@@ -632,6 +634,7 @@ export function InboxV3Thread({
             variant="ghost"
             size="icon-sm"
             aria-label={copy("closeSearch")}
+            className="max-sm:size-10"
             onClick={() => {
               setThreadSearchOpen(false);
               setThreadSearchQuery("");
@@ -678,7 +681,7 @@ export function InboxV3Thread({
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="text-xs"
+                    className="text-xs max-sm:min-h-10"
                     disabled={loadingOlderMessages}
                     onClick={() => {
                       void loadOlderMessages().then((ok) => {
@@ -762,7 +765,7 @@ export function InboxV3Thread({
                       onClick={dismissUnreadDivider}
                       aria-label={copy("newMessagesDivider")}
                       title={copy("newMessagesDivider")}
-                      className="mt-3 flex w-full items-center gap-3 py-1 text-caption font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="mt-3 flex w-full items-center gap-3 py-1 text-caption max-sm:min-h-10 font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <span className="h-px flex-1 bg-primary/35" />
                       <span className="rounded-full bg-primary-soft px-2.5 py-0.5">
@@ -822,7 +825,7 @@ export function InboxV3Thread({
             type="button"
             onClick={scrollToLatestMessages}
             aria-label={openTarget.kind === "draft" ? undefined : copy("scrollToLatest")}
-            className={cn("pointer-events-auto relative inline-flex items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-lg outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring", openTarget.kind === "draft" ? "min-h-11 gap-2 px-4" : "size-9")}
+            className={cn("pointer-events-auto relative inline-flex items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-lg outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring", openTarget.kind === "draft" ? "min-h-11 gap-2 px-4" : "size-9 max-sm:size-10")}
           >
             <ArrowDown className="size-4" aria-hidden="true" />
             {openTarget.kind === "draft" ? (
@@ -911,7 +914,7 @@ export function InboxV3Thread({
                     type="button"
                     onClick={() => setReplyTarget(null)}
                     aria-label={t("common.cancel")}
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex size-6 shrink-0 items-center max-sm:size-10 justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <X className="size-3.5" aria-hidden="true" />
                   </button>
@@ -933,6 +936,7 @@ export function InboxV3Thread({
                     size="icon-sm"
                     aria-label={copy("voiceCancelRecording")}
                     data-inbox-voice-discard="true"
+                    className="max-sm:size-10"
                     onClick={voiceRecorder.discard}
                   >
                     <Trash2 className="size-4" aria-hidden="true" />
@@ -952,6 +956,7 @@ export function InboxV3Thread({
                     size="icon"
                     aria-label={copy("voiceStopAndSend")}
                     data-inbox-voice-send="true"
+                    className="max-sm:size-11"
                     onClick={voiceRecorder.confirmSend}
                   >
                     <Check className="size-4" aria-hidden="true" />
@@ -1026,6 +1031,7 @@ export function InboxV3Thread({
                         aria-label={copy("voiceCancelRecording")}
                         data-inbox-voice-cancel="true"
                         className={cn(
+                          "max-sm:size-10",
                           slideArmed &&
                             "bg-destructive-strong text-destructive-ink hover:bg-destructive/20 hover:text-destructive",
                         )}
@@ -1045,6 +1051,7 @@ export function InboxV3Thread({
                     size="icon"
                     aria-label={copy("voiceFinishRecording")}
                     data-inbox-voice-finish="true"
+                    className="max-sm:size-11"
                     disabled={voiceRecorder.state !== "recording"}
                     onClick={voiceRecorder.finish}
                   >
@@ -1060,7 +1067,7 @@ export function InboxV3Thread({
                 className={
                   voiceRecorder.state !== "idle"
                     ? "hidden"
-                    : "flex items-end gap-1.5"
+                    : "flex flex-wrap items-end gap-1.5"
                 }
                 aria-hidden={voiceRecorder.state !== "idle" || undefined}
               >
@@ -1189,6 +1196,7 @@ export function InboxV3Thread({
                         disabled={sending || !canSend}
                         aria-label={copy("attachMenu")}
                         data-inbox-attach-menu="true"
+                        className="max-sm:size-10"
                       >
                         <Plus className="size-4" aria-hidden="true" />
                       </Button>
@@ -1264,7 +1272,7 @@ export function InboxV3Thread({
                 className={COMPOSER_FIELD_CLASS}
               />
               <div
-                className="flex h-11 shrink-0 items-center gap-1"
+                className="flex h-11 shrink-0 items-center gap-1 max-sm:ms-auto"
                 data-inbox-composer-group="end"
               >
               <Tooltip>
@@ -1276,6 +1284,7 @@ export function InboxV3Thread({
                   disabled={sending || !canSend}
                   aria-label={copy("voiceRecord")}
                   data-inbox-audio-picker="true"
+                  className="max-sm:size-10"
                   onPointerDown={handleMicPointerDown}
                   onPointerMove={handleMicPointerMove}
                   onPointerUp={() => endMicHold(true)}

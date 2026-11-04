@@ -43,7 +43,7 @@ export function InboxThreadError({ onRetry }: { onRetry: () => void }) {
       <SignalShape shape="triangle" className="size-4" />
       <p className="text-body-sm font-semibold">{t("inbox.thread.state.error.title")}</p>
       <p className="text-caption text-muted-foreground">{t("inbox.thread.state.error.lead")}</p>
-      <Button type="button" variant="outline" size="sm" onClick={onRetry} className="min-h-11 [@media(pointer:fine)]:min-h-8">
+      <Button type="button" variant="outline" size="sm" onClick={onRetry} className="min-h-11 sm:[@media(pointer:fine)]:min-h-8">
         {t("inbox.thread.state.error.retry")}
       </Button>
     </div>

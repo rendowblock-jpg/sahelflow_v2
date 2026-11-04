@@ -25,7 +25,8 @@ export function composerPlaceholderPercent(): number {
 
 export const COMPOSER_FIELD_CLASS = [
   // box: >= 44 px tall, grows with the text (the thread caps it with max-h-32)
-  "max-h-32 min-h-11 w-full flex-1 resize-none rounded-control border bg-card px-3 py-2.5 text-start leading-6 shadow-none",
+  // phone: the field takes a whole line (max-sm:basis-full, first), the two button groups share the next one
+  "max-h-32 min-h-11 w-full flex-1 max-sm:order-first max-sm:basis-full resize-none rounded-control border bg-card px-3 py-2.5 text-start leading-6 shadow-none",
   // type: 16 px on the phone (no iOS zoom), 15 px on desktop
   "text-base md:text-[15px]",
   // the boundary: foreground mixed into the bar colour
