@@ -47,6 +47,8 @@ export function InfoHint({
           aria-label={ariaLabel}
           className={cn(
             "inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors",
+            // Phone: a 40 px target; the negative margin gives the extra 16 px back so the icon row does not grow (R50 sweep: 24x24 hint on /orders/confirmation-queue).
+            "max-sm:-m-2 max-sm:min-h-10 max-sm:min-w-10",
             "hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
             "cursor-help",
             className,
