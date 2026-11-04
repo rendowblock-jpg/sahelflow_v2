@@ -130,7 +130,7 @@ export function StudioCanvas({
                 ref={pageRef}
                 data-studio-page="true"
                 aria-label={t("storefront.studio.preview")}
-                className="absolute top-0 start-0"
+                className="absolute top-0 start-0 max-sm:[&_a]:pointer-events-none max-sm:[&_button]:pointer-events-none max-sm:[&_input]:pointer-events-none max-sm:[&_select]:pointer-events-none max-sm:[&_textarea]:pointer-events-none"
                 style={{
                   width,
                   transform: scale === 1 ? undefined : `scale(${scale})`,

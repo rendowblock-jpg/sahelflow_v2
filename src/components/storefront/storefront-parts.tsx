@@ -287,7 +287,7 @@ export function StorefrontHeader({
       style={{ background: "color-mix(in srgb, var(--background) 88%, transparent)" }}
     >
       <Container className="flex h-16 items-center justify-between gap-4">
-        <a href="#" className="flex min-w-0 items-center gap-2.5">
+        <a href="#" className="flex min-h-11 min-w-0 items-center gap-2.5">
           <span
             aria-hidden="true"
             className={cn(radius(theme.radius), "flex size-9 shrink-0 items-center justify-center text-sm font-bold")}
@@ -306,11 +306,11 @@ export function StorefrontHeader({
           </b>
         </a>
         <nav className="flex items-center gap-1 text-sm font-medium">
-          <a href="#storefront-catalog" className="hidden rounded-full px-3 py-2 text-muted-foreground hover:text-foreground @min-[40rem]:inline-flex">
+          <a href="#storefront-catalog" className="hidden min-h-11 items-center rounded-full px-3 py-2 text-muted-foreground hover:text-foreground @min-[40rem]:inline-flex">
             {t("storefront.view.navProducts")}
           </a>
           {hasContact(theme.builder.contact) ? (
-            <a href="#storefront-contact" className="hidden rounded-full px-3 py-2 text-muted-foreground hover:text-foreground @min-[40rem]:inline-flex">
+            <a href="#storefront-contact" className="hidden min-h-11 items-center rounded-full px-3 py-2 text-muted-foreground hover:text-foreground @min-[40rem]:inline-flex">
               {t("storefront.view.navContact")}
             </a>
           ) : null}
