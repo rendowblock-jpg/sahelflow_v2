@@ -32,6 +32,10 @@ import { HeldSendNotice } from "@/components/inbox/held-send-notice";
 import type { HeldDiscardUiStatus } from "@/hooks/inbox/held-discard-client";
 import { heldSendView } from "@/lib/whatsapp/held-send";
 import { BUBBLE_FLOW, bubbleSide, messageVisual } from "@/components/inbox/inbox-message-visual";
+import {
+  BUBBLE_IN_BORDER_CLASS,
+  BUBBLE_OUT_BORDER_CLASS,
+} from "@/components/inbox/inbox-composer-style";
 import { SignalShape } from "@/components/inbox/inbox-signal-shape";
 import { MessagePreviewPlaceholder } from "@/components/inbox/message-preview-glyph";
 import { messagePreview } from "@/lib/inbox/message-preview";
@@ -229,7 +233,7 @@ function CopyMessageButton({
       }}
       aria-live="polite"
       className={cn(
-        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+        "ms-2 inline-flex min-h-7 max-sm:min-h-10 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
         state === "failed"
           ? "text-destructive opacity-100"
           : state === "copied"
@@ -270,7 +274,7 @@ export const MessageBubble = memo(function MessageBubble({
   upload,
   onCancelUpload,
   groupStart = true,
-  groupEnd: _groupEnd = true,
+  groupEnd = true,
   highlighted = false,
   quotedJumpable = false,
   onJumpToQuoted,
@@ -383,10 +387,12 @@ export const MessageBubble = memo(function MessageBubble({
       <div className={cn("flex", side === "left" ? "justify-start" : "justify-end")}>
         <div
           className={cn(
-            "max-w-[min(46rem,75%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
+            "max-w-[min(46rem,70%)] min-w-0 rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
+            // The outline is the only thing that separates a bubble from the
+            // pane in the light theme, so it is measured (>= 3:1), not guessed.
             inbound
-              ? "border-border/70 bg-card text-foreground"
-              : "border-primary/20 bg-primary-soft text-foreground",
+              ? `${BUBBLE_IN_BORDER_CLASS} bg-card text-foreground`
+              : `${BUBBLE_OUT_BORDER_CLASS} bg-primary-soft text-foreground`,
             visual.edge === "destructive" && "border-destructive",
             // Tail corner sits on the group's last bubble; continuation
             // bubbles soften their connecting corners (WhatsApp grouping).
@@ -406,7 +412,7 @@ export const MessageBubble = memo(function MessageBubble({
                 }}
                 aria-label={copy("jumpToMessage")}
                 title={copy("jumpToMessage")}
-                className="mb-2 block w-full rounded-surface border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5 text-start outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
+                className="mb-2 block w-full max-sm:min-h-10 rounded-surface border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5 text-start outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {renderQuoteBody()}
               </button>
@@ -456,7 +462,7 @@ export const MessageBubble = memo(function MessageBubble({
                       href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(message.attachment.location.latitude)}&mlon=${encodeURIComponent(message.attachment.location.longitude)}#map=17/${encodeURIComponent(message.attachment.location.latitude)}/${encodeURIComponent(message.attachment.location.longitude)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-1.5 inline-flex min-h-8 items-center text-xs font-medium underline underline-offset-4"
+                      className="mt-1.5 inline-flex min-h-8 max-sm:min-h-10 items-center text-xs font-medium underline underline-offset-4"
                     >
                       {message.attachment.location.name ??
                         message.attachment.location.address ??
@@ -498,7 +504,7 @@ export const MessageBubble = memo(function MessageBubble({
 
           {message.body.trim() ? (
             <p
-              className="whitespace-pre-wrap break-words text-[14px] leading-[1.65]"
+              className="whitespace-pre-wrap break-words text-[14px] leading-[1.65] [overflow-wrap:anywhere]"
               dir="auto"
               data-sf-user-content="true"
             >
@@ -535,7 +541,7 @@ export const MessageBubble = memo(function MessageBubble({
                   <button
                     type="button"
                     onClick={() => onCancelUpload(message.id)}
-                    className="inline-flex min-h-7 items-center gap-1 rounded-control px-2 text-caption font-medium text-destructive outline-none transition-colors hover:bg-destructive-soft focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex min-h-7 max-sm:min-h-10 items-center gap-1 rounded-control px-2 text-caption font-medium text-destructive outline-none transition-colors hover:bg-destructive-soft focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <X className="size-3" aria-hidden="true" />
                     {copy("cancelUpload")}
@@ -546,7 +552,9 @@ export const MessageBubble = memo(function MessageBubble({
           ) : null}
 
           <div className="mt-1 flex items-center justify-end gap-1 text-caption tabular-nums text-muted-foreground">
-            <span>{messageTime(message.timestamp, locale)}</span>
+            <span className={cn(!groupEnd && "sr-only")}>
+              {messageTime(message.timestamp, locale)}
+            </span>
             {!inbound ? (
               <MessageStatus status={bubbleDeliveryStatus(message)} />
             ) : null}
@@ -586,7 +594,7 @@ export const MessageBubble = memo(function MessageBubble({
               type="button"
               onClick={() => onReply(message)}
               aria-label={copy("replyToMessage")}
-              className="inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium text-muted-foreground opacity-0 outline-none transition-[color,background-color,opacity] hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
+              className="inline-flex min-h-7 max-sm:min-h-10 items-center gap-1.5 rounded-control px-2 text-caption font-medium text-muted-foreground opacity-0 outline-none transition-[color,background-color,opacity] hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
             >
               <Reply className="size-3 icon-rtl-flip" aria-hidden="true" />
               {copy("replyToMessage")}
@@ -604,7 +612,7 @@ export const MessageBubble = memo(function MessageBubble({
               onClick={() => onChooseCandidate(message.id)}
               aria-pressed={candidate}
               className={cn(
-                "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                "ms-2 inline-flex min-h-7 max-sm:min-h-10 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 candidate
                   ? "bg-primary-soft text-primary-ink"
                   : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
@@ -655,7 +663,7 @@ export const MessageBubble = memo(function MessageBubble({
               variant="outline"
               size="sm"
               onClick={() => onRetry(message)}
-              className="min-h-9 border-destructive/60 [@media(pointer:coarse)]:min-h-11"
+              className="min-h-9 max-sm:min-h-11 border-destructive/60 [@media(pointer:coarse)]:min-h-11"
             >
               <RefreshCw className="size-3.5" aria-hidden="true" />
               {t("inbox.retry")}
@@ -670,6 +678,7 @@ export const MessageBubble = memo(function MessageBubble({
             type="button"
             variant="outline"
             size="sm"
+            className="max-sm:min-h-11"
             onClick={() => onRetry(message)}
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />

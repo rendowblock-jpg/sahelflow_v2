@@ -307,7 +307,7 @@ export function VoiceNotePlayer({ src, label, locale }: VoiceNotePlayerProps) {
             type="button"
             onClick={retry}
             data-inbox-voice-retry="true"
-            className="inline-flex min-h-7 items-center gap-1 rounded-control px-2 font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-7 max-sm:min-h-10 items-center gap-1 rounded-control px-2 font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
           >
             <RotateCcw className="size-3" aria-hidden="true" />
             {copy("inbox.voice.retry")}
@@ -322,7 +322,7 @@ export function VoiceNotePlayer({ src, label, locale }: VoiceNotePlayerProps) {
             aria-pressed={playing}
             data-inbox-voice-play={playing ? "playing" : "paused"}
             disabled={mediaStatus === "loading" && duration <= 0}
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
+            className="inline-flex size-8 max-sm:size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
           >
             {playing ? (
               <Pause className="size-4" aria-hidden="true" />
@@ -395,7 +395,7 @@ export function VoiceNotePlayer({ src, label, locale }: VoiceNotePlayerProps) {
             onClick={cycleSpeed}
             aria-label={copy("inbox.voice.speed")}
             data-inbox-voice-speed="true"
-            className="inline-flex min-h-7 shrink-0 items-center rounded-full border border-border/70 bg-background px-2 text-caption font-semibold tabular-nums text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-7 max-sm:min-h-10 max-sm:min-w-10 max-sm:justify-center shrink-0 items-center rounded-full border border-border/70 bg-background px-2 text-caption font-semibold tabular-nums text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
           >
             {rate}×
           </button>

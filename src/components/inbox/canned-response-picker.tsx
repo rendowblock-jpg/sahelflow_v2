@@ -19,6 +19,11 @@ import { useEffect, useRef, useState } from "react";
 import { Bookmark, Loader2, Search } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -55,18 +60,26 @@ export function CannedResponsePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant={variant}
-          size={size}
-          disabled={disabled}
-          aria-label={t("inbox.cannedResponses.open")}
-          title={t("inbox.cannedResponses.open")}
-        >
-          <Bookmark className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant={variant}
+              size={size}
+              disabled={disabled}
+              aria-label={t("inbox.cannedResponses.open")}
+              data-inbox-canned-picker="true"
+              className={cn(size === "icon" ? "max-sm:size-10" : "max-sm:min-h-10")}
+            >
+              <Bookmark className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="top" sideOffset={6}>
+          {t("inbox.cannedResponses.open")}
+        </TooltipContent>
+      </Tooltip>
       <PopoverContent align="end" sideOffset={6} className="w-80 p-0">
         {/* Radix unmounts PopoverContent on close, so the body mounts fresh each
             open → useState initializers re-run, no useEffect reset needed. */}
@@ -139,7 +152,7 @@ function CannedResponsePickerBody({ onSelect, onPick }: CannedResponsePickerBody
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("inbox.cannedResponses.search")}
-            className="h-8 border-0 shadow-none focus-visible:ring-0 px-0"
+            className="h-8 max-sm:h-10 border-0 shadow-none focus-visible:ring-0 px-0"
             aria-label={t("inbox.cannedResponses.search")}
           />
           {loading && (
@@ -165,7 +178,7 @@ function CannedResponsePickerBody({ onSelect, onPick }: CannedResponsePickerBody
                   type="button"
                   onClick={() => handlePick(item)}
                   className={cn(
-                    "w-full text-start px-3 py-2 hover:bg-accent transition-colors",
+                    "w-full text-start px-3 py-2 max-sm:min-h-10 hover:bg-accent transition-colors",
                     "focus:bg-accent focus:outline-none",
                   )}
                 >

@@ -89,6 +89,8 @@ export function makeInboxWorkspace(overrides: WorkspaceOverrides = {}) {
     activeChat,
     messages,
     loadingMessages: false,
+    messagesLoadFailed: false,
+    retryLoadMessages: vi.fn(),
     messagesInnerRef: { current: null },
     messagesEndRef: { current: null },
     isAwayFromBottom: false,
