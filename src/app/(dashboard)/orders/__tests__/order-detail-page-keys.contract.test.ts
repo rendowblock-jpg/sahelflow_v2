@@ -23,7 +23,7 @@ const usedKeys = [
   ...new Set(
     SOURCES.flatMap((path) => {
       const text = readFileSync(resolve(process.cwd(), path), "utf8");
-      return [...text.matchAll(/"(orders\.detail\.[A-Za-z]+(?:\.[A-Za-z]+)*)"/g)].map((m) => m[1]);
+      return [...text.matchAll(/"(orders\.detail\.[A-Za-z]+(?:\.[A-Za-z]+)*)"/g)].flatMap((m) => (m[1] ? [m[1]] : []));
     }),
   ),
 ].sort();

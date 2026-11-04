@@ -56,6 +56,16 @@ describe.each(PAGE_LOCALES)("OrderSummaryStrip (%s)", (locale) => {
     expect(total?.className).toContain("tabular-nums");
   });
 
+  it("clamps a very long customer name to two lines and keeps the full name as a tooltip (the aside card shows it whole)", () => {
+    const longName = "Amina Benali Bent Mohamed El Hadj Abdelkader Ben Youcef Ben Salah Eddine ".repeat(6).trim();
+    const { container } = render(<OrderSummaryStrip {...props(locale, { customerName: longName })} />);
+    const name = container.querySelector("[data-testid='order-summary-customer-name']");
+    expect(name).not.toBeNull();
+    expect(name!.className).toContain("line-clamp-2");
+    expect(name!.getAttribute("title")).toBe(longName);
+    expect(container.querySelector("bdi[dir='auto']")?.textContent).toBe(longName);
+  });
+
   it("is one card with four cells and a 2 x 2 phone grid", () => {
     const { container } = render(<OrderSummaryStrip {...props(locale)} />);
     expect(container.querySelectorAll("[data-slot='card']").length).toBe(1);
