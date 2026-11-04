@@ -64,3 +64,17 @@ describe("automation list and tabs: phone tap targets", () => {
     }
   });
 });
+
+describe("automation list: a long name cannot make the cards wider than the phone", () => {
+  // Found on the production build (4 Nov 2026, scale data, 390 px phone): with no `grid-template-columns` the grid has one
+  // implicit `auto` track, and an `auto` track is at least as wide as the widest item's content. A nowrap, truncating title
+  // still reports its whole text width as min-content, so one long name made EVERY card 1,140 px wide inside a 362 px column.
+  // The page clips sideways, so three quarters of each card (its toggle and menu too) were out of reach. `grid-cols-1` is
+  // `repeat(1, minmax(0, 1fr))`: the track may shrink to the column and the title truncates as intended.
+  const source = read("components/automations/automations-list-client.tsx");
+
+  it("the card grid has an explicit shrinkable single column below the lg breakpoint", () => {
+    expect(source).toMatch(/className="grid grid-cols-1 gap-3 lg:grid-cols-2"/);
+  });
+});
+
