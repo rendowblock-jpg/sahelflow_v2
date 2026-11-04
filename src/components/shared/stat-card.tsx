@@ -358,24 +358,29 @@ export function StatCard({
       </div>
 
       {spark && spark.length > 1 ? (
-        <div className="relative z-10 mt-2.5" data-stat-sparkline="true">
+        // The block sits ABOVE the stretched link (z-10) only so the interactive chart can take touch and pointer input.
+        // Everything else in it (the date line, the gaps) is passive, so it lets taps through to the link underneath:
+        // pointer-events-none here, pointer-events-auto on the chart alone.
+        <div className="pointer-events-none relative z-10 mt-2.5" data-stat-sparkline="true">
           {tableAlt ? <SparkTableAlt table={tableAlt} /> : null}
           {sparkDated ? (
-            <Sparkline
-              data={spark}
-              color={sparkColor}
-              height={28}
-              zeroBaseline={sparkZeroBaseline}
-              interactive
-              activeIndex={activeSpark}
-              onActiveIndexChange={setActiveSpark}
-              label={typeof label === "string" ? label : undefined}
-              // The card itself is the visual read-out (headline value + day
-              // line above), so no floating tooltip competes with it.
-              valueText={
-                explored ? `${exploredDay}: ${formatSparkValue(explored.value)}` : undefined
-              }
-            />
+            <div className="pointer-events-auto" data-stat-sparkline-chart="true">
+              <Sparkline
+                data={spark}
+                color={sparkColor}
+                height={28}
+                zeroBaseline={sparkZeroBaseline}
+                interactive
+                activeIndex={activeSpark}
+                onActiveIndexChange={setActiveSpark}
+                label={typeof label === "string" ? label : undefined}
+                // The card itself is the visual read-out (headline value + day
+                // line above), so no floating tooltip competes with it.
+                valueText={
+                  explored ? `${exploredDay}: ${formatSparkValue(explored.value)}` : undefined
+                }
+              />
+            </div>
           ) : (
             <div className="h-7 overflow-hidden opacity-90" aria-hidden="true">
               <Sparkline
