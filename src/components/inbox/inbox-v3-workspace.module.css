@@ -60,19 +60,26 @@
   z-index: 1;
 }
 
-/* Selected: bar + weight + aria-current + a 1px edge + one surface step up. */
+/* Selected: one surface step up + a thin rounded marker in --primary (every
+   preset keeps --primary at 4.5:1+ on its page, so the marker clears 3:1) +
+   aria-current. No wash, no thick bar. */
 .row[aria-current="true"] {
   background: var(--background);
-  border-inline-start: 1px solid color-mix(in oklab, var(--primary) 40%, transparent);
 }
 
 .row[aria-current="true"]::before {
   content: "";
   position: absolute;
-  inset-block: 0;
+  inset-block: 14px;
   inset-inline-start: 0;
-  inline-size: 5px;
+  inline-size: 3px;
+  border-start-end-radius: 3px;
+  border-end-end-radius: 3px;
   background: var(--primary);
+}
+
+.row:active {
+  background: color-mix(in oklab, var(--background) 80%, transparent);
 }
 
 .rowName {
@@ -87,13 +94,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 36px;
-  block-size: 36px;
+  inline-size: 40px;
+  block-size: 40px;
+  flex: none;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--background);
   color: var(--foreground);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
 }
 
@@ -125,9 +133,66 @@
 }
 
 .skeletonRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  padding-inline: 12px;
   block-size: 72px;
   border-block-end: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
-  background: color-mix(in oklab, var(--muted-foreground) 7%, transparent);
+}
+
+.skeletonAvatar {
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--muted-foreground) 14%, transparent);
+}
+
+.skeletonLines {
+  display: grid;
+  row-gap: 8px;
+}
+
+.skeletonLine {
+  block-size: 10px;
+  border-radius: 5px;
+  background: color-mix(in oklab, var(--muted-foreground) 12%, transparent);
+}
+
+/* No-results / offline / error: one centred block, the same shape for all. */
+.stateBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 14rem;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.stateIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 40px;
+  block-size: 40px;
+  margin-block-end: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.offlineNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-block-end: 1px solid var(--border);
+  background: var(--background);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--foreground);
 }
 
 .footer {

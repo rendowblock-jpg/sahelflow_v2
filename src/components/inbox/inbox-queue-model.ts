@@ -24,10 +24,22 @@ export const INBOX_ROW_CHIPS: Readonly<Record<ConversationStatus, RowChip>> &
 
 const DRAFT_CHIP: RowChip = { shape: "diamond", labelKey: "inbox.list.chip.draft" };
 
-/** A reply waiting in the composer needs the seller whatever the status says. */
-export function rowChipFor(input: { status: string; hasDraft: boolean }): RowChip {
+/**
+ * Statuses that earn a tag on the row. "open" is the default of every new
+ * conversation and "resolved" is the quiet end state: a tag on them says
+ * nothing and, repeated on every row, hides the rows that do need the seller.
+ * The table above still maps every status (filters and the header use it).
+ */
+export const ROW_CHIP_ATTENTION_STATUSES: readonly string[] = ["pending", "snoozed"];
+
+/**
+ * The one status tag a row shows, or null for a quiet row. A reply waiting in
+ * the composer needs the seller whatever the status says.
+ */
+export function rowChipFor(input: { status: string; hasDraft: boolean }): RowChip | null {
   if (input.hasDraft) return DRAFT_CHIP;
-  return INBOX_ROW_CHIPS[input.status] ?? INBOX_ROW_CHIPS.open;
+  if (!ROW_CHIP_ATTENTION_STATUSES.includes(input.status)) return null;
+  return INBOX_ROW_CHIPS[input.status] ?? null;
 }
 
 export type ListFooter =
