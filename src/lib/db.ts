@@ -23,6 +23,7 @@ import {
 import { withProtectedNestedReads } from "@/lib/crypto/with-protected-nested";
 import { withProtectedPiiEncryption } from "@/lib/crypto/with-protected-pii";
 import { withProtectedRaceSafeUpserts } from "@/lib/crypto/with-protected-upserts";
+import { shopPrismaClientOptions } from "@/lib/db-pool";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { processShopContext, type ShopContext } from "@/lib/shops/context";
 
@@ -73,6 +74,8 @@ process.env.DATABASE_URL = resolveDatabaseUrl();
 export const dbRaw =
   globalForPrisma.prismaRaw ??
   new PrismaClient({
+    // One connection, long transaction wait (F-0043): see src/lib/db-pool.ts.
+    ...shopPrismaClientOptions(process.env.DATABASE_URL),
     log:
       process.env.NODE_ENV === "development"
         ? ["warn", "error"]
@@ -297,7 +300,7 @@ export function getShopClient(
       ? boundShopContext
       : developmentContextForPath(resolvedPath);
   const raw = new PrismaClient({
-    datasourceUrl: `file:${resolvedPath}`,
+    ...shopPrismaClientOptions(`file:${resolvedPath}`),
     log:
       process.env.NODE_ENV === "development"
         ? ["warn", "error"]
