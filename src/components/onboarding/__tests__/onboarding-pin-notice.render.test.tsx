@@ -110,7 +110,7 @@ describe("OnboardingPinNotice", () => {
   it("speaks French and Arabic with the same structure", () => {
     harness.locale = "fr";
     setup();
-    expect(screen.getByText("Confirmez votre code PIN pour vérifier l'état de la livraison et de l'IA")).toBeTruthy();
+    expect(screen.getByText("Confirmez votre code PIN pour vérifier l’état de la livraison et de l’IA")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Confirmer" })).toBeTruthy();
   });
 
