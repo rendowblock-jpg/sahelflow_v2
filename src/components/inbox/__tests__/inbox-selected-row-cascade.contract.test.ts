@@ -41,7 +41,7 @@ describe("no global stylesheet repaints the selected inbox row", () => {
   }
 
   it("the module rule is the only owner of the selected look (marker + one surface step)", () => {
-    const moduleCss = read("src/components/inbox/inbox-v3-workspace.moduleCss.css");
+    const moduleCss = read("src/components/inbox/inbox-v3-workspace.module.css");
     expect(moduleCss).toContain('.row[aria-current="true"]::before');
     expect(moduleCss).toMatch(/\.row\[aria-current="true"\] \{\s*background: var\(--background\);/);
   });
