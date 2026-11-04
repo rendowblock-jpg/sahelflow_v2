@@ -237,7 +237,7 @@ export function AutomationBuilder({
       data-automation-builder="when-if-then"
       className="flex h-full min-h-0 flex-col bg-background"
     >
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b px-2 sm:px-3">
+      <header className="flex h-14 max-sm:h-auto max-sm:flex-wrap max-sm:py-1 shrink-0 items-center gap-2 border-b px-2 sm:px-3">
         {/* The name field is the visible title; this is the page's h1. */}
         <h1 className="sr-only">
           {automation ? (
@@ -255,11 +255,11 @@ export function AutomationBuilder({
           onClick={(event) => {
             if (dirty && !window.confirm(c("flow.discardConfirm"))) event.preventDefault();
           }}
-          className="flex size-9 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex size-9 max-sm:size-11 max-sm:me-auto shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
         </Link>
-        <div className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
+        <div className="h-6 w-px shrink-0 bg-border max-sm:hidden" aria-hidden="true" />
         <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary-subtle text-primary-ink max-sm:hidden">
           <TriggerGlyph trigger={flow.trigger} className="size-4" />
         </span>
@@ -276,7 +276,7 @@ export function AutomationBuilder({
           aria-invalid={!flow.name.trim() || undefined}
           onChange={(event) => patch({ name: event.target.value })}
           className={cn(
-            "h-9 min-w-0 flex-1 rounded-control border bg-transparent px-2 text-body font-semibold outline-none transition-colors placeholder:font-normal placeholder:text-muted-foreground hover:border-border focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25",
+            "h-9 max-sm:h-11 max-sm:order-last max-sm:basis-full max-sm:text-base min-w-0 flex-1 rounded-control border bg-transparent px-2 text-body font-semibold outline-none transition-colors placeholder:font-normal placeholder:text-muted-foreground hover:border-border focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25",
             flow.name.trim() ? "border-transparent" : "border-dashed border-border bg-muted/30",
           )}
         />
@@ -302,7 +302,7 @@ export function AutomationBuilder({
           </span>
         ) : null}
 
-        <label className="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-control border px-2.5 text-caption font-medium" title={c("flow.activeHint")}>
+        <label className="flex h-9 max-sm:h-11 shrink-0 cursor-pointer items-center gap-2 rounded-control border px-2.5 text-caption font-medium" title={c("flow.activeHint")}>
           <Switch checked={isActive} disabled={saving || legacyInvalid} onCheckedChange={setIsActive} aria-label={c("flow.active")} />
           <span className="max-sm:hidden">{c("flow.active")}</span>
         </label>
@@ -312,7 +312,7 @@ export function AutomationBuilder({
           onClick={() => void save()}
           disabled={!valid || saving || (isEdit && !dirty)}
           data-automation-save="true"
-          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-control bg-primary px-3.5 text-body-sm font-semibold text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45"
+          className="inline-flex h-9 max-sm:h-11 shrink-0 items-center gap-2 rounded-control bg-primary px-3.5 text-body-sm font-semibold text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45"
         >
           {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
           {isEdit ? c("builder.save") : c("builder.create")}
@@ -323,7 +323,7 @@ export function AutomationBuilder({
         <div role="status" data-automation-whatsapp-warning="true" className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-warning/30 bg-warning-subtle px-4 py-2 text-body-sm">
           <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
           <p className="min-w-0 flex-1">{c("flow.waNotConnected")}</p>
-          <Link href="/inbox" className="shrink-0 font-semibold text-primary hover:underline">
+          <Link href="/inbox" className="shrink-0 font-semibold text-primary hover:underline max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">
             {c("flow.waConnect")}
           </Link>
         </div>
@@ -555,7 +555,7 @@ function IssuesStatus({
         <button
           type="button"
           data-automation-issues={issues.length}
-          className="flex shrink-0 items-center gap-1 rounded-full bg-destructive-subtle px-2 py-1 text-caption font-medium text-destructive-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex shrink-0 items-center gap-1 rounded-full bg-destructive-subtle px-2 py-1 max-sm:min-h-11 max-sm:min-w-11 max-sm:justify-center text-caption font-medium text-destructive-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <AlertCircle className="size-3.5" aria-hidden="true" />
           {c("flow.issues", { count: issues.length + (legacyInvalid ? 1 : 0) })}

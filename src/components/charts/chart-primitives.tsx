@@ -283,7 +283,7 @@ export function ChartCard({
               aria-pressed={asTable}
               aria-controls={plotId}
               onClick={() => setAsTable((value) => !value)}
-              className="inline-flex min-h-8 items-center rounded-control px-2 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:min-h-11"
+              className="inline-flex min-h-8 max-sm:min-h-10 max-sm:min-w-10 items-center rounded-control px-2 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:min-h-11"
             >
               {asTable ? dataTable.hideLabel : dataTable.showLabel}
             </button>

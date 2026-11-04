@@ -445,14 +445,14 @@ export function StorefrontStudio({
           <button
             type="button"
             onClick={acceptServerDraft}
-            className="h-8 rounded-control border bg-background px-3 font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-8 max-sm:h-11 rounded-control border bg-background px-3 font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t("storefront.studio.useSavedVersion")}
           </button>
           <button
             type="button"
             onClick={keepLocalDraft}
-            className="h-8 rounded-control bg-foreground px-3 font-medium text-background outline-none hover:bg-foreground/90 focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-8 max-sm:h-11 rounded-control bg-foreground px-3 font-medium text-background outline-none hover:bg-foreground/90 focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t("storefront.studio.keepChanges")}
           </button>
