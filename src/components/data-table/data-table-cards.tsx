@@ -214,7 +214,7 @@ function DataCard<TData>({
               key={cell.id}
               data-slot="title"
               title={plainText(cell)}
-              className="min-w-0 truncate text-sm font-medium [&>*]:truncate [&_a]:after:absolute [&_a]:after:inset-0"
+              className="min-w-0 truncate text-sm font-medium [&>*]:truncate [&_a]:block [&_a]:min-h-10 [&_a]:leading-10 [&_a]:after:absolute [&_a]:after:inset-0"
             >
               {renderCell(cell)}
             </div>
@@ -224,7 +224,7 @@ function DataCard<TData>({
               key={cell.id}
               data-slot="subtitle"
               title={plainText(cell)}
-              className="min-w-0 truncate text-xs text-muted-foreground [&>*]:truncate"
+              className="min-w-0 truncate text-xs text-muted-foreground [&>*]:truncate [&_a]:relative [&_a]:z-10 [&_a]:block [&_a]:min-h-10 [&_a]:leading-10"
             >
               {renderCell(cell)}
             </div>
@@ -258,7 +258,14 @@ function DataCard<TData>({
           {fields.map((cell) => (
             <div key={cell.id} className="min-w-0">
               <dt className="truncate text-xs text-muted-foreground">{labels.get(cell.column.id)}</dt>
-              <dd title={plainText(cell)} className="min-w-0 truncate text-sm [&>*]:truncate">
+              <dd
+                title={plainText(cell)}
+                // A link in a field (phone, order number) must sit above the
+                // title link's stretched ::after layer, or a tap on it opens the
+                // card instead (Modal sweep b6509a98: 40 covered phone links on
+                // /orders/confirmation-queue) and must keep a 40 px target.
+                className="min-w-0 truncate text-sm [&>*]:truncate [&_a]:relative [&_a]:z-10 [&_a]:block [&_a]:min-h-10 [&_a]:leading-10"
+              >
                 {renderCell(cell)}
               </dd>
             </div>

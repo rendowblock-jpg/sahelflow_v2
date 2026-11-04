@@ -46,3 +46,44 @@
     gap: 0.5rem;
   }
 }
+
+/* R50 phone tap targets */
+/*
+ * Phone rule of the interface system: every link, button, field and tab a seller can tap measures at least 2.5rem
+ * (40 px) in both dimensions, except a link inside a sentence. One block instead of a fix per page.
+ *  - Layer `components` + :where(): the rule has zero specificity and sits below every Tailwind utility, so a control
+ *    that states its own size or display (hidden, block, h-14, min-h-0, flex) keeps it.
+ *  - A bare link is `display: inline` and ignores min-height, so it becomes an inline-flex box centred on its text;
+ *    a link inside a <p> (or marked data-inline-link) stays inline.
+ *  - Checkbox and Switch are not in the list: they keep their drawn size and get the 40 px box from a transparent
+ *    border (see ui/checkbox.tsx and ui/switch.tsx).
+ *  - Under 40rem (the Tailwind sm: border, written in rem as the responsive contract requires) only: nothing changes from the sm breakpoint up.
+ */
+@layer components {
+  @media (width < 40rem) {
+    [data-sahelflow-shell="desktop"] [data-shell-region="workspace"] :where(
+      button:not([role="checkbox"], [role="switch"]),
+      select,
+      input:not([type="hidden"], [type="checkbox"], [type="radio"], [type="file"]),
+      summary,
+      [role="button"]:not(button),
+      [role="tab"],
+      [role="menuitem"]
+    ) {
+      min-height: 2.5rem;
+      min-width: 2.5rem;
+    }
+
+    [data-sahelflow-shell="desktop"] [data-shell-region="workspace"] :where(a[href]:not(p a, [data-inline-link])) {
+      min-height: 2.5rem;
+      min-width: 2.5rem;
+    }
+
+    /* A truncated or line-clamped link keeps its own display (inline-flex would drop the ellipsis); it is a block or a
+       flex item already and the component adds its own line height (card list rows, notification rows). */
+    [data-sahelflow-shell="desktop"] [data-shell-region="workspace"] :where(a[href]:not(p a, [data-inline-link], .truncate, [class*="line-clamp"])) {
+      display: inline-flex;
+      align-items: center;
+    }
+  }
+}
