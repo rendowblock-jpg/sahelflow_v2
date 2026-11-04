@@ -220,8 +220,10 @@ describe("message bubbles (measured from the tokens)", () => {
       const bg = lab(c.layers, "--background");
       const inbound = mix(lab(c.layers, "--foreground"), bg, composerFieldBorderPercent(c.mode));
       const outbound = mix(lab(c.layers, "--primary"), bg, bubbleOutBorderPercent(c.mode));
-      expect(ratio(inbound, bg)).toBeGreaterThanOrEqual(3);
-      expect(ratio(outbound, bg)).toBeGreaterThanOrEqual(3);
+      // 3.1, not 3.0: Chromium MEASURED the dark outgoing outline at 2.92:1 (Modal probe, merged tree 53aeb9d7) where this maths said >= 3.0
+      // (colour-mix gamut mapping + 8-bit rounding), so the computed number needs 0.1 of headroom to be a true >= 3:1 in the browser.
+      expect(ratio(inbound, bg)).toBeGreaterThanOrEqual(3); // Chromium measured the incoming outline at 3.7:1 (dark) and 5.65:1 (light)
+      expect(ratio(outbound, bg)).toBeGreaterThanOrEqual(3.1);
     });
   }
 

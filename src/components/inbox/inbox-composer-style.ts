@@ -47,7 +47,7 @@ export const COMPOSER_FIELD_CLASS = [
  *   outgoing outline = primary Q% into the pane background
  */
 export const BUBBLE_OUT_BORDER_LIGHT_PERCENT = 85;
-export const BUBBLE_OUT_BORDER_DARK_PERCENT = 60;
+export const BUBBLE_OUT_BORDER_DARK_PERCENT = 70;
 
 export function bubbleOutBorderPercent(mode: "light" | "dark"): number {
   return mode === "dark"
@@ -59,4 +59,4 @@ export const BUBBLE_IN_BORDER_CLASS =
   "border-[color-mix(in_oklab,var(--foreground)_55%,var(--background))] dark:border-[color-mix(in_oklab,var(--foreground)_50%,var(--background))]";
 
 export const BUBBLE_OUT_BORDER_CLASS =
-  "border-[color-mix(in_oklab,var(--primary)_85%,var(--background))] dark:border-[color-mix(in_oklab,var(--primary)_60%,var(--background))]";
+  "border-[color-mix(in_oklab,var(--primary)_85%,var(--background))] dark:border-[color-mix(in_oklab,var(--primary)_70%,var(--background))]";
