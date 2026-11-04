@@ -2,7 +2,7 @@
 
 > **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here (the table below FD-033 lists them). Entries that only authorized a signed release are stubs: the decision (date, quote, scope) is kept, the package list lives in the release request, the GitHub release and `CHANGELOG.md`
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-11-04 (header and index; FD-086 adopted. No earlier decision changed)
+> **Last amended:** 2026-11-04 (header and index; FD-087 adopted. No earlier decision changed)
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
 This register records approved product and execution decisions. Entries FD-001–FD-029 are consolidated policy statements; FD-030 onward are dated Founder directives. Detailed mechanisms remain subject to architecture, research, security review, provider certification and evidence gates, but engineering may not contradict these policies without a new numbered Founder decision. A later entry supersedes an earlier one only for the choice it names.
@@ -19,6 +19,7 @@ Entries are ordered by number, not by date, and the newest numbers are at the en
 
 ## Index (newest first)
 
+- FD-087 — One signed successor Internal.51 under the FD-066 customer launch (2026-11-04, ADOPTED)
 - FD-086 — One signed successor Internal.50 under the FD-066 customer launch (2026-11-04, ADOPTED)
 - FD-083 — One signed successor Internal.47 under the FD-066 customer launch (2026-11-01, ADOPTED)
 - FD-082 — Small product choices made under the Founder's delegation (2026-10-24, ADOPTED under delegation)
@@ -1158,6 +1159,29 @@ merged:
   `activate.sahelflow.com`.
 - **Content:** protected `main` at the tip this release pull request merges
   into. It carries everything merged after Internal.49 (`8284dc9e…`);
+  the list is in `CHANGELOG.md`, section 2026-11-04.
+
+- **Gates:** this release-authority PR merges only after its full Required
+  battery, including installed-MSI evidence, is green. The signed train builds
+  from that exact `main` tip and nothing else merges while it runs. The tag,
+  digests and publish time are recorded only after the signed run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row and does not turn source or CI evidence into installed or
+  live-provider evidence. #306 logout stays LAST.
+
+## FD-087 — One signed successor Internal.51 under the FD-066 customer launch (2026-11-04, ADOPTED)
+
+On 2026-11-04 the Founder directed: "I need all the remaining work done fully and
+professionally then make the signed release okay" That directive adopts the next
+customer-online release authority as one signed successor, to be built only after
+the pull requests then in flight had merged:
+
+- **Package:** app `1.0.0-internal.51` / MSI `1.0.0.51`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
+  offline-signed. Trial origins stay `license.sahelflow.com` and
+  `activate.sahelflow.com`.
+- **Content:** protected `main` at the tip this release pull request merges
+  into. It carries everything merged after Internal.50 (`a45d79ef…`);
   the list is in `CHANGELOG.md`, section 2026-11-04.
 
 - **Gates:** this release-authority PR merges only after its full Required
