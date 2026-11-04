@@ -5,6 +5,11 @@ import { Smile } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -248,18 +253,25 @@ export function EmojiPicker({
         if (next) setRecents(readRecents());
       }}
     >
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          disabled={disabled}
-          aria-label={copy("emojiTitle")}
-          data-inbox-emoji-picker="true"
-        >
-          <Smile className="size-4" aria-hidden="true" />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              disabled={disabled}
+              aria-label={copy("emojiTitle")}
+              data-inbox-emoji-picker="true"
+            >
+              <Smile className="size-4" aria-hidden="true" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="top" sideOffset={6}>
+          {copy("emojiTitle")}
+        </TooltipContent>
+      </Tooltip>
       <PopoverContent
         side="top"
         align="start"

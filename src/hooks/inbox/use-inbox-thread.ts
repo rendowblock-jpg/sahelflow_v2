@@ -82,6 +82,9 @@ export function useInboxThread({
 
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  // A foreground load that threw is NOT an empty conversation: the thread says
+  // so and offers one retry (thread lane, R50).
+  const [messagesLoadFailed, setMessagesLoadFailed] = useState(false);
   // Ledger INB-11: honest older-history paging. The cursor is the opaque
   // (timestampSeconds,rowId) composite served by the messages route; null
   // means the locally loaded thread has reached its durable beginning.
@@ -157,6 +160,7 @@ export function useInboxThread({
       };
       if (!background) {
         setLoadingMessages(true);
+        setMessagesLoadFailed(false);
         setSendError(null);
       }
       try {
@@ -218,6 +222,7 @@ export function useInboxThread({
           messageMutationGenerationRef.current === mutationGeneration
         ) {
           replaceMessages([]);
+          setMessagesLoadFailed(true);
         }
       } finally {
         if (
@@ -465,6 +470,7 @@ export function useInboxThread({
   return {
     messages,
     loadingMessages,
+    messagesLoadFailed,
     historyHasMore,
     loadingOlderMessages,
     isAwayFromBottom,

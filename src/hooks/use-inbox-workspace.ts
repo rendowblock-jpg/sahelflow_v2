@@ -416,6 +416,10 @@ export function useInboxWorkspace() {
     clearActiveChat: thread.clearActiveChat,
     messages: thread.messages,
     loadingMessages: thread.loadingMessages,
+    messagesLoadFailed: thread.messagesLoadFailed,
+    retryLoadMessages: () => {
+      if (activeChat) void thread.loadMessages(activeChat);
+    },
     messagesInnerRef: thread.messagesInnerRef,
     messagesEndRef: thread.messagesEndRef,
     isAwayFromBottom: thread.isAwayFromBottom,

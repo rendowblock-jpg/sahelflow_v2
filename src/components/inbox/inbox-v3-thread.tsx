@@ -26,6 +26,7 @@ import { CannedResponsePicker } from "@/components/inbox/canned-response-picker"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { HeldSendApproveDialog, HeldSendDiscardDialog } from "@/components/inbox/held-send-notice";
 import { EmojiPicker } from "@/components/inbox/inbox-emoji-picker";
+import { COMPOSER_FIELD_CLASS } from "@/components/inbox/inbox-composer-style";
 import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-panel";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { InboxThreadHeader } from "@/components/inbox/inbox-thread-header";
@@ -35,7 +36,7 @@ import {
   threadOpenTarget,
 } from "@/components/inbox/inbox-order-draft-model";
 import { useOrderDrafts } from "@/components/inbox/inbox-order-draft-store";
-import { InboxThreadEmpty, InboxThreadLoading } from "@/components/inbox/inbox-thread-states";
+import { InboxThreadEmpty, InboxThreadError, InboxThreadLoading } from "@/components/inbox/inbox-thread-states";
 import {
   ThreadPausedHint,
   threadSendGate,
@@ -149,6 +150,8 @@ export function InboxV3Thread({
     activeChat,
     messages,
     loadingMessages,
+    messagesLoadFailed,
+    retryLoadMessages,
     messagesInnerRef,
     messagesEndRef,
     isAwayFromBottom,
@@ -660,6 +663,8 @@ export function InboxV3Thread({
         >
           {loadingMessages ? (
             <InboxThreadLoading />
+          ) : messages.length === 0 && messagesLoadFailed ? (
+            <InboxThreadError onRetry={retryLoadMessages} />
           ) : messages.length === 0 ? (
             <InboxThreadEmpty />
           ) : (
@@ -843,10 +848,16 @@ export function InboxV3Thread({
 
             <div
               className={cn(
-                "rounded-surface border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15 data-[drag-active=true]:border-primary data-[drag-active=true]:bg-primary-subtle",
+                // The reply field carries its own visible boundary
+                // (COMPOSER_FIELD_CLASS); this wrapper is only a tray for the
+                // reply chip, the voice UI and the drag highlight.
+                "rounded-surface p-1 transition-colors data-[drag-active=true]:bg-primary-subtle data-[drag-active=true]:ring-2 data-[drag-active=true]:ring-primary",
+                voiceRecorder.state !== "idle" &&
+                  "border border-border/75 bg-muted/15 p-2",
                 // Drafts can still be written while WhatsApp is offline, but
                 // the composer must not read as ready to send.
-                !canSend && "border-dashed bg-muted/40 shadow-none",
+                !canSend &&
+                  "[&_textarea]:border-dashed [&_textarea]:bg-muted/40",
               )}
               data-drag-active={dragActive ? "true" : "false"}
               data-send-available={canSend ? "true" : "false"}
@@ -876,7 +887,7 @@ export function InboxV3Thread({
             >
               {replyTarget ? (
                 <div
-                  className="flex w-full items-start gap-2 rounded-surface border border-border/70 bg-background/80 px-2.5 py-1.5"
+                  className="mb-2 flex w-full items-start gap-2 rounded-surface border border-border/70 bg-background/80 px-2.5 py-1.5"
                   data-inbox-reply-chip="true"
                 >
                   <Reply
@@ -1049,7 +1060,7 @@ export function InboxV3Thread({
                 className={
                   voiceRecorder.state !== "idle"
                     ? "hidden"
-                    : "flex items-end gap-2"
+                    : "flex items-end gap-1.5"
                 }
                 aria-hidden={voiceRecorder.state !== "idle" || undefined}
               >
@@ -1163,6 +1174,10 @@ export function InboxV3Thread({
                   void sendVoice(file, quotedId);
                 }}
               />
+              <div
+                className="flex h-11 shrink-0 items-center gap-0.5"
+                data-inbox-composer-group="start"
+              >
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenu>
@@ -1210,6 +1225,48 @@ export function InboxV3Thread({
                   {copy("attachMenu")}
                 </TooltipContent>
               </Tooltip>
+              <EmojiPicker
+                disabled={sending || !canSend}
+                onSelect={(emoji) =>
+                  setReplyText((current) => `${current}${emoji}`)
+                }
+              />
+              <CannedResponsePicker
+                disabled={sending}
+                onSelect={(text) =>
+                  setReplyText((current) =>
+                    current.trim() ? `${current.trimEnd()}\n${text}` : text,
+                  )
+                }
+              />
+              </div>
+              <Textarea
+                ref={replyTextareaRef}
+                dir={
+                  replyText.trim()
+                    ? "auto"
+                    : locale === "ar"
+                      ? "rtl"
+                      : "auto"
+                }
+                value={replyText}
+                onChange={(event) => setReplyText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey && canSend) {
+                    event.preventDefault();
+                    dispatchReply();
+                  }
+                }}
+                aria-label={t("inbox.replyPlaceholder")}
+                placeholder={t("inbox.replyPlaceholder")}
+                disabled={sending}
+                rows={1}
+                className={COMPOSER_FIELD_CLASS}
+              />
+              <div
+                className="flex h-11 shrink-0 items-center gap-1"
+                data-inbox-composer-group="end"
+              >
               <Tooltip>
                 <TooltipTrigger asChild>
                 <Button
@@ -1240,62 +1297,35 @@ export function InboxV3Thread({
                   {copy("voiceRecord")}
                 </TooltipContent>
               </Tooltip>
-              <EmojiPicker
-                disabled={sending || !canSend}
-                onSelect={(emoji) =>
-                  setReplyText((current) => `${current}${emoji}`)
-                }
-              />
-              <CannedResponsePicker
-                disabled={sending}
-                onSelect={(text) =>
-                  setReplyText((current) =>
-                    current.trim() ? `${current.trimEnd()}\n${text}` : text,
-                  )
-                }
-              />
-              <Textarea
-                ref={replyTextareaRef}
-                dir={
-                  replyText.trim()
-                    ? "auto"
-                    : locale === "ar"
-                      ? "rtl"
-                      : "auto"
-                }
-                value={replyText}
-                onChange={(event) => setReplyText(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey && canSend) {
-                    event.preventDefault();
-                    dispatchReply();
-                  }
-                }}
-                aria-label={t("inbox.replyPlaceholder")}
-                placeholder={t("inbox.replyPlaceholder")}
-                disabled={sending}
-                rows={1}
-                className="max-h-32 min-h-10 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-start text-[14px] shadow-none focus-visible:ring-0"
-              />
-              <Button
-                type="button"
-                size="icon"
-                onClick={dispatchReply}
-                disabled={sending || !canSend || !replyText.trim()}
-                aria-label={t("inbox.send")}
-              >
-                {sending ? (
-                  <Loader2
-                    className="size-4 animate-spin"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Send
-                    className="size-4 icon-rtl-flip"
-                    aria-hidden="true"
-                  />
-                )}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="size-11 max-sm:size-11"
+                    onClick={dispatchReply}
+                    disabled={sending || !canSend || !replyText.trim()}
+                    aria-label={t("inbox.send")}
+                    data-inbox-send="true"
+                  >
+                    {sending ? (
+                      <Loader2
+                        className="size-4 animate-spin"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <Send
+                        className="size-4 icon-rtl-flip"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  {t("inbox.send")}
+                </TooltipContent>
+              </Tooltip>
+              </div>
               </div>
             </div>
           </div>
