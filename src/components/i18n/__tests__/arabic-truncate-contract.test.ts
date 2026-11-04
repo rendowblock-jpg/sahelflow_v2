@@ -5,9 +5,8 @@
  * html[dir="rtl"] h1-h4. `text-wrap` is the shorthand of text-wrap-mode, and an unlayered rule beats the layered
  * Tailwind utility, so `.truncate` (white-space: nowrap) lost its nowrap: the inbox title, the store-card title and the
  * inbox names WRAPPED instead of ending in an ellipsis (a store-card title became 3 lines in a box sized for them).
- * Second, Noto Sans Arabic has a 1.7 em content area but headings get a 1.42 line box, so shadda/kasra stacks at 15 px
- * can reach 0.7 px past the clip edge (measured with the ink probe, audit/program/ui/ink-probe.mjs); the fix grows the
- * clip box by 0.12 em on both sides and cancels it with the same negative margin, so no layout moves.
+ * The "needs 26px, box 21px" figure itself is the font's 1.7 em content area, not clipped ink (ink probe,
+ * audit/program/ui/ink-probe.mjs: 0.0 px cut for ordinary names, 0.7 px for stacked marks at 15 px), so no padding is added.
  *
  * The browser proof is the page sweep (text-cut, ar cells) and the ink probe; this file keeps the rule from slipping back.
  */
@@ -37,14 +36,8 @@ describe("Arabic truncating headings", () => {
     expect(css.indexOf("/* sf:arabic-truncate:start */")).toBeGreaterThan(css.indexOf("text-wrap: balance"));
   });
 
-  it("grows the clip box by a font-relative amount and cancels it with the same negative margin (no layout shift)", () => {
-    const rules = block();
-    const pad = rules.match(/padding-block:\s*(0?\.\d+)em/);
-    const mar = rules.match(/margin-block:\s*-(0?\.\d+)em/);
-    expect(pad, "padding-block in em").not.toBeNull();
-    expect(mar, "margin-block negative in em").not.toBeNull();
-    expect(pad![1]).toBe(mar![1]);
-    expect(Number(pad![1])).toBeGreaterThanOrEqual(0.1);
+  it("does not set margin or padding on headings (an unlayered margin-block would beat every mt-* / py-* utility)", () => {
+    expect(block()).not.toMatch(/(^|[;{\s])(margin|padding)[a-z-]*\s*:/);
   });
 
   it("is top-level CSS (a layered rule would lose to the unlayered balance rule it corrects)", () => {

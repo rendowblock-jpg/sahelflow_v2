@@ -164,19 +164,17 @@ html[dir="rtl"] input[data-sf-placeholder-dir="document"]:placeholder-shown {
 /* sf:arabic-truncate:start */
 /*
  * Truncating headings in the Arabic UI (sweep class text-cut, 26 hits, all in ar cells).
- *  1. `text-wrap: balance` above is the shorthand of text-wrap-mode, and this file is unlayered, so it beat the
- *     layered `.truncate` / `.whitespace-nowrap` utilities: a truncating title WRAPPED (a store-card title took three
- *     lines) instead of ending in an ellipsis. A heading that must stay on one line gets text-wrap: nowrap back.
- *  2. Noto Sans Arabic has a 1.7 em content area, a heading gets a 1.42 line box: a stack of marks (shadda + kasra)
- *     can reach 0.7 px past the clip edge at 15 px, 1.6 px at 24 px (ink probe, audit/program/ui/ink-probe.mjs).
- *     overflow:hidden clips at the padding box, so the box grows by 0.12 em above and below and the same negative
- *     margin cancels it: the layout does not move by one pixel.
+ * `text-wrap: balance` above is the shorthand of text-wrap-mode, and this file is unlayered, so it beat the layered
+ * `.truncate` / `.whitespace-nowrap` utilities: a truncating title WRAPPED (a store-card title took three lines, the
+ * inbox title and names too) instead of ending in an ellipsis. A heading that must stay on one line gets nowrap back.
+ * Measured in Chromium with this file: white-space normal -> nowrap, one line, ellipsis, no other property touched.
+ *
+ * Deliberately NOT here: padding/margin "ink room". Noto Sans Arabic has a 1.7 em content area in a 1.42 line box, which
+ * is why the sweep said "needs 26px, box 21px", but the INK fits (ordinary names 0.0 px cut; only stacked shadda+kasra
+ * reach 0.7 px past the edge at 15 px). An unlayered margin-block/padding-block would beat every mt-* / py-* utility on
+ * a heading, which is a worse defect than a 0.7 px mark. The harness measures ink now (sweep-lib.mjs inkClip).
  */
 html[dir="rtl"] :is(h1, h2, h3, h4):is(.truncate, .whitespace-nowrap, .text-nowrap) {
   text-wrap: nowrap;
-}
-html[dir="rtl"] :is(h1, h2, h3, h4).truncate {
-  padding-block: 0.12em;
-  margin-block: -0.12em;
 }
 /* sf:arabic-truncate:end */
