@@ -256,7 +256,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(thread).toContain('locale === "ar"');
     expect(thread).toContain('? "auto"');
     expect(thread).toContain('? "rtl"');
-    expect(thread).toContain("text-start");
+    expect(read("src/components/inbox/inbox-composer-style.ts")).toContain("text-start");
   });
 
   it("compacts the v3 composer into one attach menu and closes the message-list dead space", () => {
