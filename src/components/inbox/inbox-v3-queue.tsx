@@ -849,7 +849,7 @@ export function InboxV3Queue({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               aria-label={copy("searchConversations")}
-              placeholder={copy("searchConversations")}
+              placeholder={copy("searchPlaceholder")}
               className="h-9 max-sm:h-10 rounded-surface bg-muted/20 ps-8 pe-8 text-[13px]"
             />
             {searchState.query === normalizedQuery && searchState.loading ? (
