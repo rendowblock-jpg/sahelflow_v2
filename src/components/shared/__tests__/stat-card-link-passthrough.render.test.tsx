@@ -7,7 +7,7 @@
  * 26-33 of 49 points on the link for Orders / Analytics / Customers: the date line under the chart and the gaps around it swallowed the tap.
  * Now only the chart is interactive; the rest of the block lets the tap through to the link.
  */
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { Clock } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -97,5 +97,92 @@ describe("StatCard stretched link and the sparkline block", () => {
     );
     expect(container.querySelector('[data-stat-link="true"]')).toBeNull();
     expect(container.querySelector('[data-sparkline-interactive="true"]')).not.toBeNull();
+  });
+});
+
+/**
+ * Second finding, found by a held touch on the English Analytics card (production build, 390 x 844): that card has a trend row
+ * that wraps to two lines. Touching the chart swapped it for the one-line day read-out, the card shrank by a line, the chart moved up
+ * under the finger, and the tap ended below it, on the card link (now a pass-through): the page left /dashboard.
+ * The trend row and the read-out now share ONE grid cell, so the cell keeps the taller height while the day is read out.
+ */
+describe("StatCard does not change height while the chart is explored", () => {
+  function withTrend() {
+    const { container } = render(
+      <TooltipProvider>
+        <StatCard
+          label="Orders value"
+          value="1 234"
+          icon={<Clock />}
+          href="/analytics"
+          hrefLabel="Analytics"
+          trend={4.2}
+          trendDirectionOnly={false}
+          trendLabel="vs yesterday"
+          subtitle="12 orders today and a long second part"
+          spark={dated}
+          sparkContext="Last 7 days"
+        />
+      </TooltipProvider>,
+    );
+    const root = container.firstElementChild as HTMLElement;
+    return {
+      root,
+      slider: root.querySelector('[data-sparkline-interactive="true"]') as HTMLElement,
+      sub: () => root.querySelector('[data-stat-subline="true"]') as HTMLElement,
+      trend: () => root.querySelector('[data-stat-trend-row="true"]') as HTMLElement | null,
+      readout: () => root.querySelector('[data-stat-explored-day="true"]') as HTMLElement | null,
+    };
+  }
+
+  it("keeps the trend row in the same grid cell, invisible, while the day is read out", () => {
+    const { slider, sub, trend, readout } = withTrend();
+    expect(trend()!.className).not.toContain("invisible");
+    expect(trend()!.getAttribute("aria-hidden")).toBeNull();
+    expect(readout()).toBeNull();
+
+    fireEvent.keyDown(slider, { key: "Home" });
+    expect(readout()).not.toBeNull();
+    expect(trend()).not.toBeNull();
+    expect(trend()!.className).toContain("invisible");
+    expect(trend()!.getAttribute("aria-hidden")).toBe("true");
+    expect(sub().contains(trend())).toBe(true);
+    expect(sub().contains(readout())).toBe(true);
+    for (const el of [trend()!, readout()!]) {
+      expect(el.className).toContain("col-start-1");
+      expect(el.className).toContain("row-start-1");
+    }
+    // The wrapper is a grid, so the cell is as tall as the taller child.
+    expect(sub().className).toContain("grid");
+  });
+
+  it("gives the trend row back when the exploring ends", () => {
+    const { slider, trend, readout } = withTrend();
+    fireEvent.keyDown(slider, { key: "Home" });
+    expect(readout()).not.toBeNull();
+    fireEvent.keyDown(slider, { key: "Escape" });
+    expect(readout()).toBeNull();
+    expect(trend()!.className).not.toContain("invisible");
+    expect(trend()!.getAttribute("aria-hidden")).toBeNull();
+  });
+
+  it("a card without a trend row swaps the reserved slot for the read-out inside the same wrapper", () => {
+    const { root, slider } = card(dated);
+    const sub = () => root.querySelector('[data-stat-subline="true"]') as HTMLElement;
+    expect(sub()).not.toBeNull();
+    expect(sub().querySelector('[data-stat-readout-slot="true"]')).not.toBeNull();
+    fireEvent.keyDown(slider as HTMLElement, { key: "Home" });
+    expect(sub()).not.toBeNull();
+    expect(sub().querySelector('[data-stat-explored-day="true"]')).not.toBeNull();
+    expect(sub().querySelector('[data-stat-readout-slot="true"]')).toBeNull();
+  });
+
+  it("a card with neither a trend row nor a dated chart still renders no line at all", () => {
+    const { container } = render(
+      <TooltipProvider>
+        <StatCard label="Plain" value="5" icon={<Clock />} />
+      </TooltipProvider>,
+    );
+    expect(container.querySelector('[data-stat-subline="true"]')).toBeNull();
   });
 });
