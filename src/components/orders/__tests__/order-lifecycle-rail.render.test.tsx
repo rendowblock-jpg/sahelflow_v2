@@ -33,7 +33,7 @@ function rail(status: "delivered" | "pending" | "shipped") {
       orderNumber="DZ-1"
       status={status}
       version={1}
-      mutationAuthority="legacy"
+      mutationAuthority="legacy_compatibility"
       fulfillmentState={null}
       deliveryState={null}
       inventoryState={null}
