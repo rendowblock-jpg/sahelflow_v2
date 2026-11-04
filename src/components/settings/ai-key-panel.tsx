@@ -121,6 +121,37 @@ function asText(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+const TRANSPORT_CLASSES = ["dns", "tls", "blocked", "reset", "timeout"] as const;
+
+/**
+ * The probe diagnostics are drawn as one line of text. Whatever the server (or a proxy in front of it) sends is cut
+ * down to the typed parts that are really there, so an object where a word belongs never prints "[object Object]" and
+ * never reaches a translation lookup as a key. Anything that is not a plain object is no diagnostics at all.
+ */
+function cleanDiagnostics(raw: unknown): GeminiKeyDiagnostics | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const d = raw as Record<string, unknown>;
+  const text = (value: unknown): string | null => (typeof value === "string" && value ? value : null);
+  const out: GeminiKeyDiagnostics = {};
+  if (typeof d.httpStatus === "number" && Number.isFinite(d.httpStatus)) out.httpStatus = d.httpStatus;
+  out.providerStatus = text(d.providerStatus);
+  out.reason = text(d.reason);
+  const transport = d.transport && typeof d.transport === "object" ? (d.transport as Record<string, unknown>) : null;
+  out.transport = transport ? { name: text(transport.name) ?? "", code: text(transport.code) } : null;
+  out.transportClass = TRANSPORT_CLASSES.find((known) => known === d.transportClass) ?? null;
+  const shape = d.responseShape && typeof d.responseShape === "object" ? (d.responseShape as Record<string, unknown>) : null;
+  out.responseShape = shape
+    ? {
+        jsonParseFailed: shape.jsonParseFailed === true,
+        candidatesCount: typeof shape.candidatesCount === "number" && Number.isFinite(shape.candidatesCount) ? shape.candidatesCount : null,
+        finishReason: text(shape.finishReason),
+        blockReason: text(shape.blockReason),
+      }
+    : null;
+  out.keyShape = d.keyShape as GeminiKeyDiagnostics["keyShape"]; // keyShapeText() checks every part itself
+  return out;
+}
+
 /** The " — key: AIza…, 39 chars · whitespace" tail of the probe line, built only from the parts that are really there. */
 function keyShapeText(
   shape: unknown,
@@ -318,9 +349,9 @@ export function AiKeyPanel({
       if (!response.ok || !data.ok) {
         setResult({
           ok: false,
-          code: data.code,
+          code: asText(data.code),
           error: rejectionCopy(data, t),
-          diagnostics: data.diagnostics ?? null,
+          diagnostics: cleanDiagnostics(data.diagnostics),
         });
         return;
       }
