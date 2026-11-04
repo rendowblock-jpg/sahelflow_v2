@@ -15,7 +15,6 @@ import { formatWaitAge } from "@/lib/inbox/wait-age";
  * The same checks, over every changed string, run as audit/program/ui/texts-check.mjs.
  */
 const root = process.cwd();
-const NBSP = "\u00a0";
 const FILES = [
   "inbox-health-runtime.ts",
   "inbox-sample-runtime.ts",
