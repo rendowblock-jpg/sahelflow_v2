@@ -179,8 +179,8 @@ describe("the header's container query is declared", () => {
       .map((name) => read(DIR + name));
     const used = new Set<string>();
     for (const source of sources) {
-      for (const m of source.matchAll(/@(?:min|max)-(?:\[[^\]]+\]|[a-z0-9]+)\/([a-z][a-z0-9-]*):/g)) used.add(m[1]);
-      for (const m of source.matchAll(/@[a-z0-9]+\/([a-z][a-z0-9-]*):/g)) used.add(m[1]);
+      for (const m of source.matchAll(/@(?:min|max)-(?:\[[^\]]+\]|[a-z0-9]+)\/([a-z][a-z0-9-]*):/g)) used.add(m[1]!);
+      for (const m of source.matchAll(/@[a-z0-9]+\/([a-z][a-z0-9-]*):/g)) used.add(m[1]!);
     }
     const declaredIn = [
       ...sources,
