@@ -1,1 +1,1 @@
-lab branch for Modal runs (not for merge): all Internal.50 lane heads merged 2026-11-04T04:41:33Z
+lab branch rebuilt 2026-11-04T04:44:42Z: inbox/hydr/texts test-type fixes
