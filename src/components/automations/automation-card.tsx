@@ -67,7 +67,7 @@ export function AutomationCard({ data, canManage, order = 0 }: { data: Automatio
             {canManage ? (
               // A block with a 24px floor: an inline link is only as tall as its
               // font box, which is under the WCAG 2.5.8 minimum target.
-              <Link href={href} data-automation-edit={data.id} className="block min-h-6 truncate outline-none after:absolute after:inset-0 after:rounded-surface focus-visible:underline">
+              <Link href={href} data-automation-edit={data.id} className="block min-h-6 truncate outline-none after:absolute after:inset-0 after:rounded-surface focus-visible:underline max-sm:min-h-10 max-sm:leading-10">
                 <span dir="auto">{data.name}</span>
               </Link>
             ) : (
