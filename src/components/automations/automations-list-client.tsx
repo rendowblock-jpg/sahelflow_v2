@@ -107,7 +107,7 @@ export function AutomationsListClient({
           {c("workspace.noMatch")}
         </p>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {visible.map((automation, index) => (
             <AutomationCard key={automation.id} data={automation} canManage={canManage} order={index} />
           ))}
