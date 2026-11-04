@@ -129,6 +129,26 @@ describe.each(PAGE_LOCALES)("OrderSummaryStrip (%s)", (locale) => {
   });
 });
 
+describe("OrderSummaryStrip lifecycle slot", () => {
+  it("renders its children (stepper + actions) below the four cells, inside the SAME single card", () => {
+    const { container } = render(
+      <OrderSummaryStrip {...props("en")}>
+        <p>LIFECYCLE-SLOT</p>
+      </OrderSummaryStrip>,
+    );
+    expect(container.querySelectorAll("[data-slot='card']").length).toBe(1);
+    const slot = container.querySelector("[data-testid='order-summary-lifecycle']");
+    expect(slot?.textContent).toBe("LIFECYCLE-SLOT");
+    const grid = container.querySelector("[data-testid='order-summary-grid']")!;
+    expect(grid.compareDocumentPosition(slot!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("without children there is no empty band", () => {
+    const { container } = render(<OrderSummaryStrip {...props("en")} />);
+    expect(container.querySelector("[data-testid='order-summary-lifecycle']")).toBeNull();
+  });
+});
+
 describe("OrderSummaryStrip without a customer record", () => {
   it("falls back to the phone and the not-found sentence, not an empty cell", () => {
     const t = makeT("en");

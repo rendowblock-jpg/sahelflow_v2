@@ -29,6 +29,8 @@ export interface OrderSummaryStripProps {
   deliveryState: string | null;
   delivery: { provider: string; trackingNumber: string | null; status: string } | null;
   whatsapp?: ReactNode;
+  /** The lifecycle area (stepper + next actions): the lower part of the same card, under the four cells. */
+  children?: ReactNode;
   className?: string;
 }
 
@@ -74,6 +76,7 @@ export function OrderSummaryStrip({
   deliveryState,
   delivery,
   whatsapp,
+  children,
   className,
 }: OrderSummaryStripProps) {
   const place = [commune, wilaya ? displayWilaya(wilaya, locale) : null].filter(Boolean).join(" · ");
@@ -168,6 +171,11 @@ export function OrderSummaryStrip({
           ) : null}
         </div>
       </div>
+      {children ? (
+        <div data-testid="order-summary-lifecycle" className="space-y-4 border-t bg-card p-4">
+          {children}
+        </div>
+      ) : null}
     </Card>
   );
 }
