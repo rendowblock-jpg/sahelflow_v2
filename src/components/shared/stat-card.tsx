@@ -320,40 +320,56 @@ export function StatCard({
           {explored ? formatSparkValue(explored.value) : value}
         </div>
 
-        {explored ? (
-          <div
-            className="mt-1.5 flex min-h-5 items-center text-xs leading-5 text-muted-foreground"
-            aria-live="polite"
-            data-stat-explored-day="true"
-          >
-            {exploredDay}
-          </div>
-        ) : subtitle || trendLabel || hasTrend ? (
-          <div className="mt-1.5 flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-muted-foreground">
-            {hasTrend ? (
-              <span
+        {/* The line under the figure: the trend row, or (while the chart is being explored) the day read-out.
+            Both sit in ONE grid cell. While exploring, the trend row stays in the cell but invisible, so the cell keeps the height of the
+            taller of the two. Swapping them used to shrink the card by a line (the English Analytics card wraps to two), which moved the
+            chart up under the finger: the tap then ended on the card link. */}
+        {explored || subtitle || trendLabel || hasTrend || sparkDated ? (
+          <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)]" data-stat-subline="true">
+            {subtitle || trendLabel || hasTrend ? (
+              <div
                 className={cn(
-                  "inline-flex items-center gap-0.5 font-medium tabular-nums",
-                  positive && "text-success",
-                  negative && "text-destructive",
+                  "col-start-1 row-start-1 flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-muted-foreground",
+                  explored && "invisible",
                 )}
+                aria-hidden={explored ? true : undefined}
+                data-stat-trend-row="true"
               >
-                {positive ? (
-                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
-                ) : (
-                  <ArrowDownRight className="size-3.5" aria-hidden="true" />
-                )}
-                {trendText}
-              </span>
+                {hasTrend ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-0.5 font-medium tabular-nums",
+                      positive && "text-success",
+                      negative && "text-destructive",
+                    )}
+                  >
+                    {positive ? (
+                      <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                    ) : (
+                      <ArrowDownRight className="size-3.5" aria-hidden="true" />
+                    )}
+                    {trendText}
+                  </span>
+                ) : null}
+                {trendLabel ? <span>{trendLabel}</span> : null}
+                {subtitle ? <span>{subtitle}</span> : null}
+              </div>
+            ) : sparkDated && !explored ? (
+              // Reserve the read-out line: exploring the chart swaps the date in
+              // here, and the card must not grow under the pointer (which would
+              // move the chart away and end the hover in a flicker loop).
+              <div className="col-start-1 row-start-1 min-h-5" aria-hidden="true" data-stat-readout-slot="true" />
             ) : null}
-            {trendLabel ? <span>{trendLabel}</span> : null}
-            {subtitle ? <span>{subtitle}</span> : null}
+            {explored ? (
+              <div
+                className="col-start-1 row-start-1 flex min-h-5 items-center text-xs leading-5 text-muted-foreground"
+                aria-live="polite"
+                data-stat-explored-day="true"
+              >
+                {exploredDay}
+              </div>
+            ) : null}
           </div>
-        ) : sparkDated ? (
-          // Reserve the read-out line: exploring the chart swaps the date in
-          // here, and the card must not grow under the pointer (which would
-          // move the chart away and end the hover in a flicker loop).
-          <div className="mt-1.5 min-h-5" aria-hidden="true" data-stat-readout-slot="true" />
         ) : null}
       </div>
 
