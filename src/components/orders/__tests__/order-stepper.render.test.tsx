@@ -57,9 +57,9 @@ describe.each(PAGE_LOCALES)("OrderStepper (%s)", (locale) => {
     const { container } = view(locale, dates, "shipped");
     expect(states(container)).toEqual(["done", "done", "done", "done", "current"]);
     const items = [...container.querySelectorAll("[data-testid='order-step']")];
-    expect(items[0].textContent).toContain(formatDate(dates[0]!, locale));
-    expect(items[4].textContent).not.toMatch(/\d{4}/);
-    expect(items[4].getAttribute("aria-current")).toBe("step");
+    expect(items[0]?.textContent).toContain(formatDate(dates[0]!, locale));
+    expect(items[4]?.textContent).not.toMatch(/\d{4}/);
+    expect(items[4]?.getAttribute("aria-current")).toBe("step");
     expect(container.querySelectorAll("[aria-current='step']").length).toBe(1);
   });
 
