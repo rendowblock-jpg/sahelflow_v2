@@ -264,7 +264,7 @@ export function OnboardingChecklist({
                     step: checklistLabel(t, item.id),
                   })}
                   onClick={() => onSelectStep(item.step)}
-                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring max-sm:inline-flex max-sm:size-11 max-sm:items-center max-sm:justify-center"
                 >
                   <StepMarker state={state}>
                     {item.done ? (
@@ -289,7 +289,7 @@ export function OnboardingChecklist({
               aria-current={onFinish ? "step" : undefined}
               aria-label={t("onboarding.finishSetup")}
               onClick={onSelectFinish}
-              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring max-sm:inline-flex max-sm:size-11 max-sm:items-center max-sm:justify-center"
             >
               <StepMarker state={onFinish ? "current" : finished ? "done" : "todo"}>
                 <Rocket className="size-4" aria-hidden="true" />

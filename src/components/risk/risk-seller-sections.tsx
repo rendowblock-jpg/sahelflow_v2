@@ -276,7 +276,7 @@ export function WhereYouLoseMoney({
                   ) : (
                     <Link
                       href={`/customers/${encodeURIComponent(customer.customerId)}`}
-                      className="shrink-0 rounded-control border px-2.5 py-1 text-caption font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                      className="shrink-0 rounded-control border px-2.5 py-1 text-caption font-medium max-sm:inline-flex max-sm:min-h-10 max-sm:items-center outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {copy("review")}
                     </Link>

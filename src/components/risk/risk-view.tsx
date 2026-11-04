@@ -117,7 +117,7 @@ export function RiskView({
               <Link
                 key={range.days}
                 href={`/risk?days=${range.days}&tab=${activeTab}`}
-                className={`rounded-control px-3 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`rounded-control px-3 py-1.5 text-xs font-medium max-sm:inline-flex max-sm:min-h-10 max-sm:min-w-10 max-sm:items-center max-sm:justify-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
                   days === range.days ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >

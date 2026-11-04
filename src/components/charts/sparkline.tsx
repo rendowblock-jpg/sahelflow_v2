@@ -170,7 +170,7 @@ export function Sparkline({
       aria-valuenow={activeIndex ?? values.length - 1}
       aria-valuetext={valueText ?? (typeof readout === "string" ? readout : undefined)}
       data-sparkline-interactive="true"
-      className="relative cursor-crosshair touch-none rounded-control outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="relative flex cursor-crosshair touch-none items-center rounded-control outline-none focus-visible:ring-2 focus-visible:ring-ring max-sm:min-h-10"
       style={{ width, height }}
       onPointerMove={(event) => onActiveIndexChange?.(indexFromPointer(event.clientX))}
       onPointerDown={(event) => onActiveIndexChange?.(indexFromPointer(event.clientX))}
@@ -196,6 +196,8 @@ export function Sparkline({
         }
       }}
     >
+      {/* The slider box is the touch target (40 px tall on a phone); the drawing keeps its own height and sits in the middle of it. */}
+      <div className="relative w-full" style={{ height }}>
       {chart}
       {active ? (
         <>
@@ -225,6 +227,7 @@ export function Sparkline({
           ) : null}
         </>
       ) : null}
+      </div>
     </div>
   );
 }

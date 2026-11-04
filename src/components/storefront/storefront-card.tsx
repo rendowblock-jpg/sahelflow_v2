@@ -127,7 +127,7 @@ export function StorefrontCard({
               onClick={onCopyLink}
               aria-label={t("storefront.list.copyLink")}
               title={t("storefront.list.copyLink")}
-              className="ms-auto flex size-7 shrink-0 items-center justify-center rounded-control outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              className="ms-auto flex size-7 max-sm:-my-1.5 max-sm:size-10 shrink-0 items-center justify-center rounded-control outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Copy className="size-3.5" aria-hidden="true" />
             </button>
@@ -189,7 +189,7 @@ export function StorefrontCard({
 
       <div className="flex items-center gap-2 border-t p-3">
         {canMutate ? (
-          <Button asChild size="sm" className="flex-1">
+          <Button asChild size="sm" className="flex-1 max-sm:min-h-10">
             <Link href={studioHref}>
               <PenLine className="size-3.5" aria-hidden="true" />
               {t("storefront.list.openStudio")}
@@ -200,7 +200,7 @@ export function StorefrontCard({
           asChild
           size="sm"
           variant="outline"
-          className={canMutate ? undefined : "flex-1"}
+          className={cn("max-sm:min-h-10", !canMutate && "flex-1")}
         >
           <a href={publicHref} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="size-3.5" aria-hidden="true" />
