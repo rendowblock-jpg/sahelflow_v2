@@ -21,6 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { OrderLifecycleRail } from "@/components/orders/order-lifecycle-rail";
+import { OrderStepper, terminalStepFor } from "@/components/orders/order-stepper";
+import { OrderSummaryStrip } from "@/components/orders/order-summary-strip";
 import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
 import {
   DeliverySlipPrintButton,
@@ -37,18 +39,17 @@ import {
 import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
 import { getI18n } from "@/lib/i18n-server";
 import {
-  ArrowRight,
-  Phone,
-  MapPin,
-  Calendar,
-  MessageSquare,
-  Package,
-  User,
   ArrowLeft,
-  ShieldAlert,
+  ArrowRight,
+  ChevronRight,
   Clock,
   DollarSign,
+  MapPin,
+  Package,
+  Phone,
+  ShieldAlert,
   Sparkles,
+  User,
 } from "lucide-react";
 import { askAiHref } from "@/lib/ai/ask-ai-link";
 import { getOrderTimeline } from "@/lib/data/order-change-service";
@@ -223,6 +224,30 @@ export default async function OrderDetailPage({
     },
   ];
 
+  type RiskFactor = NonNullable<typeof riskAssessment>["factors"][number];
+  const renderRiskFactor = (factor: RiskFactor) => {
+    const presentation = getOrderRiskFactorPresentation(factor);
+    return (
+      <div
+        key={factor.id}
+        className="flex items-start justify-between gap-2 text-sm"
+      >
+        <div className="min-w-0 flex-1">
+          <span className="font-medium">{t(factor.labelKey)}</span>
+          <p className="text-xs text-muted-foreground">
+            {t(presentation.key, presentation.params)}
+          </p>
+        </div>
+        <span
+          className={`font-medium tabular-nums ${factor.points > 0 ? "text-destructive" : "text-success"}`}
+        >
+          {factor.points > 0 ? "+" : ""}
+          {factor.points}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="app-content page-sections">
       <DetailOfflineBanner />
@@ -233,18 +258,29 @@ export default async function OrderDetailPage({
         label={order.orderNumber}
         href={`/orders/${order.id}`}
       />
-      <div className="space-y-4">
-        <Button variant="ghost" size="sm" asChild className="-ms-2">
-          <Link href="/orders">
-            <ArrowLeft className="h-4 w-4 me-1 rtl:rotate-180" />
-            {t("orders.detail.backToOrders")}
-          </Link>
-        </Button>
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight font-mono">
+      {/* HEADER (not a card): breadcrumb, number + status, one action group. */}
+      <header className="space-y-3">
+        <nav aria-label={t("orders.detail.breadcrumbLabel")}>
+          <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <li>
+              <Link
+                href="/orders"
+                className="inline-flex items-center rounded-control hover:text-foreground hover:underline max-sm:min-h-10"
+              >
+                {t("orders.title")}
+              </Link>
+            </li>
+            <li aria-hidden="true">
+              <ChevronRight className="size-4 rtl:rotate-180" />
+            </li>
+          </ol>
+        </nav>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="break-words font-mono text-2xl font-semibold">
                 {order.orderNumber}
               </h1>
               <OrderStatusBadge
@@ -253,15 +289,15 @@ export default async function OrderDetailPage({
                 disabled={canonicalManual || importConfirmationBlocked}
               />
             </div>
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
+            <p className="text-sm text-muted-foreground">
               {formatDate(order.createdAt, locale)}
-              <span className="mx-1">·</span>
-              <MessageSquare className="h-3.5 w-3.5" />
+              {" · "}
               {SOURCE_LABELS[order.source] ?? order.source}
+              {" · "}
+              {t("orders.detail.itemsCount", { count: order.items.length })}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             {canAskAi ? (
               /* R4-e deep link: order NUMBER only in the URL — the assistant
                  resolves the full record through its permission-checked
@@ -280,6 +316,10 @@ export default async function OrderDetailPage({
                 </Link>
               </Button>
             ) : null}
+            <DeliverySlipPrintButton
+              slips={[slipData]}
+              className="whitespace-normal h-auto min-h-10 text-center"
+            />
             {!canonicalManual && (
               <OfflineWriteGate>
                 <OrderDeleteButton orderId={order.id} orderStatus={order.status} />
@@ -287,57 +327,101 @@ export default async function OrderDetailPage({
             )}
           </div>
         </div>
+      </header>
 
-        <Card className={isConfirmationReview ? "border-primary/30" : undefined}>
-          {isConfirmationReview ? (
-            <CardHeader>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <CardTitle className="text-base">
-                    {t("orders.workspace.confirmation.title")}
-                  </CardTitle>
-                  <p className="max-w-2xl text-sm text-muted-foreground">
-                    {t("orders.workspace.confirmation.description")}
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/orders/confirmation-queue">
-                    <ArrowLeft className="me-1.5 size-4 rtl:rotate-180" />
-                    {t("orders.workspace.confirmation.backToQueue")}
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-          ) : null}
-          <CardContent className={isConfirmationReview ? undefined : "pt-6"}>
-            {/* R3-a: one lifecycle rail replaces the former dual action cards
-                (legacy free transitions vs canonical governed commands). */}
-            <OrderLifecycleRail
-              orderId={order.id}
+      {/* SUMMARY STRIP: who, how much, where, what next. The lower part of the same
+          card is the lifecycle: the stepper (the former Tracking card) and the rail. */}
+      <OrderSummaryStrip
+        t={t}
+        locale={locale}
+        status={order.status}
+        totalPrice={order.totalPrice}
+        deliveryCost={deliveryCost}
+        itemCount={order.items.length}
+        customerName={customer?.name ?? null}
+        phone={order.phone ?? customer?.phone ?? null}
+        wilaya={order.wilaya}
+        commune={order.commune}
+        address={order.address}
+        codState={order.codState}
+        deliveryState={order.deliveryState}
+        delivery={
+          delivery
+            ? {
+                provider: delivery.provider,
+                trackingNumber: delivery.trackingNumber,
+                status: delivery.status,
+              }
+            : null
+        }
+        whatsapp={
+          <OfflineWriteGate>
+            <OrderWhatsAppButton
+              phone={order.phone ?? customer?.phone ?? null}
+              customerName={customer?.name ?? null}
               orderNumber={order.orderNumber}
-              status={order.status}
-              version={order.version}
-              mutationAuthority={mutationAuthority}
-              fulfillmentState={order.fulfillmentState}
-              deliveryState={order.deliveryState}
-              inventoryState={order.inventoryState}
-              codState={order.codState}
-              packedAt={order.packedAt ? order.packedAt.toISOString() : null}
-              lastChangeAt={lastChangeAt ? lastChangeAt.toISOString() : null}
+              total={order.totalPrice}
             />
-          </CardContent>
-        </Card>
+          </OfflineWriteGate>
+        }
+      >
+        {isConfirmationReview ? (
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold">
+                {t("orders.workspace.confirmation.title")}
+              </h2>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                {t("orders.workspace.confirmation.description")}
+              </p>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/orders/confirmation-queue">
+                <ArrowLeft className="me-1.5 size-4 rtl:rotate-180" />
+                {t("orders.workspace.confirmation.backToQueue")}
+              </Link>
+            </Button>
+          </div>
+        ) : null}
+        <div id="order-tracking" className="scroll-mt-20">
+          <OrderStepper
+            steps={timeline}
+            terminal={terminalStepFor(order.status, t)}
+            locale={locale}
+            ariaLabel={t("orderLifecycle.stepsLabel")}
+            stateLabels={{
+              done: t("orders.detail.stepper.done"),
+              current: t("orders.detail.stepper.current"),
+              upcoming: t("orders.detail.stepper.upcoming"),
+            }}
+          />
+        </div>
+        {/* R3-a: one lifecycle rail replaces the former dual action cards
+            (legacy free transitions vs canonical governed commands). The
+            stepper above draws the path, so the rail shows only its actions. */}
+        <OrderLifecycleRail
+          orderId={order.id}
+          orderNumber={order.orderNumber}
+          status={order.status}
+          version={order.version}
+          mutationAuthority={mutationAuthority}
+          fulfillmentState={order.fulfillmentState}
+          deliveryState={order.deliveryState}
+          inventoryState={order.inventoryState}
+          codState={order.codState}
+          packedAt={order.packedAt ? order.packedAt.toISOString() : null}
+          lastChangeAt={lastChangeAt ? lastChangeAt.toISOString() : null}
+          showProgress={false}
+          className="space-y-2"
+        />
         {canonicalManual &&
           order.status !== "pending" &&
           order.status !== "cancelled" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {t("orderLifecycle.aux.heading")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <OfflineWriteGate className="m-0 min-w-0 space-y-5 border-0 p-0">
+            <div className="space-y-3 border-t pt-4">
+              <h2 className="text-sm font-semibold">
+                {t("orderLifecycle.aux.heading")}
+              </h2>
+              <OfflineWriteGate className="m-0 min-w-0 space-y-5 border-0 p-0">
                 <CanonicalCourierActions orderId={order.id} />
                 {showCodAuthority ? (
                   <div className="border-t pt-5">
@@ -346,170 +430,290 @@ export default async function OrderDetailPage({
                 ) : null}
                 <CanonicalOrderRecoveryActions orderId={order.id} />
                 <CanonicalCustomerReturnActions orderId={order.id} />
-                </OfflineWriteGate>
-              </CardContent>
-            </Card>
-          )}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <OfflineWriteGate className="m-0 min-w-0 border-0 p-0">
-          <OrderEditPanel
-            // A new version remounts the panel, so what it shows after a save is what is stored.
-            key={`${order.id}:${order.version}`}
-            orderId={order.id}
-            readOnly={canonicalManual && order.status !== "pending"}
-            canonicalVersion={
-              canonicalManual && order.status === "pending"
-                ? order.version
-                : undefined
-            }
-            linesEditable={
-              order.status === "pending" &&
-              isSellerEditableLinesAuthority(order.source, order.sourceMetadata)
-            }
-            initialItems={order.items.map((i) => ({
-              id: i.id,
-              productId: i.productId,
-              productVariantId: i.productVariantId ?? null,
-              productName: i.productName,
-              productVariantName: i.productVariantName ?? null,
-              quantity: i.quantity,
-              unitPrice: i.unitPrice,
-              total: i.total,
-            }))}
-            initialDeliveryCost={deliveryCost}
-            initialWilaya={order.wilaya}
-            initialCommune={order.commune}
-            initialAddress={order.address}
-            initialPhone={order.phone}
-            initialNotes={order.notes}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Package className="h-4 w-4" />
-                  {t("orders.detail.itemsWithCount", { n: order.items.length })}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {order.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between py-3 border-b last:border-0"
-                    >
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-medium">{item.productName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.quantity} × {formatDZD(item.unitPrice, locale)}
-                        </p>
-                        {item.productVariantName && (
-                          <p className="text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1 rounded-control border px-1.5 py-0.5">
-                              {t("products.variant")}: {item.productVariantName}
-                            </span>
-                          </p>
-                        )}
-                      </div>
-                      <p className="text-sm font-medium">
-                        {formatDZD(item.total, locale)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <Separator className="my-4" />
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {t("orders.detail.subtotal")}
-                    </span>
-                    <span>{formatDZD(itemsTotal, locale)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {t("orders.detail.shipping")}
-                    </span>
-                    <span>
-                      {deliveryCost > 0 ? formatDZD(deliveryCost, locale) : "—"}
-                    </span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between text-base font-bold">
-                    <span>{t("orders.total")}</span>
-                    <span>{formatDZD(order.totalPrice, locale)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {!canonicalManual && (
-              <OfflineWriteGate>
-              <CreateShipment
-                orderId={order.id}
-                orderStatus={order.status}
-                delivery={
-                  delivery
-                    ? {
-                        id: delivery.id,
-                        provider: delivery.provider,
-                        trackingNumber: delivery.trackingNumber,
-                        labelUrl: delivery.labelUrl,
-                        cost: delivery.cost,
-                        status: delivery.status,
-                      }
-                    : null
-                }
-              />
               </OfflineWriteGate>
-            )}
+            </div>
+          )}
+      </OrderSummaryStrip>
 
-            {order.notes && (
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-6">
+          <OfflineWriteGate className="m-0 min-w-0 border-0 p-0">
+            <OrderEditPanel
+              // A new version remounts the panel, so what it shows after a save is what is stored.
+              key={`${order.id}:${order.version}`}
+              orderId={order.id}
+              readOnly={canonicalManual && order.status !== "pending"}
+              canonicalVersion={
+                canonicalManual && order.status === "pending"
+                  ? order.version
+                  : undefined
+              }
+              linesEditable={
+                order.status === "pending" &&
+                isSellerEditableLinesAuthority(order.source, order.sourceMetadata)
+              }
+              initialItems={order.items.map((i) => ({
+                id: i.id,
+                productId: i.productId,
+                productVariantId: i.productVariantId ?? null,
+                productName: i.productName,
+                productVariantName: i.productVariantName ?? null,
+                quantity: i.quantity,
+                unitPrice: i.unitPrice,
+                total: i.total,
+              }))}
+              initialDeliveryCost={deliveryCost}
+              initialWilaya={order.wilaya}
+              initialCommune={order.commune}
+              initialAddress={order.address}
+              initialPhone={order.phone}
+              initialNotes={order.notes}
+            >
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">{t("orders.notes")}</CardTitle>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Package className="size-4" />
+                    {t("orders.detail.itemsWithCount", { n: order.items.length })}
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {order.notes}
-                  </p>
+                <CardContent className="space-y-4">
+                  <ul className="divide-y">
+                    {order.items.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex items-start justify-between gap-4 py-3 first:pt-0"
+                      >
+                        <div className="min-w-0 space-y-0.5">
+                          <p className="break-words text-sm font-medium">
+                            {item.productName}
+                          </p>
+                          {item.productVariantName && (
+                            <p className="text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1 rounded-control border px-1.5 py-0.5">
+                                {t("products.variant")}: {item.productVariantName}
+                              </span>
+                            </p>
+                          )}
+                          <p className="text-xs tabular-nums text-muted-foreground">
+                            {item.quantity} × {formatDZD(item.unitPrice, locale)}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-sm font-medium tabular-nums">
+                          {formatDZD(item.total, locale)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="ms-auto w-full max-w-xs space-y-2 border-t pt-4">
+                    <div className="flex justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">
+                        {t("orders.detail.subtotal")}
+                      </span>
+                      <span className="tabular-nums">
+                        {formatDZD(itemsTotal, locale)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">
+                        {t("orders.detail.shipping")}
+                      </span>
+                      <span className="tabular-nums">
+                        {deliveryCost > 0 ? formatDZD(deliveryCost, locale) : "—"}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-baseline justify-between gap-4 text-lg font-semibold">
+                      <span>{t("orders.total")}</span>
+                      <span className="tabular-nums">
+                        {formatDZD(order.totalPrice, locale)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {order.notes ? (
+                    <div className="space-y-1 border-t pt-4">
+                      <h3 className="text-sm font-medium">{t("orders.notes")}</h3>
+                      <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                        {order.notes}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {!canonicalManual &&
+                    ["delivered", "returned", "refused"].includes(order.status) && (
+                      <div className="space-y-3 border-t pt-4">
+                        <h3 className="flex items-center gap-2 text-sm font-medium">
+                          <DollarSign className="size-4" />
+                          {t("orders.refund.title")}
+                        </h3>
+                        {refunds.length > 0 && (
+                          <div className="space-y-1.5">
+                            {refunds.map((r) => (
+                              <div
+                                key={r.id}
+                                className="flex items-center justify-between gap-3 rounded-surface border p-2.5 text-sm"
+                              >
+                                <div className="min-w-0">
+                                  <span className="font-medium">
+                                    {formatDZD(r.amount, locale)}
+                                  </span>
+                                  <span className="ms-2 text-muted-foreground">
+                                    · {r.method}
+                                  </span>
+                                  {r.reason && (
+                                    <span className="ms-2 text-muted-foreground">
+                                      · {r.reason}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                  {formatDate(r.createdAt, locale)}
+                                </span>
+                              </div>
+                            ))}
+                            <div className="flex justify-between border-t pt-2 text-sm">
+                              <span className="font-medium">
+                                {t("orders.refund.total")}
+                              </span>
+                              <span className="font-bold text-destructive">
+                                {formatDZD(totalRefunded, locale)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        {totalRefunded < order.totalPrice && (
+                          <OfflineWriteGate>
+                            <RefundDialog
+                              orderId={order.id}
+                              orderNumber={order.orderNumber}
+                              maxAmount={order.totalPrice}
+                              alreadyRefunded={totalRefunded}
+                            />
+                          </OfflineWriteGate>
+                        )}
+                      </div>
+                    )}
                 </CardContent>
               </Card>
-            )}
-          </OrderEditPanel>
+
+              {!canonicalManual && (
+                <OfflineWriteGate>
+                  <CreateShipment
+                    orderId={order.id}
+                    orderStatus={order.status}
+                    delivery={
+                      delivery
+                        ? {
+                            id: delivery.id,
+                            provider: delivery.provider,
+                            trackingNumber: delivery.trackingNumber,
+                            labelUrl: delivery.labelUrl,
+                            cost: delivery.cost,
+                            status: delivery.status,
+                          }
+                        : null
+                    }
+                  />
+                </OfflineWriteGate>
+              )}
+            </OrderEditPanel>
           </OfflineWriteGate>
         </div>
 
-        <div className="space-y-6">
+        <aside className="min-w-0 space-y-6 lg:sticky lg:top-4 lg:-m-1 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-y-auto lg:p-1">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <User className="size-4" />
+                {t("orders.detail.customerAddress")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {customer ? (
+                <div className="space-y-1">
+                  <p className="break-words text-sm font-medium">
+                    <bdi dir="auto">{customer.name}</bdi>
+                  </p>
+                  {customer.orderCount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {customer.orderCount > 1
+                        ? t("orders.detail.ordersCountPlural", {
+                            n: customer.orderCount,
+                          })
+                        : t("orders.detail.ordersCountSingular", {
+                            n: customer.orderCount,
+                          })}
+                      {" · "}
+                      {formatDZD(customer.totalSpent, locale)}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t("orders.detail.customerNotFound")}
+                </p>
+              )}
+              <div className="space-y-2 text-sm">
+                {(order.phone ?? customer?.phone) ? (
+                  <div className="flex items-center gap-2">
+                    <Phone className="size-3.5 shrink-0 text-muted-foreground" />
+                    <a
+                      href={`tel:${order.phone ?? customer?.phone}`}
+                      dir="ltr"
+                      className="tabular-nums hover:underline"
+                    >
+                      {order.phone ?? customer?.phone}
+                    </a>
+                  </div>
+                ) : null}
+                <div className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    {order.address ? (
+                      <p className="break-words">{order.address}</p>
+                    ) : null}
+                    <p className="text-muted-foreground">
+                      {order.commune}, {displayWilaya(order.wilaya, locale)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {customer ? (
+                <Button variant="outline" size="sm" className="w-full" asChild>
+                  <Link href={`/customers/${customer.id}`}>
+                    {t("orders.detail.viewCustomer")}
+                    <ArrowRight className="ms-1 size-3.5 rtl:rotate-180" />
+                  </Link>
+                </Button>
+              ) : null}
+            </CardContent>
+          </Card>
+
           {riskAssessment && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <ShieldAlert className="h-4 w-4" />
+                  <ShieldAlert className="size-4" />
                   {t("risk.assessment.title")}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold tabular-nums">
-                        {riskAssessment.score}
-                      </span>
-                      <span className="text-sm text-muted-foreground">/ 100</span>
-                    </div>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-semibold tabular-nums">
+                      {riskAssessment.score}
+                    </span>
+                    <span className="text-sm text-muted-foreground">/ 100</span>
                     <RiskLevelBadgeServer
                       level={riskAssessment.level}
                       label={t(`risk.level.${riskAssessment.level}`)}
                     />
                   </div>
-                  <div className="text-end space-y-1">
-                    <p className="text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
                       {t("risk.assessment.action")}
-                    </p>
+                    </span>
                     <RiskActionBadgeServer
                       action={riskAssessment.action}
                       label={t(riskActionCopyKey(riskAssessment.action))}
@@ -520,7 +724,7 @@ export default async function OrderDetailPage({
                 <Separator />
 
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {t("risk.assessment.factors")}
                   </p>
                   {riskAssessment.factors.length === 0 ? (
@@ -528,30 +732,21 @@ export default async function OrderDetailPage({
                       {t("risk.assessment.noFactors")}
                     </p>
                   ) : (
-                    riskAssessment.factors.map((factor) => {
-                      const presentation = getOrderRiskFactorPresentation(factor);
-                      return (
-                        <div
-                          key={factor.id}
-                          className="flex items-start justify-between gap-2 text-sm"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium">
-                              {t(factor.labelKey)}
-                            </span>
-                            <p className="text-xs text-muted-foreground">
-                              {t(presentation.key, presentation.params)}
-                            </p>
+                    <>
+                      {riskAssessment.factors.slice(0, 3).map(renderRiskFactor)}
+                      {riskAssessment.factors.length > 3 ? (
+                        <details>
+                          <summary className="flex min-h-10 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
+                            {t("orders.detail.risk.moreFactors", {
+                              count: riskAssessment.factors.length - 3,
+                            })}
+                          </summary>
+                          <div className="mt-2 space-y-2">
+                            {riskAssessment.factors.slice(3).map(renderRiskFactor)}
                           </div>
-                          <span
-                            className={`tabular-nums font-medium ${factor.points > 0 ? "text-destructive" : "text-success"}`}
-                          >
-                            {factor.points > 0 ? "+" : ""}
-                            {factor.points}
-                          </span>
-                        </div>
-                      );
-                    })
+                        </details>
+                      ) : null}
+                    </>
                   )}
                 </div>
 
@@ -573,9 +768,9 @@ export default async function OrderDetailPage({
 
                 <Link
                   href="/risk"
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline max-sm:min-h-10"
                 >
-                  <ShieldAlert className="h-3 w-3" />
+                  <ShieldAlert className="size-3" />
                   {t("risk.title")}
                 </Link>
               </CardContent>
@@ -585,221 +780,32 @@ export default async function OrderDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <User className="h-4 w-4" />
-                {t("orders.customer")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {customer ? (
-                <>
-                  <div>
-                    <p className="text-sm font-medium">{customer.name}</p>
-                    {customer.orderCount > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {customer.orderCount > 1
-                          ? t("orders.detail.ordersCountPlural", {
-                              n: customer.orderCount,
-                            })
-                          : t("orders.detail.ordersCountSingular", {
-                              n: customer.orderCount,
-                            })}
-                        {" · "}
-                        {formatDZD(customer.totalSpent, locale)}
-                      </p>
-                    )}
-                  </div>
-                  <Separator />
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                      <a
-                        href={`tel:${customer.phone}`}
-                        className="hover:underline"
-                      >
-                        {customer.phone}
-                      </a>
-                    </div>
-                    {customer.wilaya && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>
-                          {customer.commune ?? ""}, {displayWilaya(customer.wilaya, locale)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    asChild
-                  >
-                    <Link href={`/customers/${customer.id}`}>
-                      {t("orders.detail.viewCustomer")}
-                      <ArrowRight className="h-3.5 w-3.5 ms-1 rtl:rotate-180" />
-                    </Link>
-                  </Button>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t("orders.detail.customerNotFound")}
-                </p>
-              )}
-              <div className="grid grid-cols-2 gap-2">
-                <OfflineWriteGate>
-                <OrderWhatsAppButton
-                  phone={order.phone ?? customer?.phone ?? null}
-                  customerName={customer?.name ?? null}
-                  orderNumber={order.orderNumber}
-                  total={order.totalPrice}
-                  className="w-full"
-                />
-                </OfflineWriteGate>
-                <DeliverySlipPrintButton slips={[slipData]} className="w-full" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MapPin className="h-4 w-4" />
-                {t("orders.address")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              <p className="font-medium">{order.phone}</p>
-              <p className="text-muted-foreground">{order.address}</p>
-              <p className="text-muted-foreground">
-                {order.commune}, {displayWilaya(order.wilaya, locale)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-          <Card id="order-tracking">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {t("orders.detail.tracking")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {timeline.map((step, i) => (
-                  <div key={step.label} className="flex items-start gap-3">
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`h-2.5 w-2.5 rounded-full ${
-                          step.done ? "bg-primary" : "bg-muted-foreground/30"
-                        }`}
-                      />
-                      {i < timeline.length - 1 && (
-                        <div
-                          className={`w-0.5 h-8 ${
-                            step.done ? "bg-primary" : "bg-muted-foreground/20"
-                          }`}
-                        />
-                      )}
-                    </div>
-                    <div className="pt-0">
-                      <p
-                        className={`text-sm font-medium ${step.done ? "" : "text-muted-foreground"}`}
-                      >
-                        {step.label}
-                      </p>
-                      {step.date && (
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(step.date, locale)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Clock className="h-4 w-4" />
+                <Clock className="size-4" />
                 {t("orders.detail.activity")}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <OrderTimeline
-                entries={timelineEntries.map((e) => ({
-                  id: e.id,
-                  actionType: e.actionType,
-                  actor: e.actor ?? "system",
-                  payload: e.payload,
-                  status: e.status,
-                  createdAt: e.createdAt.toISOString(),
-                }))}
-              />
+              {/* The one timeline of the page: it scrolls inside a bounded, focusable region. */}
+              <div
+                role="region"
+                aria-label={t("orders.detail.activity")}
+                tabIndex={0}
+                className="max-h-72 overflow-y-auto rounded-control pe-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <OrderTimeline
+                  entries={timelineEntries.map((e) => ({
+                    id: e.id,
+                    actionType: e.actionType,
+                    actor: e.actor ?? "system",
+                    payload: e.payload,
+                    status: e.status,
+                    createdAt: e.createdAt.toISOString(),
+                  }))}
+                />
+              </div>
             </CardContent>
           </Card>
-
-          {!canonicalManual &&
-            ["delivered", "returned", "refused"].includes(order.status) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <DollarSign className="h-4 w-4" />
-                    {t("orders.refund.title")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {refunds.length > 0 && (
-                    <div className="space-y-1.5">
-                      {refunds.map((r) => (
-                        <div
-                          key={r.id}
-                          className="flex items-center justify-between rounded-surface border p-2.5 text-sm"
-                        >
-                          <div>
-                            <span className="font-medium">
-                              {formatDZD(r.amount, locale)}
-                            </span>
-                            <span className="text-muted-foreground ms-2">
-                              · {r.method}
-                            </span>
-                            {r.reason && (
-                              <span className="text-muted-foreground ms-2">
-                                · {r.reason}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(r.createdAt, locale)}
-                          </span>
-                        </div>
-                      ))}
-                      <div className="flex justify-between border-t pt-2 text-sm">
-                        <span className="font-medium">
-                          {t("orders.refund.total")}
-                        </span>
-                        <span className="font-bold text-destructive">
-                          {formatDZD(totalRefunded, locale)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  {totalRefunded < order.totalPrice && (
-                    <OfflineWriteGate>
-                    <RefundDialog
-                      orderId={order.id}
-                      orderNumber={order.orderNumber}
-                      maxAmount={order.totalPrice}
-                      alreadyRefunded={totalRefunded}
-                    />
-                    </OfflineWriteGate>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+        </aside>
       </div>
     </div>
   );
