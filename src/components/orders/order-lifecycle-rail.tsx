@@ -223,6 +223,11 @@ export interface OrderLifecycleRailProps {
   packedAt?: string | null;
   /** Last change across the timeline (ISO), for the compact "Updated" line. */
   lastChangeAt?: string | null;
+  /**
+   * Presentation only. The order page draws the path as its own stepper above the rail, so it passes false to hide the
+   * rail's second row of steps (and the terminal chip); the actions, the commands and the sub-state line are untouched.
+   */
+  showProgress?: boolean;
   className?: string;
 }
 
@@ -238,6 +243,7 @@ export function OrderLifecycleRail({
   codState,
   packedAt = null,
   lastChangeAt = null,
+  showProgress = true,
   className,
 }: OrderLifecycleRailProps) {
   const router = useRouter();
@@ -428,7 +434,7 @@ export function OrderLifecycleRail({
       </div>
 
       {/* The rail — terminal statuses render as a badge, not steps */}
-      {railPosition ? (
+      {!showProgress ? null : railPosition ? (
         <ol
           className="flex items-start gap-1"
           aria-label={t("orderLifecycle.stepsLabel")}
