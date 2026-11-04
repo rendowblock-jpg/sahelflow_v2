@@ -263,7 +263,7 @@ export function StatCard({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="relative z-10 inline-flex size-6 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="relative z-10 inline-flex size-6 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring max-sm:-m-2 max-sm:size-10"
                     aria-label={tooltip}
                   >
                     <Info className="size-3.5" aria-hidden="true" />

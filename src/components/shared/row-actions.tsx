@@ -37,6 +37,7 @@ export function RowActions({
         <Button
           variant="ghost"
           size="icon-sm"
+          className="max-sm:size-10"
           onClick={onEdit}
           disabled={disabled}
           title={editLabel}
@@ -53,7 +54,7 @@ export function RowActions({
           disabled={disabled}
           title={deleteLabel}
           aria-label={deleteLabel}
-          className="text-destructive hover:text-destructive"
+          className="text-destructive hover:text-destructive max-sm:size-10"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
