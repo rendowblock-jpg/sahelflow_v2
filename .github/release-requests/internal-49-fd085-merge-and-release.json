@@ -9,11 +9,11 @@
   "ownedHostSuffix": "sahelflow.com",
   "authorityDecision": "FD-085",
   "licenseServiceUrl": "https://license.sahelflow.com|https://activate.sahelflow.com",
-  "reason": "ADOPTED release authority — FD-085 (documentation/product/DECISIONS.md). One signed successor, app 1.0.0-internal.49 / MSI 1.0.0.49, mode customer-online, owned host sahelflow.com, built from the exact protected main tip after the Founder's directive of 2026-11-04 to complete the remaining work and make the release. The product tree is pull request #688: main (Internal.48) plus thirteen reviewed pull requests (#675 to #687) as merge commits plus two small commits (an Arabic wording fix, and two defects the page sweep of this build found: a raw key under the Studio's Legal icon and an unnamed Variant select); the second parent of every merge was checked against the pull request head before the push. This release pull request is that head plus one merge of it and this authority commit (the first version of this request certified an earlier head, 6fec7a01, which the sweep fixes superseded); its certification block names the CI, Phase 5 and Phase 6-7 runs of #688 on the head ce46e29a, and it merges only after those three runs and its own Required battery are green. #663 and #665 are not included. Not proven by this request: that the Founder has seen any of it on his device.",
+  "reason": "ADOPTED release authority — FD-085 (documentation/product/DECISIONS.md). One signed successor, app 1.0.0-internal.49 / MSI 1.0.0.49, mode customer-online, owned host sahelflow.com, built from the exact protected main tip after the Founder's directive of 2026-11-04 to complete the remaining work and make the release. The product tree is pull request #688: main (Internal.48) plus thirteen reviewed pull requests (#675 to #687) as merge commits plus three small commits (an Arabic wording fix; two defects the page sweep of this build found, a raw key under the Studio's Legal icon and an unnamed Variant select; and test-only fixes for four failures the first full CI run on the merged tree exposed: three type errors in the one-PIN tests, a notification clean-up order in an inbound test, and an AI quota test that depended on the calendar date); the second parent of every merge was checked against the pull request head before the push. This release pull request is that head plus one merge of it and this authority commit (the first version of this request certified an earlier head, 6fec7a01, which later fixes superseded); its certification block names the CI, Phase 5 and Phase 6-7 runs of #688 on the head b5c04c78, and it merges only after those three runs and its own Required battery are green. #663 and #665 are not included. Not proven by this request: that the Founder has seen any of it on his device.",
   "certification": {
-    "productSha": "ce46e29a813343ce9b86536e5cf5f9f6de4695f9",
-    "phase5RunId": 41758783247,
-    "phase67RunId": 41758783193,
-    "ciRunId": 41758783869
+    "productSha": "b5c04c78630a120e16bd5affcf18e9511e76a6fc",
+    "phase5RunId": 41761300868,
+    "phase67RunId": 41761300814,
+    "ciRunId": 41761300874
   }
 }
