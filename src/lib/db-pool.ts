@@ -17,6 +17,12 @@
  * an ordinary asynchronous wait that blocks no thread. The price is that a running transaction holds
  * the connection, so other queries queue behind it: keep transactions short.
  *
+ * NO POOL TIMEOUT ON SQLITE. Prisma's `pool_timeout` has no effect on SQLite (measured, Prisma 6.19: with
+ * `pool_timeout=1` and with the default, plain reads waited up to 11.9 s for a busy connection and none
+ * failed). A plain query therefore waits for the connection without a limit of its own; a transaction
+ * waiting for its turn is limited by `maxWait`, and any query waiting inside its own transaction is
+ * limited by that transaction's `timeout`, after which the engine rolls the transaction back.
+ *
  * TWO SETTINGS GO TOGETHER. `connection_limit=1` alone is not enough: Prisma gives an interactive
  * transaction only `maxWait` (default 2 s) to obtain the connection, and with a queue of transactions
  * the later ones then fail with P2028 "Unable to start a transaction in the given time" (measured:
@@ -24,13 +30,11 @@
  */
 import type { Prisma } from "@prisma/client";
 
-/** How long a plain query or a starting transaction may wait for the one connection. */
-export const SHOP_POOL_TIMEOUT_SECONDS = 60;
 /** Prisma `transactionOptions.maxWait` (ms): how long a transaction may wait for its turn. */
 export const SHOP_TRANSACTION_MAX_WAIT_MS = 30_000;
 
 /**
- * Add `connection_limit=1` and `pool_timeout` to a `file:` SQLite URL. A parameter that is already
+ * Add `connection_limit=1` to a `file:` SQLite URL. A parameter that is already
  * in the URL is kept as written, so an operator or a test can still override it. Anything that is
  * not a `file:` URL is returned unchanged.
  */
@@ -42,9 +46,6 @@ export function withSingleConnectionPool(databaseUrl: string): string {
     queryStart === -1 ? "" : databaseUrl.slice(queryStart + 1),
   );
   if (!params.has("connection_limit")) params.set("connection_limit", "1");
-  if (!params.has("pool_timeout")) {
-    params.set("pool_timeout", String(SHOP_POOL_TIMEOUT_SECONDS));
-  }
   return `${base}?${params.toString()}`;
 }
 

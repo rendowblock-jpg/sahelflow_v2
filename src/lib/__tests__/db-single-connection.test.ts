@@ -6,7 +6,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { dbRaw } from "@/lib/db";
 import {
-  SHOP_POOL_TIMEOUT_SECONDS,
   SHOP_TRANSACTION_MAX_WAIT_MS,
   shopPrismaClientOptions,
   withSingleConnectionPool,
@@ -23,9 +22,9 @@ const TABLE = "S42PoolProbe";
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe("withSingleConnectionPool", () => {
-  it("adds connection_limit=1 and a pool timeout to a plain file URL", () => {
+  it("adds connection_limit=1 to a plain file URL", () => {
     expect(withSingleConnectionPool("file:/data/shops/a.db")).toBe(
-      `file:/data/shops/a.db?connection_limit=1&pool_timeout=${SHOP_POOL_TIMEOUT_SECONDS}`,
+      "file:/data/shops/a.db?connection_limit=1",
     );
   });
 
@@ -40,7 +39,7 @@ describe("withSingleConnectionPool", () => {
     const params = new URL(url.replace("file:", "file://")).searchParams;
     expect(params.get("connection_limit")).toBe("3");
     expect(params.get("socket_timeout")).toBe("9");
-    expect(params.get("pool_timeout")).toBe(String(SHOP_POOL_TIMEOUT_SECONDS));
+    expect(params.get("pool_timeout")).toBeNull();
   });
 
   it("leaves a URL that is not a file: URL alone", () => {
