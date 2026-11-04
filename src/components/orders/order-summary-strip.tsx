@@ -96,7 +96,7 @@ export function OrderSummaryStrip({
       >
         <div data-testid="order-summary-total" className={cell}>
           <CellLabel>{t("orders.detail.summary.total")}</CellLabel>
-          <p className="mt-1 break-words text-2xl font-semibold leading-tight tabular-nums">
+          <p className="mt-1 break-words text-2xl font-semibold leading-tight tabular-nums max-sm:text-xl">
             {formatDZD(totalPrice, locale)}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
