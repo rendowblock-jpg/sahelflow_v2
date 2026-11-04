@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
-const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+// Windows checks sources out with CRLF line endings; the assertions below spell multi-line source with \n.
+const read = (path: string) => readFileSync(resolve(root, path), "utf8").replace(/\r\n/g, "\n");
 
 describe("Inbox Class-AAA operations desk contract", () => {
   it("routes Inbox through the live V3 workspace with bounded recovery", () => {
