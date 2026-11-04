@@ -295,15 +295,18 @@ export function OrderEditPanel({
 
   if (!isEditing) {
     return (
-      <>
-        <div className="flex justify-end">
+      // The Edit button sits in the header row of the first card (the items card): a Card has py-6 and a 24 px title row, so the
+      // row's centre is 36 px from the top; a 32 px button (40 px on a phone) is centred with top-5 (max-sm:top-4). Before, it floated
+      // alone above the card (seen on the redesigned order page, 4 Nov 2026).
+      <div className="relative" data-testid="order-edit-toolbar-host">
+        <div className="absolute end-6 top-5 z-10 max-sm:top-4">
           <Button variant="outline" size="sm" onClick={startEdit}>
             <Pencil className="h-3.5 w-3.5" />
             {t("orders.detail.edit")}
           </Button>
         </div>
         {children}
-      </>
+      </div>
     );
   }
 

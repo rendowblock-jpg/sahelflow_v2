@@ -111,7 +111,11 @@ export function OrderSummaryStrip({
         <div data-testid="order-summary-customer" className={cell}>
           <CellLabel>{t("orders.detail.summary.customer")}</CellLabel>
           {customerName ? (
-            <p className="mt-1 break-words text-base font-semibold leading-snug">
+            <p
+              className="mt-1 line-clamp-2 break-words text-base font-semibold leading-snug"
+              title={customerName}
+              data-testid="order-summary-customer-name"
+            >
               <bdi dir="auto">{customerName}</bdi>
             </p>
           ) : (
