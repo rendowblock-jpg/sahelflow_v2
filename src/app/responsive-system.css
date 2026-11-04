@@ -57,10 +57,10 @@
  *    a link inside a <p> (or marked data-inline-link) stays inline.
  *  - Checkbox and Switch are not in the list: they keep their drawn size and get the 40 px box from a transparent
  *    border (see ui/checkbox.tsx and ui/switch.tsx).
- *  - Under 40rem only: nothing changes from the sm breakpoint up.
+ *  - Under 40rem (the Tailwind sm: border, written in rem as the responsive contract requires) only: nothing changes from the sm breakpoint up.
  */
 @layer components {
-  @media (max-width: 639.98px) {
+  @media (width < 40rem) {
     [data-sahelflow-shell="desktop"] [data-shell-region="workspace"] :where(
       button:not([role="checkbox"], [role="switch"]),
       select,

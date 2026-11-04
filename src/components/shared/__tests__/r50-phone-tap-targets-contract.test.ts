@@ -67,3 +67,11 @@ describe("R50 shared card list row", () => {
     expect(src).toMatch(/data-slot="subtitle"[\s\S]{0,400}\[&_a\]:relative[\s\S]{0,40}\[&_a\]:z-10/);
   });
 });
+
+describe("R50 Button keeps a phone floor that its size variants cannot lower", () => {
+  it("every size, including the 36 px default and the min-h-(--sf-touch-target) ones, is 40 px on a phone", () => {
+    const src = read("components/ui/button.tsx");
+    // the component layer rule in responsive-system.css loses to a utility that states min-height, so Button states it too
+    expect(src).toMatch(/"sf-button inline-flex[^"]*max-sm:min-h-10[^"]*max-sm:min-w-10/);
+  });
+});
