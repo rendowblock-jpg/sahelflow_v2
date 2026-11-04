@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, Loader2, ShieldCheck, Truck } from "lucide-react";
 
+import { UserText } from "@/components/i18n/user-text";
 import { StorefrontLanguageSwitcher } from "@/components/storefront/storefront-language-switcher";
 import {
   StorefrontLocaleProvider,
@@ -257,7 +258,7 @@ function LandingPageBody({
       ) : null}
 
       <section className="mt-6">
-        <h1 className="text-2xl font-semibold">{page.product.name}</h1>
+        <h1 className="text-2xl font-semibold"><UserText text={page.product.name} /></h1>
         <p className="mt-1 text-xl font-semibold text-primary">{formatDZD(unitPrice, locale)}</p>
         {available ? null : (
           <p className="mt-1 text-sm font-medium text-destructive">

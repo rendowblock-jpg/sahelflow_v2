@@ -2,6 +2,7 @@
 
 import { ArrowRight, Package } from "lucide-react";
 
+import { UserText } from "@/components/i18n/user-text";
 import { useStorefrontI18n } from "@/components/storefront/storefront-locale-provider";
 import {
   Container,
@@ -68,14 +69,14 @@ export function StorefrontHero({
             style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
           >
             <p dir="auto" className="text-xs font-semibold uppercase tracking-[0.16em] opacity-85">
-              {eyebrow}
+              <UserText text={eyebrow} />
             </p>
             <Heading
               dir="auto"
               className="mx-auto mt-4 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight @min-[40rem]:text-5xl @5xl:text-6xl"
               style={{ color: "inherit" }}
             >
-              {headline}
+              <UserText text={headline} />
             </Heading>
             {body ? (
               <p dir="auto" className="mx-auto mt-5 max-w-xl text-base leading-7 opacity-85 @min-[40rem]:text-lg">
@@ -108,13 +109,13 @@ export function StorefrontHero({
             className="text-xs font-semibold uppercase tracking-[0.16em]"
             style={{ color: "var(--sf-brand-text)" }}
           >
-            {eyebrow}
+            <UserText text={eyebrow} />
           </p>
           <Heading
             dir="auto"
             className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight @min-[40rem]:text-5xl @5xl:text-6xl"
           >
-            {headline}
+            <UserText text={headline} />
           </Heading>
           {body ? (
             <p dir="auto" className="mt-5 max-w-xl text-base leading-7 text-muted-foreground @min-[40rem]:text-lg">

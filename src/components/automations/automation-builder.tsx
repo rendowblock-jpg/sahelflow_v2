@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { SellerConditionBuilder, type SellerConditionGroupDraft } from "@/components/automations/seller-condition-builder";
+import { UserText } from "@/components/i18n/user-text";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -242,7 +243,7 @@ export function AutomationBuilder({
         <h1 className="sr-only">
           {automation ? (
             <>
-              {c("workspace.edit")}: <bdi>{automation.name}</bdi>
+              {c("workspace.edit")}: <bdi><UserText text={automation.name} /></bdi>
             </>
           ) : (
             c("flow.newTitle")
