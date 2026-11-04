@@ -214,7 +214,7 @@ function DataCard<TData>({
               key={cell.id}
               data-slot="title"
               title={plainText(cell)}
-              className="min-w-0 truncate text-sm font-medium [&>*]:truncate [&_a]:after:absolute [&_a]:after:inset-0"
+              className="min-w-0 truncate text-sm font-medium [&>*]:truncate [&_a]:block [&_a]:min-h-10 [&_a]:leading-10 [&_a]:after:absolute [&_a]:after:inset-0"
             >
               {renderCell(cell)}
             </div>
@@ -224,7 +224,7 @@ function DataCard<TData>({
               key={cell.id}
               data-slot="subtitle"
               title={plainText(cell)}
-              className="min-w-0 truncate text-xs text-muted-foreground [&>*]:truncate"
+              className="min-w-0 truncate text-xs text-muted-foreground [&>*]:truncate [&_a]:relative [&_a]:z-10 [&_a]:block [&_a]:min-h-10 [&_a]:leading-10"
             >
               {renderCell(cell)}
             </div>
