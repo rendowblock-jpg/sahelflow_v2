@@ -10,7 +10,8 @@ import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
 import { buildWhatsAppLink } from "@/lib/whatsapp/deep-link";
 
 const root = process.cwd();
-const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+// Normalise line endings: a Windows checkout (core.autocrlf) reads sources with CRLF, and several assertions below match multi-line source text.
+const read = (path: string) => readFileSync(resolve(root, path), "utf8").replace(/\r\n/g, "\n");
 
 describe("R3-b delivery-slip printing contract", () => {
   it("renders slips through a print-only portal driven by the sf-printing body class", () => {
