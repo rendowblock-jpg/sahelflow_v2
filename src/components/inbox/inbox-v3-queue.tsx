@@ -791,6 +791,27 @@ export function InboxV3Queue({
 
   // The list request returns no total, so the footer only says what is loaded.
   const footer = deriveListFooter({ loaded: chats.length, total: null });
+
+  // Tabs: roving tabindex + arrow keys that follow the reading direction.
+  const tabSelected = PRIMARY_QUEUES.includes(queueFilter);
+  const handleTabKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const rtl = locale === "ar";
+      const last = PRIMARY_QUEUES.length - 1;
+      const at = PRIMARY_QUEUES.indexOf(queueFilter);
+      let next = -1;
+      if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = last;
+      else if (event.key === (rtl ? "ArrowLeft" : "ArrowRight")) next = at >= last ? 0 : at + 1;
+      else if (event.key === (rtl ? "ArrowRight" : "ArrowLeft")) next = at <= 0 ? last : at - 1;
+      if (next < 0) return;
+      event.preventDefault();
+      const target = PRIMARY_QUEUES[next]!;
+      onQueueFilterChange(target);
+      document.getElementById(`inbox-queue-tab-${target}`)?.focus();
+    },
+    [locale, queueFilter, onQueueFilterChange],
+  );
   const footerText =
     footer.kind === "of-total"
       ? t("inbox.list.footer.loadedOf", { count: footer.loaded, total: footer.total })
@@ -825,7 +846,7 @@ export function InboxV3Queue({
               onChange={(event) => setQuery(event.target.value)}
               aria-label={copy("searchConversations")}
               placeholder={copy("searchConversations")}
-              className="h-9 rounded-surface bg-muted/20 ps-8 pe-8 text-[13px]"
+              className="h-9 max-sm:h-10 rounded-surface bg-muted/20 ps-8 pe-8 text-[13px]"
             />
             {searchState.query === normalizedQuery && searchState.loading ? (
               <Loader2
@@ -835,6 +856,12 @@ export function InboxV3Queue({
             ) : null}
           </div>
 
+          <div
+            role="group"
+            aria-label={copy("queueTools")}
+            data-inbox-queue-tools=""
+            className="flex shrink-0 items-center gap-1"
+          >
           <button
             type="button"
             aria-pressed={queueFilter === "unassigned"}
@@ -842,7 +869,7 @@ export function InboxV3Queue({
             title={`${queueLabel("unassigned", copy)} · ${queueCounts.unassigned}`}
             onClick={() => onQueueFilterChange("unassigned")}
             className={cn(
-              "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex size-8 max-sm:size-10 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
               queueFilter === "unassigned"
                 ? "border-primary/25 bg-primary-soft text-primary-ink"
                 : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -864,7 +891,7 @@ export function InboxV3Queue({
                   workflowFilter !== "all"
                 }
                 className={cn(
-                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  "inline-flex size-8 max-sm:size-10 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   priorityFilter !== "" ||
                   labelFilter !== "" ||
                   workflowFilter !== "all"
@@ -892,7 +919,7 @@ export function InboxV3Queue({
                     aria-pressed={workflowFilter === filter}
                     onClick={() => onWorkflowFilterChange(filter)}
                     className={cn(
-                      "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      "inline-flex h-7 max-sm:h-10 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       workflowFilter === filter
                         ? "border-primary/25 bg-primary-soft text-primary-ink"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -913,7 +940,7 @@ export function InboxV3Queue({
                     aria-pressed={priorityFilter === value}
                     onClick={() => setPriorityFilter(value)}
                     className={cn(
-                      "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      "inline-flex h-7 max-sm:h-10 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       priorityFilter === value
                         ? "border-primary/25 bg-primary-soft text-primary-ink"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -936,7 +963,7 @@ export function InboxV3Queue({
                       aria-pressed={labelFilter === ""}
                       onClick={() => setLabelFilter("")}
                       className={cn(
-                        "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                        "inline-flex h-7 max-sm:h-10 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                         labelFilter === ""
                           ? "border-primary/25 bg-primary-soft text-primary-ink"
                           : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -955,7 +982,7 @@ export function InboxV3Queue({
                           )
                         }
                         className={cn(
-                          "inline-flex h-7 max-w-36 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                          "inline-flex h-7 max-sm:h-10 max-w-36 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                           labelFilter === label
                             ? "border-primary/25 bg-primary-soft text-primary-ink"
                             : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -979,11 +1006,12 @@ export function InboxV3Queue({
               onClick={() => {
                 setSelectMode(true);
               }}
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex size-8 max-sm:size-10 shrink-0 items-center justify-center rounded-full border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             >
               <ListChecks className="size-3.5" aria-hidden="true" />
             </button>
           ) : null}
+          </div>
         </div>
 
         {/* Selection mode morphs the queue-pills row in place — same height,
@@ -1097,8 +1125,9 @@ export function InboxV3Queue({
         <div className="mt-2 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div
             className="flex w-max min-w-full gap-1 rounded-full bg-muted/25 p-0.5"
-            role="group"
+            role="tablist"
             aria-label={copy("workQueue")}
+            onKeyDown={handleTabKeyDown}
           >
             {PRIMARY_QUEUES.map((filter) => {
               const selected = queueFilter === filter;
@@ -1106,11 +1135,16 @@ export function InboxV3Queue({
                 <button
                   key={filter}
                   type="button"
-                  aria-pressed={selected}
+                  role="tab"
+                  id={`inbox-queue-tab-${filter}`}
+                  aria-selected={selected}
+                  aria-controls="inbox-queue-panel"
+                  tabIndex={selected || (!tabSelected && filter === PRIMARY_QUEUES[0]) ? 0 : -1}
+                  data-inbox-queue-tab={filter}
                   onClick={() => onQueueFilterChange(filter)}
                   className={cn(
                     styles.tab,
-                    "inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex h-8 max-sm:h-10 shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                     selected
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -1140,6 +1174,10 @@ export function InboxV3Queue({
       </div>
 
       <div
+        id="inbox-queue-panel"
+        role="tabpanel"
+        aria-labelledby={tabSelected ? `inbox-queue-tab-${queueFilter}` : undefined}
+        aria-label={tabSelected ? undefined : queueLabel(queueFilter, copy)}
         onKeyDown={handleQueueKeyDown}
         className="flex min-h-0 flex-1 flex-col outline-none"
       >
