@@ -16,8 +16,8 @@ export const RUNTIME_HEALTH_RUNTIME: Record<Locale, Record<string, string>> = {
     "runtimeHealth.close": "إغلاق",
   },
   fr: {
-    "runtimeHealth.reconnecting.title": "Reconnexion à l’application",
-    "runtimeHealth.reconnecting.body": "Les pages peuvent sembler vides jusqu’au retour ; nous réessayons.",
+    "runtimeHealth.reconnecting.title": "Reconnexion au service de l’application",
+    "runtimeHealth.reconnecting.body": "Les pages peuvent sembler vides jusqu’au retour du service ; nous réessayons.",
     "runtimeHealth.offline.title": "Appareil sans réseau",
     "runtimeHealth.offline.body": "L’application se reconnecte toute seule dès le retour du réseau.",
     "runtimeHealth.retry": "Réessayer",

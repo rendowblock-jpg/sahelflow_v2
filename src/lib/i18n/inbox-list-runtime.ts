@@ -109,7 +109,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.list.empty.title": "الدفتر فارغ بعد",
     "inbox.list.empty.lead": "ثلاث طرق للبدء:",
     "inbox.list.empty.step.link": "اربط واتساب (الوسم في الأعلى)",
-    "inbox.list.empty.step.import": "استورد جهات الاتصال أو الطلبات",
+    "inbox.list.empty.step.import": "استورد جهات الاتصال أو الطلبيات",
     "inbox.list.empty.step.storefront": "شارك رابط متجرك",
     "inbox.list.error.title": "تعذّر تحميل المحادثات",
     "inbox.list.error.body": "لم يُحذف شيء. تحقق من الاتصال وأعد المحاولة.",
