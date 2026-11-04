@@ -75,3 +75,15 @@ describe("R50 Button keeps a phone floor that its size variants cannot lower", (
     expect(src).toMatch(/"sf-button inline-flex[^"]*max-sm:min-h-10[^"]*max-sm:min-w-10/);
   });
 });
+
+describe("R50 truncated links keep their ellipsis", () => {
+  it("the shared rule only changes display for a link that is not .truncate or line-clamped", () => {
+    const css = read("app/responsive-system.css");
+    const rule = css.slice(css.indexOf("/* R50 phone tap targets */"));
+    expect(rule).toMatch(/a\[href\]:not\([^)]*\.truncate[^)]*\[class\*="line-clamp"\][^)]*\)\)\s*\{\s*display:\s*inline-flex/);
+  });
+
+  it("the notification row title link is a 40 px line on a phone (it is a truncated flex item, stretched over the row)", () => {
+    expect(read("components/notifications/notification-feed-list.tsx")).toMatch(/min-w-0 flex-1 truncate[^"]*max-sm:leading-10/);
+  });
+});

@@ -75,10 +75,15 @@
     }
 
     [data-sahelflow-shell="desktop"] [data-shell-region="workspace"] :where(a[href]:not(p a, [data-inline-link])) {
-      display: inline-flex;
-      align-items: center;
       min-height: 2.5rem;
       min-width: 2.5rem;
+    }
+
+    /* A truncated or line-clamped link keeps its own display (inline-flex would drop the ellipsis); it is a block or a
+       flex item already and the component adds its own line height (card list rows, notification rows). */
+    [data-sahelflow-shell="desktop"] [data-shell-region="workspace"] :where(a[href]:not(p a, [data-inline-link], .truncate, [class*="line-clamp"])) {
+      display: inline-flex;
+      align-items: center;
     }
   }
 }

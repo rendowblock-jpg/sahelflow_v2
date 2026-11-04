@@ -123,7 +123,7 @@ function NotificationFeedRow({
           <Link
             href={item.link}
             className={cn(
-              "min-w-0 flex-1 truncate text-body text-foreground outline-none",
+              "min-w-0 flex-1 truncate text-body text-foreground outline-none max-sm:leading-10",
               "after:absolute after:inset-0 after:rounded-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring",
               unread ? "font-semibold" : "font-medium",
             )}
