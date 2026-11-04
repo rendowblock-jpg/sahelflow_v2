@@ -67,15 +67,25 @@
       input:not([type="hidden"], [type="checkbox"], [type="radio"], [type="file"]),
       summary,
       [role="button"]:not(button),
-      [role="tab"],
       [role="menuitem"]
     ) {
       min-height: 2.5rem;
       min-width: 2.5rem;
     }
 
+    /* A tab gets the height floor only. An explicit min-width on a flex item replaces its automatic minimum (its label), so a
+       row of tabs with flex-1 stopped wrapping and shrank to equal 68 px cells: on /risk in English on a phone the label of the
+       second tab spilled over the first and a tap on the middle of "Overview" opened the second tab (found by a real tap on the
+       production build, 4 Nov 2026). */
+    [data-sahelflow-shell="desktop"] [data-shell-region="workspace"] :where([role="tab"]) {
+      min-height: 2.5rem;
+    }
+
     [data-sahelflow-shell="desktop"] [data-shell-region="workspace"] :where(a[href]:not(p a, [data-inline-link])) {
       min-height: 2.5rem;
+    }
+
+    [data-sahelflow-shell="desktop"] [data-shell-region="workspace"] :where(a[href]:not(p a, [data-inline-link], [role="tab"])) {
       min-width: 2.5rem;
     }
 

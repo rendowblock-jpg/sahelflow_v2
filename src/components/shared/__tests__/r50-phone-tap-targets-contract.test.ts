@@ -37,6 +37,19 @@ describe("R50 phone tap-target authority (responsive-system.css)", () => {
     }
   });
 
+  it("gives a tab a height floor but NO min-width (a flex tab with an explicit min-width stops wrapping and its label spills over the next tab)", () => {
+    // Found by a real tap on /risk in English on a phone (production build): five tabs shrank to 68 px cells, the label of the second
+    // (about 140 px) spilled over the first, and a tap on the middle of Overview opened the second tab.
+    const tabRule = block.match(/:where\(\s*\[role="tab"\]\s*\)\s*\{([^}]*)\}/);
+    expect(tabRule, "a separate tab rule").not.toBeNull();
+    expect(tabRule![1]).toMatch(/min-height:\s*2\.5rem/);
+    expect(tabRule![1]).not.toMatch(/min-width/);
+    const list = block.match(/:where\(\s*button:not[\s\S]*?\)\s*\{[^}]*\}/);
+    expect(list, "the generic control list").not.toBeNull();
+    expect(list![0]).not.toContain('[role="tab"]');
+    expect(block).toMatch(/a\[href\]:not\(p a, \[data-inline-link\], \[role="tab"\]\)\)\s*\{\s*min-width:\s*2\.5rem;\s*\}/);
+  });
+
   it("turns a bare link into an inline-flex 2.5rem box, except a link inside a sentence", () => {
     expect(block).toMatch(/display:\s*inline-flex/);
     expect(block).toMatch(/align-items:\s*center/);
