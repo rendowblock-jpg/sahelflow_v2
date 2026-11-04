@@ -36,7 +36,7 @@ import {
   threadOpenTarget,
 } from "@/components/inbox/inbox-order-draft-model";
 import { useOrderDrafts } from "@/components/inbox/inbox-order-draft-store";
-import { InboxThreadEmpty, InboxThreadLoading } from "@/components/inbox/inbox-thread-states";
+import { InboxThreadEmpty, InboxThreadError, InboxThreadLoading } from "@/components/inbox/inbox-thread-states";
 import {
   ThreadPausedHint,
   threadSendGate,
@@ -150,6 +150,8 @@ export function InboxV3Thread({
     activeChat,
     messages,
     loadingMessages,
+    messagesLoadFailed,
+    retryLoadMessages,
     messagesInnerRef,
     messagesEndRef,
     isAwayFromBottom,
@@ -661,6 +663,8 @@ export function InboxV3Thread({
         >
           {loadingMessages ? (
             <InboxThreadLoading />
+          ) : messages.length === 0 && messagesLoadFailed ? (
+            <InboxThreadError onRetry={retryLoadMessages} />
           ) : messages.length === 0 ? (
             <InboxThreadEmpty />
           ) : (
