@@ -80,6 +80,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** A dictionary word that must exist: a missing key stops the test with its name instead of passing `undefined` on. */
+const word = (table: Record<string, string>, key: string): string => {
+  const value = table[key];
+  if (value === undefined) throw new Error(`missing dictionary word: ${key}`);
+  return value;
+};
+
 describe("OnboardingWizard when the app is open (the sign-in PIN is the only PIN)", () => {
   it.each(["en", "fr", "ar"] as const)("%s: no PIN box, no PIN title, no PIN request", async (locale) => {
     harness.locale = locale;
@@ -87,8 +94,8 @@ describe("OnboardingWizard when the app is open (the sign-in PIN is the only PIN
     await mount();
     const t = tables[locale] as Record<string, string>;
     expect(t["onboarding.pin.title"]).toBeTruthy();
-    expect(screen.queryByText(t["onboarding.pin.title"])).toBeNull();
-    expect(screen.queryByLabelText(t["auth.pinPlaceholder"])).toBeNull();
+    expect(screen.queryByText(word(t, "onboarding.pin.title"))).toBeNull();
+    expect(screen.queryByLabelText(word(t, "auth.pinPlaceholder"))).toBeNull();
     expect(screen.queryByRole("button", { name: t["onboarding.pin.verify"] })).toBeNull();
     expect(calledUrls()).not.toContain("/api/auth/reauthenticate");
   });

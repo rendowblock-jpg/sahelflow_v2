@@ -59,10 +59,17 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
+/** A dictionary word that must exist: a missing key stops the test with its name instead of passing `undefined` on. */
+const word = (table: Record<string, string>, key: string): string => {
+  const value = table[key];
+  if (value === undefined) throw new Error(`missing dictionary word: ${key}`);
+  return value;
+};
+
 const reauthCalls = () => fetchMock.mock.calls.filter(([url]) => String(url) === "/api/auth/reauthenticate");
 const pinBoxes = (locale: "en" | "fr" | "ar") => {
   const t = tables[locale] as Record<string, string>;
-  return screen.queryAllByLabelText(t["auth.pinPlaceholder"]);
+  return screen.queryAllByLabelText(word(t, "auth.pinPlaceholder"));
 };
 
 describe("Settings > AI keys when the app is open", () => {

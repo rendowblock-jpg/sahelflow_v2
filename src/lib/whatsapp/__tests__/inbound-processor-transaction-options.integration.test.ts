@@ -71,6 +71,9 @@ async function clean(): Promise<void> {
   await db.businessCommand.deleteMany();
   await db.businessAggregateVersion.deleteMany();
   await db.auditLog.deleteMany();
+  // OperationalNotification points at NotificationEvent (ON DELETE RESTRICT): an earlier test file of the
+  // full suite leaves rows behind, so the child table goes first (as in the other integration tests).
+  await db.operationalNotification.deleteMany();
   await db.notificationEvent.deleteMany();
 }
 
