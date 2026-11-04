@@ -101,6 +101,26 @@ describe("marker tokens carry no personal data", () => {
     expect(safeToken("1.4.2")).toBe("1.4.2");
     expect(safeToken(undefined)).toBe("none");
   });
+
+  it("keeps a canonical UUID even when its last group is all digits, but still refuses a bare phone number", () => {
+    const digitsTail = "a1b2c3d4-e5f6-4789-8123-123456789012";
+    const otherTail = "f0e1d2c3-b4a5-4968-8777-987654321098";
+    expect(safeToken(digitsTail)).toBe(digitsTail);
+    expect(safeToken(otherTail)).toBe(otherTail);
+    expect(safeToken("A1B2C3D4-E5F6-4789-8123-123456789012")).toBe("A1B2C3D4-E5F6-4789-8123-123456789012");
+    // not the canonical shape: still refused
+    expect(safeToken("a1b2c3d4e5f647898123123456789012")).toBe("none");
+    expect(safeToken("a1b2c3d4-e5f6-4789-8123-1234567890123")).toBe("none");
+    expect(safeToken("213550123456")).toBe("none");
+  });
+
+  it("two different held sends on one day never share an event key, whatever digits their ids hold", () => {
+    const at = new Date("2026-11-04T13:10:00Z");
+    const a = buildEventKey({ kind: "whatsapp.held", at, subject: "a1b2c3d4-e5f6-4789-8123-123456789012" });
+    const b = buildEventKey({ kind: "whatsapp.held", at, subject: "f0e1d2c3-b4a5-4968-8777-987654321098" });
+    expect(a).not.toBe(b);
+    expect(a).not.toContain(":none");
+  });
 });
 
 describe("toast links", () => {
