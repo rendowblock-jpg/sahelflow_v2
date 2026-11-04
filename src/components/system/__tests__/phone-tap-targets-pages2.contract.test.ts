@@ -11,7 +11,8 @@ import { describe, expect, it } from "vitest";
  * or display needs its own phone-only (`max-sm:`) size, and a control inside a dialog is outside that
  * rule. Desktop must not change: every size here is a `max-sm:` class.
  */
-const read = (path: string) => readFileSync(resolve(process.cwd(), "src", path), "utf8");
+// Windows checks sources out with CRLF line endings; the assertions below spell multi-line source with \n.
+const read = (path: string) => readFileSync(resolve(process.cwd(), "src", path), "utf8").replace(/\r\n/g, "\n");
 
 /** The opening tag (up to its closing `>` on its own line) that contains `needle`. */
 function tagWith(source: string, needle: string): string {
