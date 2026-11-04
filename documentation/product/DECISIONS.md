@@ -1124,7 +1124,7 @@ into:
   `activate.sahelflow.com`.
 - **Content:** protected `main` at the tip this pull request merges into: the
   Internal.48 tip (`da49f418…`) plus thirteen reviewed pull requests, #675 to
-  #687, merged together as merge commits with one Arabic wording commit. The
+  #687, merged together as merge commits with two small commits (an Arabic wording fix and two defects found by the page sweep). The
   list and the evidence are in `CHANGELOG.md`, section 2026-11-04. #663 and
   #665 are not part of it.
 - **Product decision recorded here:** the sign-in PIN opens the whole app. No
