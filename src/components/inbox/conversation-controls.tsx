@@ -135,9 +135,9 @@ export function StatusControl({
           <button
             type="button"
             className={cn(
-              "flex items-center gap-1 rounded-control text-xs font-medium transition-colors",
+              "flex items-center gap-1 rounded-control text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
               appearance === "badge"
-                ? "border-0 bg-transparent p-0 hover:opacity-80"
+                ? "border-0 bg-transparent p-0 hover:opacity-80 max-sm:min-h-10 max-sm:px-1"
                 : "border px-2 py-1 hover:bg-muted",
             )}
           >
