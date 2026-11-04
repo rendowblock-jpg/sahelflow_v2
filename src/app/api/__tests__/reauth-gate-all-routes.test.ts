@@ -125,7 +125,7 @@ function scan(): Row[] {
     const methods = new Set<Method>();
     const callArguments: string[] = [];
     for (const call of source.matchAll(/\brequireRecentReauthentication\s*\(([^)]*)\)/g)) {
-      callArguments.push(call[1].trim());
+      callArguments.push((call[1] ?? "").trim());
       const owner = [...starts].reverse().find((start) => start.index < (call.index ?? 0));
       if (owner) methods.add(owner.method);
       else starts.forEach((start) => methods.add(start.method));
