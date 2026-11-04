@@ -38,7 +38,7 @@ describe("buildIngressDetailsText", () => {
     expect(build("ar").split("\n")).toEqual([
       "SahelFlow: استلام الرسائل",
       "رسائل تنتظر الاستلام: 127",
-      "أقدمها تنتظر منذ: يومين",
+      "مدة انتظار أقدمها: يومين",
       "رمز السبب: APP_INGRESS_TIMEOUT",
       "مشاكل في الاستعادة: 2",
     ]);
