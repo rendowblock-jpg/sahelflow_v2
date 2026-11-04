@@ -101,10 +101,13 @@ export function OrderSummaryStrip({
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {t("orders.detail.itemsCount", { count: itemCount })}
-            {" · "}
-            {t("orders.detail.summary.shippingLine", {
-              amount: deliveryCost > 0 ? formatDZD(deliveryCost, locale) : "—",
-            })}
+            {/* No delivery cost (hand-over, pick-up, not set yet): say nothing, instead of "shipping —". */}
+            {deliveryCost > 0 ? (
+              <>
+                {" · "}
+                {t("orders.detail.summary.shippingLine", { amount: formatDZD(deliveryCost, locale) })}
+              </>
+            ) : null}
           </p>
         </div>
 

@@ -212,7 +212,10 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                 {orderStatus === "draft"
                   ? t("orders.shipment.mustConfirmFirst")
                   : orderStatus === "shipped" || orderStatus === "delivered"
-                    ? t("orders.shipment.alreadyCreated")
+                    ? // "see below" is only true when a delivery row exists; a hand-over order marked shipped or delivered has none.
+                      delivery
+                      ? t("orders.shipment.alreadyCreated")
+                      : t("orders.shipment.noneAttached")
                     : t("orders.shipment.notShippable")}
               </p>
             )}
