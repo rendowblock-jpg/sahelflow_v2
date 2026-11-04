@@ -40,14 +40,14 @@ vi.mock("@/hooks/use-i18n", async () => {
 // ---- the page stand-in: whatever the panel throws in render lands here instead of blanking the page ----
 const caught: unknown[] = [];
 class Catcher extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+  override state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
-  componentDidCatch(error: unknown) {
+  override componentDidCatch(error: unknown) {
     caught.push(error);
   }
-  render() {
+  override render() {
     return this.state.failed ? <p data-testid="page-crashed">PAGE CRASHED</p> : this.props.children;
   }
 }
