@@ -47,10 +47,13 @@ async function fetchUnreadAuthority(page: Page): Promise<{
 }
 
 async function selectAllQueue(page: Page) {
-  const all = page.getByRole("button", { name: /Toutes|الكل|All/ }).first();
+  // The queue filters are a real tablist since R50 (inbox lane, 80581c2b: arrow keys, roving tabindex), so they are
+  // tabs with aria-selected, not toggle buttons with aria-pressed. A role "tab" also cannot match the thread's
+  // "Aller aux derniers messages" button, which the old /All/ pattern matched by accident ("Aller").
+  const all = page.getByRole("tab", { name: /Toutes|الكل|All/ }).first();
   await expect(all).toBeVisible({ timeout: 30_000 });
   await all.click();
-  await expect(all).toHaveAttribute("aria-pressed", "true");
+  await expect(all).toHaveAttribute("aria-selected", "true");
 }
 
 test.describe.serial("Inbox operational workspace evidence", () => {
@@ -166,9 +169,9 @@ test.describe.serial("Inbox operational workspace evidence", () => {
       page.locator('[data-inbox-conversation][data-inbox-unread="true"]'),
     ).toHaveCount(expectedUnread);
 
-    const unreadQueue = page.getByRole("button", { name: /Non lues/ });
+    const unreadQueue = page.getByRole("tab", { name: /Non lues/ });
     await unreadQueue.click();
-    await expect(unreadQueue).toHaveAttribute("aria-pressed", "true");
+    await expect(unreadQueue).toHaveAttribute("aria-selected", "true");
     await expect(
       page.locator('[data-inbox-conversation][data-inbox-unread="true"]'),
     ).toHaveCount(expectedUnread);
