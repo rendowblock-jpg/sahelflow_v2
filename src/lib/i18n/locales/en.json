@@ -1856,6 +1856,7 @@
   "orders.shipment.descTracking": "Track or update the shipment status",
   "orders.shipment.errorFallback": "Failed",
   "orders.shipment.mustConfirmFirst": "The order must be confirmed before shipping.",
+  "orders.shipment.noneAttached": "No courier shipment is attached to this order.",
   "orders.shipment.notShippable": "Order status is not shippable.",
   "orders.shipment.printLabel": "Print Label",
   "orders.shipment.syncFailed": "Failed to synchronize",
