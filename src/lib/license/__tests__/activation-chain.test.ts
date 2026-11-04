@@ -112,7 +112,7 @@ describe("activation code", () => {
         workspaceId: REQUEST.workspaceId,
         installationId: REQUEST.installationId,
         deviceBinding: REQUEST.deviceBinding,
-        appVersion: "1.0.0-internal.48",
+        appVersion: "1.0.0-internal.49",
         minimumRevocationEpoch: 0,
         now: new Date("2026-10-08T01:00:00Z"),
       },

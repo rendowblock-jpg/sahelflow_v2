@@ -1109,3 +1109,37 @@ pull request merges into:
 - **Not Stable:** Beta/Stable authority is unchanged. This authority converts
   no ledger row and does not turn source or CI evidence into installed or
   live-provider evidence. #306 logout stays LAST.
+
+## FD-085 — One signed successor Internal.49: the reviewed pull requests of 4 November (2026-11-04, ADOPTED)
+
+On 2026-11-04 the Founder directed: "Continue professionally, I want you to
+complete all the work that needed to be done, then make the release." That
+directive adopts the next customer-online release authority as one signed
+successor, to be built from the `main` tip this release pull request merges
+into:
+
+- **Package:** app `1.0.0-internal.49` / MSI `1.0.0.49`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
+  offline-signed. Trial origins stay `license.sahelflow.com` and
+  `activate.sahelflow.com`.
+- **Content:** protected `main` at the tip this pull request merges into: the
+  Internal.48 tip (`da49f418…`) plus thirteen reviewed pull requests, #675 to
+  #687, merged together as merge commits with one Arabic wording commit. The
+  list and the evidence are in `CHANGELOG.md`, section 2026-11-04. #663 and
+  #665 are not part of it.
+- **Product decision recorded here:** the sign-in PIN opens the whole app. No
+  screen asks for a PIN again while the session lives (#683); destructive
+  actions keep a typed confirmation. This is the Founder's decision of
+  2026-11-03, replacing the per-action PIN of the earlier Phase 2 design for
+  the screens #683 names. The trade-off is real and chosen: for those screens, a
+  signed-in session (up to 24 hours) can now act without a second PIN, where
+  before a recent PIN entry was needed, so an unlocked PC is MORE exposed for
+  that window. The server still answers 403 REAUTHENTICATION_REQUIRED where the
+  safety net applies.
+- **Gates:** this release-authority PR merges only after its full Required
+  battery is green. The signed train builds from that exact `main` tip and
+  nothing else merges while it runs. The tag, digests and publish time are
+  recorded only after the signed run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row and does not turn source, lab or CI evidence into installed or
+  live-provider evidence. #306 logout stays LAST.
