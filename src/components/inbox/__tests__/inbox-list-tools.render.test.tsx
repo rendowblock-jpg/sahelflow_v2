@@ -110,3 +110,16 @@ describe("phone targets", () => {
     expect(src).toMatch(/h-9 max-sm:h-10/);
   });
 });
+
+describe("header icon buttons: a name and a tooltip, one group (source contract)", () => {
+  const header = readFileSync(join(process.cwd(), "src/components/inbox/inbox-v3-header.tsx"), "utf8");
+  it("every aria-label in the header has the same title", () => {
+    // The group label names the cluster, not a button: no tooltip needed.
+    const labels = [...header.matchAll(/aria-label=\{([^}]+)\}/g)].map((m) => m[1]!).filter((e) => e !== 'copy("queueTools")');
+    expect(labels.length).toBeGreaterThanOrEqual(4);
+    for (const expr of labels) expect(header, expr).toContain(`title={${expr}}`);
+  });
+  it("the title can show Arabic descenders: line-height 2rem and no tracking in RTL", () => {
+    expect(header).toMatch(/<h2 className="truncate text-title-3 leading-8 tracking-tight rtl:tracking-normal">/);
+  });
+});
