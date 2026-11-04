@@ -232,6 +232,9 @@ const ConversationRow = memo(function ConversationRow({
   const status = chat.workflow.status ?? "open";
   const priority = chat.workflow.priority;
   const chip = rowChipFor({ status, hasDraft: Boolean(draftPreview) });
+  const hasTags = Boolean(
+    chip || priority || chat.workflow.assigneeId || isSampleChat(chat),
+  );
   // F-0028: the stored name can be the raw WhatsApp id; never print it.
   const title = inboxChatTitleParts(chat, locale);
   // One line for the last message: its words, or what kind of message it was.
@@ -268,7 +271,7 @@ const ConversationRow = memo(function ConversationRow({
       {selectMode ? (
         <span
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full border",
+            "flex size-10 shrink-0 items-center justify-center rounded-full border",
             checked
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border bg-background text-transparent group-hover:border-primary/60",
@@ -291,6 +294,7 @@ const ConversationRow = memo(function ConversationRow({
               ellipsizes at its own end. */}
           <span className="flex min-w-0 flex-1 justify-start overflow-hidden">
             <bdi
+              data-inbox-name=""
               dir={title.kind === "name" ? "auto" : locale === "ar" ? "rtl" : "ltr"}
               className={cn(
                 styles.rowName,
@@ -314,10 +318,8 @@ const ConversationRow = memo(function ConversationRow({
             />
           ) : null}
           <span
-            className={cn(
-              "shrink-0 font-mono text-xs tabular-nums",
-              chat.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground",
-            )}
+            data-inbox-time=""
+            className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground"
           >
             {relativeTime(chat.lastMessageAt, locale, relativeNow)}
           </span>
@@ -342,12 +344,7 @@ const ConversationRow = memo(function ConversationRow({
               <bdi
                 data-inbox-preview="true"
                 data-sf-seller-label="true"
-                className={cn(
-                  "block min-w-0 max-w-full flex-1 truncate text-sm leading-5",
-                  chat.unread > 0
-                    ? "font-medium text-foreground/90"
-                    : "text-muted-foreground",
-                )}
+                className="block min-w-0 max-w-full flex-1 truncate text-sm leading-5 text-muted-foreground"
               >
                 {preview.text ? (
                   <ArabicRuns text={preview.text} locale={locale} />
@@ -357,7 +354,10 @@ const ConversationRow = memo(function ConversationRow({
           )}
 
           {chat.unread > 0 ? (
-            <span className={cn(styles.unreadBadge, "shrink-0 font-mono")}>
+            <span
+              data-inbox-unread-count=""
+              className={cn(styles.unreadBadge, "shrink-0 font-mono")}
+            >
               <span aria-hidden="true">{chat.unread > 99 ? "99+" : chat.unread}</span>
               <span className="sr-only">
                 {t("inbox.list.row.unreadCount", { count: chat.unread })}
@@ -366,43 +366,53 @@ const ConversationRow = memo(function ConversationRow({
           ) : null}
         </span>
 
-        <span className="flex min-w-0 items-center gap-2 overflow-hidden">
+        {/* The tag line exists only when something needs the seller: a status
+            that needs a reply, an assignee, a priority or a sample mark. A
+            quiet row is two lines; the row height stays the same. */}
+        {hasTags ? (
           <span
-            data-inbox-row-chip=""
-            data-shape={chip.shape}
-            className={styles.chip}
+            data-inbox-row-tags=""
+            className="flex min-w-0 items-center gap-2 overflow-hidden"
           >
-            <SignalShape shape={chip.shape} />
-            <span className="truncate">{t(chip.labelKey)}</span>
+            {chip ? (
+              <span
+                data-inbox-row-chip=""
+                data-shape={chip.shape}
+                className={styles.chip}
+              >
+                <SignalShape shape={chip.shape} />
+                <span className="truncate">{t(chip.labelKey)}</span>
+              </span>
+            ) : null}
+
+            <SampleBadge conversationId={chat.conversationId} t={t} />
+
+            {priority ? (
+              <Flag
+                className={cn(
+                  "size-3 shrink-0",
+                  priority === "urgent"
+                    ? "text-destructive"
+                    : priority === "high"
+                      ? "text-warning"
+                      : priority === "medium"
+                        ? "text-primary"
+                        : "text-muted-foreground",
+                )}
+                aria-label={t(`inbox.priority.${priority}`)}
+              />
+            ) : null}
+
+            {chat.workflow.assigneeId ? (
+              <span
+                data-inbox-assignee={mine ? "mine" : "other"}
+                className="ms-auto shrink-0 text-xs leading-5 text-muted-foreground"
+              >
+                {t(mine ? "inbox.list.assignee.mine" : "inbox.list.assignee.other")}
+              </span>
+            ) : null}
           </span>
-
-          <SampleBadge conversationId={chat.conversationId} t={t} />
-
-          {priority ? (
-            <Flag
-              className={cn(
-                "size-3 shrink-0",
-                priority === "urgent"
-                  ? "text-destructive"
-                  : priority === "high"
-                    ? "text-warning"
-                    : priority === "medium"
-                      ? "text-primary"
-                      : "text-muted-foreground",
-              )}
-              aria-label={t(`inbox.priority.${priority}`)}
-            />
-          ) : null}
-
-          {chat.workflow.assigneeId ? (
-            <span
-              data-inbox-assignee={mine ? "mine" : "other"}
-              className="ms-auto shrink-0 text-xs leading-5 text-muted-foreground"
-            >
-              {t(mine ? "inbox.list.assignee.mine" : "inbox.list.assignee.other")}
-            </span>
-          ) : null}
-        </span>
+        ) : null}
       </span>
     </button>
   );

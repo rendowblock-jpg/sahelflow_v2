@@ -48,7 +48,8 @@ describe("row state chip table", () => {
     expect(INBOX_ROW_CHIPS.snoozed!.shape).toBe("ring");
     expect(rowChipFor({ status: "open", hasDraft: true }).shape).toBe("diamond");
     expect(rowChipFor({ status: "resolved", hasDraft: true }).shape).toBe("diamond");
-    expect(rowChipFor({ status: "something-new", hasDraft: false }).shape).toBe("ring");
+    // s42: the default "new" ring tag was noise on every row; an unknown status is quiet.
+    expect(rowChipFor({ status: "something-new", hasDraft: false })).toBeNull();
   });
 });
 

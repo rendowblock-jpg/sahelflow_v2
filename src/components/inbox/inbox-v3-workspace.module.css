@@ -60,19 +60,26 @@
   z-index: 1;
 }
 
-/* Selected: bar + weight + aria-current + a 1px edge + one surface step up. */
+/* Selected: one surface step up + a thin rounded marker in --primary (every
+   preset keeps --primary at 4.5:1+ on its page, so the marker clears 3:1) +
+   aria-current. No wash, no thick bar. */
 .row[aria-current="true"] {
   background: var(--background);
-  border-inline-start: 1px solid color-mix(in oklab, var(--primary) 40%, transparent);
 }
 
 .row[aria-current="true"]::before {
   content: "";
   position: absolute;
-  inset-block: 0;
+  inset-block: 14px;
   inset-inline-start: 0;
-  inline-size: 5px;
+  inline-size: 3px;
+  border-start-end-radius: 3px;
+  border-end-end-radius: 3px;
   background: var(--primary);
+}
+
+.row:active {
+  background: color-mix(in oklab, var(--background) 80%, transparent);
 }
 
 .rowName {
@@ -87,13 +94,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 36px;
-  block-size: 36px;
+  inline-size: 40px;
+  block-size: 40px;
+  flex: none;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--background);
   color: var(--foreground);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
 }
 
