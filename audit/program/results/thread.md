@@ -21,9 +21,18 @@
    on card and on primary-soft (8 % primary over the pane, approximated in OKLab: CONFIRM in Chromium). max-w 46rem/70 %, min-w-0, `[overflow-wrap:anywhere]`,
    time visible only on the last bubble of a sender's run (sr-only otherwise; ticks stay). Files: inbox-thread-message.tsx, inbox-composer-style.ts.
 
-## NEXT STEPS FOR A CONTINUATION
-- Step 2 THREAD HEADER (inbox-thread-header.tsx): names + tooltips for the 4 icon buttons, one primary action, 40 px on phone.
-- Step 3 BUBBLES (inbox-thread-message.tsx, inbox-message-visual.ts): contrast, max-w ~70 %, grouping, wrapping, ticks.
-- Step 4 PHONE, Step 5 STATES (tests en/fr/ar), then the ONE measuring batch + audit/program/results/thread-design.md.
-- Commands: `flock /tmp/vt.lock sf vt wt-s42-thread src/components/inbox/__tests__` (59 files, 580+ tests);
-  commit: `sf commit thread fix/s42-thread "msg" FILES...`; server: `bash audit/program/ui/devslot.sh thread 3116 start|stop`.
+## NEXT STEPS FOR A CONTINUATION (state at helper turn ~62)
+DONE + pushed: steps 1 composer, 2 header, 3 bubbles (code + contract/render tests, inbox __tests__ = 60 files / 609 tests green). Draft PR #694.
+LEFT, in this order:
+1. ONE measuring batch: `bash audit/program/ui/devslot.sh thread 3116 start`; screenshots with the see tool (url http://127.0.0.1:3116/inbox, device desktop, locale ar,
+   scheme dark/light, then en light, then phone 390x844): LOOK at composer, header, bubbles. Check with layout/inspect_page: (a) computed border colour of
+   the textarea vs the footer background >= 3:1 in Oasis dark and light (Chromium handles color-mix), (b) the primary header button shows the WORD at desktop
+   width (container-query class `@min-[36rem]/inbox-thread:inline` in inbox-thread-header.tsx - if it never shows, replace with `max-sm:hidden`),
+   (c) bubble `bg-primary-soft` text contrast >= 4.5:1, (d) phone: no overlap of status chip and search button, composer above the keyboard.
+   Sweep: `python3 audit/program/ui/sweep-triage.py tap-target overlap-controls text-cut covered-control` on a fresh run; compare with audit/ui-s42/sweep/inbox-before/.
+   Then `devslot.sh thread 3116 stop`.
+2. Step 4 phone: composer buttons are size-9 (36 px) + min touch var; the sweep reports tap-target offenders - fix any thread-side one found.
+3. Step 5: add render tests for skeleton / empty / failed+retry / offline / sending-failed-held in en/fr/ar (components: inbox-thread-states.tsx, held-send-notice.tsx).
+4. Fill the measured numbers into audit/program/results/thread-design.md and update PR #694 body.
+Commands: tests `flock /tmp/vt.lock sf vt wt-s42-thread src/components/inbox/__tests__`; commit `sf commit wt-s42-thread fix/s42-thread "thread: ..." FILES...` (WT is the full worktree name, paths relative to it, run from /opt/agent-sandbox/workspace).
+Learned: `getInboxWorkspaceCopy(locale, key)`; bg-primary-soft = primary 8 % alpha (globals.css:83); product tokens parse like contrast-contract.test.ts.
