@@ -78,7 +78,7 @@ vi.mock("@/components/notifications/notification-taxonomy", () => ({
   getNotificationPresentation: () => ({ icon: () => null, className: "" }),
 }));
 vi.mock("@/components/updater/update-chip", () => ({ UpdateChip: () => null }));
-vi.mock("@/components/layout/sidebar", () => ({ Sidebar: () => null }));
+vi.mock("@/components/layout/sidebar", () => ({ Sidebar: () => <nav data-testid="drawer-sidebar" /> }));
 vi.mock("@/components/layout/create-shop-dialog", () => ({ CreateShopDialog: () => null }));
 vi.mock("@/lib/toast", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/lib/auth/logout-client", () => ({ logoutAndRedirect: vi.fn() }));
@@ -174,6 +174,19 @@ describe("top bar on a phone (under 768 px)", () => {
       expect(button.className).toContain("min-h-(--sf-touch-target)");
       expect(button.className).toContain("min-w-(--sf-touch-target)");
     }
+  });
+
+  it("lets a phone seller reach Settings two ways: the avatar menu link and the menu drawer that holds the sidebar", async () => {
+    mount();
+    // 1. avatar menu: a real link to /settings (the intercepting route opens it as a window)
+    const { menu, user } = await openAvatarMenu();
+    const settingsItem = within(menu).getByRole("menuitem", { name: "nav.settings" });
+    expect((settingsItem.closest("a") ?? settingsItem).getAttribute("href")).toBe("/settings");
+    await user.keyboard("{Escape}");
+    // 2. the drawer: the menu button (shown under lg) opens a sheet that mounts the sidebar
+    expect(screen.queryByTestId("drawer-sidebar")).toBeNull();
+    await user.click(within(bar()).getByRole("button", { name: "common.openMenu" }));
+    expect(await screen.findByTestId("drawer-sidebar")).toBeInTheDocument();
   });
 
   it("offers the shops, theme and language in the avatar menu", async () => {

@@ -332,7 +332,16 @@ export function SettingsWorkspace({
           >
             {/* The full page already carries a "Settings" page header. */}
             {inModal ? (
-              <p className={cn("mb-3 px-2.5 text-foreground", mobile ? "text-title-2" : "text-body font-semibold")}>
+              <p
+                className={cn(
+                  "mb-3 px-2.5 text-foreground",
+                  // On a phone the window's Close button sits in the top corner, one control high:
+                  // the title row is as high, so the search below always starts under Close.
+                  mobile
+                    ? "flex min-h-(--control-height) items-center pe-14 text-title-2"
+                    : "text-body font-semibold",
+                )}
+              >
                 {copy("settingsTitle")}
               </p>
             ) : null}

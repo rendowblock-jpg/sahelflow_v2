@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HydrationMarker } from "@/components/runtime/hydration-marker";
 import { Button } from "@/components/ui/button";
 import { getI18n } from "@/lib/i18n-server";
 import { SearchX } from "lucide-react";
@@ -8,6 +9,7 @@ export default async function NotFound() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
+      <HydrationMarker />
       <div className="animate-fade-up text-center space-y-4">
         {/* Premium 404 display */}
         <div className="mx-auto rounded-surface bg-gradient-to-br from-primary-strong to-primary-subtle p-5 ring-1 ring-primary/20 w-fit">
