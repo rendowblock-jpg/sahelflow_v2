@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { UserText } from "@/components/i18n/user-text";
 import { IconTile } from "@/components/system";
 
 export type PageHeaderVariant = "document" | "workspace";
@@ -86,7 +87,7 @@ export function PageHeader({
               workspace ? "text-title-2" : "text-title-1",
             )}
           >
-            {title}
+            {typeof title === "string" ? <UserText text={title} /> : title}
           </h1>
           {description ? (
             <p

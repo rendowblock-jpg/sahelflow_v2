@@ -11,6 +11,7 @@ import {
   PhoneCall,
 } from "lucide-react";
 
+import { UserText } from "@/components/i18n/user-text";
 import { useStorefrontI18n } from "@/components/storefront/storefront-locale-provider";
 import type {
   StorefrontContactInfo,
@@ -104,11 +105,11 @@ export function SectionHeading({
             className="mb-2 text-xs font-semibold uppercase tracking-[0.14em]"
             style={{ color: "var(--sf-brand-text)" }}
           >
-            {eyebrow}
+            <UserText text={eyebrow} />
           </p>
         ) : null}
         <Heading dir="auto" className="text-2xl font-semibold tracking-tight @min-[40rem]:text-3xl">
-          {title}
+          <UserText text={title} />
         </Heading>
       </div>
       {aside}

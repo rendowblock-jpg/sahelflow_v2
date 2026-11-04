@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Sparkline } from "@/components/charts/sparkline";
+import { UserText } from "@/components/i18n/user-text";
 import { StorefrontMiniPreview } from "@/components/storefront/storefront-mini-preview";
 import type { StorefrontStudioProduct } from "@/components/storefront/studio/studio-types";
 import { Button } from "@/components/ui/button";
@@ -114,7 +115,7 @@ export function StorefrontCard({
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="min-w-0">
           <h2 dir="auto" className="truncate text-title-3 font-semibold">
-            {config.name}
+            <UserText text={config.name} />
           </h2>
           <div className="mt-1 flex min-w-0 items-center gap-1.5 text-body-sm text-muted-foreground">
             <Globe className="size-3.5 shrink-0" aria-hidden="true" />

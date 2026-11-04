@@ -137,3 +137,44 @@ html[dir="rtl"] input[type="password"]:placeholder-shown,
 html[dir="rtl"] input[data-sf-placeholder-dir="document"]:placeholder-shown {
   direction: rtl;
 }
+
+/* sf:arabic-letter-spacing:start */
+/*
+ * Arabic is connected script: ANY non-zero letter-spacing pulls the joined letters apart.
+ * The rules above reset it for html[dir="rtl"] only. Arabic DATA (a customer, product,
+ * store or automation name) is just as common in the English and French UI, inside h1/h2
+ * whose base style is `tracking-tight` (-0.02em, -0.48 px on detail headings, -1.2 px on
+ * the store hero). These rules do not depend on the page language:
+ *  - [lang|="ar"]: whatever the code tagged as Arabic (components/i18n/user-text.tsx tags
+ *    every Arabic run of a data string; the Latin part keeps the heading tracking);
+ *  - bdi and dir="auto" fragments whose text resolves right-to-left (:dir(rtl) follows the
+ *    first strong character), with no markup change.
+ * Unlayered and !important on purpose: it must also beat a tracking-* utility on the same
+ * element. html is excluded so an Arabic page does not flatten tracking on LTR technical
+ * values that opt out of the RTL rule (a pairing code in a dir="ltr" bdi keeps its spacing).
+ */
+[lang|="ar"]:not(html) {
+  letter-spacing: normal !important;
+}
+:is(bdi, [dir="auto"]):dir(rtl) {
+  letter-spacing: normal !important;
+}
+/* sf:arabic-letter-spacing:end */
+
+/* sf:arabic-truncate:start */
+/*
+ * Truncating headings in the Arabic UI (sweep class text-cut, 26 hits, all in ar cells).
+ * `text-wrap: balance` above is the shorthand of text-wrap-mode, and this file is unlayered, so it beat the layered
+ * `.truncate` / `.whitespace-nowrap` utilities: a truncating title WRAPPED (a store-card title took three lines, the
+ * inbox title and names too) instead of ending in an ellipsis. A heading that must stay on one line gets nowrap back.
+ * Measured in Chromium with this file: white-space normal -> nowrap, one line, ellipsis, no other property touched.
+ *
+ * Deliberately NOT here: padding/margin "ink room". Noto Sans Arabic has a 1.7 em content area in a 1.42 line box, which
+ * is why the sweep said "needs 26px, box 21px", but the INK fits (ordinary names 0.0 px cut; only stacked shadda+kasra
+ * reach 0.7 px past the edge at 15 px). An unlayered margin-block/padding-block would beat every mt-* / py-* utility on
+ * a heading, which is a worse defect than a 0.7 px mark. The harness measures ink now (sweep-lib.mjs inkClip).
+ */
+html[dir="rtl"] :is(h1, h2, h3, h4):is(.truncate, .whitespace-nowrap, .text-nowrap) {
+  text-wrap: nowrap;
+}
+/* sf:arabic-truncate:end */

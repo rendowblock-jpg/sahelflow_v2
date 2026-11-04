@@ -2,6 +2,7 @@
 
 import { BadgeCheck, ChevronDown, Quote } from "lucide-react";
 
+import { UserText } from "@/components/i18n/user-text";
 import { useStorefrontI18n } from "@/components/storefront/storefront-locale-provider";
 import { StorefrontHero } from "@/components/storefront/storefront-hero";
 import {
@@ -244,11 +245,11 @@ export function StorefrontRenderer({
                 <div className="flex flex-col justify-center p-8 @min-[40rem]:p-12">
                   {eyebrow ? (
                     <p dir="auto" className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--sf-brand-text-on-surface)" }}>
-                      {eyebrow}
+                      <UserText text={eyebrow} />
                     </p>
                   ) : null}
                   {title ? (
-                    <h2 dir="auto" className="mt-3 text-2xl font-semibold tracking-tight @min-[40rem]:text-3xl">{title}</h2>
+                    <h2 dir="auto" className="mt-3 text-2xl font-semibold tracking-tight @min-[40rem]:text-3xl"><UserText text={title} /></h2>
                   ) : null}
                   {body ? (
                     <p dir="auto" className="mt-4 whitespace-pre-wrap text-base leading-7 text-muted-foreground">{body}</p>
