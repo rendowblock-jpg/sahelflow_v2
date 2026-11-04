@@ -67,24 +67,9 @@
   background: color-mix(in oklch, var(--accent) 58%, var(--card));
 }
 
-[data-inbox-workspace="v2"] [data-inbox-conversation][aria-current="true"] {
-  background:
-    linear-gradient(
-      90deg,
-      color-mix(in oklch, var(--primary) 11%, transparent),
-      color-mix(in oklch, var(--accent) 52%, var(--card))
-    );
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 10%, transparent) inset;
-}
-
-html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-current="true"] {
-  background:
-    linear-gradient(
-      270deg,
-      color-mix(in oklch, var(--primary) 11%, transparent),
-      color-mix(in oklch, var(--accent) 52%, var(--card))
-    );
-}
+/* The selected conversation row is painted by inbox-v3-workspace.module.css only (3 px marker + one surface step).
+   A primary-tinted gradient and an inset ring used to live here at higher specificity and beat it (measured 4 Nov,
+   see inbox-selected-row-cascade.contract.test.ts). Do not add a background or shadow for it in a global sheet. */
 
 [data-inbox-thread="empty"] {
   background:
