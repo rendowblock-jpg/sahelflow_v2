@@ -70,6 +70,7 @@ export function CannedResponsePicker({
               disabled={disabled}
               aria-label={t("inbox.cannedResponses.open")}
               data-inbox-canned-picker="true"
+              className={cn(size === "icon" ? "max-sm:size-10" : "max-sm:min-h-10")}
             >
               <Bookmark className="h-4 w-4" aria-hidden="true" />
             </Button>
@@ -151,7 +152,7 @@ function CannedResponsePickerBody({ onSelect, onPick }: CannedResponsePickerBody
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("inbox.cannedResponses.search")}
-            className="h-8 border-0 shadow-none focus-visible:ring-0 px-0"
+            className="h-8 max-sm:h-10 border-0 shadow-none focus-visible:ring-0 px-0"
             aria-label={t("inbox.cannedResponses.search")}
           />
           {loading && (
@@ -177,7 +178,7 @@ function CannedResponsePickerBody({ onSelect, onPick }: CannedResponsePickerBody
                   type="button"
                   onClick={() => handlePick(item)}
                   className={cn(
-                    "w-full text-start px-3 py-2 hover:bg-accent transition-colors",
+                    "w-full text-start px-3 py-2 max-sm:min-h-10 hover:bg-accent transition-colors",
                     "focus:bg-accent focus:outline-none",
                   )}
                 >

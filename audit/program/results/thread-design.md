@@ -19,8 +19,14 @@ NOT YET MEASURED IN CHROMIUM = the one browser batch was not reached (helper tur
 | bubble text | foreground on card / primary-soft | unchanged tokens | COMPUTED >= 4.5:1, 8/8 (primary-soft approximated as 8 % primary over the pane) |
 | bubble width / wrapping | max 75 %, `break-words` | max 70 %, min-w-0, `overflow-wrap:anywhere` | READ IN CODE |
 | grouping | mt-4 / mt-1 existed | time shown only on the last bubble of a run (sr-only otherwise); ticks stay on each outgoing bubble | contract test |
+| phone controls (390x844, 360x740) | composer buttons size-9 = 36 px (+ min var that is 0px for a fine pointer), search/voice/emoji/template/message-row/held-send buttons h-7..h-9, emoji cells size-8 | every thread-pane control has an explicit `max-sm:` floor of 40 px (send/back 44); 10-test contract scans 11 files, RED 6 fails (52 controls) -> GREEN | READ IN CODE + contract test; NOT YET measured in Chromium |
+| composer row at 360 px | one line: field would get 112 px (40 px buttons) / 80 px (real phone, 48 px) | under 640 px the row wraps: field on its own 336 px line (`max-sm:order-first basis-full`), the two button groups share the second line (250 px) | COMPUTED in the contract test; desktop unchanged |
+| emoji popover on phone | 8 columns of 32 px cells | 7 columns of 40 px+ cells (8 x 40 = 334 px > 315 px popover), 40 px category tabs and search | COMPUTED |
+| header primary-action word | `@min-[36rem]/inbox-thread:inline` suspected undeclared | CHECKED: container declared by `[data-inbox-thread]` (workspace-system.css), Tailwind 4.3.1 compiles it to `@container inbox-thread (width >= 36rem)`; kept | compile() on the VM + contract test; word at desktop width NOT YET seen in Chromium |
 
-## Not done (honest)
-- Browser batch (Chromium computed colours, sweep '/inbox' 8 cells, screenshots ar dark / ar light / en light): NOT RUN.
-- Step 4 phone composer above the keyboard + back control: back control exists (size-11); visualViewport code untouched, NOT re-verified.
-- Step 5 states (skeleton/empty/failed/offline/sending/held en/fr/ar): existing tests (inbox-thread-states.render.test.tsx, held-send-notice.render.test.tsx) still pass; no new state tests written.
+## Not done / for the Modal browser run (honest)
+- Chromium: computed field border vs footer (Oasis dark + light), header word at 1366 px and absent in a 400-575 px pane, primary-soft text contrast, bubble outlines.
+- Phone sweep of /inbox WITH a conversation open (390x844 and 360x740, en + ar): tap-target, overlap-controls, covered-control, no sideways overflow of the wrapped composer;
+  composer above the on-screen keyboard (visualViewport code untouched, not re-verified); emoji popover inside 360 px.
+- INFERRED: the earlier inbox sweep (inbox-before) lists only list-pane tap-target offenders, so it probably ran with no conversation open and sampled the thread
+  controls barely; the contract test is the guard until a run with a conversation open exists.
