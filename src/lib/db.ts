@@ -23,13 +23,13 @@ import {
 import { withProtectedNestedReads } from "@/lib/crypto/with-protected-nested";
 import { withProtectedPiiEncryption } from "@/lib/crypto/with-protected-pii";
 import { withProtectedRaceSafeUpserts } from "@/lib/crypto/with-protected-upserts";
-import { shopPrismaClientOptions } from "@/lib/db-pool";
+import { shareRawClient, shopPrismaClientOptions } from "@/lib/db-pool";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { processShopContext, type ShopContext } from "@/lib/shops/context";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: unknown;
-  prismaRaw: PrismaClient | undefined;
+  prismaRaw?: PrismaClient | undefined;
   shopClients: Map<string, unknown> | undefined;
 };
 
@@ -71,8 +71,8 @@ function databasePathFromUrl(databaseUrl: string): string {
 
 process.env.DATABASE_URL = resolveDatabaseUrl();
 
-export const dbRaw =
-  globalForPrisma.prismaRaw ??
+// One raw client for the whole process, whichever bundle loads this file first (F-0043, src/lib/db-pool.ts).
+export const dbRaw = shareRawClient(globalForPrisma, () =>
   new PrismaClient({
     // One connection, long transaction wait (F-0043): see src/lib/db-pool.ts.
     ...shopPrismaClientOptions(process.env.DATABASE_URL),
@@ -80,11 +80,8 @@ export const dbRaw =
       process.env.NODE_ENV === "development"
         ? ["warn", "error"]
         : ["error"],
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prismaRaw = dbRaw;
-}
+  }),
+);
 
 type ProtectedClient = ReturnType<
   typeof withProtectedPiiEncryption<PrismaClient>

@@ -30,6 +30,27 @@
  */
 import type { Prisma } from "@prisma/client";
 
+/**
+ * ONE raw client per process, shared by every copy of src/lib/db.ts (F-0043).
+ *
+ * Next.js compiles the same source file once per layer: the instrumentation hook (which starts the
+ * background workers) and the route handlers each get their OWN copy of db.ts, with their own
+ * module variables. Without a process-wide holder that means two PrismaClient objects, two query
+ * engines and two SQLite connections to the one shop database, and `connection_limit=1` then only
+ * limits each of them. Measured on the production build: 1 file descriptor on the database right
+ * after start, 2 after the first requests, and the original 5-s freezes were still there under load.
+ * `globalThis` is the one thing every layer shares, so the holder lives there, in production too
+ * (the usual "only cache outside production" habit exists to stop dev hot-reload from leaking
+ * clients; a packaged process never reloads).
+ */
+export function shareRawClient<T>(
+  holder: { prismaRaw?: T | undefined },
+  create: () => T,
+): T {
+  holder.prismaRaw ??= create();
+  return holder.prismaRaw;
+}
+
 /** Prisma `transactionOptions.maxWait` (ms): how long a transaction may wait for its turn. */
 export const SHOP_TRANSACTION_MAX_WAIT_MS = 30_000;
 

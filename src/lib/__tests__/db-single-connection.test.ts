@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { dbRaw } from "@/lib/db";
 import {
   SHOP_TRANSACTION_MAX_WAIT_MS,
+  shareRawClient,
   shopPrismaClientOptions,
   withSingleConnectionPool,
 } from "@/lib/db-pool";
@@ -116,7 +117,49 @@ describe("the application's database client under overlapping transactions", () 
   }, 90_000);
 });
 
+describe("shareRawClient", () => {
+  it("creates the client once and gives the same object to every later caller", () => {
+    const holder: { prismaRaw?: object } = {};
+    let created = 0;
+    const create = () => {
+      created += 1;
+      return { copy: created };
+    };
+
+    const first = shareRawClient(holder, create);
+    const second = shareRawClient(holder, create);
+
+    expect(created).toBe(1);
+    expect(second).toBe(first);
+    expect(holder.prismaRaw).toBe(first);
+  });
+
+  it("uses a client that another copy of the module already stored", () => {
+    const stored = { fromAnotherBundle: true };
+    const holder: { prismaRaw?: object } = { prismaRaw: stored };
+    let created = 0;
+
+    const got = shareRawClient(holder, () => {
+      created += 1;
+      return {};
+    });
+
+    expect(got).toBe(stored);
+    expect(created).toBe(0);
+  });
+});
+
 describe("db.ts", () => {
+  it("shares its raw client through globalThis in production too (two bundles = two copies of the module)", () => {
+    const source = readFileSync(join(__dirname, "..", "db.ts"), "utf8");
+    // Next.js compiles db.ts once for the workers (instrumentation) and once for the routes.
+    expect(source).toMatch(/shareRawClient\(\s*globalForPrisma,/);
+    // The old guard stored the client only outside production, so a packaged process had two clients.
+    expect(source).not.toMatch(
+      /NODE_ENV\s*!==\s*"production"\s*\)\s*\{\s*globalForPrisma\.prismaRaw\s*=/,
+    );
+  });
+
   it("builds every PrismaClient with the single-connection options", () => {
     const source = readFileSync(join(__dirname, "..", "db.ts"), "utf8");
     const constructions = source.match(/new PrismaClient\(/g)?.length ?? 0;
