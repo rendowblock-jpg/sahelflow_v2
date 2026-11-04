@@ -380,7 +380,15 @@ export function OrderLifecycleRail({
       <Button
         key={id}
         size="sm"
-        variant={meta.destructive ? "destructive" : "default"}
+        variant={meta.destructive ? "outline" : "default"}
+        // s42 r51: return / refuse / cancel are the way OUT of an order, not the way forward. A filled red button made a
+        // delivered order's only action the loudest thing on the page, so they are an outline with red text instead.
+        className={
+          meta.destructive
+            ? "border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive dark:border-destructive/60"
+            : undefined
+        }
+        data-tone={meta.destructive ? "destructive" : "primary"}
         data-testid="lifecycle-action"
         data-action={id}
         disabled={busy}

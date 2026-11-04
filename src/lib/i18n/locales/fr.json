@@ -1856,6 +1856,7 @@
   "orders.shipment.descTracking": "Suivre ou mettre à jour le statut de l'expédition",
   "orders.shipment.errorFallback": "Échec",
   "orders.shipment.mustConfirmFirst": "La commande doit être confirmée avant l'expédition.",
+  "orders.shipment.noneAttached": "Aucune expédition transporteur n'est rattachée à cette commande.",
   "orders.shipment.notShippable": "Statut de commande non expédiable.",
   "orders.shipment.printLabel": "Imprimer l'étiquette",
   "orders.shipment.syncFailed": "Échec de la synchronisation",

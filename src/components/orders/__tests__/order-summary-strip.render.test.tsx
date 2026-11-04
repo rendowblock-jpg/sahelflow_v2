@@ -167,3 +167,22 @@ describe("OrderSummaryStrip without a customer record", () => {
     expect(container.querySelector("a[href='tel:0555123456']")).not.toBeNull();
   });
 });
+
+describe.each(PAGE_LOCALES)("OrderSummaryStrip with no delivery cost (%s)", (locale) => {
+  // s42 r51: a hand-over / pick-up / not-yet-priced order used to read "3 items · shipping —": a label with nothing behind it.
+  it("says nothing about shipping instead of a dangling dash", () => {
+    const { container } = render(<OrderSummaryStrip {...props(locale, { deliveryCost: 0 })} />);
+    const cell = container.querySelector('[data-testid="order-summary-total"]')?.textContent ?? "";
+    expect(cell).toContain(formatDZD(14500, locale));
+    expect(cell).not.toContain("—");
+    expect(cell).not.toContain("·");
+    expect(cell).not.toContain(makeT(locale)("orders.detail.summary.shippingLine", { amount: "" }).trim());
+  });
+
+  it("still shows the cost when there is one", () => {
+    const { container } = render(<OrderSummaryStrip {...props(locale, { deliveryCost: 600 })} />);
+    const cell = container.querySelector('[data-testid="order-summary-total"]')?.textContent ?? "";
+    expect(cell).toContain("·");
+    expect(cell).toContain(formatDZD(600, locale));
+  });
+});

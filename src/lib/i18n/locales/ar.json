@@ -1856,6 +1856,7 @@
   "orders.shipment.descTracking": "تتبع أو تحديث حالة الشحنة",
   "orders.shipment.errorFallback": "فشل",
   "orders.shipment.mustConfirmFirst": "يجب تأكيد الطلب قبل الشحن.",
+  "orders.shipment.noneAttached": "لا توجد شحنة توصيل مرتبطة بهذا الطلب.",
   "orders.shipment.notShippable": "حالة الطلب غير قابلة للشحن.",
   "orders.shipment.printLabel": "طباعة الملصق",
   "orders.shipment.syncFailed": "فشلت المزامنة",
