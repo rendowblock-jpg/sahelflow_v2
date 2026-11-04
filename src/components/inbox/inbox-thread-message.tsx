@@ -32,6 +32,10 @@ import { HeldSendNotice } from "@/components/inbox/held-send-notice";
 import type { HeldDiscardUiStatus } from "@/hooks/inbox/held-discard-client";
 import { heldSendView } from "@/lib/whatsapp/held-send";
 import { BUBBLE_FLOW, bubbleSide, messageVisual } from "@/components/inbox/inbox-message-visual";
+import {
+  BUBBLE_IN_BORDER_CLASS,
+  BUBBLE_OUT_BORDER_CLASS,
+} from "@/components/inbox/inbox-composer-style";
 import { SignalShape } from "@/components/inbox/inbox-signal-shape";
 import { MessagePreviewPlaceholder } from "@/components/inbox/message-preview-glyph";
 import { messagePreview } from "@/lib/inbox/message-preview";
@@ -270,7 +274,7 @@ export const MessageBubble = memo(function MessageBubble({
   upload,
   onCancelUpload,
   groupStart = true,
-  groupEnd: _groupEnd = true,
+  groupEnd = true,
   highlighted = false,
   quotedJumpable = false,
   onJumpToQuoted,
@@ -383,10 +387,12 @@ export const MessageBubble = memo(function MessageBubble({
       <div className={cn("flex", side === "left" ? "justify-start" : "justify-end")}>
         <div
           className={cn(
-            "max-w-[min(46rem,75%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
+            "max-w-[min(46rem,70%)] min-w-0 rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
+            // The outline is the only thing that separates a bubble from the
+            // pane in the light theme, so it is measured (>= 3:1), not guessed.
             inbound
-              ? "border-border/70 bg-card text-foreground"
-              : "border-primary/20 bg-primary-soft text-foreground",
+              ? `${BUBBLE_IN_BORDER_CLASS} bg-card text-foreground`
+              : `${BUBBLE_OUT_BORDER_CLASS} bg-primary-soft text-foreground`,
             visual.edge === "destructive" && "border-destructive",
             // Tail corner sits on the group's last bubble; continuation
             // bubbles soften their connecting corners (WhatsApp grouping).
@@ -498,7 +504,7 @@ export const MessageBubble = memo(function MessageBubble({
 
           {message.body.trim() ? (
             <p
-              className="whitespace-pre-wrap break-words text-[14px] leading-[1.65]"
+              className="whitespace-pre-wrap break-words text-[14px] leading-[1.65] [overflow-wrap:anywhere]"
               dir="auto"
               data-sf-user-content="true"
             >
@@ -546,7 +552,9 @@ export const MessageBubble = memo(function MessageBubble({
           ) : null}
 
           <div className="mt-1 flex items-center justify-end gap-1 text-caption tabular-nums text-muted-foreground">
-            <span>{messageTime(message.timestamp, locale)}</span>
+            <span className={cn(!groupEnd && "sr-only")}>
+              {messageTime(message.timestamp, locale)}
+            </span>
             {!inbound ? (
               <MessageStatus status={bubbleDeliveryStatus(message)} />
             ) : null}

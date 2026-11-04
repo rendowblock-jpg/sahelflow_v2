@@ -16,6 +16,11 @@
    status chip: focus ring + max-sm:min-h-10. Test: __tests__/inbox-thread-header.render.test.tsx (RED 4 fails, GREEN 9; the chip test was written together with the fix).
    CHECK IN THE BROWSER: the container-query class `@min-[36rem]/inbox-thread:inline` really shows the word at desktop widths.
 
+3. BUBBLES (pushed): outlines are measured, not guessed: incoming = foreground 55 % (light) / 50 % (dark) into the pane, outgoing = primary 85 % / 60 %;
+   contract test computes >= 3:1 vs the pane for sahel/atlas/oasis/dune x light/dark (RED: 14 failures incl. outgoing 2.78-2.94:1 at 70 %), text >= 4.5:1
+   on card and on primary-soft (8 % primary over the pane, approximated in OKLab: CONFIRM in Chromium). max-w 46rem/70 %, min-w-0, `[overflow-wrap:anywhere]`,
+   time visible only on the last bubble of a sender's run (sr-only otherwise; ticks stay). Files: inbox-thread-message.tsx, inbox-composer-style.ts.
+
 ## NEXT STEPS FOR A CONTINUATION
 - Step 2 THREAD HEADER (inbox-thread-header.tsx): names + tooltips for the 4 icon buttons, one primary action, 40 px on phone.
 - Step 3 BUBBLES (inbox-thread-message.tsx, inbox-message-visual.ts): contrast, max-w ~70 %, grouping, wrapping, ticks.

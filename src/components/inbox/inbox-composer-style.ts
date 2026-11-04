@@ -37,3 +37,25 @@ export const COMPOSER_FIELD_CLASS = [
   "outline-none transition-[color,box-shadow,border-color] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/35",
   "disabled:cursor-not-allowed disabled:opacity-60",
 ].join(" ");
+
+/*
+ * Message bubbles share the same rule: a bubble's fill is almost the pane
+ * colour in the light theme (card on background is ~1.1:1), so the OUTLINE is
+ * the only separator and must be >= 3:1 (the contract test measures it).
+ *   incoming outline = foreground P% into the pane background (same as the field)
+ *   outgoing outline = primary Q% into the pane background
+ */
+export const BUBBLE_OUT_BORDER_LIGHT_PERCENT = 85;
+export const BUBBLE_OUT_BORDER_DARK_PERCENT = 60;
+
+export function bubbleOutBorderPercent(mode: "light" | "dark"): number {
+  return mode === "dark"
+    ? BUBBLE_OUT_BORDER_DARK_PERCENT
+    : BUBBLE_OUT_BORDER_LIGHT_PERCENT;
+}
+
+export const BUBBLE_IN_BORDER_CLASS =
+  "border-[color-mix(in_oklab,var(--foreground)_55%,var(--background))] dark:border-[color-mix(in_oklab,var(--foreground)_50%,var(--background))]";
+
+export const BUBBLE_OUT_BORDER_CLASS =
+  "border-[color-mix(in_oklab,var(--primary)_85%,var(--background))] dark:border-[color-mix(in_oklab,var(--primary)_60%,var(--background))]";

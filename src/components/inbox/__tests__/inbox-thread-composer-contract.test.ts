@@ -3,6 +3,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  BUBBLE_IN_BORDER_CLASS,
+  BUBBLE_OUT_BORDER_CLASS,
+  bubbleOutBorderPercent,
   COMPOSER_FIELD_CLASS,
   composerFieldBorderPercent,
   composerPlaceholderPercent,
@@ -200,5 +203,50 @@ describe("composer row structure (read in code)", () => {
 
   it("Enter sends and Shift+Enter keeps the newline (send logic untouched)", () => {
     expect(thread).toMatch(/event\.key === "Enter" && !event\.shiftKey && canSend/);
+  });
+});
+
+describe("message bubbles (measured from the tokens)", () => {
+  for (const c of cascades) {
+    it(`${c.id}: text is >= 4.5:1 on both bubble kinds`, () => {
+      const fg = lab(c.layers, "--foreground");
+      expect(ratio(fg, lab(c.layers, "--card"))).toBeGreaterThanOrEqual(4.5);
+      // bg-primary-soft = primary 8 % over the pane (globals.css --color-primary-soft)
+      const soft = mix(lab(c.layers, "--primary"), lab(c.layers, "--background"), 8);
+      expect(ratio(fg, soft)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it(`${c.id}: both outlines are >= 3:1 against the pane (the outline is the only separator)`, () => {
+      const bg = lab(c.layers, "--background");
+      const inbound = mix(lab(c.layers, "--foreground"), bg, composerFieldBorderPercent(c.mode));
+      const outbound = mix(lab(c.layers, "--primary"), bg, bubbleOutBorderPercent(c.mode));
+      expect(ratio(inbound, bg)).toBeGreaterThanOrEqual(3);
+      expect(ratio(outbound, bg)).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  it("the Tailwind outline classes carry the same percentages as the constants", () => {
+    const out = BUBBLE_OUT_BORDER_CLASS.match(/(?:^|\s)border-\[color-mix\(in_oklab,var\(--primary\)_(\d+)%/);
+    const outDark = BUBBLE_OUT_BORDER_CLASS.match(/dark:border-\[color-mix\(in_oklab,var\(--primary\)_(\d+)%/);
+    const inn = BUBBLE_IN_BORDER_CLASS.match(/(?:^|\s)border-\[color-mix\(in_oklab,var\(--foreground\)_(\d+)%/);
+    const inDark = BUBBLE_IN_BORDER_CLASS.match(/dark:border-\[color-mix\(in_oklab,var\(--foreground\)_(\d+)%/);
+    expect(Number(out?.[1])).toBe(bubbleOutBorderPercent("light"));
+    expect(Number(outDark?.[1])).toBe(bubbleOutBorderPercent("dark"));
+    expect(Number(inn?.[1])).toBe(composerFieldBorderPercent("light"));
+    expect(Number(inDark?.[1])).toBe(composerFieldBorderPercent("dark"));
+  });
+
+  const message = read("src/components/inbox/inbox-thread-message.tsx");
+  it("the bubble uses the measured outlines, is capped near 70 % and wraps long words and links", () => {
+    expect(message).toContain("BUBBLE_IN_BORDER_CLASS");
+    expect(message).toContain("BUBBLE_OUT_BORDER_CLASS");
+    expect(message).toContain("max-w-[min(46rem,70%)]");
+    expect(message).toContain("[overflow-wrap:anywhere]");
+    expect(message).not.toContain("border-border/70 bg-card");
+    expect(message).not.toContain("border-primary/20 bg-primary-soft");
+  });
+
+  it("only the last bubble of a sender's run shows the time; ticks stay on every outgoing bubble", () => {
+    expect(message).toContain('!groupEnd && "sr-only"');
   });
 });
