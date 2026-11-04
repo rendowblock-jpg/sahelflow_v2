@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { publishIngressPayload, useIngressHealthSnapshot } from "@/hooks/inbox/ingress-health-store";
 import { deriveIngressHealthView, WAITING_AFTER_SEC } from "@/lib/inbox/ingress-health-view";
+import { parseFailureCode } from "@/lib/inbox/ingress-failure-reason";
 
 // S05a-03 / S05a-10. Reads the sidecar's ingress-health block (through
 // /api/whatsapp/status) and turns it into calm notices for the recovery dock.
@@ -16,6 +17,12 @@ export interface IngressNotice {
   count: number;
   /** Whole minutes the oldest waiting message has waited, only for "waiting". */
   minutes: number | null;
+  /**
+   * Why the oldest stuck message failed (payload.ingress.spool.lastFailureCode, a short token
+   * such as APP_INGRESS_TIMEOUT), only for "waiting" and "stalled". Absent, not null, when the
+   * service reports none or something that is not a short token.
+   */
+  failureCode?: string;
 }
 
 /** A notice that lasts less than this is not shown (and one that went is kept this long). */
@@ -59,10 +66,19 @@ export function describeIngressHealth(
   if (view.redUnsaved) notices.push({ kind: "lost", count: view.redUnsaved, minutes: null });
 
   const pending = whole(spool.pending);
-  if (view.amber === "stalled") notices.push({ kind: "stalled", count: pending, minutes: null });
+  const code = parseFailureCode(spool.lastFailureCode);
+  const failure = code === null ? {} : { failureCode: code };
+  if (view.amber === "stalled") {
+    notices.push({ kind: "stalled", count: pending, minutes: null, ...failure });
+  }
   if (view.amber === "waiting") {
     const oldest = whole(spool.oldestPendingSec);
-    notices.push({ kind: "waiting", count: pending, minutes: Math.max(1, Math.floor(oldest / 60)) });
+    notices.push({
+      kind: "waiting",
+      count: pending,
+      minutes: Math.max(1, Math.floor(oldest / 60)),
+      ...failure,
+    });
   }
 
   const unsupported = whole(sinceStart.unsupportedChat);

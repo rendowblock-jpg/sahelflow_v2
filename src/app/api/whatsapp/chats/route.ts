@@ -9,6 +9,7 @@ import {
 import { projectTrustedActorActions } from "@/lib/identity/conversation-projection";
 import { listTeamMembers } from "@/lib/identity/team-directory";
 import { getConversationAssignmentVersions } from "@/lib/inbox/conversation-assignment";
+import { conversationKnownName } from "@/lib/inbox/conversation-title";
 import {
   sidecar,
   SidecarRequestError,
@@ -158,7 +159,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       {
         jid: conversation.sourceId,
         conversationId: conversation.id,
-        name: conversation.contactName || conversation.sourceId,
+        // F-0028: a real name or "". The stored name can be the raw WhatsApp
+        // id; the inbox forms the localized title from the empty name and `jid`.
+        name: conversationKnownName({
+          name: conversation.contactName,
+          sourceId: conversation.sourceId,
+        }),
         phone: conversation.contactPhone,
         unread: conversation.unreadCount,
         lastMessage: last

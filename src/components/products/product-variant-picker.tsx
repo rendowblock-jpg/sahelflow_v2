@@ -92,7 +92,10 @@ export function ProductVariantPicker({
           </Label>
         )}
         <Select disabled>
-          <SelectTrigger className={size === "sm" ? "h-8" : ""}>
+          <SelectTrigger
+            aria-label={t("products.variant")}
+            className={size === "sm" ? "h-8" : ""}
+          >
             <SelectValue placeholder={t("products.noVariants")} />
           </SelectTrigger>
         </Select>
@@ -118,7 +121,10 @@ export function ProductVariantPicker({
         onValueChange={handleChange}
         disabled={disabled}
       >
-        <SelectTrigger className={size === "sm" ? "h-8" : ""}>
+        <SelectTrigger
+          aria-label={t("products.variant")}
+          className={size === "sm" ? "h-8" : ""}
+        >
           <SelectValue placeholder={t("products.selectVariant")} />
         </SelectTrigger>
         <SelectContent className="max-h-60">

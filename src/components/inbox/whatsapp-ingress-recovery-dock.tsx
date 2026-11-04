@@ -1,14 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  History,
-  Loader2,
-  RefreshCw,
-  RotateCcw,
-  ShieldCheck,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { History, Loader2, RefreshCw, RotateCcw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +13,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { useInboxIngressHealth } from "@/hooks/inbox/use-inbox-ingress-health";
 import { useI18n } from "@/hooks/use-i18n";
@@ -36,9 +28,7 @@ import {
   RECOVERY_STATUSES,
 } from "@/lib/inbox/recovery-load";
 import { toast } from "@/lib/toast";
-import { WhatsAppIngressHealthNotices } from "./whatsapp-ingress-health-notices";
-import { WhatsAppRecoveryCheckNotice } from "./whatsapp-recovery-check-notice";
-import { cn } from "@/lib/utils";
+import { InboxStatusStrip } from "./inbox-status-strip";
 
 interface IngressAttempt {
   id: string;
@@ -99,6 +89,7 @@ export function WhatsAppIngressRecoveryDock({
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [failedChecks, setFailedChecks] = useState(0);
   const healthNotices = useInboxIngressHealth(linkConnected);
+  const detailsRef = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -182,62 +173,39 @@ export function WhatsAppIngressRecoveryDock({
   };
 
   // Not allowed to list events is not "nothing to report": the reception counts come from the status
-  // answer, which needs less permission, so they stay.
-  const noticeBlock = (
-    <>
-      <WhatsAppIngressHealthNotices
-        notices={healthNotices}
-        locale={locale}
-        embedded={embedded}
-        onReconnect={onReconnect}
-      />
-      {checkFailed(failedChecks) ? (
-        <WhatsAppRecoveryCheckNotice
-          locale={locale}
-          embedded={embedded}
-          busy={loading}
-          onRetry={() => void refresh()}
-        />
-      ) : null}
-    </>
+  // answer, which needs less permission, so they stay. Everything the inbox says about reception is
+  // ONE compact strip (waiting + age, recovery issues, lost, stalled, failed check); its Details
+  // popover floats over the page. The recovery sheet below is opened from Details.
+  const recoveryCount = authorized ? recoveryEvents.length : 0;
+  const strip = (
+    <InboxStatusStrip
+      notices={healthNotices}
+      recoveryCount={recoveryCount}
+      checkFailed={checkFailed(failedChecks)}
+      checkBusy={loading}
+      locale={locale}
+      embedded={embedded}
+      onReconnect={onReconnect}
+      onReviewRecovery={recoveryCount > 0 ? () => setOpen(true) : undefined}
+      onCheckAgain={() => void refresh()}
+      detailsRef={detailsRef}
+    />
   );
-  if (!authorized) return noticeBlock;
-  if (loading && events.length === 0) return noticeBlock;
-  if (recoveryEvents.length === 0) return noticeBlock;
 
+  // Same tree whether or not there is anything to review, so Details keeps its state across a poll.
   return (
     <>
-    {noticeBlock}
+    {strip}
+    {recoveryCount === 0 ? null : (
     <Sheet open={open} onOpenChange={setOpen}>
-      <div
-        role="status"
-        className={cn(
-          "flex min-h-10 items-center justify-between gap-3 rounded-surface border border-warning/25 bg-warning-soft px-3 py-2",
-          embedded && "order-last mb-2 basis-full",
-        )}
-      >
-        <div className="flex min-w-0 items-center gap-2 text-xs">
-          <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
-          <div className="min-w-0">
-            <span className="font-medium text-foreground">
-              {copy("recoveryIssues", { count: recoveryEvents.length })}
-            </span>
-            <span className="ms-2 hidden text-muted-foreground md:inline">
-              {copy("recoveryDescription")}
-            </span>
-          </div>
-        </div>
-        <SheetTrigger asChild>
-          <Button type="button" variant="outline" size="sm" className="shrink-0">
-            <ShieldCheck className="size-3.5" aria-hidden="true" />
-            {copy("reviewRecovery")}
-          </Button>
-        </SheetTrigger>
-      </div>
-
       <SheetContent
         side={locale === "ar" ? "left" : "right"}
         className="w-[min(440px,96vw)] p-0 sm:max-w-none"
+        onCloseAutoFocus={(event) => {
+          // The sheet is opened from Details, which has closed by now: give the focus back to its button.
+          event.preventDefault();
+          detailsRef.current?.focus();
+        }}
       >
         <SheetHeader className="border-b px-5 py-4 text-start">
           <div className="flex items-start justify-between gap-3 pe-8">
@@ -349,6 +317,7 @@ export function WhatsAppIngressRecoveryDock({
         </div>
       </SheetContent>
     </Sheet>
+    )}
     </>
   );
 }

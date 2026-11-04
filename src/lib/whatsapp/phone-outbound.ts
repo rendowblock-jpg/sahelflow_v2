@@ -4,12 +4,16 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import type { ServiceContext } from "@/lib/data/service-base";
-import { ConflictError, SahelFlowError } from "@/types/errors";
+import { SahelFlowError } from "@/types/errors";
 import { isSameWhatsAppAccount } from "../../../sidecars/whatsapp/auth-tokens";
 import { deterministicWhatsAppMessageId } from "../../../sidecars/whatsapp/send-receipts";
 import { storedMessageTime } from "./message-time";
-import { sidecar } from "./sidecar-client";
 import { messageText, normalizeWhatsAppMessageContent } from "./types";
+import {
+  clearVerifiedWhatsAppAccount,
+  resolveVerifiedWhatsAppAccountId,
+  WHATSAPP_ACCOUNT_MISMATCH,
+} from "./verified-account";
 
 /** The envelope the sidecar spools for a message the seller sent (from the phone, or echoed from SahelFlow). */
 export const phoneOutboundSchema = z.object({
@@ -72,24 +76,9 @@ async function resolveProviderAccountId(
   context: PhoneOutboundContext,
 ): Promise<string> {
   if (context.whatsAppProviderAccountId) return context.whatsAppProviderAccountId;
-  try {
-    const status = await sidecar.status();
-    if (status.status !== "connected" || !status.user?.id) {
-      throw new SahelFlowError(
-        "WhatsApp account identity is unavailable",
-        "WHATSAPP_ACCOUNT_UNAVAILABLE",
-        409,
-      );
-    }
-    return status.user.id;
-  } catch (error) {
-    if (error instanceof SahelFlowError) throw error;
-    throw new SahelFlowError(
-      "WhatsApp account identity could not be verified",
-      "WHATSAPP_ACCOUNT_UNAVAILABLE",
-      503,
-    );
-  }
+  // Same question, same answer rules and same remembered account as the
+  // inbound path: see verified-account.ts.
+  return resolveVerifiedWhatsAppAccountId();
 }
 
 async function findExistingOutbound(
@@ -144,8 +133,11 @@ export async function persistWhatsAppPhoneOutbound(
   }
   const expectedAccountId = await resolveProviderAccountId(context);
   if (!isSameWhatsAppAccount(input.accountId, expectedAccountId)) {
-    throw new ConflictError(
+    if (!context.whatsAppProviderAccountId) clearVerifiedWhatsAppAccount();
+    throw new SahelFlowError(
       "WhatsApp phone message belongs to a different paired account",
+      WHATSAPP_ACCOUNT_MISMATCH,
+      409,
     );
   }
 

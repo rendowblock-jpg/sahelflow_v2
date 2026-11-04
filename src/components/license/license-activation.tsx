@@ -1,5 +1,7 @@
 "use client";
 
+import { reauthFailureText } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin } from "@/lib/auth/reauthenticate-client";
 import { useRef, useState, type DragEvent, type ReactNode } from "react";
 import { FileUp, Loader2, LockKeyhole } from "lucide-react";
 
@@ -110,18 +112,14 @@ export function useLicenseActions() {
     setError(null);
     setActivating(true);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      if (!response.ok) {
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
         setError(
-          t(
-            response.status === 429
-              ? "license.activation.pinLocked"
-              : "license.activation.pinIncorrect",
-          ),
+          reauthFailureText(result, t, {
+            incorrect: "license.activation.pinIncorrect",
+            locked: "license.activation.pinLocked",
+            unavailable: "license.activationFailed",
+          }),
         );
         return "needs_pin";
       }

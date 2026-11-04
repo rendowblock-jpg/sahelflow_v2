@@ -382,6 +382,44 @@ describe("search_conversations", () => {
     expect(r4.success).toBe(true);
     expect(r4.data).toEqual([]);
   });
+
+  // F-0028: the stored name of an unnamed WhatsApp contact can be its raw id
+  // (and a LID's digits can sit in the phone column). The assistant must not
+  // repeat either to the seller as a name or a phone.
+  it("never returns a raw WhatsApp id as a name, nor a LID as a phone (F-0028)", async () => {
+    await db.conversation.create({
+      data: {
+        channel: "whatsapp",
+        contactName: "202460866064562@lid",
+        contactPhone: "202460866064562",
+        sourceId: "202460866064562@lid",
+        lastMessageAt: new Date(),
+      },
+    });
+    await db.conversation.create({
+      data: {
+        channel: "whatsapp",
+        contactName: "Amel Rahmani",
+        contactPhone: "213791999157",
+        sourceId: "213791999157@s.whatsapp.net",
+        lastMessageAt: new Date(),
+      },
+    });
+
+    const tool = getTool("search_conversations")!;
+    const lid = await tool.execute({ query: "@lid" }, ctx());
+    expect(lid.success).toBe(true);
+    const lidRows = lid.data as Array<{ contactName: string | null; contactPhone: string | null }>;
+    expect(lidRows).toHaveLength(1);
+    expect(lidRows[0]!.contactName).toBeNull();
+    expect(lidRows[0]!.contactPhone).toBeNull();
+
+    const named = await tool.execute({ query: "amel" }, ctx());
+    const namedRows = named.data as Array<{ contactName: string | null; contactPhone: string | null }>;
+    expect(namedRows).toHaveLength(1);
+    expect(namedRows[0]!.contactName).toBe("Amel Rahmani");
+    expect(namedRows[0]!.contactPhone).toBe("213791999157");
+  });
 });
 
 // ── get_pending_deliveries ───────────────────────────────────────────────────

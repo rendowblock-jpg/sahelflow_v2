@@ -1,5 +1,7 @@
 "use client";
 
+import { ReauthFailureMessage } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin, type ReauthFailure } from "@/lib/auth/reauthenticate-client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -75,7 +77,7 @@ export function CommerceIntegrationsPanel({
   const [reauthRequired, setReauthRequired] = useState(false);
   const [pin, setPin] = useState("");
   const [reauthBusy, setReauthBusy] = useState(false);
-  const [reauthError, setReauthError] = useState<string | null>(null);
+  const [reauthError, setReauthError] = useState<ReauthFailure | null>(null);
 
   const definitions: CommerceDefinition[] = [
     {
@@ -204,21 +206,16 @@ export function CommerceIntegrationsPanel({
     setReauthBusy(true);
     setReauthError(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      const data = (await response.json().catch(() => ({}))) as ApiResult;
-      if (!response.ok) {
-        setReauthError(data.error ?? copy("reauthFailed"));
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setReauthError(result);
         return;
       }
       setReauthRequired(false);
       setPin("");
       await handleSave(true);
     } catch {
-      setReauthError(copy("reauthFailed"));
+      setReauthError({ kind: "unavailable" });
     } finally {
       setReauthBusy(false);
     }
@@ -415,9 +412,7 @@ export function CommerceIntegrationsPanel({
                   }}
                 />
                 {reauthError ? (
-                  <p id="commerce-reauth-error" role="alert" className="text-xs text-destructive">
-                    {reauthError}
-                  </p>
+                  <ReauthFailureMessage id="commerce-reauth-error" failure={reauthError} />
                 ) : null}
                 <Button
                   type="button"

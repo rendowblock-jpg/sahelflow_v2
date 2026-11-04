@@ -36,6 +36,7 @@ import { getOrdersStatesRuntimeTranslation } from "@/lib/i18n/orders-states-runt
 import { getDeliveryReconcileRuntimeTranslation } from "@/lib/i18n/delivery-reconcile-runtime";
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
 import { getInboxListRuntimeTranslation } from "@/lib/i18n/inbox-list-runtime";
+import { getInboxSampleRuntimeTranslation } from "@/lib/i18n/inbox-sample-runtime";
 import { getInboxLivenessRuntimeTranslation } from "@/lib/i18n/inbox-liveness-runtime";
 import { getInboxThreadStatesRuntimeTranslation } from "@/lib/i18n/inbox-thread-states-runtime";
 import { getInboxOrderStatusRuntimeTranslation } from "@/lib/i18n/inbox-order-status-runtime";
@@ -213,6 +214,7 @@ export function getRuntimeTranslation(
     getDeliveryReconcileRuntimeTranslation(locale, key) ??
     getEntityDetailRuntimeTranslation(locale, key) ??
     getInboxListRuntimeTranslation(locale, key) ??
+    getInboxSampleRuntimeTranslation(locale, key) ??
     getInboxLivenessRuntimeTranslation(locale, key) ??
     getInboxThreadStatesRuntimeTranslation(locale, key) ??
     getInboxOrderStatusRuntimeTranslation(locale, key) ??

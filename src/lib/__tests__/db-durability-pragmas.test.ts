@@ -124,7 +124,10 @@ describe("application database durability pragmas (PB-DATA-DURABILITY)", () => {
     expectDurable(all);
   });
 
-  it("overlapping statements really run on more than one connection", async () => {
+  it("overlapping statements run on exactly one connection (F-0043)", async () => {
+    // F-0043 (src/lib/db-pool.ts): the shop client uses ONE connection, because several
+    // connections waiting for the SQLite write lock froze the whole query engine for the busy
+    // timeout. The pragma reads above are therefore read on that one connection.
     // A temp table is private to one connection. CREATE TEMP TABLE succeeds once per
     // connection and fails on a reused one, so the number of successes is the number of
     // different connections that served eight overlapping calls.
@@ -138,7 +141,7 @@ describe("application database durability pragmas (PB-DATA-DURABILITY)", () => {
       }),
     );
     const connections = outcomes.filter((o) => o.status === "fulfilled").length;
-    expect(connections).toBeGreaterThan(1);
+    expect(connections).toBe(1);
   });
 
   it("the reader can see a weakened connection (self-check of this guard)", async () => {

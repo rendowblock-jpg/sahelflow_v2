@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -31,11 +31,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/hooks/use-i18n";
+import { ReauthFailureMessage } from "@/components/auth/reauth-failure-message";
 import { BrandLogo } from "@/components/brand/brand-icons";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
+import {
+  reauthenticateWithPin,
+  type ReauthFailure,
+} from "@/lib/auth/reauthenticate-client";
 import { toast } from "@/lib/toast";
 
 export type AiKeyProvider = "gemini" | "groq";
@@ -71,12 +76,13 @@ type GeminiKeyDiagnostics = {
     finishReason: string | null;
     blockReason: string | null;
   } | null;
-  keyShape: {
+  /** Optional on purpose: the panel must survive a body without it. */
+  keyShape?: {
     prefix: string;
     length: number;
     hasWhitespace: boolean;
     hasNewline: boolean;
-  };
+  } | null;
 };
 
 interface SaveResult {
@@ -99,12 +105,36 @@ function requiresReauthentication(response: Response, body: SaveResult): boolean
  * protected-key authority mismatches) never reach a merchant.
  */
 function rejectionCopy(data: SaveResult, t: (key: string) => string): string {
-  const code = data.code ?? "";
+  const code = typeof data.code === "string" ? data.code : "";
   if (code.startsWith("LICENSE_")) return t("aiKey.errorLicense");
   if (code.startsWith("PROTECTED_DATA_")) {
     return t("aiKey.errorSecretAuthority");
   }
-  return data.error ?? t("aiKey.error");
+  return asText(data.error) ?? t("aiKey.error");
+}
+
+/**
+ * Server JSON is not trusted to have the shape the types promise. A field drawn as text must BE text: React throws
+ * on an object child, and one throw in render takes the whole page down (F-0023 round 2).
+ */
+function asText(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+/** The " — key: AIza…, 39 chars · whitespace" tail of the probe line, built only from the parts that are really there. */
+function keyShapeText(
+  shape: unknown,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (!shape || typeof shape !== "object") return "";
+  const { prefix, length, hasNewline, hasWhitespace } = shape as Record<string, unknown>;
+  let text = "";
+  if (typeof prefix === "string" && typeof length === "number") {
+    text += ` — ${t("aiKey.probe.keyShape", { prefix, length })}`;
+  }
+  if (hasNewline === true) text += ` · ${t("aiKey.probe.newlines")}`;
+  if (hasWhitespace === true) text += ` · ${t("aiKey.probe.whitespace")}`;
+  return text;
 }
 
 export function AiKeyPanel({
@@ -137,7 +167,9 @@ export function AiKeyPanel({
   const [consentSaving, setConsentSaving] = useState(false);
   const [pin, setPin] = useState("");
   const [reauthBusy, setReauthBusy] = useState(false);
-  const [reauthError, setReauthError] = useState<string | null>(null);
+  const [reauthFailure, setReauthFailure] = useState<ReauthFailure | null>(null);
+  // A ref, not state: two submits in the same tick both see the same render, so state alone cannot stop the second.
+  const reauthInFlight = useRef(false);
   const [pendingAction, setPendingAction] = useState<
     "save" | "delete" | null
   >(null);
@@ -145,7 +177,7 @@ export function AiKeyPanel({
   const loadKeyStatus = useCallback(async () => {
     if (!canManageKey) return;
     setAuthorityState("loading");
-    setReauthError(null);
+    setReauthFailure(null);
     try {
       const response = await fetch(KEY_ENDPOINTS[provider], {
         method: "GET",
@@ -197,24 +229,16 @@ export function AiKeyPanel({
   }, [canManageKey, loadConsent, loadKeyStatus]);
 
   const verifyPin = async () => {
-    if (!canManageKey || !pin.trim() || reauthBusy) return;
+    if (!canManageKey || !pin.trim() || reauthBusy || reauthInFlight.current) {
+      return;
+    }
+    reauthInFlight.current = true;
     setReauthBusy(true);
-    setReauthError(null);
+    setReauthFailure(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      const body = (await response.json().catch(() => ({}))) as SaveResult;
-      if (!response.ok) {
-        setReauthError(
-          response.status === 401
-            ? t("aiKey.pinIncorrect")
-            : response.status === 429
-              ? t("aiKey.pinLocked")
-              : body.error ?? copy("verificationDescription"),
-        );
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setReauthFailure(result);
         return;
       }
       setPin("");
@@ -230,8 +254,9 @@ export function AiKeyPanel({
         await performDelete();
       }
     } catch {
-      setReauthError(copy("unavailableDescription"));
+      setReauthFailure({ kind: "unavailable" });
     } finally {
+      reauthInFlight.current = false;
       setReauthBusy(false);
     }
   };
@@ -301,7 +326,7 @@ export function AiKeyPanel({
       }
       setResult(data);
       if (response.ok && data.ok) {
-        setActiveModel(data.model ?? null);
+        setActiveModel(asText(data.model) ?? null);
         setConfigured(true);
         setEditing(false);
         setKeyInput("");
@@ -443,10 +468,8 @@ export function AiKeyPanel({
                         {copy("verify")}
                       </Button>
                     </div>
-                    {reauthError ? (
-                      <p role="alert" className="text-xs text-destructive">
-                        {reauthError}
-                      </p>
+                    {reauthFailure ? (
+                      <ReauthFailureMessage failure={reauthFailure} />
                     ) : null}
                   </AlertDescription>
                 </Alert>
@@ -584,8 +607,8 @@ export function AiKeyPanel({
                   <div className="min-w-0 space-y-1">
                     <span>
                       {result.ok
-                        ? result.message ?? t("aiKey.saved")
-                        : result.error ?? t("aiKey.error")}
+                        ? asText(result.message) ?? t("aiKey.saved")
+                        : asText(result.error) ?? t("aiKey.error")}
                     </span>
                     {!result.ok && result.diagnostics ? (
                       <p className="break-all font-mono text-xs opacity-80">
@@ -633,16 +656,7 @@ export function AiKeyPanel({
                         {result.diagnostics.reason
                           ? ` — ${result.diagnostics.reason}`
                           : ""}
-                        {` — ${t("aiKey.probe.keyShape", {
-                          prefix: result.diagnostics.keyShape.prefix,
-                          length: result.diagnostics.keyShape.length,
-                        })}`}
-                        {result.diagnostics.keyShape.hasNewline
-                          ? ` · ${t("aiKey.probe.newlines")}`
-                          : ""}
-                        {result.diagnostics.keyShape.hasWhitespace
-                          ? ` · ${t("aiKey.probe.whitespace")}`
-                          : ""}
+                        {keyShapeText(result.diagnostics.keyShape, t)}
                       </p>
                     ) : null}
                   </div>

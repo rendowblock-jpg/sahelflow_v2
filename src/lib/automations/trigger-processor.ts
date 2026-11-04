@@ -76,24 +76,49 @@ function isUniqueViolation(error: unknown): boolean {
   );
 }
 
-async function claimTrigger(
+/**
+ * The one definition of "an automation trigger intent is claimable now". The
+ * idle pre-check and the claim transaction both use it, so they cannot drift.
+ */
+function claimableTriggerWhere(
+  now: Date,
+  expiredBefore: Date,
+): Prisma.OutboxIntentWhereInput {
+  return {
+    effectType: AUTOMATION_TRIGGER_EFFECT_TYPE,
+    OR: [
+      { status: "queued" },
+      {
+        status: "retrying",
+        OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+      },
+      { status: "processing", lockedAt: { lte: expiredBefore } },
+    ],
+  };
+}
+
+/** Exported for the idle-queue contract tests; the drain below is the caller. */
+export async function claimTrigger(
   context: ServiceContext,
 ): Promise<ClaimedTrigger | null> {
+  // Idle pre-check (F-0031), OUTSIDE the transaction: when nothing is claimable
+  // the 2 s worker tick must not open an interactive transaction at all. A row
+  // that becomes due just after this probe is claimed on the next tick.
+  const probeAt = new Date();
+  const due = await context.prisma.outboxIntent.findFirst({
+    where: claimableTriggerWhere(
+      probeAt,
+      new Date(probeAt.getTime() - TRIGGER_LEASE_MS),
+    ),
+    select: { id: true },
+  });
+  if (!due) return null;
+
   return context.prisma.$transaction(async (tx) => {
     const now = new Date();
     const expiredBefore = new Date(now.getTime() - TRIGGER_LEASE_MS);
     const current = await tx.outboxIntent.findFirst({
-      where: {
-        effectType: AUTOMATION_TRIGGER_EFFECT_TYPE,
-        OR: [
-          { status: "queued" },
-          {
-            status: "retrying",
-            OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
-          },
-          { status: "processing", lockedAt: { lte: expiredBefore } },
-        ],
-      },
+      where: claimableTriggerWhere(now, expiredBefore),
       orderBy: { createdAt: "asc" },
     });
     if (!current) return null;

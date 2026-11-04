@@ -7,6 +7,7 @@ import type {
   InboxQueueFilter,
 } from "@/components/inbox/inbox-workspace-types";
 import type { ConversationWorkflowState } from "@/components/inbox/conversation-controls";
+import { compareQueueRows } from "@/components/inbox/inbox-sample-model";
 import type { WhatsAppStatus } from "@/lib/whatsapp/types";
 import {
   CHAT_REFRESH_COALESCE_MS,
@@ -17,7 +18,6 @@ import {
   mapConversationProjection,
 } from "./inbox-workspace-shared";
 import type { InboxSharedRefs } from "./use-inbox-shared-refs";
-import { displayContactName } from "@/lib/validation/phone";
 import { matchesSearchQuery } from "@/lib/search/universal-search";
 
 /**
@@ -125,7 +125,7 @@ export function useInboxChatQueue({
             id: chat.jid,
             conversationId: chat.conversationId,
             transportId: chat.jid,
-            name: displayContactName(chat.name),
+            name: chat.name,
             phone: chat.phone ?? undefined,
             channel: "whatsapp" as const,
             lastMessageText: chat.lastMessage?.text,
@@ -352,9 +352,10 @@ export function useInboxChatQueue({
       if (!query) return true;
       return matchesSearchQuery(query, [chat.name, chat.phone, chat.lastMessageText]);
       })
-      // Pinned conversations float first (INB-12); the stable sort keeps the
-      // server's recency order inside each group.
-      .sort((a, b) => Number(b.pinned) - Number(a.pinned));
+      // Real conversations first, sample rows last (F-0030); inside each group
+      // pinned ones float first (INB-12). The sort is stable, so the server's
+      // recency order survives inside every group.
+      .sort(compareQueueRows);
   }, [chats, queueFilter, searchQuery]);
 
   const queueCounts = useMemo(

@@ -17,9 +17,11 @@ function beforeChild(source: string, child: string): string {
 
 describe("Latin title ellipsis", () => {
   it("does not pair seller-label alignment with truncate and dir=auto", () => {
+    // F-0028: the row draws the resolved title; a real (seller or customer)
+    // name keeps dir="auto", only generated labels take the page direction.
     const queueName = beforeChild(
       read("src/components/inbox/inbox-v3-queue.tsx"),
-      "{chat.name}",
+      "{title.text}",
     );
     const sessionTitle = beforeChild(
       read("src/components/ai/ai-session-row.tsx"),
@@ -28,7 +30,7 @@ describe("Latin title ellipsis", () => {
 
     for (const opening of [queueName, sessionTitle]) {
       expect(opening).toContain("truncate");
-      expect(opening).toContain('dir="auto"');
+      expect(opening).toMatch(/dir=("auto"|\{title\.kind === "name" \? "auto")/);
       expect(opening).not.toContain("data-sf-seller-label");
     }
   });

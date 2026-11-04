@@ -132,10 +132,19 @@ describe("readRequestsToday", () => {
 
 describe("saveQuotaLedger", () => {
   it("also writes the requests the shared ledger counted, and leaves a private test ledger alone", async () => {
-    const { context, rows } = fakeContext();
-    quotaLedger.recordRequest("groq", NOW);
-    quotaLedger.recordRequest("groq", NOW);
-    await saveQuotaLedger(context);
-    expect(rows.get("ai_requests_groq_2026-10-31")).toBe("2");
+    // saveQuotaLedger flushes with the REAL clock, and a flush deletes counters older than PRUNE_AFTER_DAYS (3).
+    // This test counts requests on 31 Oct: it passed until 3 Nov and failed from 4 Nov, when the counter it had
+    // just written was 4 days old and was pruned. Pin the clock to the day the test is about.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    try {
+      const { context, rows } = fakeContext();
+      quotaLedger.recordRequest("groq", NOW);
+      quotaLedger.recordRequest("groq", NOW);
+      await saveQuotaLedger(context);
+      expect(rows.get("ai_requests_groq_2026-10-31")).toBe("2");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

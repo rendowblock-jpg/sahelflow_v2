@@ -1,5 +1,7 @@
 "use client";
 
+import { ReauthFailureMessage } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin, type ReauthFailure } from "@/lib/auth/reauthenticate-client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -80,7 +82,7 @@ export function ChatGptPlanCard({ canManage }: { canManage: boolean }) {
   const [welcome, setWelcome] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pin, setPin] = useState("");
-  const [pinError, setPinError] = useState<string | null>(null);
+  const [pinError, setPinError] = useState<ReauthFailure | null>(null);
   // The address and the attempt id live in refs: they are never rendered.
   const attemptRef = useRef<{ id: string; url: string } | null>(null);
   const pollTimer = useRef<number | null>(null);
@@ -250,13 +252,9 @@ export function ChatGptPlanCard({ canManage }: { canManage: boolean }) {
     setWorking(true);
     setPinError(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      if (!response.ok) {
-        setPinError(t(response.status === 401 ? "aiKey.pinIncorrect" : response.status === 429 ? "aiKey.pinLocked" : "aiKey.chatgpt.error.generic"));
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setPinError(result);
         return;
       }
       setPin("");
@@ -269,7 +267,7 @@ export function ChatGptPlanCard({ canManage }: { canManage: boolean }) {
       else if (retry?.kind === "activate") activate(retry.id);
       else if (retry?.kind === "signOut") signOut(retry.id);
     } catch {
-      setPinError(t("aiKey.chatgpt.error.generic"));
+      setPinError({ kind: "unavailable" });
     } finally {
       setWorking(false);
     }
@@ -342,7 +340,7 @@ export function ChatGptPlanCard({ canManage }: { canManage: boolean }) {
               {t("aiKey.chatgpt.pinLabel")}
             </label>
             <Input id="chatgpt-pin" type="password" inputMode="numeric" autoComplete="off" value={pin} onChange={(event) => setPin(event.target.value)} />
-            {pinError ? <p role="alert" className="text-sm text-destructive">{pinError}</p> : null}
+            {pinError ? <ReauthFailureMessage failure={pinError} className="text-sm text-destructive" /> : null}
             <Button type="submit" size="sm" disabled={busy || !pin.trim()}>
               {t("aiKey.chatgpt.pinConfirm")}
             </Button>

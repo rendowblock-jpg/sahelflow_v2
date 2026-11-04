@@ -1,5 +1,7 @@
 "use client";
 
+import { reauthFailureText } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin } from "@/lib/auth/reauthenticate-client";
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
@@ -187,12 +189,11 @@ export function DeliveryCredentialsPanel() {
     if (!pin.trim()) return;
     setBusy("reauth");
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      if (!response.ok) throw new Error(copy("verificationDescription"));
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setResult({ ok: false, message: reauthFailureText(result, t) });
+        return;
+      }
       setPin("");
       await load();
     } catch (error) {

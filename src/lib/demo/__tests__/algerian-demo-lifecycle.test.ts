@@ -360,4 +360,138 @@ describe("Algerian demo workspace lifecycle", () => {
     ).not.toBeNull();
     expect(await prisma.product.count()).toBe(0);
   });
+  // F-0030: a shop whose inbox holds real chats AND sample chats. The inbox
+  // "Remove sample data" control calls exactly this path (GET status for the
+  // counts it prints, then DELETE). Only `demo-` rows may go.
+  async function createRealShopRows() {
+    await prisma.category.create({ data: { id: "real-cat-1", name: "Real category" } });
+    await prisma.product.create({
+      data: { id: "real-product-1", name: "Real product", price: 1500, categoryId: "real-cat-1" },
+    });
+    await prisma.customer.create({
+      data: { id: "real-customer-1", name: "Real Customer", phone: "0555123456" },
+    });
+    await prisma.order.create({
+      data: {
+        id: "real-order-1",
+        orderNumber: "DZ-REAL-0001",
+        customerId: "real-customer-1",
+        totalPrice: 1500,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "Rue 1",
+        phone: "0555123456",
+      },
+    });
+    await prisma.conversation.create({
+      data: {
+        id: "real-conversation-1",
+        channel: "whatsapp",
+        contactName: "Real Customer",
+        contactPhone: "0555123456",
+        sourceId: "213555123456@s.whatsapp.net",
+        lastMessageAt: new Date("2026-08-19T10:00:00.000Z"),
+      },
+    });
+    await prisma.message.create({
+      data: {
+        id: "real-message-1",
+        conversationId: "real-conversation-1",
+        body: "Salam, je veux commander",
+        direction: "incoming",
+        timestamp: new Date("2026-08-19T10:00:00.000Z"),
+      },
+    });
+  }
+
+  async function countByTag() {
+    const demo = { startsWith: "demo-" };
+    const real = { not: { startsWith: "demo-" } };
+    const per = async (model: "conversation" | "message" | "order" | "customer" | "product") => {
+      const delegate = prisma[model] as unknown as {
+        count(args: { where: { id: object } }): Promise<number>;
+      };
+      return {
+        demo: await delegate.count({ where: { id: demo } }),
+        real: await delegate.count({ where: { id: real } }),
+      };
+    };
+    return {
+      conversations: await per("conversation"),
+      messages: await per("message"),
+      orders: await per("order"),
+      customers: await per("customer"),
+      products: await per("product"),
+    };
+  }
+
+  it("a shop with BOTH real and sample rows: the status counts only the sample rows, and removal deletes only them (F-0030)", { timeout: 120_000 }, async () => {
+    await createRealShopRows();
+    await loadAlgerianDemoWorkspace(client());
+
+    const before = await countByTag();
+    // The shop really is mixed: every kind has real AND sample rows.
+    for (const kind of ["conversations", "messages", "orders", "customers", "products"] as const) {
+      expect(before[kind].real, `real ${kind}`).toBe(1);
+      expect(before[kind].demo, `sample ${kind}`).toBeGreaterThan(0);
+    }
+
+    // The counts the inbox dialog prints come from this status. They must be
+    // the SAMPLE counts, not the shop totals.
+    const status = await getAlgerianDemoWorkspaceStatus(client());
+    expect(status.loaded).toBe(true);
+    expect(status.counts.conversations).toBe(before.conversations.demo);
+    expect(status.counts.orders).toBe(before.orders.demo);
+    expect(status.counts.customers).toBe(before.customers.demo);
+    expect(status.counts.products).toBe(before.products.demo);
+
+    const removed = await removeAlgerianDemoWorkspace(client());
+    expect(removed.loaded).toBe(false);
+    expect(removed.counts.conversations).toBe(0);
+
+    const after = await countByTag();
+    for (const kind of ["conversations", "messages", "orders", "customers", "products"] as const) {
+      expect(after[kind].demo, `sample ${kind} after`).toBe(0);
+      expect(after[kind].real, `real ${kind} after`).toBe(1);
+    }
+    // The real rows are intact, not just present.
+    expect(
+      await prisma.conversation.findUniqueOrThrow({ where: { id: "real-conversation-1" } }),
+    ).toMatchObject({ contactName: "Real Customer", sourceId: "213555123456@s.whatsapp.net" });
+    expect(await prisma.message.findUniqueOrThrow({ where: { id: "real-message-1" } })).toMatchObject({
+      body: "Salam, je veux commander",
+    });
+    expect(await prisma.order.findUniqueOrThrow({ where: { id: "real-order-1" } })).toMatchObject({
+      orderNumber: "DZ-REAL-0001",
+      totalPrice: 1500,
+    });
+  });
+
+  it("a real order placed for a sample customer blocks removal and deletes nothing, real or sample (F-0030)", { timeout: 120_000 }, async () => {
+    await createRealShopRows();
+    await loadAlgerianDemoWorkspace(client());
+    await prisma.order.create({
+      data: {
+        id: "real-order-for-sample-customer",
+        orderNumber: "DZ-REAL-0002",
+        customerId: "demo-customer-01",
+        totalPrice: 900,
+        wilaya: "Alger",
+        commune: "Kouba",
+        address: "Rue 2",
+        phone: "0555000001",
+      },
+    });
+    const before = await countByTag();
+
+    await expect(removeAlgerianDemoWorkspace(client())).rejects.toMatchObject({
+      code: "DEMO_REMOVAL_BLOCKED_BY_REFERENCES",
+      statusCode: 409,
+    });
+
+    expect(await countByTag()).toEqual(before);
+    expect(
+      (await getAlgerianDemoWorkspaceStatus(client())).loaded,
+    ).toBe(true);
+  });
 });

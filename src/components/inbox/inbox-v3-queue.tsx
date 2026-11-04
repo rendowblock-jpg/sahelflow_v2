@@ -10,22 +10,19 @@ import {
   Check,
   CheckCheck,
   CheckCircle2,
-  FileText,
   Filter,
   Flag,
-  ImageIcon,
   ListChecks,
   Loader2,
   Mail,
   MessageSquareText,
-  Mic,
+  User,
   MoreVertical,
   Pin,
   PinOff,
   Search,
   Trash2,
   UserMinus,
-  Video,
   X,
 } from "lucide-react";
 
@@ -43,6 +40,14 @@ import {
 import { searchResultToChat } from "@/components/inbox/inbox-desk-types";
 import type { InboxChat } from "@/components/inbox/inbox-workspace-types";
 import {
+  SampleBadge,
+  SampleDataFooter,
+} from "@/components/inbox/inbox-sample-data";
+import {
+  isSampleChat,
+  sampleRowsLast,
+} from "@/components/inbox/inbox-sample-model";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -53,6 +58,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArabicRuns } from "@/components/inbox/arabic-runs";
+import { inboxChatInitial, inboxChatTitleParts } from "@/components/inbox/inbox-chat-title";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -78,6 +84,11 @@ import {
 } from "@/components/inbox/inbox-queue-model";
 import styles from "@/components/inbox/inbox-v3-workspace.module.css";
 import { matchesSearchQuery } from "@/lib/search/universal-search";
+import {
+  messagePreview,
+  type MessagePreviewIcon,
+} from "@/lib/inbox/message-preview";
+import { MessagePreviewGlyph } from "@/components/inbox/message-preview-glyph";
 
 const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread", "archived"];
 const WORKFLOW_FILTERS: WorkflowFilter[] = [
@@ -162,38 +173,14 @@ function matchesDeskFilters(
   return workflowFilter === "all" || status === workflowFilter;
 }
 
-/** Media-family glyph for the list preview (📷/🎤/📎 convention). */
-function PreviewGlyph({ type }: { type?: string | null }) {
-  switch (type) {
-    case "image":
-    case "sticker":
-      return (
-        <ImageIcon
-          className="size-3 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-      );
-    case "video":
-      return (
-        <Video
-          className="size-3 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-      );
-    case "audio":
-      return (
-        <Mic className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-      );
-    case "document":
-      return (
-        <FileText
-          className="size-3 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-      );
-    default:
-      return null;
-  }
+/** Icon of the last-message preview (the shared glyph set, small for the row). */
+function PreviewGlyph({ icon }: { icon: MessagePreviewIcon | null }) {
+  return (
+    <MessagePreviewGlyph
+      icon={icon}
+      className="size-3 shrink-0 text-muted-foreground"
+    />
+  );
 }
 
 const PRIORITY_FILTER_VALUES = ["", "urgent", "high", "medium", "low"] as const;
@@ -245,6 +232,17 @@ const ConversationRow = memo(function ConversationRow({
   const status = chat.workflow.status ?? "open";
   const priority = chat.workflow.priority;
   const chip = rowChipFor({ status, hasDraft: Boolean(draftPreview) });
+  // F-0028: the stored name can be the raw WhatsApp id; never print it.
+  const title = inboxChatTitleParts(chat, locale);
+  // One line for the last message: its words, or what kind of message it was.
+  // A chat the list has no message data for (no text and no type at all) gets
+  // an empty line, never a stored-history phrase.
+  const preview = messagePreview(
+    chat.lastMessageText !== undefined || chat.lastMessageType != null
+      ? { body: chat.lastMessageText ?? "", messageType: chat.lastMessageType }
+      : null,
+    locale,
+  );
 
   return (
     <button
@@ -280,8 +278,8 @@ const ConversationRow = memo(function ConversationRow({
         </span>
       ) : (
         <span className={styles.rowAvatar} aria-hidden="true">
-          {chat.name.charAt(0).toUpperCase() || (
-            <MessageSquareText className="size-4" />
+          {inboxChatInitial(chat, locale) ?? (
+            <User className="size-4" />
           )}
         </span>
       )}
@@ -293,14 +291,14 @@ const ConversationRow = memo(function ConversationRow({
               ellipsizes at its own end. */}
           <span className="flex min-w-0 flex-1 justify-start overflow-hidden">
             <bdi
-              dir="auto"
+              dir={title.kind === "name" ? "auto" : locale === "ar" ? "rtl" : "ltr"}
               className={cn(
                 styles.rowName,
                 "block min-w-0 max-w-full truncate text-start text-base leading-6",
                 chat.unread > 0 ? "font-semibold text-foreground" : "font-medium",
               )}
             >
-              <ArabicRuns text={chat.name} locale={locale} />
+              <ArabicRuns text={title.text} locale={locale} />
             </bdi>
           </span>
           {chat.pinned ? (
@@ -340,7 +338,7 @@ const ConversationRow = memo(function ConversationRow({
                   {copy("youPrefix")}:
                 </span>
               ) : null}
-              <PreviewGlyph type={chat.lastMessageType} />
+              <PreviewGlyph icon={preview.icon} />
               <bdi
                 data-inbox-preview="true"
                 data-sf-seller-label="true"
@@ -351,11 +349,9 @@ const ConversationRow = memo(function ConversationRow({
                     : "text-muted-foreground",
                 )}
               >
-                {chat.lastMessageText ? (
-                  <ArabicRuns text={chat.lastMessageText} locale={locale} />
-                ) : (
-                  copy("savedHistory")
-                )}
+                {preview.text ? (
+                  <ArabicRuns text={preview.text} locale={locale} />
+                ) : null}
               </bdi>
             </>
           )}
@@ -379,6 +375,8 @@ const ConversationRow = memo(function ConversationRow({
             <SignalShape shape={chip.shape} />
             <span className="truncate">{t(chip.labelKey)}</span>
           </span>
+
+          <SampleBadge conversationId={chat.conversationId} t={t} />
 
           {priority ? (
             <Flag
@@ -441,6 +439,8 @@ export function InboxV3Queue({
     markUnread,
     setConversationState,
     refreshChats,
+    activeChat,
+    clearActiveChat,
     dataDegraded,
     canUpdateConversation,
     localDrafts,
@@ -565,7 +565,7 @@ export function InboxV3Queue({
   }, [copy, normalizedQuery, query, searchAttempt]);
 
   const rows = useMemo(() => {
-    if (!normalizedQuery) return localMatches;
+    if (!normalizedQuery) return sampleRowsLast(localMatches);
     const byConversation = new Map<string, InboxChat>();
     const serverResults =
       searchState.query === normalizedQuery
@@ -584,10 +584,12 @@ export function InboxV3Queue({
       }
     }
     const merged = [...byConversation.values()];
-    return merged.filter(
-      (chat) =>
-        (!priorityFilter || chat.workflow.priority === priorityFilter) &&
-        (!labelFilter || (chat.workflow.labels ?? []).includes(labelFilter)),
+    return sampleRowsLast(
+      merged.filter(
+        (chat) =>
+          (!priorityFilter || chat.workflow.priority === priorityFilter) &&
+          (!labelFilter || (chat.workflow.labels ?? []).includes(labelFilter)),
+      ),
     );
   }, [
     currentMemberId,
@@ -762,6 +764,17 @@ export function InboxV3Queue({
     }
     exitSelectMode();
   };
+
+  // F-0030: the sample data is gone; refresh the lists, and leave a thread that
+  // no longer exists instead of showing its 404.
+  const handleSampleRemoved = useCallback(() => {
+    if (activeChat && isSampleChat(activeChat)) {
+      clearActiveChat();
+      router.replace("/inbox");
+    }
+    void refreshChats();
+    router.refresh();
+  }, [activeChat, clearActiveChat, refreshChats, router]);
 
   const unreadEmpty =
     queueFilter === "unread" && queueCounts.unread === 0 && !normalizedQuery;
@@ -1277,6 +1290,12 @@ export function InboxV3Queue({
             {footerText}
           </p>
         ) : null}
+        <SampleDataFooter
+          hasRealRows={chats.some((chat) => !isSampleChat(chat))}
+          sampleRowCount={chats.filter(isSampleChat).length}
+          t={t}
+          onRemoved={handleSampleRemoved}
+        />
       </div>
 
       <AlertDialog

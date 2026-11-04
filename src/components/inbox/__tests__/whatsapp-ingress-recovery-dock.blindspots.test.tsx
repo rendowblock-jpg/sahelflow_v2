@@ -1,11 +1,13 @@
 /**
  * @vitest-environment happy-dom
  */
-// The recovery dock must not look "all clear" when it could not look. Real
-// code: the dock, its notices, the status hook, the copy files. Stand-ins:
+// The recovery dock must not look "all clear" when it could not look. F-0027:
+// the failed-check line is now a chip of the one status strip (short text); the
+// full sentence and the Check again button are in its Details popover. Real
+// code: the dock, the strip, the status hook, the copy files. Stand-ins:
 // fetch (status + inbound), the locale hook, fake timers. NOT covered: a real
 // database, a real sidecar, a browser.
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let locale: "ar" | "fr" | "en" = "en";
@@ -23,6 +25,13 @@ const TITLE = {
   fr: "Impossible de vérifier les messages à traiter pour le moment",
   ar: "تعذّر التحقق من الرسائل التي تحتاج إلى مراجعة الآن",
 } as const;
+
+const CHIP = {
+  en: "Recovery check failed",
+  fr: "Vérification impossible",
+  ar: "تعذّر فحص الاستعادة",
+} as const;
+const DETAILS = { en: "Details", fr: "Détails", ar: "التفاصيل" } as const;
 
 async function settle(ms: number) {
   await act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
@@ -73,8 +82,15 @@ describe("recovery dock: blind spots", () => {
       expect(screen.queryByTestId("recovery-check-failed")).toBeNull();
       await settle(15_000);
       const notice = screen.getByTestId("recovery-check-failed");
-      expect(notice.textContent).toContain(TITLE[lang]);
-      expect(notice.getAttribute("dir")).toBe(lang === "ar" ? "rtl" : "ltr");
+      expect(notice.textContent).toContain(CHIP[lang]);
+      const strip = screen.getByTestId("ingress-health-notices");
+      expect(strip.contains(notice)).toBe(true);
+      expect(strip.getAttribute("dir")).toBe(lang === "ar" ? "rtl" : "ltr");
+      fireEvent.click(within(strip).getByRole("button", { name: DETAILS[lang] }));
+      await settle(1);
+      const panel = screen.getByTestId("ingress-strip-details-panel");
+      expect(panel.textContent).toContain(TITLE[lang]);
+      expect(panel.getAttribute("dir")).toBe(lang === "ar" ? "rtl" : "ltr");
     });
   }
 
@@ -114,6 +130,8 @@ describe("recovery dock: blind spots", () => {
     await settle(15_000);
     const before = inboundUrls.length;
     inbound = "ok";
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    await settle(1);
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     await settle(1);
     expect(inboundUrls.length).toBe(before + 1);

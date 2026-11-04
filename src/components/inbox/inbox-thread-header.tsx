@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { ArrowLeft, Mail, PanelRight, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, Mail, PanelRight, Search, Sparkles, User } from "lucide-react";
 
 import { ArabicRuns } from "@/components/inbox/arabic-runs";
+import {
+  inboxChatInitial,
+  inboxChatPhone,
+  inboxChatTitleParts,
+} from "@/components/inbox/inbox-chat-title";
 import { StatusControl } from "@/components/inbox/conversation-controls";
 import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { registerOrderDraft, updateOrderDraft } from "@/components/inbox/inbox-order-draft-store";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
+import { SampleBadge } from "@/components/inbox/inbox-sample-data";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +40,6 @@ import {
 } from "@/components/ui/tooltip";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { formatInboxAge } from "@/lib/inbox-age";
-import { displayContactName } from "@/lib/validation/phone";
 
 /** "Active …" hint appears only after the thread has been idle this long. */
 const LAST_ACTIVE_MIN_IDLE_MS = 5 * 60_000;
@@ -141,6 +146,9 @@ export function InboxThreadHeader({
   onBackToQueue: () => void;
   contextPanel: ReactNode;
 }) {
+  // F-0028: the stored name can be the raw WhatsApp id; never print it.
+  const title = inboxChatTitleParts(activeChat, locale);
+  const phoneLine = inboxChatPhone(activeChat, locale);
   return (
     <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-3 py-2 sm:px-4">
       <div className="flex min-w-0 items-center gap-2.5">
@@ -162,14 +170,19 @@ export function InboxThreadHeader({
 
         <Avatar className="size-9 border border-border/70 bg-background">
           <AvatarFallback className="bg-primary-soft text-[13px] font-semibold text-primary-ink">
-            {activeChat.name.charAt(0).toUpperCase()}
+            {inboxChatInitial(activeChat, locale) ?? (
+              <User className="size-4" aria-hidden="true" />
+            )}
           </AvatarFallback>
         </Avatar>
 
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
-            <h3 dir="auto" className="truncate text-[13px] font-semibold">
-              <ArabicRuns text={activeChat.name} locale={locale} />
+            <h3
+              dir={title.kind === "name" ? "auto" : locale === "ar" ? "rtl" : "ltr"}
+              className="truncate text-[13px] font-semibold"
+            >
+              <ArabicRuns text={title.text} locale={locale} />
             </h3>
             {canUpdateConversation ? (
               <StatusControl
@@ -184,14 +197,17 @@ export function InboxThreadHeader({
                 status={activeChat.workflow.status ?? "open"}
               />
             )}
+            <SampleBadge conversationId={activeChat.conversationId} t={t} />
           </div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-muted-foreground">
-            {activeChat.phone ? (
+            {phoneLine && title.kind !== "phone" ? (
               <span dir="ltr" className="truncate tabular-nums">
-                {displayContactName(activeChat.phone)}
+                {phoneLine}
               </span>
             ) : null}
-            {activeChat.phone ? <span aria-hidden="true">·</span> : null}
+            {phoneLine && title.kind !== "phone" ? (
+              <span aria-hidden="true">·</span>
+            ) : null}
             <span className="truncate">
               {isWhatsAppConversation ? "WhatsApp" : copy("savedHistory")}
             </span>
@@ -287,7 +303,7 @@ export function InboxThreadHeader({
               <MessageExtraction
                 key={`${activeChat.conversationId}:${selectedCandidate.id}:header`}
                 layout="workspace"
-                contactName={activeChat.name}
+                contactName={title.text}
                 conversationId={activeChat.transportId}
                 messageId={selectedCandidate.id}
                 messageBody={selectedCandidate.body}
@@ -345,7 +361,7 @@ export function InboxThreadHeader({
           >
             <SheetHeader className="sr-only">
               <SheetTitle>{copy("conversationContext")}</SheetTitle>
-              <SheetDescription>{activeChat.name}</SheetDescription>
+              <SheetDescription>{title.text}</SheetDescription>
             </SheetHeader>
             {contextPanel}
           </SheetContent>

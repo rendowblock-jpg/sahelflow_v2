@@ -29,6 +29,7 @@ import { registerGatedTool, registerTool } from "./registry";
 import { assessOrderRisk } from "@/lib/wilaya-risk/engine";
 import type { DbClient } from "@/lib/db";
 import { productService } from "@/lib/data/product-service";
+import { conversationDisplayPhone, conversationSafeLabel } from "@/lib/inbox/conversation-title";
 import { addShopDays, shopDayBounds, startOfShopDay } from "@/lib/time/shop-day";
 
 function getDb(ctx: ToolContext): DbClient {
@@ -459,6 +460,7 @@ registerTool({
           channel: true,
           contactName: true,
           contactPhone: true,
+          sourceId: true,
           lastMessageAt: true,
           unreadCount: true,
         },
@@ -473,8 +475,12 @@ registerTool({
         data: matched.map((c) => ({
           id: c.id,
           channel: c.channel,
-          contactName: c.contactName,
-          contactPhone: c.contactPhone,
+          // F-0028: never a raw WhatsApp id as a name, nor a LID stored as a phone.
+          contactName: conversationSafeLabel({ name: c.contactName, sourceId: c.sourceId }),
+          contactPhone:
+            conversationDisplayPhone({ phone: c.contactPhone, sourceId: c.sourceId }) === null
+              ? null
+              : c.contactPhone,
           lastMessageAt: c.lastMessageAt,
           unreadCount: c.unreadCount,
         })),

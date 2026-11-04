@@ -162,6 +162,42 @@ describe("durable WhatsApp inbound normalization", () => {
     });
   });
 
+  it("never copies a raw WhatsApp id into the automation trigger customerName (F-0028)", async () => {
+    const lid = envelope("PROVIDER-INBOUND-LID-NONAME");
+    lid.message.key.remoteJid = "202460866064562@lid";
+    delete lid.message.pushName;
+    const named = envelope("PROVIDER-INBOUND-NAMED");
+
+    async function triggerPayload(input: WhatsAppInboundEnvelope) {
+      await db.outboxIntent.deleteMany();
+      const ingress = await persistWhatsAppInbound(context, input);
+      await processWhatsAppInbound(context, ingress.ingressEventId);
+      const intent = await db.outboxIntent.findFirstOrThrow({
+        where: { effectType: AUTOMATION_TRIGGER_EFFECT_TYPE },
+      });
+      return openBusinessPayloadWithKey<{ customerName?: string; customerPhone: string | null }>(
+        intent.payloadJson,
+        {
+          kind: "outbox-intent",
+          recordKey: intent.effectKey,
+          recordType: intent.effectType,
+          commandId: intent.commandId,
+        },
+        await getBusinessEnvelopeKey(context),
+      );
+    }
+
+    const fromLid = await triggerPayload(lid);
+    // `sourceId` stays in the payload (automations need the address); only the
+    // customer NAME must not be the raw id.
+    expect(fromLid.customerName ?? "").toBe("");
+    expect(fromLid.customerPhone).toBeNull();
+
+    const fromNamed = await triggerPayload(named);
+    expect(fromNamed.customerName).toBe("Client Durable");
+    expect(fromNamed.customerPhone).toBe("213555000222");
+  });
+
   it("replays applied ingress without duplicating message, unread count or trigger intent", async () => {
     const ingress = await persistWhatsAppInbound(context, envelope());
     const first = await processWhatsAppInbound(context, ingress.ingressEventId);

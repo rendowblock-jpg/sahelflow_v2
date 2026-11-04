@@ -19,8 +19,18 @@ export const SESSION_INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
 /** Avoid a database write on every authenticated request. */
 export const SESSION_ACTIVITY_WRITE_INTERVAL_MS = 5 * 60 * 1000;
 
-/** Maximum age of PIN proof accepted for a high-risk action. */
-export const SENSITIVE_REAUTH_WINDOW_MS = 10 * 60 * 1000;
+/**
+ * Maximum age of PIN proof accepted for a high-risk action (AI keys, delivery
+ * credentials, backups, export and erase, team settings, ...).
+ *
+ * Founder decision, 3 Nov 2026: the PIN typed at sign-in opens the whole app and
+ * nothing asks for it again while the sign-in lives. So the window is the
+ * sign-in's own lifetime (imported, not copied): a live session IS the PIN
+ * proof, and the 24 h absolute and 1 h inactivity limits above still end it.
+ * To tighten again, lower this one constant (it was 10 minutes) or pass a
+ * smaller window to `requireRecentReauthentication(maxAgeMs)` at one call site.
+ */
+export const SENSITIVE_REAUTH_WINDOW_MS = SESSION_OVERALL_TIMEOUT_MS;
 
 /** Exact public API routes. No child route inherits public access. */
 export const PUBLIC_API_ROUTES: readonly string[] = [

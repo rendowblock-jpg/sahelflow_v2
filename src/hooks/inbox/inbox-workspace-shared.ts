@@ -291,6 +291,8 @@ export interface ConversationProjection {
   channel: string;
   contactName: string | null;
   contactPhone: string | null;
+  /** Provider address for title classification only (F-0028); absent on older servers. */
+  sourceId?: string | null;
   lastMessageAt: string | null;
   unreadCount: number;
   status: string;
@@ -364,6 +366,7 @@ export function mapConversationProjection(
     id: conversation.id,
     conversationId: conversation.id,
     name: conversation.contactName ?? restrictedContact,
+    ...(conversation.sourceId ? { sourceId: conversation.sourceId } : {}),
     phone: conversation.contactPhone ?? undefined,
     channel: "conversation",
     lastMessageAt: conversation.lastMessageAt

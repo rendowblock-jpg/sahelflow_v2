@@ -53,12 +53,13 @@ describe("appearance transition authority", () => {
     const css = source("../../../app/theme-preset-system.css");
 
     expect(css).toContain("html.dark,\nhtml.dark[data-theme-preset] {");
-    expect(css).toContain("--surface-0: oklch(0.145 0.004 260);");
+    // 3 Nov 2026 (F-0026): the literals below were re-pinned to the lifted stack (see surface-layering-contract.test.ts).
+    expect(css).toContain("--surface-0: oklch(0.190 0.006 260);");
     expect(css).toContain("--card: var(--surface-1);");
-    expect(css).toContain("--border: oklch(0.94 0.006 90 / 0.12);");
+    expect(css).toContain("--border: oklch(0.94 0.006 90 / 0.16);");
     expect(css).toContain("--input: oklch(0.94 0.006 90 / 0.16);");
-    expect(css).toContain("--sidebar: oklch(0.158 0.004 260);");
-    expect(css).toContain("--sidebar-border: oklch(0.94 0.006 90 / 0.09);");
+    expect(css).toContain("--sidebar: oklch(0.205 0.006 260);");
+    expect(css).toContain("--sidebar-border: oklch(0.94 0.006 90 / 0.12);");
 
     for (const preset of ["sahel", "atlas", "oasis", "dune"] as const) {
       const selector = `html.dark[data-theme-preset=\"${preset}\"]`;

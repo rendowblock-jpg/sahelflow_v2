@@ -1,5 +1,7 @@
 "use client";
 
+import { reauthFailureText } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin } from "@/lib/auth/reauthenticate-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -194,12 +196,11 @@ export function GoogleSheetsBridgePanel({ canManage }: { canManage: boolean }) {
     if (!retry || !pin.trim()) return;
     setBusy("pin");
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      if (!response.ok) throw new Error(copy.verifyPin);
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        toast.error(reauthFailureText(result, t));
+        return;
+      }
       setPin("");
       setNeedsPin(null);
       await retry();

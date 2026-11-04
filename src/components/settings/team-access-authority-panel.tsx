@@ -1,5 +1,7 @@
 "use client";
 
+import { reauthFailureText } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin } from "@/lib/auth/reauthenticate-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Check,
@@ -1408,6 +1410,7 @@ function OwnerPinForm({
   onCancel: () => void;
   onVerified: () => void;
 }) {
+  const { t } = useI18n();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -1416,13 +1419,9 @@ function OwnerPinForm({
     setPending(true);
     setError(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      if (!response.ok) {
-        setError(c("reauth.wrong"));
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setError(result.kind === "incorrect" ? c("reauth.wrong") : reauthFailureText(result, t));
         return;
       }
       onVerified();

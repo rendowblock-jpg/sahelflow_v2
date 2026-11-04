@@ -573,12 +573,13 @@ export async function claimNativeDelivery(
   ) {
     const message = await db.message.findUnique({
       where: { id: notification.event.sourceRecordId },
-      select: { body: true, conversation: { select: { contactName: true } } },
+      select: { body: true, conversation: { select: { contactName: true, sourceId: true } } },
     });
     if (message) {
       preview = sanitizeNativePreview(
         message.conversation.contactName,
         message.body,
+        message.conversation.sourceId,
       );
     }
   }

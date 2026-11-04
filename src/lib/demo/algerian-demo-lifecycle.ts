@@ -330,6 +330,43 @@ export async function loadAlgerianDemoWorkspace(
   );
 }
 
+function demoRemovalBlockedError(): SahelFlowError {
+  return new SahelFlowError(
+    "Demo removal is blocked because real records still reference demo records (for example a real order created for a demo customer). Reassign or remove those real records first, then remove the demo again. Nothing real was changed.",
+    "DEMO_REMOVAL_BLOCKED_BY_REFERENCES",
+    409,
+  );
+}
+
+/**
+ * Real (untagged) rows that deleting the demo graph would delete with it.
+ *
+ * FD-054 says removal "fails closed at the database boundary" when a real
+ * record references a demo record. That holds only for links that restrict.
+ * These two are `ON DELETE CASCADE` in the schema, so the database does not
+ * stop them: deleting a demo customer silently deleted a real order placed for
+ * that customer (and its items, delivery, returns, refunds), and deleting a
+ * demo product deleted a real variant under it. F-0030: nothing untagged may
+ * go, so they are counted first and block the removal explicitly.
+ *
+ * Deliberately NOT included: `OrderItem -> Product` and `Product -> Category`
+ * are SET NULL (a link is cleared, no row is deleted); rows derived from demo
+ * orders and conversations are removed by `clearDemoDerivedRecords`.
+ */
+async function countRealRecordsThatWouldCascade(
+  client: DbClient,
+): Promise<number> {
+  const counts = await Promise.all([
+    client.order.count({
+      where: { id: outsideDemo, customerId: demoIdentity },
+    }),
+    client.productVariant.count({
+      where: { id: outsideDemo, productId: demoIdentity },
+    }),
+  ]);
+  return counts.reduce((total, count) => total + count, 0);
+}
+
 /**
  * Remove the complete demo graph atomically.
  *
@@ -348,6 +385,9 @@ export async function removeAlgerianDemoWorkspace(
   return withDemoPolicyLock(() =>
     client.$transaction(async (transaction) => {
       const tx = transaction as unknown as DbClient;
+      if ((await countRealRecordsThatWouldCascade(tx)) > 0) {
+        throw demoRemovalBlockedError();
+      }
       try {
         await clearDemoDerivedRecords(tx);
         await clearAlgerianDemoData(tx);
@@ -356,11 +396,7 @@ export async function removeAlgerianDemoWorkspace(
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2003"
         ) {
-          throw new SahelFlowError(
-            "Demo removal is blocked because real records still reference demo records (for example a real order created for a demo customer). Reassign or remove those real records first, then remove the demo again. Nothing real was changed.",
-            "DEMO_REMOVAL_BLOCKED_BY_REFERENCES",
-            409,
-          );
+          throw demoRemovalBlockedError();
         }
         throw error;
       }

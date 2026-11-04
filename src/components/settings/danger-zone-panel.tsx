@@ -1,5 +1,7 @@
 "use client";
 
+import { ReauthFailureMessage } from "@/components/auth/reauth-failure-message";
+import { reauthenticateWithPin, type ReauthFailure } from "@/lib/auth/reauthenticate-client";
 import { useState } from "react";
 import { AlertTriangle, Download, KeyRound, Loader2, Trash2 } from "lucide-react";
 
@@ -43,7 +45,7 @@ export function DangerZonePanel({
   const [exporting, setExporting] = useState(false);
   const [pin, setPin] = useState("");
   const [reauthBusy, setReauthBusy] = useState(false);
-  const [reauthError, setReauthError] = useState<string | null>(null);
+  const [reauthError, setReauthError] = useState<ReauthFailure | null>(null);
 
   const shops = useShopStore((state) => state.shops);
   const activeShopId = useShopStore((state) => state.activeShopId);
@@ -170,20 +172,9 @@ export function DangerZonePanel({
     setReauthBusy(true);
     setReauthError(null);
     try {
-      const response = await fetch("/api/auth/reauthenticate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as ApiPayload;
-      if (!response.ok) {
-        setReauthError(
-          translateServerError(
-            payload.error,
-            t,
-            copy("verificationDescription"),
-          ),
-        );
+      const result = await reauthenticateWithPin(pin);
+      if (result.kind !== "ok") {
+        setReauthError(result);
         return;
       }
       const resume = reauthAction;
@@ -195,7 +186,7 @@ export function DangerZonePanel({
         await handleReset(true);
       }
     } catch {
-      setReauthError(copy("unavailableDescription"));
+      setReauthError({ kind: "unavailable" });
     } finally {
       setReauthBusy(false);
     }
@@ -333,9 +324,7 @@ export function DangerZonePanel({
                 }}
               />
               {reauthError ? (
-                <p id="danger-zone-reauth-error" role="alert" className="text-xs text-destructive">
-                  {reauthError}
-                </p>
+                <ReauthFailureMessage id="danger-zone-reauth-error" failure={reauthError} />
               ) : null}
               <div className="flex flex-wrap gap-2">
                 <Button
