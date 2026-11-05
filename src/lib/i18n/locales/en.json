@@ -1719,6 +1719,7 @@
   "orders.deleteWarning": "This removes the order from your list. You can undo for a few seconds right after.",
   "orders.delivered": "Delivered",
   "orders.deliveredToday": "Delivered Today",
+  "orders.kpiStrip": "Orders overview",
   "orders.deliveryCost": "Delivery Cost",
   "orders.detail.activity": "Activity Timeline",
   "orders.detail.backToOrders": "Back to orders",

@@ -14,6 +14,8 @@ export type PhoneTransportOptions = Readonly<{
   scope(): PhoneScope | null;
   /** The shop id, read at every seal: the poll learns it AFTER the transport is built. Without it identity.shopId is used (a snapshot). */
   shopId?(): string | null;
+  /** The bearer token, read at EVERY request: the relay swaps it from time to time (sync/token-rotation.ts) and this transport lives for the whole session. Without it identity.deviceToken is used (a snapshot). */
+  token?(): string | Promise<string>;
   fetch: typeof fetch; now(): number;
 }>;
 type Metadata = Parameters<typeof sealEnvelopeWeb>[0];
@@ -21,7 +23,7 @@ const obj = (v: unknown): Record<string, unknown> | null => (v !== null && typeo
 
 export function createPhoneTransport(o: PhoneTransportOptions) {
   const base = o.relayBase.replace(/\/+$/, "");
-  const headers = { authorization: `Bearer ${o.identity.deviceToken}` };
+  const headers = async (): Promise<{ authorization: string }> => ({ authorization: `Bearer ${o.token ? await o.token() : o.identity.deviceToken}` });
   const send = async (url: string, init: RequestInit): Promise<Reply> => {
     const res = await o.fetch(url, { ...init, credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store" });
     const body: unknown = await res.json().catch(() => null);
@@ -43,10 +45,10 @@ export function createPhoneTransport(o: PhoneTransportOptions) {
       };
       return JSON.stringify(await sealEnvelopeWeb(metadata, i.payload, o.pinned.rsaPublicJwk, o.keys.signing.privateKey));
     },
-    post: (sealedEnvelopeJson: string): Promise<Reply> => send(`${base}/v1/commands`, { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: sealedEnvelopeJson }),
-    status(commandId: string): Promise<Reply> {
+    post: async (sealedEnvelopeJson: string): Promise<Reply> => send(`${base}/v1/commands`, { method: "POST", headers: { ...(await headers()), "content-type": "application/json" }, body: sealedEnvelopeJson }),
+    async status(commandId: string): Promise<Reply> {
       const q = new URLSearchParams({ workspaceId: o.identity.workspaceId, deviceId: o.identity.deviceId });
-      return send(`${base}/v1/commands/${encodeURIComponent(commandId)}?${q.toString()}`, { method: "GET", headers });
+      return send(`${base}/v1/commands/${encodeURIComponent(commandId)}?${q.toString()}`, { method: "GET", headers: await headers() });
     },
     async openResult(sealedResult: unknown): Promise<ParsedResult> {
       const opened = await openEnvelopeWeb<unknown>(sealedResult, o.pinned.signingPublicKey, o.keys.encryption.privateKey, { now: o.now(), expect: { recipientId: o.identity.deviceId, deviceId: o.identity.deviceId } });

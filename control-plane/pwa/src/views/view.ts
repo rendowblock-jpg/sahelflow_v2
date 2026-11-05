@@ -9,6 +9,8 @@ export type LockNotice = null | Readonly<{ kind: "wrong"; left: number }> | Read
 export type View = Readonly<{
   locale: Locale; theme: Theme; screen: ScreenId; state: ViewState; now: number; online: boolean;
   updateReady: boolean; canInstall: boolean; installed: boolean; ios: boolean;
+  // W4SEC-07: the update is 24 h old and something unsent or open keeps it from applying itself: a modal with one Update button replaces the small banner.
+  updateBlocking?: boolean;
   projection: Projection | null; step: PairStep | null; fingerprint: string | null; failure: PairFailure | null;
   lockMode: "enter" | "set" | "confirm"; lockNotice: LockNotice; hasLock: boolean;
   version: string; confirmRemove: boolean; removeError: string | null; removed: boolean;
@@ -138,15 +140,20 @@ export function effectiveScreen(v: View): ScreenId {
   return v.screen;
 }
 
+// The stronger update prompt: a modal with ONE button. No close, no "later": the seller either updates or keeps working until the
+// work that holds the update back is done (the app then updates by itself). Its role is alertdialog, so it never counts as an open sheet.
+const updateRequired = (tr: Tr): string => `<div class="update-required"><div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="ur-t" aria-describedby="ur-d"><h2 id="ur-t">${tr("common.update.required.title")}</h2><p id="ur-d">${tr("common.update.required")}</p>${button("update", tr("common.update.apply"))}</div></div>`;
+
 export function renderApp(v: View): string {
   const tr: Tr = (key, params) => esc(t(v.locale, key, params));
   if (v.screen === "lock") return `<main id="main" class="lock" tabindex="-1">${lock(v, tr)}</main>`;
   const id = effectiveScreen(v);
   const body = isLazyScreen(id) ? "" : id === "pair" ? pair(v, tr) : id === "today" ? today(v.state === "keygen" || v.state === "waiting" ? { ...v, state: "loading" } : v, tr) : id === "settings" ? settings(v, tr) : welcome(v, tr);
-  const banners = `${v.online ? "" : `<p class="banner" role="status">${tr("common.offline")}</p>`}${v.updateReady ? `<div class="banner" role="status"><span>${tr("common.update.ready")}</span>${button("update", tr("common.update.apply"), "small")}</div>` : ""}`;
+  const banners = `${v.online ? "" : `<p class="banner" role="status">${tr("common.offline")}</p>`}${v.updateReady && v.updateBlocking !== true ? `<div class="banner" role="status"><span>${tr("common.update.ready")}</span>${button("update", tr("common.update.apply"), "small")}</div>` : ""}`;
+  const required = v.updateReady && v.updateBlocking === true ? updateRequired(tr) : "";
   const on: TabId | ScreenId = TAB_OF[id] ?? id;
   const tab = (tid: TabId): string => `<a class="tab" href="/?screen=${tid}" data-nav="${tid}"${on === tid ? ' aria-current="page"' : ""}>${tr(`nav.${tid}`)}</a>`;
   const tabs: readonly TabId[] = v.paired === true ? ["today", "orders", "inbox", "settings"] : ["today", "pair", "settings"];
-  return `<header class="top"><a class="brand" href="/?screen=welcome" data-nav="welcome">${tr("app.name")}</a></header>${banners}<main id="main" tabindex="-1">${body}</main><nav class="tabs" aria-label="${tr("nav.label")}">${tabs.map(tab).join("")}</nav>`;
+  return `<header class="top"><a class="brand" href="/?screen=welcome" data-nav="welcome">${tr("app.name")}</a></header>${banners}<main id="main" tabindex="-1">${body}</main><nav class="tabs" aria-label="${tr("nav.label")}">${tabs.map(tab).join("")}</nav>${required}`;
 }
 export { dirOf };

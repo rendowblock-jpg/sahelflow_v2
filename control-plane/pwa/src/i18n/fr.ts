@@ -13,6 +13,8 @@ export const fr: Catalog = {
   "common.retry": "Réessayer",
   "common.offline": "Pas de connexion. L'application affiche ce qui est enregistré.",
   "common.update.ready": "Une nouvelle version est prête.",
+  "common.update.required.title": "Mise à jour nécessaire",
+  "common.update.required": "Cette version de l’application est trop ancienne. Mettez à jour maintenant pour protéger les données de votre boutique. Les commandes en attente d’envoi restent sur le téléphone et partent après la mise à jour.",
   "common.update.apply": "Mettre à jour",
   "common.readonly": "Lecture seule",
   "common.error.title": "Une erreur est survenue",

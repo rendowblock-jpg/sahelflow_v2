@@ -12,6 +12,17 @@ import {
   type ConnectedEnvelope,
 } from "../../src/lib/connected-platform/protocol";
 import { allowedOrigin, corsHeaders, parseAllowedOrigins } from "./cors";
+import { tokenRotationProofBytes } from "../../src/lib/connected-platform/token-rotation-proof";
+import {
+  MAX_ROTATE_BODY_BYTES,
+  MAX_ROTATE_SIGNATURE_CHARS,
+  TOKEN_ROTATE_GRACE_MS,
+  proofIsFresh,
+  rotationDue,
+  tokenExpiresAt,
+  tokenIsLive,
+  type TokenMatch,
+} from "./device-token";
 import { parseDesktopKeyProofField } from "./key-proof";
 import { RATE_PRUNE_BATCH, RATE_RULES, decideRate, pruneBeforeMs, windowStartMs, type RateBucket } from "./rate-limit";
 
@@ -79,6 +90,10 @@ type DeviceRow = {
   encryption_public_key: string;
   revocation_epoch: number;
   revoked_at: string | null;
+  // Token lifetime (migration 0004). Optional: the other selects of this row do not name them.
+  token_issued_at?: number | null;
+  prev_token_hash?: string | null;
+  prev_token_valid_until?: number | null;
 };
 
 type CommandRow = {
@@ -346,33 +361,64 @@ async function authenticateDesktop(
   return workspace && hasWorkspaceFeature(workspace, requiredFeature) ? workspace : null;
 }
 
+type DeviceAuth = {
+  device: DeviceRow & { features_json: string };
+  /** The presented token was the current one, or the one the last swap replaced (still inside its grace window). */
+  match: TokenMatch;
+  tokenHash: string;
+  /** When the current token was issued; a row from before migration 0004 is stamped "now" at its first use. */
+  issuedAt: number;
+};
+
+/** The device behind a bearer token, with which token matched. A token past its life, a revoked device and an unknown token all give null. */
+async function authenticateDeviceDetailed(
+  request: Request,
+  environment: ConnectedWorkerEnvironment,
+  workspaceId: string,
+  deviceId: string,
+): Promise<DeviceAuth | null> {
+  const token = bearerToken(request);
+  if (!token) return null;
+  const tokenHash = await sha256Hex(token);
+  const device = await environment.DB.prepare(
+    `SELECT d.workspace_id, d.device_id, d.member_id, d.token_hash, d.signing_public_key,
+            d.encryption_public_key, d.revocation_epoch, d.revoked_at,
+            d.token_issued_at, d.prev_token_hash, d.prev_token_valid_until, w.features_json
+       FROM connected_device d
+       JOIN connected_workspace w ON w.workspace_id = d.workspace_id
+      WHERE d.workspace_id = ?1 AND d.device_id = ?2 AND (d.token_hash = ?3 OR d.prev_token_hash = ?3)
+        AND d.revoked_at IS NULL AND w.revoked_at IS NULL
+        AND (w.entitlement_expires_at IS NULL OR datetime(w.entitlement_expires_at) > CURRENT_TIMESTAMP)`,
+  ).bind(workspaceId, deviceId, tokenHash).first<DeviceRow & { features_json: string }>();
+  if (!device || !hasWorkspaceFeature(device, CONNECTED_FEATURE)) return null;
+  const now = Date.now();
+  const match: TokenMatch = device.token_hash === tokenHash ? "current" : "previous";
+  let issuedAt = device.token_issued_at === null || device.token_issued_at === undefined ? null : Number(device.token_issued_at);
+  if (issuedAt === null) {
+    // A phone paired by the worker that ran before migration 0004 (and after it was applied): its age is unknown, so it starts now.
+    issuedAt = now;
+    await environment.DB.prepare(
+      `UPDATE connected_device SET token_issued_at = ?3
+        WHERE workspace_id = ?1 AND device_id = ?2 AND token_issued_at IS NULL`,
+    ).bind(workspaceId, deviceId, now).run();
+  }
+  const prevValidUntil = device.prev_token_valid_until === null || device.prev_token_valid_until === undefined ? null : Number(device.prev_token_valid_until);
+  if (!tokenIsLive({ match, issuedAt, prevValidUntil, now })) return null;
+  await environment.DB.prepare(
+    `UPDATE connected_device SET last_seen_at = CURRENT_TIMESTAMP
+     WHERE workspace_id = ?1 AND device_id = ?2
+      AND (last_seen_at IS NULL OR last_seen_at <= datetime('now', ?3))`,
+  ).bind(workspaceId, deviceId, `-${LAST_SEEN_THROTTLE_SECONDS} seconds`).run();
+  return { device, match, tokenHash, issuedAt };
+}
+
 async function authenticateDevice(
   request: Request,
   environment: ConnectedWorkerEnvironment,
   workspaceId: string,
   deviceId: string,
 ): Promise<DeviceRow | null> {
-  const token = bearerToken(request);
-  if (!token) return null;
-  const tokenHash = await sha256Hex(token);
-  const device = await environment.DB.prepare(
-    `SELECT d.workspace_id, d.device_id, d.member_id, d.token_hash, d.signing_public_key,
-            d.encryption_public_key, d.revocation_epoch, d.revoked_at, w.features_json
-       FROM connected_device d
-       JOIN connected_workspace w ON w.workspace_id = d.workspace_id
-      WHERE d.workspace_id = ?1 AND d.device_id = ?2 AND d.token_hash = ?3
-        AND d.revoked_at IS NULL AND w.revoked_at IS NULL
-        AND (w.entitlement_expires_at IS NULL OR datetime(w.entitlement_expires_at) > CURRENT_TIMESTAMP)`,
-  ).bind(workspaceId, deviceId, tokenHash).first<DeviceRow & { features_json: string }>();
-  if (device && !hasWorkspaceFeature(device, CONNECTED_FEATURE)) return null;
-  if (device) {
-    await environment.DB.prepare(
-      `UPDATE connected_device SET last_seen_at = CURRENT_TIMESTAMP
-       WHERE workspace_id = ?1 AND device_id = ?2
-        AND (last_seen_at IS NULL OR last_seen_at <= datetime('now', ?3))`,
-    ).bind(workspaceId, deviceId, `-${LAST_SEEN_THROTTLE_SECONDS} seconds`).run();
-  }
-  return device;
+  return (await authenticateDeviceDetailed(request, environment, workspaceId, deviceId))?.device ?? null;
 }
 
 function rateLimited(bucket: RateBucket, retryAfterSeconds: number): Response {
@@ -849,8 +895,8 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
     const inserted = await environment.DB.prepare(
       `INSERT INTO connected_device
         (workspace_id, device_id, member_id, token_hash, signing_public_key, encryption_public_key,
-         revocation_epoch)
-       SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7
+         revocation_epoch, token_issued_at)
+       SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?10
         WHERE (
           SELECT COUNT(*) FROM connected_device
            WHERE workspace_id = ?1 AND revoked_at IS NULL
@@ -875,6 +921,7 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
       workspace.entitlement_revocation_epoch,
       workspace.device_limit,
       workspace.member_limit,
+      Date.now(),
     ).run();
     if (!inserted.success) return pairingUnavailable();
     if (inserted.meta?.changes !== 1) return json({ error: "entitlement_limit_reached" }, 403);
@@ -904,6 +951,76 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
     desktopKeyProof: pairing.desktop_key_proof ?? null,
     revocationEpoch: workspace.entitlement_revocation_epoch,
   }, 201);
+}
+
+/**
+ * A phone swaps its device token (W4SEC-05). The phone asks; the relay decides whether a swap is due. Only a holder of the phone's signing
+ * key can ask: the body carries an Ed25519 signature, checked against the key stored at pairing, over this workspace, device, token and time.
+ * The new token is returned once and stored only as a SHA-256; the old one keeps working for TOKEN_ROTATE_GRACE_MS. Every refusal here
+ * leaves the stored token exactly as it was.
+ */
+async function rotateDeviceToken(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
+  const parsed = await readBoundedJson(request, MAX_ROTATE_BODY_BYTES);
+  if (!parsed.ok) return parsed.response;
+  const input = parsed.value as { workspaceId?: unknown; deviceId?: unknown; issuedAt?: unknown; signature?: unknown } | null;
+  if (
+    !input ||
+    !validIdentity(input.workspaceId) ||
+    !validIdentity(input.deviceId) ||
+    typeof input.issuedAt !== "number" ||
+    !Number.isSafeInteger(input.issuedAt) ||
+    typeof input.signature !== "string" ||
+    input.signature.length > MAX_ROTATE_SIGNATURE_CHARS
+  ) {
+    return json({ error: "invalid_request" }, 400);
+  }
+  const auth = await authenticateDeviceDetailed(request, environment, input.workspaceId, input.deviceId);
+  if (!auth) return json({ error: "unauthorized" }, 401);
+  const limited = await hitRate(environment, "token_rotate", `${input.workspaceId}:${input.deviceId}`);
+  if (limited) return limited;
+  const now = Date.now();
+  let proven = false;
+  if (proofIsFresh(input.issuedAt, now)) {
+    try {
+      proven = await verifyEd25519(
+        auth.device.signing_public_key,
+        input.signature,
+        tokenRotationProofBytes({
+          workspaceId: input.workspaceId,
+          deviceId: input.deviceId,
+          tokenSha256Hex: auth.tokenHash,
+          issuedAt: input.issuedAt,
+        }),
+      );
+    } catch {
+      proven = false;
+    }
+  }
+  if (!proven) return json({ error: "invalid_proof" }, 403);
+  if (!rotationDue({ match: auth.match, issuedAt: auth.issuedAt, now })) {
+    return json({ rotated: false, tokenExpiresAt: tokenExpiresAt(auth.issuedAt) });
+  }
+  const deviceToken = randomToken();
+  // Swapping from the current token makes it the previous one for a day. Swapping from the PREVIOUS token (the phone never got the
+  // last answer) hands out another token but keeps the original deadline: asking again never lengthens the old token's life.
+  const previousHash = auth.match === "current" ? auth.tokenHash : auth.device.prev_token_hash ?? auth.tokenHash;
+  const previousUntil = auth.match === "current" ? now + TOKEN_ROTATE_GRACE_MS : auth.device.prev_token_valid_until ?? now + TOKEN_ROTATE_GRACE_MS;
+  const swapped = await environment.DB.prepare(
+    `UPDATE connected_device
+        SET token_hash = ?4, token_issued_at = ?5, prev_token_hash = ?6, prev_token_valid_until = ?7
+      WHERE workspace_id = ?1 AND device_id = ?2 AND token_hash = ?3 AND revoked_at IS NULL`,
+  ).bind(
+    input.workspaceId,
+    input.deviceId,
+    auth.device.token_hash,
+    await sha256Hex(deviceToken),
+    now,
+    previousHash,
+    previousUntil,
+  ).run();
+  // Another swap got there first (or the device was revoked meanwhile). The phone keeps what it has and asks again later.
+  if (!swapped.success || swapped.meta?.changes !== 1) return json({ error: "rotation_conflict" }, 409);
+  return json({ rotated: true, deviceToken, tokenExpiresAt: tokenExpiresAt(now) });
 }
 
 async function listDevices(request: Request, environment: ConnectedWorkerEnvironment, url: URL): Promise<Response> {
@@ -1375,6 +1492,8 @@ async function health(environment: ConnectedWorkerEnvironment): Promise<Response
     await environment.DB.prepare("SELECT device_id FROM connected_device LIMIT 1").first<{ device_id: string }>();
     await environment.DB.prepare("SELECT command_id FROM connected_command LIMIT 1").first<{ command_id: string }>();
     await environment.DB.prepare("SELECT bucket FROM connected_rate_limit LIMIT 1").first<{ bucket: string }>();
+    // Migration 0004 (device token lifetime): without it every phone call would fail, so say so here first.
+    await environment.DB.prepare("SELECT token_issued_at FROM connected_device LIMIT 1").first<{ token_issued_at: number | null }>();
     parsedKeyring(environment.SF_LICENSE_TRIAL_PUBLIC_KEYS);
     parsedKeyring(environment.SF_LICENSE_PERMANENT_PUBLIC_KEYS);
     const productMajor = Number(environment.PRODUCT_MAJOR);
@@ -1415,6 +1534,7 @@ async function routeRequest(
   if (request.method === "POST" && url.pathname === "/v1/bootstrap") return bootstrap(request, environment);
   if (request.method === "POST" && url.pathname === "/v1/desktop/pairings") return createPairing(request, environment);
   if (request.method === "POST" && url.pathname === "/v1/pairings/exchange") return exchangePairing(request, environment);
+  if (request.method === "POST" && url.pathname === "/v1/devices/rotate-token") return rotateDeviceToken(request, environment);
   if (request.method === "GET" && url.pathname === "/v1/desktop/authority") return workspaceAuthority(request, environment, url);
   if (request.method === "GET" && url.pathname === "/v1/storefront/authority") return publicStorefrontAuthority(environment, url);
   if (request.method === "GET" && url.pathname === "/v1/desktop/devices") return listDevices(request, environment, url);
