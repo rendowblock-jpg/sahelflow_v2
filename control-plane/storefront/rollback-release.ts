@@ -158,6 +158,29 @@ export async function rollbackRelease(
   } catch {
     return json({ error: "rollback_source_invalid" }, 409);
   }
+  // A rollback puts the source release back as it was, so its bundles come from the source row, never from the request.
+  const sourceOffers = await environment.DB.prepare(
+    `SELECT item_key, offers_json FROM storefront_allocation WHERE release_id = ?1`,
+  )
+    .bind(sourceReleaseId)
+    .all<{ item_key: string; offers_json: string | null }>();
+  if (!sourceOffers.success) return json({ error: "rollback_source_unavailable" }, 503);
+  const offersByItem = new Map<string, unknown>();
+  for (const row of sourceOffers.results ?? []) {
+    if (!row.offers_json) continue;
+    try {
+      offersByItem.set(row.item_key, JSON.parse(row.offers_json));
+    } catch {
+      return json({ error: "rollback_source_invalid" }, 409);
+    }
+  }
+  const allocations = input.allocations.map((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+    const row = { ...(raw as Record<string, unknown>) };
+    delete row.offers;
+    const offers = offersByItem.get(String(row.itemKey ?? ""));
+    return offers === undefined ? row : { ...row, offers };
+  });
   const parsed = parseReleaseInput({
     workspaceId,
     releaseId,
@@ -165,7 +188,7 @@ export async function rollbackRelease(
     templateId: source.template_id,
     locale: source.locale,
     publicArtifact,
-    allocations: input.allocations,
+    allocations,
     shippingRules: shipping.results.map((rule) => ({
       wilayaCode: rule.wilaya_code,
       deliveryMode: rule.delivery_mode,
