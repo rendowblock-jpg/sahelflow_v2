@@ -96,4 +96,17 @@ describe("OrdersKpiStrip", () => {
     const last = container.querySelectorAll("a[data-orders-kpi-item]")[2] as HTMLElement;
     expect(last.textContent).toBe("Revenue delivered today—");
   });
+
+  /**
+   * SEEN and MEASURED on the merged-candidate capture (ar light phone 390, 5 Nov 2026, OCR word positions): the third label
+   * ("الإيراد المسلّم اليوم") wraps to two lines while the other two stay on one, so its figure sat 20 px lower (y 325 against
+   * y 305). The items are equal-height grid cells, so a figure pushed to the bottom of its cell lines up with the others. A test page
+   * with the real class values in headless Chromium: figure tops 31/31/47 before, 47/47/47 with `mt-auto`.
+   */
+  it("keeps the figures on one line: each figure sits at the bottom of its item, so a label that wraps does not push it lower", () => {
+    const { container } = mount();
+    const figures = [...container.querySelectorAll("[data-orders-kpi-figure]")];
+    expect(figures).toHaveLength(3);
+    for (const figure of figures) expect(figure.className).toMatch(/\bmt-auto\b/);
+  });
 });

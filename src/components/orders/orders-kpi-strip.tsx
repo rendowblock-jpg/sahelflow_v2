@@ -41,7 +41,7 @@ export function OrdersKpiItem({
       </span>
       <span
         data-orders-kpi-figure
-        className="break-words text-base font-semibold leading-tight tracking-tight text-foreground tabular-nums md:text-2xl"
+        className="mt-auto break-words text-base font-semibold leading-tight tracking-tight text-foreground tabular-nums md:text-2xl"
       >
         {value}
       </span>
