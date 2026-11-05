@@ -12,11 +12,13 @@ import { isOpen } from "../outbox/state";
 import { createVault, purgeOld } from "../storage/sealed";
 import { wipeAll } from "../storage/wipe";
 import { createSync } from "../sync/engine";
+import { createTokenRotation } from "../sync/token-rotation";
 import { reactToPoll, type PollReaction } from "../sync/revoke";
 import { focusKeyOf } from "../kit/focus";
 import { createDirectPoll } from "./direct-poll";
 import type { Budget } from "../sync/schedule";
-import type { UpdateController } from "../sw/update";
+import type { UpdateController, UpdateOptions } from "../sw/update";
+import { createInflight } from "../sw/update-safety";
 import { createRelayClient } from "../today/relay-source";
 import { freshness, type Projection, type ProjectionSource } from "../today/projection";
 import { effectiveScreen, isLazyScreen, renderApp, type ScreenId, type Theme, type View } from "../views/view";
@@ -31,6 +33,7 @@ import { GROUP_OF, loadScreen } from "./registry";
 import { clickTarget } from "./click-target";
 import { createScreenMount } from "./screen-mount";
 import { withShellStrip } from "./shell-strip";
+import { createUpdateWiring } from "./update-wiring";
 import { createVaultWiring } from "./vault-wiring";
 
 declare const __APP_VERSION__: string;
@@ -45,10 +48,13 @@ const store = {
   set: (k: string, v: string): void => { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
 };
 
-export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<{ attachUpdates(c: UpdateController): void }> {
-  const relay = createRelayClient({ baseUrl: __RELAY_URL__, getDb: () => getDb() });
+export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<{ attachUpdates(c: UpdateController): void; updateOptions: UpdateOptions }> {
+  // W4SEC-07: every request to the relay goes through this counter, so an automatic update never reloads the page in the middle of one.
+  const inflight = createInflight();
+  const trackedFetch = inflight.track((input, init) => fetch(input, init));
+  const relay = createRelayClient({ baseUrl: __RELAY_URL__, getDb: () => getDb(), fetchImpl: trackedFetch });
   const source: ProjectionSource = options.source ?? relay.source;
-  const transport = options.transport ?? createFetchTransport({ baseUrl: __RELAY_URL__ });
+  const transport = options.transport ?? createFetchTransport({ baseUrl: __RELAY_URL__, fetchImpl: trackedFetch });
   const standalone = matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
   const savedLocale = store.get("sf.locale"); const savedTheme = store.get("sf.theme");
   const qScreen = new URLSearchParams(location.search).get("screen");
@@ -66,8 +72,19 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   let previewOn = preview;
   let dbPromise: Promise<Db> | null = null;
   const getDb = (): Promise<Db> => (dbPromise ??= openDb(indexedDB));
+  // W4SEC-05: the relay swaps the phone's device token now and then. Asked at launch, on return to the foreground and when back online;
+  // the check is a no-op for an unpaired phone, at most one request is in flight and it asks at most twice a day. It never wipes.
+  const tokenRotation = createTokenRotation({ getDb: () => getDb(), relayBase: __RELAY_URL__, fetch: trackedFetch, now: Date.now });
+  const checkToken = (): void => { void tokenRotation.check().catch(() => undefined); };
   let installEvent: InstallEvent | null = null;
   let updates: UpdateController | null = null;
+  // W4SEC-07: a waiting update applies itself at a safe moment. The flags come from the real state: unsent outbox records, an open composer or
+  // sheet, a request in flight, the pairing screen. A stale update that stays unsafe gets the stronger prompt (updateBlocking).
+  const updateWiring = createUpdateWiring({
+    root, getDb: () => getDb(), inflight, pairing: () => view.screen === "pair" || view.state === "keygen",
+    setBlocking: (blocking) => { set({ updateBlocking: blocking }); if (blocking) root.querySelector<HTMLElement>('.update-required [data-act="update"]')?.focus(); },
+    storage: { ...store, remove: (k) => { try { localStorage.removeItem(k); } catch { /* private mode */ } } },
+  });
   let lockState: LockState = { phase: "unset" }; let lockRow: LockRow | null = null; let pendingPin = ""; let returnTo: ScreenId = "welcome";
   let link: ReturnType<typeof takePairingLink> = { kind: "none" };
   let watcher: Readonly<{ stop(): void }> | null = null;
@@ -225,7 +242,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
 
   async function getStack(): ReturnType<typeof createCommandStack> {
     if (stack) return stack;
-    stack = await createCommandStack({ db: await getDb(), relayBase: __RELAY_URL__, fetch: (input, init) => fetch(input, init), now: Date.now });
+    stack = await createCommandStack({ db: await getDb(), relayBase: __RELAY_URL__, fetch: trackedFetch, now: Date.now });
     return stack;
   }
   // ONE flush wrapper for both hosts: an accepted command goes to the relay at once (the outbox keeps it when that fails), then the screens are told and the status poll is armed.
@@ -331,7 +348,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   });
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e as InstallEvent; set({ canInstall: true }); });
   window.addEventListener("appinstalled", () => set({ installed: true, canInstall: false }));
-  window.addEventListener("online", () => { set({ online: true }); sync.onOnline(); });
+  window.addEventListener("online", () => { set({ online: true }); sync.onOnline(); checkToken(); updateWiring.check("online"); });
   window.addEventListener("offline", () => set({ online: false }));
   window.addEventListener("popstate", () => { const s = SCREENS.find((x) => x === new URLSearchParams(location.search).get("screen")); set({ screen: s ?? "welcome" }); attachFor(); });
   document.addEventListener("visibilitychange", () => {
@@ -340,11 +357,13 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     if (document.hidden) sync.onHidden();
     else if (lockState.phase === "locked" && view.screen !== "lock") { returnTo = view.screen; set({ screen: "lock", lockMode: "enter", lockNotice: null }); sync.onScreen(); } // the lock screen polls too: tell the engine
     else sync.onVisible();
+    if (!document.hidden) checkToken();
+    if (!document.hidden) updateWiring.check("resume");
   });
 
   void getDb().then((db) => purgeOld(db, Date.now())).catch(() => undefined);
   link = takePairingLink(location.hash, location.pathname + location.search, (u) => history.replaceState(null, "", u));
-  paint(); attachFor(); detectPaired();
+  paint(); attachFor(); detectPaired(); checkToken();
   void getDb().then((db) => db.get<LockRow>("settings", "lock")).then((row) => {
     if (!row) return;
     lockRow = row; lockState = initialState(true, row); vaultWiring.locked(); returnTo = view.screen === "lock" ? "welcome" : view.screen;
@@ -356,5 +375,14 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   else if (link.kind === "link") void pair();
   else if (view.screen === "today") void loadToday();
   else if (link.kind === "none" && !options.source) void watchRelay();
-  return { attachUpdates(c) { updates = c; c.subscribe((s) => set({ updateReady: s === "waiting" })); if (c.state() === "waiting") set({ updateReady: true }); } };
+  return {
+    updateOptions: updateWiring.options,
+    attachUpdates(c) {
+      updates = c;
+      // "reload" = the new worker already runs but the reload is held: the small banner (the tap) still offers it.
+      c.subscribe((s) => set({ updateReady: s === "waiting" || s === "reload" }));
+      if (c.state() === "waiting") set({ updateReady: true });
+      updateWiring.attach(c);
+    },
+  };
 }
