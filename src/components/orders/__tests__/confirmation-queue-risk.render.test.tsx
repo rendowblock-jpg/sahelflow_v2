@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment happy-dom
+ */
 /** M1 render: the suspicious flag is a badge PLUS the top reason as visible text (Arabic RTL + French). */
 import { screen } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
