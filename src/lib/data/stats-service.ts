@@ -10,6 +10,7 @@ import type { DashboardStats } from "@/types/domain";
 import type { ServiceContext } from "./service-base";
 import { grossRevenue } from "./metrics";
 import { addShopDays, startOfShopDay } from "@/lib/time/shop-day";
+import { roundedPercentChange } from "./percent-change";
 import { getProfitabilitySeries } from "@/lib/accounting/profitability";
 
 export interface DashboardStatsAccess {
@@ -34,12 +35,21 @@ export const statsService = {
     const canReadProducts = access.products ?? true;
 
     // Shop days (Algeria), not the host's: see lib/time/shop-day.ts.
-    const startOfDay = startOfShopDay(new Date());
+    const now = new Date();
+    const startOfDay = startOfShopDay(now);
     const startOfYesterday = addShopDays(startOfDay, -1);
     const startOfTomorrow = addShopDays(startOfDay, 1);
+    // F-0048: the trend compares today SO FAR with the SAME HOURS of yesterday. Against the whole of yesterday every
+    // morning after a busy day showed a red negative percentage.
+    const sameHoursYesterday = new Date(
+      Math.min(
+        startOfYesterday.getTime() + (now.getTime() - startOfDay.getTime()),
+        startOfDay.getTime(),
+      ),
+    );
 
     const todayPeriod = { from: startOfDay, to: startOfTomorrow };
-    const yesterdayPeriod = { from: startOfYesterday, to: startOfDay };
+    const yesterdayPeriod = { from: startOfYesterday, to: sameHoursYesterday };
 
     const [
       ordersToday,
@@ -60,7 +70,7 @@ export const statsService = {
       canReadOrders
         ? ctx.prisma.order.count({
             where: {
-              createdAt: { gte: startOfYesterday, lt: startOfDay },
+              createdAt: { gte: startOfYesterday, lt: sameHoursYesterday },
               deletedAt: null,
             },
           })
@@ -119,20 +129,10 @@ export const statsService = {
       yesterdayRealized = yesterdayProfitability.grossRevenue;
     }
 
-    const ordersTrend =
-      ordersYesterday === 0
-        ? 0
-        : Math.round(((ordersToday - ordersYesterday) / ordersYesterday) * 100);
-    const revenueTrend =
-      revenueYesterday === 0
-        ? 0
-        : Math.round(((revenueToday - revenueYesterday) / revenueYesterday) * 100);
-    const realizedRevenueTrend =
-      yesterdayRealized === 0
-        ? 0
-        : Math.round(
-            ((todayRealized - yesterdayRealized) / yesterdayRealized) * 100,
-          );
+    // null = nothing to compare against (shown as a dash); one rule with the analytics page (F-0049).
+    const ordersTrend = roundedPercentChange(ordersToday, ordersYesterday);
+    const revenueTrend = roundedPercentChange(revenueToday, revenueYesterday);
+    const realizedRevenueTrend = roundedPercentChange(todayRealized, yesterdayRealized);
 
     return {
       ordersToday,
