@@ -2,6 +2,7 @@
 
 import {
   Layers,
+  Megaphone,
   Package,
   Palette,
   Phone,
@@ -21,7 +22,8 @@ export type StudioPanel =
   | "checkout"
   | "contact"
   | "legal"
-  | "seo";
+  | "seo"
+  | "tracking";
 
 export const STUDIO_PANELS: ReadonlyArray<{
   id: StudioPanel;
@@ -35,6 +37,7 @@ export const STUDIO_PANELS: ReadonlyArray<{
   { id: "contact", labelKey: "storefront.studio.panels.contact", icon: Phone },
   { id: "legal", labelKey: "storefront.legalPanel.nav", icon: Scale },
   { id: "seo", labelKey: "storefront.studio.panels.seo", icon: Search },
+  { id: "tracking", labelKey: "storefront.studio.panels.tracking", icon: Megaphone },
 ];
 
 /**
