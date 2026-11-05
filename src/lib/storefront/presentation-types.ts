@@ -1,5 +1,6 @@
 import type { StorefrontPageComposition } from "./studio-sections";
 import type { StorefrontLegal } from "./studio-schema";
+import type { StorefrontTracking } from "./studio-tracking";
 
 export const STOREFRONT_THEME_SCHEMA_VERSION = 2 as const;
 export const STOREFRONT_BUILDER_SCHEMA_VERSION = 1 as const;
@@ -134,4 +135,6 @@ export interface StorefrontTheme {
     showSupportBadge: boolean;
   };
   builder: StorefrontBuilderState;
+  /** Meta / TikTok pixel ids. Absent = the hosted store loads and sends nothing extra. */
+  tracking?: StorefrontTracking;
 }

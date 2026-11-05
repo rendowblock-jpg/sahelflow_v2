@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { STOREFRONT_PAGE_MODES, STOREFRONT_TEMPLATE_IDS } from "./presentation-types";
+import { STOREFRONT_TRACKING_PATTERNS } from "./studio-tracking";
 
 const color = z.string().regex(/^#[0-9a-f]{6}$/i);
 const text = (max: number) => z.string().max(max);
@@ -288,6 +289,14 @@ const storefrontContactSchema = z
   })
   .strict();
 
+/** Optional ad-tracking ids. "" means removed (the Studio normalises it away before save and publish). Strict on purpose: the id ends up inside a script the buyer runs. */
+const storefrontTrackingSchema = z
+  .object({
+    metaPixelId: z.union([z.literal(""), z.string().regex(new RegExp(STOREFRONT_TRACKING_PATTERNS.meta))]).optional(),
+    tiktokPixelId: z.union([z.literal(""), z.string().regex(new RegExp(STOREFRONT_TRACKING_PATTERNS.tiktok))]).optional(),
+  })
+  .strict();
+
 /** Legal pages of the hosted store. The limits are repeated in control-plane/storefront/shared.ts (validPublicLegal); studio-legal.test.ts keeps both equal. */
 export const STOREFRONT_LEGAL_LIMITS = { sellerName: 120, registerNumber: 60, extraReturns: 600, extraTerms: 1500, maxReturnDays: 30 } as const;
 export const STOREFRONT_RETURN_SHIPPING = ["seller", "buyer", "none"] as const;
@@ -421,6 +430,8 @@ export const storefrontStudioThemeSchema = z
       showSupportBadge: z.boolean(),
     }),
     builder: storefrontBuilderSchema,
+    // Optional and without a schema version bump (like builder.contact): rows saved before it existed stay valid and gain no key.
+    tracking: storefrontTrackingSchema.optional(),
   })
   .strict();
 

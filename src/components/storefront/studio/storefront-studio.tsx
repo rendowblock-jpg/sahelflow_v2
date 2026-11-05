@@ -54,7 +54,7 @@ import { PanelHeader } from "./studio-controls";
 import { ProductsPanel, ThemePanel } from "./studio-design-panels";
 import { StudioRail, type StudioPanel } from "./studio-rail";
 import { legalPublishBlock } from "@/lib/storefront/studio-legal";
-import { CheckoutPanel, ContactPanel, LegalPanel, SeoPanel } from "./studio-settings-panels";
+import { CheckoutPanel, ContactPanel, LegalPanel, SeoPanel, TrackingPanel } from "./studio-settings-panels";
 import { StudioTopBar, type StudioSaveState } from "./studio-top-bar";
 import type { StorefrontStudioDevice, StorefrontStudioProduct } from "./studio-types";
 
@@ -525,6 +525,7 @@ export function StorefrontStudio({
               {panel === "checkout" ? <CheckoutPanel draft={draft} commit={commitDraft} /> : null}
               {panel === "contact" ? <ContactPanel draft={draft} commit={commitDraft} /> : null}
               {panel === "legal" ? <LegalPanel draft={draft} commit={commitDraft} /> : null}
+              {panel === "tracking" ? <TrackingPanel draft={draft} commit={commitDraft} /> : null}
               {panel === "seo" ? <SeoPanel draft={draft} commit={commitDraft} /> : null}
             </div>
           )}

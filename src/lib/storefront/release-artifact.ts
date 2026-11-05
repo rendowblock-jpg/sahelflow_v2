@@ -1,6 +1,7 @@
 import type { StorefrontStudioDraft } from "./studio-draft";
 import { isLegalReviewed, LEGAL_REVIEW_REQUIRED_MESSAGE, publicLegalOf } from "./studio-legal";
 import { storefrontStudioDraftSchema } from "./studio-schema";
+import { normalizeStorefrontTracking } from "./studio-tracking";
 
 export interface StorefrontReleaseProduct {
   id: string;
@@ -121,6 +122,9 @@ export function createStorefrontReleaseInput(input: Readonly<{
     }
   }
   const { domain: _privateDomain, shippingRules, legal: _privateLegal, ...publicBuilder } = draft.theme.builder;
+  // Empty = removed: a store with no pixel id carries no `tracking` key at all (the deployed worker checks theme keys strictly).
+  const { tracking: draftTracking, ...themeWithoutTracking } = draft.theme;
+  const publicTracking = normalizeStorefrontTracking(draftTracking);
   return {
     workspaceId: input.workspaceId,
     releaseId: input.releaseId,
@@ -131,7 +135,7 @@ export function createStorefrontReleaseInput(input: Readonly<{
       schemaVersion: 2,
       storeName: draft.name,
       ...(draft.description ? { description: draft.description } : {}),
-      theme: { ...draft.theme, builder: publicBuilder },
+      theme: { ...themeWithoutTracking, builder: publicBuilder, ...(publicTracking ? { tracking: publicTracking } : {}) },
       products: publicProducts,
       ...(draft.legal ? { legal: publicLegalOf(draft.legal) } : {}),
     },
