@@ -26,27 +26,27 @@ const PRESET_PREVIEW: Record<
   { accent: string; secondary: string; canvas: string; rail: string }
 > = {
   sahel: {
-    accent: "oklch(0.70 0.16 150)",
+    accent: "oklch(0.74 0.16 150)",
     secondary: "oklch(0.78 0.15 55)",
-    canvas: "oklch(0.242 0.007 260)",
+    canvas: "oklch(0.272 0.008 260)",
     rail: "oklch(0.205 0.006 260)",
   },
   atlas: {
-    accent: "oklch(0.72 0.15 285)",
+    accent: "oklch(0.77 0.122 285)",
     secondary: "oklch(0.70 0.13 245)",
-    canvas: "oklch(0.242 0.007 260)",
+    canvas: "oklch(0.272 0.008 260)",
     rail: "oklch(0.205 0.006 260)",
   },
   oasis: {
-    accent: "oklch(0.72 0.125 190)",
+    accent: "oklch(0.74 0.125 190)",
     secondary: "oklch(0.71 0.13 178)",
-    canvas: "oklch(0.242 0.007 260)",
+    canvas: "oklch(0.272 0.008 260)",
     rail: "oklch(0.205 0.006 260)",
   },
   dune: {
     accent: "oklch(0.76 0.125 70)",
     secondary: "oklch(0.70 0.15 350)",
-    canvas: "oklch(0.242 0.007 260)",
+    canvas: "oklch(0.272 0.008 260)",
     rail: "oklch(0.205 0.006 260)",
   },
 };
