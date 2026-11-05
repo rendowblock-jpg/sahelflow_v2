@@ -12,6 +12,7 @@ import { isOpen } from "../outbox/state";
 import { createVault, purgeOld } from "../storage/sealed";
 import { wipeAll } from "../storage/wipe";
 import { createSync } from "../sync/engine";
+import { createTokenRotation } from "../sync/token-rotation";
 import { reactToPoll, type PollReaction } from "../sync/revoke";
 import { focusKeyOf } from "../kit/focus";
 import { createDirectPoll } from "./direct-poll";
@@ -66,6 +67,10 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   let previewOn = preview;
   let dbPromise: Promise<Db> | null = null;
   const getDb = (): Promise<Db> => (dbPromise ??= openDb(indexedDB));
+  // W4SEC-05: the relay swaps the phone's device token now and then. Asked at launch, on return to the foreground and when back online;
+  // the check is a no-op for an unpaired phone, at most one request is in flight and it asks at most twice a day. It never wipes.
+  const tokenRotation = createTokenRotation({ getDb: () => getDb(), relayBase: __RELAY_URL__, fetch: (input, init) => fetch(input, init), now: Date.now });
+  const checkToken = (): void => { void tokenRotation.check().catch(() => undefined); };
   let installEvent: InstallEvent | null = null;
   let updates: UpdateController | null = null;
   let lockState: LockState = { phase: "unset" }; let lockRow: LockRow | null = null; let pendingPin = ""; let returnTo: ScreenId = "welcome";
@@ -331,7 +336,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   });
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e as InstallEvent; set({ canInstall: true }); });
   window.addEventListener("appinstalled", () => set({ installed: true, canInstall: false }));
-  window.addEventListener("online", () => { set({ online: true }); sync.onOnline(); });
+  window.addEventListener("online", () => { set({ online: true }); sync.onOnline(); checkToken(); });
   window.addEventListener("offline", () => set({ online: false }));
   window.addEventListener("popstate", () => { const s = SCREENS.find((x) => x === new URLSearchParams(location.search).get("screen")); set({ screen: s ?? "welcome" }); attachFor(); });
   document.addEventListener("visibilitychange", () => {
@@ -340,11 +345,12 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     if (document.hidden) sync.onHidden();
     else if (lockState.phase === "locked" && view.screen !== "lock") { returnTo = view.screen; set({ screen: "lock", lockMode: "enter", lockNotice: null }); sync.onScreen(); } // the lock screen polls too: tell the engine
     else sync.onVisible();
+    if (!document.hidden) checkToken();
   });
 
   void getDb().then((db) => purgeOld(db, Date.now())).catch(() => undefined);
   link = takePairingLink(location.hash, location.pathname + location.search, (u) => history.replaceState(null, "", u));
-  paint(); attachFor(); detectPaired();
+  paint(); attachFor(); detectPaired(); checkToken();
   void getDb().then((db) => db.get<LockRow>("settings", "lock")).then((row) => {
     if (!row) return;
     lockRow = row; lockState = initialState(true, row); vaultWiring.locked(); returnTo = view.screen === "lock" ? "welcome" : view.screen;
