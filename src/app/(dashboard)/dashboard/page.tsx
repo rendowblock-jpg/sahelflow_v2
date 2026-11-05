@@ -1,7 +1,7 @@
 import { getDashboardAnalytics } from "@/lib/data/analytics-data";
 import { getDashboardStats, getRecentOrders } from "@/lib/data/dashboard";
 import { getFirstRunCounts } from "@/lib/data/first-run-counts";
-import { getStaleOrderCount } from "@/lib/data/confirmation-queue";
+import { getStaleOrderAges, getStaleOrderCount } from "@/lib/data/confirmation-queue";
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
@@ -20,6 +20,7 @@ export default async function DashboardPage() {
     rawRecentOrders,
     rawAnalytics,
     staleConfirmations,
+    staleAges,
     riskReport,
     firstRunCounts,
   ] = await Promise.all([
@@ -29,6 +30,7 @@ export default async function DashboardPage() {
       : Promise.resolve([]),
     getDashboardAnalytics(fieldAccess),
     fieldAccess.orders ? getStaleOrderCount() : Promise.resolve(0),
+    fieldAccess.orders ? getStaleOrderAges() : Promise.resolve(null),
     fieldAccess.risk
       ? getRiskAnalyticsReport({ prisma: db, shop: shopContext }, 30)
       : Promise.resolve(null),
@@ -67,6 +69,7 @@ export default async function DashboardPage() {
       firstRunCounts={firstRunCounts}
       riskReport={riskReport}
       staleConfirmations={staleConfirmations}
+      staleAges={staleAges}
     />
   );
 }
