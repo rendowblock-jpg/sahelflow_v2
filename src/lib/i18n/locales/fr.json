@@ -1711,6 +1711,7 @@
   "orders.deleteWarning": "Cette action retire la commande de votre liste. Vous pouvez l'annuler pendant quelques secondes.",
   "orders.delivered": "Livrée",
   "orders.deliveredToday": "Livrées aujourd'hui",
+  "orders.kpiStrip": "Aperçu des commandes",
   "orders.deliveryCost": "Frais de livraison",
   "orders.detail.activity": "Chronologie des activités",
   "orders.detail.backToOrders": "Retour aux commandes",

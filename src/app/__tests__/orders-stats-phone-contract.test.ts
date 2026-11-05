@@ -1,5 +1,5 @@
 /**
- * 31 Oct 2026 (w214): on a phone the four Orders KPI cards are a 2 x 2 grid of compact tiles. The grid rule lives in
+ * 31 Oct 2026 (w214): on a phone the four Orders KPI cards were a 2 x 2 grid of compact tiles (replaced 5 Nov by one strip; the rule stays). The grid rule lives in
  * responsive-system.css, scoped to a modifier class and to the phone range only; the page opts in.
  */
 import { readFileSync } from "node:fs";
@@ -67,11 +67,32 @@ describe("phone 2 x 2 stat grid rule", () => {
 });
 
 describe("orders page wiring", () => {
-  it("puts the four KPI cards in the modifier grid, each as a compact phone tile", () => {
-    expect(page).toContain('className="card-grid-4 card-grid-phone-2x2"');
-    expect(page).not.toContain('className="card-grid-4"');
-    expect(page.match(/<StatCard\b/g)).toHaveLength(4);
-    expect(page.match(/compactOnPhone/g)).toHaveLength(4);
+  // 5 Nov 2026 (item 1, orders): the four equal cards became ONE strip of three figures (active orders, delivered today,
+  // revenue delivered today). The pending count lives in the status tab and in the confirmation-queue button, not in a
+  // third place. The phone 2 x 2 rule above stays in the stylesheet (unused by this page now) and keeps its own tests.
+  it("shows the KPIs as ONE strip of three figures, not four stat cards", () => {
+    expect(page).toContain("<OrdersKpiStrip");
+    expect(page.match(/<OrdersKpiItem\b/g)).toHaveLength(3);
+    expect(page).not.toMatch(/<StatCard\b/);
+    expect(page).not.toContain("compactOnPhone");
+    expect(page).not.toContain("card-grid-phone-2x2");
+    expect(page).not.toContain("orders.pendingLabel");
+  });
+
+  it("puts the strip above the status tabs", () => {
+    expect(page.indexOf("<OrdersKpiStrip")).toBeGreaterThan(0);
+    expect(page.indexOf("<OrdersKpiStrip")).toBeLessThan(page.indexOf("<Tabs"));
+  });
+
+  it("keeps each figure's destination: all orders, delivered orders, analytics", () => {
+    const strip = page.slice(page.indexOf("<OrdersKpiStrip"), page.indexOf("</OrdersKpiStrip>"));
+    expect(strip).toContain('href={statusTabHref("all")}');
+    expect(strip).toContain('href={statusTabHref("delivered")}');
+    expect(strip).toContain('href="/analytics"');
+  });
+
+  it("shows a dash, not 0 DA, when the member may not read money", () => {
+    expect(page).toContain('todayRevenue === null ? "—" : formatDZD(todayRevenue, locale)');
   });
 
   it("builds the header actions with OrdersHeaderActions and hands it the create dialog as the main action", () => {
