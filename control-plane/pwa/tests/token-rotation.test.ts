@@ -19,6 +19,12 @@ afterEach(() => vi.useRealTimers());
 
 const load = () => import("../src/sync/token-rotation");
 const sha = (v: string) => createHash("sha256").update(v).digest("hex");
+/** base64Decode answers null for text that is not base64; in a test that is a failure, not a value. */
+const decode64 = (value: string): Uint8Array => {
+  const bytes = base64Decode(value);
+  if (!bytes) throw new Error("test input is not base64");
+  return bytes;
+};
 
 function memoryDb(): Db {
   const stores = new Map<string, Map<string, unknown>>();
@@ -130,8 +136,8 @@ describe("swap against the real relay", () => {
     expect(sent.issuedAt).toBe(Date.now());
     expect(call.body).not.toContain(r.identity.deviceToken);
     const message = `sahelflow.device-token-rotate.v1\n${WORKSPACE_ID}\n${r.identity.deviceId}\n${sha(r.identity.deviceToken)}\n${sent.issuedAt}`;
-    const publicKey = createPublicKey({ key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(base64Decode(phone.publicKeys.signingPublicKey))]), format: "der", type: "spki" });
-    expect(nodeVerify(null, Buffer.from(message), publicKey, Buffer.from(base64Decode(sent.signature)))).toBe(true);
+    const publicKey = createPublicKey({ key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(decode64(phone.publicKeys.signingPublicKey))]), format: "der", type: "spki" });
+    expect(nodeVerify(null, Buffer.from(message), publicKey, Buffer.from(decode64(sent.signature)))).toBe(true);
   });
 
   it("a lost answer: the phone keeps the old token, asks again 5 minutes later with it, and ends with a working token", async () => {

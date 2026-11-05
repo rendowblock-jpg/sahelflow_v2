@@ -61,7 +61,7 @@ async function setup(options = {}) {
 
 describe("the numbers", () => {
   it("are 7 days to rotate, 30 days to live, 24 hours of grace, 10 minutes of clock skew", async () => {
-    const mod = (await import("../device-token")) as Record<string, number>;
+    const mod = await import("../device-token");
     expect(mod.TOKEN_ROTATE_AFTER_MS).toBe(ROTATE_AFTER);
     expect(mod.TOKEN_MAX_AGE_MS).toBe(MAX_AGE);
     expect(mod.TOKEN_ROTATE_GRACE_MS).toBe(GRACE);
@@ -252,7 +252,7 @@ describe("rotation (POST /v1/devices/rotate-token)", () => {
   });
 
   it("a signature longer than the named limit is a 400 before any key work; one at the limit is only a wrong proof (403)", async () => {
-    const mod = (await import("../device-token")) as Record<string, number>;
+    const mod = await import("../device-token");
     const limit = mod.MAX_ROTATE_SIGNATURE_CHARS;
     expect(limit).toBe(200); // an Ed25519 signature is 88 base64 characters; 200 is room, not a target
     const { w, a } = await setup();
