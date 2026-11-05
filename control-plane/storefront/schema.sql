@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS storefront_allocation (
   unit_price_dzd INTEGER NOT NULL CHECK(unit_price_dzd >= 0),
   delegated_quantity INTEGER NOT NULL CHECK(delegated_quantity >= 0),
   remaining_quantity INTEGER NOT NULL CHECK(remaining_quantity >= 0),
+  -- Quantity offers: canonical JSON [{"q":2,"t":5500}], NULL = none. LAST on purpose: migration 0005 adds it with ALTER TABLE ADD COLUMN.
+  offers_json TEXT,
   PRIMARY KEY(release_id, item_key),
   FOREIGN KEY(release_id) REFERENCES storefront_release(release_id) ON DELETE CASCADE
 );

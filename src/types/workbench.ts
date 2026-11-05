@@ -57,6 +57,24 @@ export interface OrdersWorkbenchResponse {
   sort: string;
 }
 
+export type ConfirmationQueueRiskReasonCode =
+  | "blacklisted"
+  | "previous_returns"
+  | "repeat_order_24h"
+  | "weak_contact";
+
+export interface ConfirmationQueueRiskReason {
+  code: ConfirmationQueueRiskReasonCode;
+  /** i18n key of the short, seller-facing reason (never contains customer data). */
+  key: string;
+}
+
+/** Flag-only hint on a pending order; absent when the order looks ordinary. */
+export interface ConfirmationQueueRisk {
+  level: "medium" | "high" | "critical";
+  reasons: ConfirmationQueueRiskReason[];
+}
+
 export interface ConfirmationQueueItem {
   id: string;
   orderNumber: string;
@@ -70,6 +88,7 @@ export interface ConfirmationQueueItem {
   phone: string | null;
   wilaya: string | null;
   totalPrice: number | null;
+  risk?: ConfirmationQueueRisk;
 }
 
 export interface ConfirmationQueueResponse {
