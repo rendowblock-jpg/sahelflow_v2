@@ -11,6 +11,7 @@ import {
 } from "./studio-sections";
 import type { StorefrontTheme } from "./presentation-types";
 import { normalizeStorefrontTheme } from "./theme-normalize";
+import { normalizeStorefrontTracking } from "./studio-tracking";
 
 export interface StorefrontStudioDraft {
   name: string;
@@ -36,7 +37,14 @@ export function splitLegalFromThemeJson(raw: unknown): { theme: unknown; legal: 
 
 /** The theme as it goes on the wire and into the draft column: the working draft.legal travels at theme.builder.legal. */
 export function studioThemeForWire(draft: StorefrontStudioDraft): StorefrontTheme {
-  return draft.legal ? { ...draft.theme, builder: { ...draft.theme.builder, legal: draft.legal } } : draft.theme;
+  let theme = draft.theme;
+  if (theme.tracking !== undefined) {
+    // Empty = removed: only the pixel ids that are set go on the wire, and an unset store carries no `tracking` key.
+    const { tracking, ...rest } = theme;
+    const kept = normalizeStorefrontTracking(tracking);
+    theme = kept ? { ...rest, tracking: kept } : rest;
+  }
+  return draft.legal ? { ...theme, builder: { ...theme.builder, legal: draft.legal } } : theme;
 }
 
 export function createStorefrontStudioDraft(

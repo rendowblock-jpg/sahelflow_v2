@@ -269,13 +269,37 @@ function validBuilder(value: unknown): boolean {
   );
 }
 
+/**
+ * The two pixel-id shapes a seller's Meta / TikTok id must have. Repeated from STOREFRONT_TRACKING_PATTERNS in
+ * src/lib/storefront/studio-tracking.ts (the control plane does not import the app); studio-tracking-release.test.ts keeps both equal.
+ */
+export const PUBLIC_TRACKING_PATTERNS = { meta: "^[0-9]{10,20}$", tiktok: "^[A-Z0-9]{10,32}$" } as const;
+const META_PIXEL_ID = new RegExp(PUBLIC_TRACKING_PATTERNS.meta);
+const TIKTOK_PIXEL_ID = new RegExp(PUBLIC_TRACKING_PATTERNS.tiktok);
+
+/** theme.tracking as the buyer's page may carry it: present only when set, at least one id, each id exactly its shape (no empty strings). */
+export function validPublicTracking(value: unknown): value is { metaPixelId?: string; tiktokPixelId?: string } {
+  const tracking = record(value);
+  if (!tracking) return false;
+  const keys = Object.keys(tracking);
+  if (keys.length < 1 || !keys.every((key) => key === "metaPixelId" || key === "tiktokPixelId")) return false;
+  const meta = tracking.metaPixelId;
+  const tiktok = tracking.tiktokPixelId;
+  return (meta === undefined || (typeof meta === "string" && META_PIXEL_ID.test(meta))) &&
+    (tiktok === undefined || (typeof tiktok === "string" && TIKTOK_PIXEL_ID.test(tiktok)));
+}
+
 function validPublicTheme(value: unknown): value is PlainRecord {
   const theme = record(value);
   // "mode" exists only in themes of the five styles; a theme published before it has none and stays valid.
   const hasMode = theme ? Object.prototype.hasOwnProperty.call(theme, "mode") : false;
   if (theme && hasMode && !(theme.mode === "landing" || theme.mode === "store")) return false;
+  // "tracking" exists only in themes of stores whose seller set a pixel id; every other theme has no such key.
+  const hasTracking = theme ? Object.prototype.hasOwnProperty.call(theme, "tracking") : false;
+  if (theme && hasTracking && !validPublicTracking(theme.tracking)) return false;
   if (!theme || !exactKeys(theme, [
     ...(hasMode ? ["mode"] : []),
+    ...(hasTracking ? ["tracking"] : []),
     "schemaVersion", "template", "primaryColor", "accentColor", "backgroundColor", "surfaceColor",
     "textColor", "showPrices", "showStock", "density", "radius", "announcement", "hero", "catalog",
     "checkout", "trust", "builder",
