@@ -1,3 +1,4 @@
+import { parseOfferLadder } from "../../../control-plane/storefront/offer-ladder";
 import type { StorefrontStudioDraft } from "./studio-draft";
 import { isLegalReviewed, LEGAL_REVIEW_REQUIRED_MESSAGE, publicLegalOf } from "./studio-legal";
 import { storefrontStudioDraftSchema } from "./studio-schema";
@@ -53,6 +54,15 @@ export function parseStorefrontReleaseItemKey(itemKey: string): {
   return { productId, variantId: variant };
 }
 
+/** Quantity-offer ladders per itemKey, as the Studio draft will hold them (M3). Values are unchecked here; the builder validates them. */
+export type StorefrontOffersByItemKey = ReadonlyMap<string, unknown> | Readonly<Record<string, unknown>>;
+
+function offersFor(map: StorefrontOffersByItemKey | undefined, itemKey: string): unknown {
+  if (!map) return undefined;
+  if (map instanceof Map) return (map as ReadonlyMap<string, unknown>).get(itemKey);
+  return Object.prototype.hasOwnProperty.call(map, itemKey) ? (map as Readonly<Record<string, unknown>>)[itemKey] : undefined;
+}
+
 export function createStorefrontReleaseInput(input: Readonly<{
   workspaceId: string;
   releaseId: string;
@@ -66,6 +76,13 @@ export function createStorefrontReleaseInput(input: Readonly<{
    * in control-plane/storefront/release-input.ts.
    */
   freshByItemKey?: ReadonlyMap<string, number>;
+  /**
+   * Quantity offers (fixed-price bundles) per item, keyed by itemKey (a Map or a plain object). Each ladder is checked with the shared
+   * validator against that item's own unit price; an invalid one makes the build throw, like a bad price. An item with no entry or an
+   * empty ladder gets no `offers` key, and no map at all gives a request byte-identical to the pre-offers builder. An entry for an item
+   * that is not part of this release is ignored.
+   */
+  offersByItemKey?: StorefrontOffersByItemKey;
   /** The publish path sets this: a release then needs legal texts the seller has read (studio-legal.ts). */
   requireLegalReview?: boolean;
 }>): Record<string, unknown> {
@@ -113,11 +130,14 @@ export function createStorefrontReleaseInput(input: Readonly<{
       if (!Number.isSafeInteger(fresh) || fresh < 0 || fresh > saleItem.stock) {
         throw new Error("Published storefront fresh allocation is invalid");
       }
+      const offers = parseOfferLadder(saleItem.price, offersFor(input.offersByItemKey, itemKey));
+      if (offers === null) throw new Error("Published storefront offer ladder is invalid");
       allocations.push({
         itemKey,
         unitPriceDzd: saleItem.price,
         quantity: saleItem.stock,
         ...(fresh > 0 ? { freshQuantity: fresh } : {}),
+        ...(offers.length > 0 ? { offers } : {}),
       });
     }
   }
