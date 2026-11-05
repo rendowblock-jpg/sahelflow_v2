@@ -15,6 +15,7 @@ import { allowedOrigin, corsHeaders, parseAllowedOrigins } from "./cors";
 import { tokenRotationProofBytes } from "../../src/lib/connected-platform/token-rotation-proof";
 import {
   MAX_ROTATE_BODY_BYTES,
+  MAX_ROTATE_SIGNATURE_CHARS,
   TOKEN_ROTATE_GRACE_MS,
   proofIsFresh,
   rotationDue,
@@ -969,7 +970,7 @@ async function rotateDeviceToken(request: Request, environment: ConnectedWorkerE
     typeof input.issuedAt !== "number" ||
     !Number.isSafeInteger(input.issuedAt) ||
     typeof input.signature !== "string" ||
-    input.signature.length > 200
+    input.signature.length > MAX_ROTATE_SIGNATURE_CHARS
   ) {
     return json({ error: "invalid_request" }, 400);
   }

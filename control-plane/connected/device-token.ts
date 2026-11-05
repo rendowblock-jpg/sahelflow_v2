@@ -28,6 +28,9 @@ export const ROTATE_PROOF_MAX_SKEW_MS = 10 * MINUTE_MS;
 /** A swap request is four short fields. */
 export const MAX_ROTATE_BODY_BYTES = 4 * 1024;
 
+/** Longest signature text the relay looks at. An Ed25519 signature is 88 base64 characters; this is room for padding or a url-safe form, not a target. */
+export const MAX_ROTATE_SIGNATURE_CHARS = 200;
+
 /** The presented token is the one the relay holds now, or the one it replaced. */
 export type TokenMatch = "current" | "previous";
 
