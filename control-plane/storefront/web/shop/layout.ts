@@ -2,6 +2,7 @@ import { storefrontScheme, storefrontThemeStyle } from "@/lib/storefront/storefr
 
 import { directionOf, PUBLIC_LOCALES, type PublicLocale } from "../locale";
 import { jsonForScript } from "../html";
+import { trackingTags } from "../tracking";
 import type { ShopTheme } from "./model";
 import { arabicAttrs, autoDir, esc, icon, preloadImage, whatsappDigits, type Ctx } from "./ui";
 
@@ -73,6 +74,8 @@ export type PageParts = {
   preload: string | null;
   jsonLd: unknown;
   script: boolean;
+  /** The product being viewed: the pixel script reports it as the content id. */
+  trackId?: string;
   /** Extra attributes for <body>. */
   bodyAttrs?: string;
   main: string;
@@ -201,7 +204,7 @@ ${page.bar ?? ""}
 </main>
 ${renderFooter(ctx, page.tagline, page.legalNav ?? "")}
 ${page.tabs ?? ""}
-${page.script ? `<script src="${esc(assets.js)}" defer></script>` : assets.photos ? `<script src="${esc(assets.photos)}" defer></script>` : ""}${(page.script || page.fx) && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}
+${page.script ? `<script src="${esc(assets.js)}" defer></script>` : assets.photos ? `<script src="${esc(assets.photos)}" defer></script>` : ""}${(page.script || page.fx) && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}${trackingTags(theme, assets.trk, page.trackId, esc)}
 </body>
 </html>`;
 }

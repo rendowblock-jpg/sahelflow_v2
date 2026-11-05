@@ -1,4 +1,5 @@
 import { validPublicArtifact, type PublicArtifact } from "../shared";
+import { pagePixels, widenCsp } from "./tracking";
 import { withMotherFeeFallback } from "../wilaya-fallback";
 import type { StorefrontWorkerEnvironment } from "../types";
 import { parsePublicLocale, type PublicLocale } from "./locale";
@@ -210,7 +211,10 @@ async function build(
       legalKind: legalKind !== null && isLegalKind(legalKind) ? legalKind : null,
     });
     if (html === null) return notice("productNotFound", 404, locale, deps, NOTICE_TTL_SECONDS, {}, noticeExit("productNotFound", slug, productId, requested));
-    return { response: htmlResponse(html, 200, locale, deps.assets.css, PAGE_TTL_SECONDS), cacheable: true };
+    // A shop with a pixel id gets a CSP widened by that pixel's hosts only; every other shop keeps the string above untouched.
+    const pixels = pagePixels(artifact.theme);
+    const extra = pixels ? { "Content-Security-Policy": widenCsp(CONTENT_SECURITY_POLICY, pixels) } : {};
+    return { response: htmlResponse(html, 200, locale, deps.assets.css, PAGE_TTL_SECONDS, extra), cacheable: true };
   } catch (error) {
     logFailure("render", slug, error);
     return notice("error", 500, locale, deps, 0, { "Retry-After": "300" }, noticeExit("error", slug, productId, requested, legalKind));
