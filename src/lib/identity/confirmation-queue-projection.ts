@@ -5,6 +5,7 @@ import {
   trustedActionAllowed,
 } from "./authorization";
 import type { TrustedActorContext } from "./trusted-actor";
+import type { ConfirmationQueueRisk } from "@/types/workbench";
 import {
   isImportPendingOrderAuthority,
   isTrustedManualOrderAuthority,
@@ -28,6 +29,7 @@ type ConfirmationQueueSource = readonly Readonly<{
   ageMinutes: number;
   isStale: boolean;
   ageLabel: string;
+  risk?: ConfirmationQueueRisk;
   customer?: Readonly<{ name: string | null; phone: string | null }> | null;
 }>[];
 
@@ -76,6 +78,7 @@ export function projectConfirmationQueueForTrustedActor(
         ageMinutes: order.ageMinutes,
         isStale: order.isStale,
         ageLabel: order.ageLabel,
+        ...(order.risk ? { risk: order.risk } : {}),
         mutationAuthority,
         canUpdate: fieldAccess.update,
         customerName: fieldAccess.contact ? order.customer?.name ?? null : null,

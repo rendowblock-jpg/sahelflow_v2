@@ -1,12 +1,18 @@
 import "server-only";
 
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import {
   projectConfirmationQueueForTrustedActor,
   resolveConfirmationQueueFieldAccess,
 } from "@/lib/identity/confirmation-queue-projection";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
-import type { ConfirmationQueueResponse } from "@/types/workbench";
+import { trustedActionAllowed } from "@/lib/identity/authorization";
+import { buildConfirmationQueueRisk } from "@/lib/orders/confirmation-queue-risk";
+import { batchAssessOrdersForWorkbench } from "@/lib/orders/order-risk-workbench";
+import type {
+  ConfirmationQueueResponse,
+  ConfirmationQueueRisk,
+} from "@/types/workbench";
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -95,6 +101,33 @@ export async function getConfirmationWorkbenchPage(
       : Promise.resolve(null),
   ]);
 
+  // Flag-only suspicious-order hints: ONE batched assessment for the visible page.
+  // A failure here must never hide or block the queue.
+  const riskFlags = new Map<string, ConfirmationQueueRisk>();
+  const pageOrderIds = (sourceRows as unknown as QueueSourceRow[]).map((order) => order.id);
+  if (
+    pageOrderIds.length > 0 &&
+    trustedActionAllowed(actorContext, "risk.read", { shopId: actorContext.shop.shopId })
+  ) {
+    try {
+      const assessments = await batchAssessOrdersForWorkbench(
+        { prisma: db, shop: shopContext },
+        pageOrderIds,
+        { excludeSelfFromHistory: true },
+      );
+      for (const [orderId, assessment] of assessments) {
+        const flag = buildConfirmationQueueRisk(assessment, { contact: fieldAccess.contact });
+        if (flag) riskFlags.set(orderId, flag);
+      }
+    } catch (error) {
+      console.warn("confirmation queue risk flags unavailable", error);
+    }
+  }
+  const riskOf = (orderId: string) => {
+    const risk = riskFlags.get(orderId);
+    return risk ? { risk } : {};
+  };
+
   const enriched = (sourceRows as unknown as QueueSourceRow[]).map((order) => {
     const ageMinutes = Math.max(
       0,
@@ -105,6 +138,7 @@ export async function getConfirmationWorkbenchPage(
       ageMinutes,
       isStale: order.createdAt < staleThreshold,
       ageLabel: formatAge(ageMinutes),
+      ...riskOf(order.id),
     };
   });
 
