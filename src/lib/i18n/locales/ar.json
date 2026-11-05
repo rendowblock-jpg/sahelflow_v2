@@ -772,6 +772,7 @@
   "dashboard.attention.staleConfirmations": "تأكيدات تنتظر منذ أكثر من ساعتين",
   "dashboard.attention.pendingDeliveries": "توصيلات قيد الانتظار",
   "dashboard.attention.lowStock": "منتجات بمخزون منخفض",
+  "dashboard.attention.eyebrow": "يحتاج إلى معالجة الآن",
   "dashboard.lowStockWarning": "{{count}} منتج مخزون منخفض",
   "dashboard.manageOrders": "إدارة الطلبات",
   "dashboard.newCustomersToday": "عملاء جدد",

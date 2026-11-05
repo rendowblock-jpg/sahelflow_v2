@@ -181,6 +181,25 @@ export function DashboardView({
         description={t("dashboard.activityOverview")}
       />
 
+      {/* The work ranks above the analytics: what waits for the seller comes first (item 1, 5 Nov 2026). */}
+      {hasAttentionAuthority ? (
+        <AttentionCenter
+          title={t("dashboard.filterAlerts")}
+          items={attentionItems}
+          allClearLabel={t("confirmationQueue.allCaughtUp")}
+          leadId="confirmation-stale"
+          leadActionLabel={t("nav.confirmationQueue")}
+          eyebrow={t("dashboard.attention.eyebrow")}
+        />
+      ) : (
+        <StateSurface
+          icon={LockKeyhole}
+          title={t("error.forbidden")}
+          tone="info"
+          size="inline"
+        />
+      )}
+
       <div className="card-grid-4">
         <StatCard
           label={t("dashboard.todaysOrders")}
@@ -265,21 +284,6 @@ export function DashboardView({
           }
         />
       </div>
-
-      {hasAttentionAuthority ? (
-        <AttentionCenter
-          title={t("dashboard.filterAlerts")}
-          items={attentionItems}
-          allClearLabel={t("confirmationQueue.allCaughtUp")}
-        />
-      ) : (
-        <StateSurface
-          icon={LockKeyhole}
-          title={t("error.forbidden")}
-          tone="info"
-          size="inline"
-        />
-      )}
 
       <div
         data-dashboard-operational-grid="true"

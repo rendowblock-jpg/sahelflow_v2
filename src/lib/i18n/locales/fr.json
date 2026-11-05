@@ -772,6 +772,7 @@
   "dashboard.attention.staleConfirmations": "Confirmations en attente depuis plus de 2 h",
   "dashboard.attention.pendingDeliveries": "Livraisons en attente",
   "dashboard.attention.lowStock": "Produits en stock faible",
+  "dashboard.attention.eyebrow": "À traiter maintenant",
   "dashboard.lowStockWarning": "{{count}} produits en rupture",
   "dashboard.manageOrders": "Gérer les commandes",
   "dashboard.newCustomersToday": "Nouveaux clients",
