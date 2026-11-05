@@ -1715,6 +1715,7 @@
   "orders.deleteWarning": "سيؤدي هذا إلى إزالة الطلب من قائمتك. يمكنك التراجع خلال ثوانٍ قليلة بعد الحذف.",
   "orders.delivered": "تم التوصيل",
   "orders.deliveredToday": "تم التسليم اليوم",
+  "orders.kpiStrip": "نظرة عامة على الطلبات",
   "orders.deliveryCost": "تكلفة التوصيل",
   "orders.detail.activity": "سجل النشاط",
   "orders.detail.backToOrders": "العودة إلى الطلبات",
