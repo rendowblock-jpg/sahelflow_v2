@@ -238,3 +238,18 @@ This is the map for a second reader. "Read" means the lines were printed and rea
 - `store/shared.ts`: read 36-96. `store/types.ts` and `store/wrangler.jsonc.example`: seen one line each.
 - Gap register copy: grep lines for `W4SEC`, `relay`, `pwa`, `pairing`, `connected`.
 - PR #715: description only.
+
+## Questions for the second reader
+
+Each question turns an UNKNOWN cell into a check. Read the named place, then change the label in the table.
+
+1. Does the desktop refuse a command from a device the seller has not approved? Read the command handlers and `lib/command-policy.ts` (T01, T15).
+2. Does the phone check the signature and the sequence of every projection it stores, and refuse an older one? Read `pwa/src/today/relay-source.ts` and `pwa/src/sync/engine.ts` (T06).
+3. Does the phone wipe itself when the relay says the device is revoked? Read `pwa/src/sync/revoke.ts` (T12).
+4. What does `revokeDevice` change, and in one batch or in several? Start at `relay/worker.ts:1334` (T14).
+5. How long and how random is a token? Read `randomToken`, `relay/worker.ts:217` (T04, T05).
+6. How guessable is a workspace id? Read `validIdentity`, `relay/worker.ts:179`, and where the desktop makes ids (T19).
+7. Does any code delete finished commands or expired projections? Read `relay/worker.ts` from line 1004 to 1056 and from 1205 to 1370 (T21).
+8. Does the desktop screen show the comparison code and make the seller confirm it? Find the approval screen (T01).
+9. Which storefront routes pass input to `CONTROL`? Read the storefront route table (T20).
+10. Who can publish to the app host, and with what login and second factor? No code answers this; ask the Founder (T18).
