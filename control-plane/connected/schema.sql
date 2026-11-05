@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS connected_device (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_seen_at TEXT,
   revoked_at TEXT,
+  -- Token lifetime and rotation (migration 0004): issue time and the previous token during its grace window, in milliseconds.
+  token_issued_at INTEGER,
+  prev_token_hash TEXT,
+  prev_token_valid_until INTEGER,
   PRIMARY KEY(workspace_id, device_id),
   FOREIGN KEY(workspace_id) REFERENCES connected_workspace(workspace_id) ON DELETE CASCADE
 );

@@ -7,7 +7,8 @@ export type RateBucket =
   | "exchange_pairing_failure"
   | "command_submit"
   | "projection_get"
-  | "command_status";
+  | "command_status"
+  | "token_rotate";
 
 export type RateRule = Readonly<{ limit: number; windowMs: number }>;
 
@@ -19,6 +20,8 @@ export const RATE_RULES: Readonly<Record<RateBucket, RateRule>> = {
   command_submit: { limit: 30, windowMs: MINUTE_MS },
   projection_get: { limit: 60, windowMs: MINUTE_MS },
   command_status: { limit: 60, windowMs: MINUTE_MS },
+  // A phone asks twice a day at most; 6 a minute leaves room for retries and still caps signature checks.
+  token_rotate: { limit: 6, windowMs: MINUTE_MS },
 };
 
 /** Counter rows older than this are deleted, at most RATE_PRUNE_BATCH per request. */
