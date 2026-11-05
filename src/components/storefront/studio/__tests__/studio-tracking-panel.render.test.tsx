@@ -39,7 +39,7 @@ const tiktok = () => field("storefront.tracking.tiktok.label");
 const type = (input: HTMLElement, value: string) => fireEvent.change(input, { target: { value } });
 
 function draftWith(tracking?: { metaPixelId?: string; tiktokPixelId?: string }): StorefrontStudioDraft {
-  const theme = createDefaultStorefrontTheme("noir") as Record<string, unknown>;
+  const theme = createDefaultStorefrontTheme("noir") as unknown as Record<string, unknown>;
   if (tracking) theme.tracking = tracking;
   return { name: "Boutique Sahel", theme } as unknown as StorefrontStudioDraft;
 }
@@ -76,7 +76,7 @@ describe.each(["en", "fr", "ar"] as const)("Tracking panel (%s)", (locale) => {
     const { commit, draft } = show();
     type(meta(), META_OK);
     expect(commit).toHaveBeenCalledTimes(1);
-    const next = commit.mock.calls[0][0] as StorefrontStudioDraft;
+    const next = commit.mock.calls[0]?.[0] as StorefrontStudioDraft;
     expect((next.theme as unknown as Record<string, unknown>).tracking).toEqual({ metaPixelId: META_OK });
     expect({ ...next.theme, tracking: undefined }).toEqual({ ...draft.theme, tracking: undefined });
     expect(next.name).toBe(draft.name);

@@ -5,6 +5,8 @@
  * Events: PageView, ViewContent + InitiateCheckout on the order page, Lead when an order is accepted (never Purchase: cash on delivery
  * may never be paid; a later server-side event can send Purchase and deduplicate on the same event id).
  */
+// The vendors' pixel objects have no types of their own: any property can hold a function, a queue or a flag.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Pixel = Record<string, any>;
 type W = Window & typeof globalThis & Pixel;
 type Load = (src: string) => void;
@@ -31,8 +33,10 @@ const defaultLoad: Load = (src) => {
 function stubMeta(win: W, load: Load, id: string): void {
   if (!win.fbq) {
     const fbq: Pixel = function (this: unknown, ...args: unknown[]) {
+      /* eslint-disable prefer-spread, prefer-rest-params -- Meta's documented stub, kept as the vendor wrote it: its queue holds the real `arguments` object */
       if (fbq.callMethod) fbq.callMethod.apply(fbq, args);
       else fbq.queue.push(arguments);
+      /* eslint-enable prefer-spread, prefer-rest-params */
     };
     win.fbq = fbq;
     win._fbq = fbq;

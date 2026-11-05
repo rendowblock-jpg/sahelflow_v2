@@ -6,8 +6,8 @@ describe("Studio rail: Tracking entry", () => {
   it("lists a tracking panel with its own label key and an icon, once", () => {
     const entries = STUDIO_PANELS.filter((panel) => panel.id === "tracking");
     expect(entries).toHaveLength(1);
-    expect(entries[0].labelKey).toBe("storefront.studio.panels.tracking");
-    expect(entries[0].icon).toBeTruthy();
+    expect(entries[0]?.labelKey).toBe("storefront.studio.panels.tracking");
+    expect(entries[0]?.icon).toBeTruthy();
   });
   it("keeps every panel id unique and the older panels in place", () => {
     const ids = STUDIO_PANELS.map((panel) => panel.id);
