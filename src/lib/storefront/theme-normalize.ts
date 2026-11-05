@@ -86,5 +86,7 @@ export function switchStorefrontTemplate(
   if (theme.mode && isStorefrontStyleId(nextTemplate)) next.mode = theme.mode;
   next.trust = { ...theme.trust };
   next.builder = structuredClone(theme.builder);
+  // The seller's pixel ids belong to the shop, not to a style: they survive a style change.
+  if (theme.tracking) next.tracking = { ...theme.tracking };
   return next;
 }
