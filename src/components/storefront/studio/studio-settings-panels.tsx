@@ -15,6 +15,7 @@ import wilayasData from "../../../../data/wilayas.json";
 import { PanelHeader, TextAreaField, TextField, ToggleRow } from "./studio-controls";
 
 export { LegalPanel } from "./studio-legal-panel";
+export { TrackingPanel } from "./studio-tracking-panel";
 
 type Commit = (draft: StorefrontStudioDraft) => void;
 
