@@ -76,7 +76,8 @@ describe("store builder: phone tap targets", () => {
   it("the rail buttons keep a 44 px floor in width and height under md", () => {
     const source = read("studio/studio-rail.tsx");
     expect(source).toContain("max-md:min-h-11");
-    expect(source).toContain("max-md:min-w-11");
+    // 56 px (min-w-14), not 44 px (min-w-11): with eight entries the French labels need it (see studio-rail-phone-fit.test.ts); still above the floor.
+    expect(source).toContain("max-md:min-w-14");
   });
 
   it("the conflict-notice buttons are 44 px high on a phone", () => {
