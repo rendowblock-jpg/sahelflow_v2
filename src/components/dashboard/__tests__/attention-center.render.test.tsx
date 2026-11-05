@@ -183,3 +183,69 @@ describe("DashboardView: the work ranks above the analytics", () => {
     expect(container.querySelector("[data-attention-lead]")).toBeNull();
   });
 });
+
+describe("AttentionCenter: how long they have waited", () => {
+  const breakdown = [
+    { id: "mid", label: "2-6 h", value: 412, tone: "muted" as const },
+    { id: "late", label: "6-24 h", value: 301, tone: "warning" as const },
+    { id: "oldest", label: "over 24 h", value: 108, tone: "danger" as const },
+  ];
+
+  it("draws a thin bar whose parts are proportional to the counts, and says the numbers in text", () => {
+    const { container } = render(
+      <AttentionCenter title="Alerts" items={items(821)} allClearLabel="All caught up!" {...lead} leadBreakdown={breakdown} />,
+    );
+    const bar = container.querySelector("[data-attention-breakdown] [aria-hidden='true']");
+    expect(bar, "the bar is decoration for the eye").toBeTruthy();
+    const parts = [...container.querySelectorAll("[data-attention-segment]")] as HTMLElement[];
+    expect(parts.map((part) => part.getAttribute("data-attention-segment"))).toEqual(["mid", "late", "oldest"]);
+    expect(parts.map((part) => Number(part.style.flexGrow))).toEqual([412, 301, 108]);
+    // The numbers are real text for screen readers, not only a drawing.
+    const legend = container.querySelector("[data-attention-breakdown] ul")?.textContent ?? "";
+    for (const piece of ["2-6 h", "412", "6-24 h", "301", "over 24 h", "108"]) expect(legend).toContain(piece);
+  });
+
+  it("leaves out a part with nothing in it, and draws no bar at all when every part is empty", () => {
+    const some = render(
+      <AttentionCenter title="Alerts" items={items(821)} allClearLabel="All caught up!" {...lead}
+        leadBreakdown={[{ ...breakdown[0]!, value: 0 }, breakdown[1]!, breakdown[2]!]} />,
+    );
+    expect(some.container.querySelectorAll("[data-attention-segment]")).toHaveLength(2);
+    some.unmount();
+    const none = render(
+      <AttentionCenter title="Alerts" items={items(821)} allClearLabel="All caught up!" {...lead}
+        leadBreakdown={breakdown.map((part) => ({ ...part, value: 0 }))} />,
+    );
+    expect(none.container.querySelector("[data-attention-breakdown]")).toBeNull();
+  });
+
+  it("without a breakdown nothing changes", () => {
+    const { container } = render(
+      <AttentionCenter title="Alerts" items={items(821)} allClearLabel="All caught up!" {...lead} />,
+    );
+    expect(container.querySelector("[data-attention-breakdown]")).toBeNull();
+  });
+});
+
+describe("DashboardView: the ages reach the lead", () => {
+  it("shows the three parts with translated labels in en, fr and ar", () => {
+    for (const locale of ["en", "fr", "ar"] as const) {
+      const { container, unmount } = mount(locale, { staleAges: { from2to6h: 412, from6to24h: 301, over24h: 108 } });
+      const legend = container.querySelector("[data-attention-breakdown] ul")?.textContent ?? "";
+      expect(legend, locale).toContain("412");
+      expect(legend, locale).toContain("301");
+      expect(legend, locale).toContain("108");
+      expect(legend, locale).not.toContain("dashboard.attention.age");
+      unmount();
+    }
+  });
+
+  it("no ages given (or no right to read orders): no bar", () => {
+    expect(mount("en").container.querySelector("[data-attention-breakdown]")).toBeNull();
+    const denied = mount("en", {
+      staleAges: { from2to6h: 4, from6to24h: 3, over24h: 1 },
+      fieldAccess: new Proxy({}, { get: (_t, key) => key !== "orders" }) as never,
+    });
+    expect(denied.container.querySelector("[data-attention-breakdown]")).toBeNull();
+  });
+});

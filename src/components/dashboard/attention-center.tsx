@@ -21,6 +21,19 @@ const TONE: Record<NonNullable<AttentionItem["tone"]>, string> = {
   danger: "border-destructive/20 bg-destructive-subtle text-destructive-ink",
 };
 
+export interface AttentionBreakdownSegment {
+  id: string;
+  label: string;
+  value: number;
+  tone: "muted" | "warning" | "danger";
+}
+
+const SEGMENT: Record<AttentionBreakdownSegment["tone"], string> = {
+  muted: "bg-muted-foreground/40",
+  warning: "bg-warning",
+  danger: "bg-destructive",
+};
+
 interface AttentionCenterProps {
   title: string;
   items: AttentionItem[];
@@ -35,6 +48,11 @@ interface AttentionCenterProps {
   leadActionLabel?: string;
   /** Small line above the lead figure ("Needs attention now"). */
   eyebrow?: string;
+  /**
+   * How the lead count splits (for the late confirmations: how long they have waited). Drawn as a thin bar for the
+   * eye; the same numbers are written out as text. Parts with nothing in them are left out.
+   */
+  leadBreakdown?: AttentionBreakdownSegment[];
 }
 
 /**
@@ -86,6 +104,7 @@ export function AttentionCenter({
   leadId,
   leadActionLabel,
   eyebrow,
+  leadBreakdown,
 }: AttentionCenterProps) {
   const active = items.filter((item) => item.value > 0);
   const lead = leadId === undefined ? undefined : active.find((item) => item.id === leadId);
@@ -119,6 +138,32 @@ export function AttentionCenter({
               {lead.value}
             </p>
             <p className="mt-2 text-base font-medium text-foreground">{lead.label}</p>
+            {(() => {
+              const parts = (leadBreakdown ?? []).filter((part) => part.value > 0);
+              if (parts.length === 0) return null;
+              return (
+                <div data-attention-breakdown className="mt-4">
+                  <div className="flex h-1.5 gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
+                    {parts.map((part) => (
+                      <span
+                        key={part.id}
+                        data-attention-segment={part.id}
+                        className={cn("h-full min-w-1", SEGMENT[part.tone])}
+                        style={{ flexGrow: part.value, flexBasis: 0 }}
+                      />
+                    ))}
+                  </div>
+                  <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    {parts.map((part) => (
+                      <li key={part.id}>
+                        {part.label}{" "}
+                        <b className="font-semibold tabular-nums text-foreground">{part.value}</b>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
             <div className="mt-5 flex">
               <Button asChild>
                 <Link href={lead.href}>
