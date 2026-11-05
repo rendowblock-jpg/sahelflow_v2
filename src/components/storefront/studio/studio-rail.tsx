@@ -2,6 +2,7 @@
 
 import {
   Layers,
+  Megaphone,
   Package,
   Palette,
   Phone,
@@ -21,7 +22,8 @@ export type StudioPanel =
   | "checkout"
   | "contact"
   | "legal"
-  | "seo";
+  | "seo"
+  | "tracking";
 
 export const STUDIO_PANELS: ReadonlyArray<{
   id: StudioPanel;
@@ -35,6 +37,7 @@ export const STUDIO_PANELS: ReadonlyArray<{
   { id: "contact", labelKey: "storefront.studio.panels.contact", icon: Phone },
   { id: "legal", labelKey: "storefront.legalPanel.nav", icon: Scale },
   { id: "seo", labelKey: "storefront.studio.panels.seo", icon: Search },
+  { id: "tracking", labelKey: "storefront.studio.panels.tracking", icon: Megaphone },
 ];
 
 /**
@@ -57,7 +60,7 @@ export function StudioRail({
     <nav
       aria-label={t("storefront.studio.panelsLabel")}
       data-studio-rail="true"
-      className="flex w-16 shrink-0 flex-col items-center gap-1 border-e bg-background py-2 max-md:h-14 max-md:w-full max-md:flex-row max-md:justify-around max-md:gap-0 max-md:border-e-0 max-md:border-t max-md:py-0"
+      className="flex w-16 shrink-0 flex-col items-center gap-1 border-e bg-background py-2 max-md:h-14 max-md:w-full max-md:flex-row max-md:justify-around max-md:gap-0 max-md:overflow-x-auto max-md:border-e-0 max-md:border-t max-md:py-0"
     >
       {STUDIO_PANELS.map(({ id, labelKey, icon: Icon }) => {
         const active = panel === id && !collapsed;
@@ -70,7 +73,7 @@ export function StudioRail({
             data-studio-rail-item={id}
             onClick={() => onSelect(id)}
             className={cn(
-              "relative flex w-14 flex-col items-center gap-1 max-md:min-h-11 max-md:min-w-11 max-md:w-auto max-md:flex-1 rounded-control px-1 py-2 text-[11px] font-medium leading-3 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+              "relative flex w-14 flex-col items-center gap-1 max-md:min-h-11 max-md:min-w-[3.25rem] max-md:w-auto max-md:flex-1 rounded-control px-1 py-2 text-[11px] font-medium leading-3 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "bg-primary-subtle text-primary-ink"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
