@@ -27,7 +27,9 @@ export async function createCommandStack(d: CommandStackDeps) {
     const c = await d.db.get<PairingIdentity>("keys", "credentials"); shop = c?.shopId ?? shop;
   };
   await refresh();
-  const transport = createPhoneTransport({ relayBase: d.relayBase, keys, pinned, identity, scope: authority.scope, shopId: () => shop, fetch: d.fetch, now: d.now });
+  const transport = createPhoneTransport({ relayBase: d.relayBase, keys, pinned, identity, scope: authority.scope, shopId: () => shop, fetch: d.fetch, now: d.now,
+    // The relay swaps the device token from time to time; this stack lives for the whole session, so it reads the saved one at every request.
+    token: async () => (await d.db.get<PairingIdentity>("keys", "credentials"))?.deviceToken ?? identity.deviceToken });
   const outbox = createOutbox({ db: d.db, now: d.now, deviceId, newId: () => newCommandId(), policyVersion: authority.policyVersion, ...transport });
   async function openOrders(): Promise<OpenedOrders | null> {
     const row = await getSealed(d.db, "orders"); if (!row) return null;

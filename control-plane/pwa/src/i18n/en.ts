@@ -13,6 +13,8 @@ export const en: Catalog = {
   "common.retry": "Try again",
   "common.offline": "No connection. The app shows what is saved.",
   "common.update.ready": "A new version is ready.",
+  "common.update.required.title": "Update required",
+  "common.update.required": "This version of the app is out of date. Update now to keep your shop data safe. Commands waiting to be sent stay on your phone and go out after the update.",
   "common.update.apply": "Update",
   "common.readonly": "Read only",
   "common.error.title": "Something went wrong",

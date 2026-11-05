@@ -7,7 +7,7 @@ if (root) {
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then((reg) => {
-        app.attachUpdates(createUpdateController(reg, navigator.serviceWorker, () => location.reload()));
+        app.attachUpdates(createUpdateController(reg, navigator.serviceWorker, () => location.reload(), app.updateOptions));
       }).catch(() => undefined);
     });
   }

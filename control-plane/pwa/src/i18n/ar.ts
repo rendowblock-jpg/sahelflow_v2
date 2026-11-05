@@ -13,6 +13,8 @@ export const ar: Catalog = {
   "common.retry": "إعادة المحاولة",
   "common.offline": "لا يوجد اتصال بالإنترنت. التطبيق يعرض آخر ما حُفظ.",
   "common.update.ready": "نسخة جديدة جاهزة.",
+  "common.update.required.title": "التحديث مطلوب",
+  "common.update.required": "هذه النسخة من التطبيق قديمة. حدّث الآن لحماية بيانات متجرك. الأوامر التي بانتظار الإرسال تبقى على هاتفك وتُرسل بعد التحديث.",
   "common.update.apply": "تحديث",
   "common.readonly": "للعرض فقط",
   "common.error.title": "حدث خطأ",
