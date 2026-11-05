@@ -22,11 +22,33 @@ type OrderRiskRow = {
 };
 
 type CustomerOrderHistoryRow = {
+  id?: string;
   customerId: string;
   status: string;
   totalPrice: number;
   createdAt: Date;
 };
+
+/**
+ * Recency anchor for the engine's order_frequency factor.
+ * Default: newest order of the customer (orders list unchanged).
+ * `symmetric`: the order closest in time (before OR after), returned as an earlier
+ * date so "hours since last order" is the absolute gap. The confirmation queue uses
+ * it so two pending orders of one customer flag each other.
+ */
+function recencyAnchor(
+  orderCreatedAt: Date,
+  history: readonly CustomerOrderHistoryRow[],
+  symmetric: boolean,
+): Date {
+  const newest = history[history.length - 1]!.createdAt;
+  if (!symmetric) return newest;
+  let gap = Number.POSITIVE_INFINITY;
+  for (const entry of history) {
+    gap = Math.min(gap, Math.abs(orderCreatedAt.getTime() - entry.createdAt.getTime()));
+  }
+  return new Date(orderCreatedAt.getTime() - gap);
+}
 
 /**
  * Orders-list risk projection optimized for a page-sized batch.
@@ -38,6 +60,7 @@ type CustomerOrderHistoryRow = {
 export async function batchAssessOrdersForWorkbench(
   context: ServiceContext,
   orderIds: readonly string[],
+  options: { excludeSelfFromHistory?: boolean } = {},
 ): Promise<Map<string, RiskAssessment>> {
   const uniqueOrderIds = [...new Set(orderIds)];
   if (uniqueOrderIds.length === 0) return new Map();
@@ -68,6 +91,7 @@ export async function batchAssessOrdersForWorkbench(
       db.order.findMany({
         where: { customerId: { in: customerIds }, deletedAt: null },
         select: {
+          ...(options.excludeSelfFromHistory ? { id: true } : {}),
           customerId: true,
           status: true,
           totalPrice: true,
@@ -108,7 +132,10 @@ export async function batchAssessOrdersForWorkbench(
 
   const results = new Map<string, RiskAssessment>();
   for (const order of orders) {
-    const history = ordersByCustomer.get(order.customerId) ?? [];
+    const orderHistory = ordersByCustomer.get(order.customerId) ?? [];
+    const history = options.excludeSelfFromHistory
+      ? orderHistory.filter((entry) => entry.id !== order.id)
+      : orderHistory;
     const totalOrders = history.length;
     const deliveredCount = history.filter(
       (entry) => entry.status === "delivered",
@@ -147,7 +174,9 @@ export async function batchAssessOrdersForWorkbench(
         totalSpent,
         firstOrderDate: totalOrders > 0 ? history[0]!.createdAt : null,
         lastOrderDate:
-          totalOrders > 0 ? history[history.length - 1]!.createdAt : null,
+          totalOrders > 0
+            ? recencyAnchor(order.createdAt, history, options.excludeSelfFromHistory === true)
+            : null,
         isBlacklisted: customerBlacklist.get(order.customerId) ?? false,
       },
       wilayaRisk: wilayaProfile

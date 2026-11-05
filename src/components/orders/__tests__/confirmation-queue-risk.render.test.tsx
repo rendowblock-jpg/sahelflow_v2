@@ -8,7 +8,11 @@ import { ConfirmationQueueTable } from "@/components/orders/confirmation-queue-t
 import { render } from "@/test-utils/render";
 import type { ConfirmationQueueResponse } from "@/types/workbench";
 
-const h = vi.hoisted(() => ({ locale: "ar" as "ar" | "fr" | "en", mobile: true }));
+const h = vi.hoisted(() => ({
+  locale: "ar" as "ar" | "fr" | "en",
+  mobile: true,
+  dicts: {} as Record<string, Record<string, string>>,
+}));
 vi.mock("@/hooks/use-mobile", () => ({ useMobile: () => h.mobile }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
@@ -25,8 +29,9 @@ vi.mock("@/hooks/use-i18n", async () => {
     fr: (await import("@/lib/i18n/locales/fr.json")).default as Record<string, string>,
     en: (await import("@/lib/i18n/locales/en.json")).default as Record<string, string>,
   };
+  h.dicts = dicts;
   const t = (key: string, params?: Record<string, unknown>) => {
-    let s = dicts[h.locale][key] ?? key;
+    let s = dicts[h.locale]?.[key] ?? key;
     for (const [k, v] of Object.entries(params ?? {})) s = s.split(`{${k}}`).join(String(v));
     return s;
   };
@@ -60,9 +65,10 @@ describe.each([
   { locale: "ar" as const, mobile: true }, { locale: "ar" as const, mobile: false },
   { locale: "fr" as const, mobile: true }, { locale: "fr" as const, mobile: false },
 ])("flag on a row, locale $locale, mobile $mobile", ({ locale, mobile }) => {
-  it("shows the level badge and the top reason as visible, wrapping, direction-safe text; the clean row has none", async () => {
+  it("shows the level badge and the top reason as visible, wrapping, direction-safe text; the clean row has none", () => {
     h.locale = locale; h.mobile = mobile;
-    const dict = (await import(`@/lib/i18n/locales/${locale}.json`)).default as Record<string, string>;
+    const dict = h.dicts[locale] ?? {};
+    const text = (key: string): string => dict[key] ?? key;
     render(
       <NuqsTestingAdapter>
         <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
@@ -72,17 +78,18 @@ describe.each([
         </SWRConfig>
       </NuqsTestingAdapter>,
     );
-    const top = dict["confirmationQueue.risk.reason.previousReturns"];
-    expect(top, "locale key missing").toBeTruthy();
-    const reason = screen.getByText(top);
+    expect(dict["confirmationQueue.risk.reason.previousReturns"], "locale key missing").toBeTruthy();
+    const top = text("confirmationQueue.risk.reason.previousReturns");
+    const flags = screen.getAllByTestId("queue-risk-flag");
+    expect(flags).toHaveLength(1);
+    expect(flags[0]?.textContent).toContain(text("risk.level.high"));
+    const reason = screen.getByTestId("queue-risk-reason");
     expect(reason.textContent).toBe(top);
     expect(reason.closest("[aria-hidden='true']")).toBeNull();
     expect(reason.className).not.toMatch(/sr-only|truncate|whitespace-nowrap|\bhidden\b/);
     expect(reason.className).toMatch(/break-words|whitespace-normal|text-wrap/);
     expect(reason.className).not.toMatch(/(^|\s)(ml|mr|pl|pr|left|right)-|text-(left|right)/);
-    expect(screen.getAllByText(dict["risk.level.high"])).toHaveLength(1);
-    expect(screen.queryByText(dict["confirmationQueue.risk.reason.repeatOrder24h"])).toBeNull();
-    expect(screen.getAllByTestId("queue-risk-flag")).toHaveLength(1);
+    expect(screen.queryByText(text("confirmationQueue.risk.reason.repeatOrder24h"))).toBeNull();
     if (locale === "ar") expect(top).toMatch(/[\u0600-\u06FF]/);
     else expect(top).not.toMatch(/[\u0600-\u06FF]/);
   });

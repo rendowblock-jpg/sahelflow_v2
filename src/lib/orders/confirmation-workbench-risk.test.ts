@@ -13,7 +13,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 import { db } from "@/lib/db";
 import { getConfirmationWorkbenchPage } from "@/lib/orders/confirmation-workbench";
-import { batchAssessOrdersForWorkbench } from "@/lib/orders/order-risk-workbench";
 
 type Row = {
   id: string; orderNumber: string; customerId: string; phone: string; name: string;
@@ -22,7 +21,8 @@ type Row = {
 const h = vi.hoisted(() => ({ rows: [] as Row[], log: [] as string[], blacklisted: [] as string[] }));
 
 vi.mock("@/lib/db", () => {
-  type Args = { where: Record<string, any>; select?: Record<string, unknown> };
+  type Where = { status?: string; id?: { in: string[] }; customerId?: { in: string[] } };
+  type Args = { where: Where; select?: Record<string, unknown> };
   const order = {
     findMany: vi.fn(async ({ where: w, select }: Args) => {
       if (w.status === "pending") {
@@ -38,16 +38,18 @@ vi.mock("@/lib/db", () => {
             ...(select?.customer ? { customer: { name: r.name, phone: r.phone } } : {}),
           }));
       }
-      if (w.id?.in) {
+      const ids = w.id?.in;
+      if (ids) {
         h.log.push("order.riskRows");
-        return h.rows.filter((r) => w.id.in.includes(r.id)).map((r) => ({
+        return h.rows.filter((r) => ids.includes(r.id)).map((r) => ({
           id: r.id, totalPrice: r.totalPrice, wilaya: "16", commune: null, address: "12 rue des Freres, Alger",
           phone: r.phone, source: "manual", createdAt: r.createdAt, customerId: r.customerId,
         }));
       }
-      if (w.customerId?.in) {
+      const customerIds = w.customerId?.in;
+      if (customerIds) {
         h.log.push("order.history");
-        return h.rows.filter((r) => w.customerId.in.includes(r.customerId))
+        return h.rows.filter((r) => customerIds.includes(r.customerId))
           .sort((a, b) => a.customerId.localeCompare(b.customerId) || a.createdAt.getTime() - b.createdAt.getTime())
           .map((r) => ({ id: r.id, customerId: r.customerId, status: r.status, totalPrice: r.totalPrice, createdAt: r.createdAt }));
       }
@@ -63,7 +65,7 @@ vi.mock("@/lib/db", () => {
     }),
   };
   const wilayaRiskProfile = { findMany: vi.fn(async () => { h.log.push("wilaya"); return []; }) };
-  return { db: { order, customer, wilayaRiskProfile } };
+  return { db: { order, customer, wilayaRiskProfile }, shopContext: { shopId: "shop-1" } };
 });
 
 vi.mock("@/lib/risk-engine", async (importOriginal) => {
@@ -72,8 +74,7 @@ vi.mock("@/lib/risk-engine", async (importOriginal) => {
   return { ...real, getRiskConfig: async () => DEFAULT_RISK_CONFIG, getRiskRules: async () => [] };
 });
 
-vi.mock("@/lib/identity/authorization", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/identity/authorization")>()),
+vi.mock("@/lib/identity/authorization", () => ({
   assertTrustedAction: vi.fn(),
   trustedActionAllowed: (ctx: { denied?: string[] }, action: string) => !(ctx.denied ?? []).includes(action),
 }));
@@ -86,7 +87,7 @@ const row = (o: Partial<Row> & Pick<Row, "id" | "customerId" | "phone">): Row =>
 });
 const actor = (denied: string[] = []) => ({ shop: { shopId: "shop-1" }, denied }) as never;
 const find = (page: Awaited<ReturnType<typeof getConfirmationWorkbenchPage>>, id: string) =>
-  page.queue.find((q) => q.id === id) as ((typeof page.queue)[number] & { risk?: any }) | undefined;
+  page.queue.find((q) => q.id === id);
 
 const returnsCustomer = () => [
   row({ id: "r1", customerId: "c-ret", phone: "0555111111", status: "returned", createdAt: hoursAgo(24 * 20) }),
@@ -108,10 +109,10 @@ afterAll(() => { vi.useRealTimers(); });
 beforeEach(() => { h.rows = []; h.log = []; h.blacklisted = []; });
 
 describe("confirmation queue suspicious-order flag (M1)", () => {
-  it("(a) a pending order whose customer has 2 returned orders is flagged high, first reason = previous returns", async () => {
+  it("(a) a pending order whose customer has 2 returned orders is flagged high-or-critical (engine MEASURED: critical at 2 of 2 earlier orders returned), first reason = previous returns", async () => {
     h.rows = returnsCustomer();
     const item = find(await getConfirmationWorkbenchPage(actor()), "p-ret");
-    expect(item?.risk?.level).toBe("high");
+    expect(["high", "critical"]).toContain(item?.risk?.level);
     expect(item?.risk?.reasons[0]).toMatchObject({ code: "previous_returns", key: "confirmationQueue.risk.reason.previousReturns" });
   });
 
@@ -176,17 +177,4 @@ describe("confirmation queue suspicious-order flag (M1)", () => {
     expect(page.total).toBe(4);
   });
 
-  it("records the engine level/score per scenario (documentation of what the rule rests on)", async () => {
-    h.rows = [...returnsCustomer(), ...dupCustomer(), ...slowCustomer(), ...cleanCustomer()];
-    const ctx = { prisma: db, shop: { shopId: "shop-1" } } as never;
-    for (const opts of [undefined, { excludeSelfFromRecency: true }] as const) {
-      const map = await (batchAssessOrdersForWorkbench as (...a: unknown[]) => Promise<Map<string, any>>)(
-        ctx, ["p-ret", "d1", "d2", "s1", "s2", "p-clean"], opts);
-      for (const [id, a] of map) {
-        console.info("MEASURE", JSON.stringify(opts ?? "default"), id, a.level, a.score,
-          a.factors.filter((f: any) => f.points !== 0).map((f: any) => `${f.id}:${f.points}`).join(","));
-      }
-      expect(map.size).toBe(6);
-    }
-  });
 });

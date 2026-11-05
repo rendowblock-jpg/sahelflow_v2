@@ -22,6 +22,7 @@ import {
 } from "@/components/data-table/data-table";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { RiskLevelBadge } from "@/components/risk/risk-badges";
 import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
 import {
   loadDeliverySlipsForOrders,
@@ -275,6 +276,32 @@ function QueueRowActions({
           />
         </PopoverContent>
       </Popover>
+    </div>
+  );
+}
+
+function QueueRiskFlag({
+  risk,
+}: {
+  risk: NonNullable<ConfirmationQueueItem["risk"]>;
+}) {
+  const { t } = useI18n();
+  const top = risk.reasons[0];
+  if (!top) return null;
+  const all = risk.reasons.map((reason) => t(reason.key)).join(" · ");
+  return (
+    <div
+      data-testid="queue-risk-flag"
+      title={all}
+      className="flex min-w-0 max-w-full flex-col items-start gap-1"
+    >
+      <RiskLevelBadge level={risk.level} />
+      <span
+        data-testid="queue-risk-reason"
+        className="block max-w-full whitespace-normal break-words text-xs leading-snug text-muted-foreground"
+      >
+        {t(top.key)}
+      </span>
     </div>
   );
 }
@@ -595,12 +622,15 @@ export function ConfirmationQueueTable({
       id: "status",
       header: () => t("confirmationQueue.col.status"),
       cell: ({ row }) => (
-        <OrderStatusBadge
-          orderId={row.original.id}
-          status="pending"
-          size="sm"
-          disabled
-        />
+        <div className="flex min-w-0 max-w-full flex-col items-start gap-1.5">
+          <OrderStatusBadge
+            orderId={row.original.id}
+            status="pending"
+            size="sm"
+            disabled
+          />
+          {row.original.risk ? <QueueRiskFlag risk={row.original.risk} /> : null}
+        </div>
       ),
       meta: { mobile: { slot: "status" as const } },
       enableSorting: false,
