@@ -70,6 +70,8 @@ export function useOrdersColumns(
   const columns: ColumnDef<OrderListItem, unknown>[] = [
     ...(fieldAccess.update ? [selectColumn<OrderListItem>()] : []),
     {
+      // Item 1 (5 Nov 2026): the id is plain text colour, not the accent. Green repeated on every row made the one real
+      // action (the primary button) harder to find. It stays a link: underline on hover, visible focus ring.
       accessorKey: "orderNumber",
       header: ({ column }) => (
         <span className="inline-flex items-center">
@@ -81,14 +83,14 @@ export function useOrdersColumns(
         canOpenDetail ? (
           <Link
             href={`/orders/${row.original.id}`}
-            className="text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded-sm text-sm font-semibold text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
           >
             <TechnicalValue data-order-number>
               {row.original.orderNumber}
             </TechnicalValue>
           </Link>
         ) : (
-          <TechnicalValue className="text-sm font-medium" data-order-number>
+          <TechnicalValue className="text-sm font-semibold" data-order-number>
             {row.original.orderNumber}
           </TechnicalValue>
         ),
