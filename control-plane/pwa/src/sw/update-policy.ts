@@ -36,6 +36,8 @@ export function decideUpdate(input: Readonly<{ state: UpdatePhase; trigger: Upda
   if (input.state !== "waiting" && input.state !== "reload") return "none";
   const overdue = isOverdue(input.since, input.now);
   if (!isSafe(input.safety)) return overdue ? "block" : "hold";
-  if ((input.trigger === "timer" || input.trigger === "online") && !overdue) return "hold";
+  // A younger WAITING update is not taken by a timer or a network blip, only when the seller arrives. A held reload is different: the new
+  // worker already runs under the old page, so it is finished at the first safe look.
+  if (input.state === "waiting" && (input.trigger === "timer" || input.trigger === "online") && !overdue) return "hold";
   return "apply";
 }

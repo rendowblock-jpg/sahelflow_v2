@@ -50,3 +50,14 @@ export function createInflight(): Inflight {
     },
   };
 }
+
+/** A poll that started a moment ago is not "work in flight" worth blocking an update for: look this often... */
+export const INFLIGHT_SETTLE_GAP_MS = 250;
+/** ...for at most this many looks (3 seconds in all). A request still open after that really is in flight. */
+export const INFLIGHT_SETTLE_TRIES = 12;
+
+/** Waits a few seconds for requests already in flight to settle (the poll that starts when the seller comes back). true = none left. */
+export async function settleInflight(inflight: Pick<Inflight, "count">, sleep: (ms: number) => Promise<void>): Promise<boolean> {
+  for (let i = 0; i < INFLIGHT_SETTLE_TRIES && inflight.count() > 0; i += 1) await sleep(INFLIGHT_SETTLE_GAP_MS);
+  return inflight.count() === 0;
+}

@@ -63,8 +63,9 @@ export function createUpdateController(reg: RegistrationLike, container: Contain
     if (reloaded || trying) return;
     trying = true;
     try {
-      let ok = tapped || !options.canReload;
-      if (!ok) { try { ok = await options.canReload!(); } catch { ok = false; } }
+      const ask = options.canReload;
+      let ok = tapped || !ask;
+      if (!ok && ask) { try { ok = await ask(); } catch { ok = false; } }
       if (ok || tapped) doReload(); else set("reload");
     } finally { trying = false; }
   };

@@ -54,7 +54,10 @@ export function createAutoUpdate(deps: AutoUpdateDeps): AutoUpdate {
       show(true); arm(UPDATE_RECHECK_MS);
     } else if (decision === "hold") {
       show(false);
-      if (since !== null) arm(UPDATE_MAX_WAIT_MS - (at - since)); // wake up when the update turns overdue
+      // A held reload is looked at again soon (the new worker already runs under the old page); a waiting update waits for the seller to arrive
+      // and wakes up once, when it turns overdue.
+      if (state === "reload") arm(UPDATE_RECHECK_MS);
+      else if (since !== null) arm(UPDATE_MAX_WAIT_MS - (at - since));
     } else if (state === "idle") { disarm(); show(false); }
     return decision;
   }
