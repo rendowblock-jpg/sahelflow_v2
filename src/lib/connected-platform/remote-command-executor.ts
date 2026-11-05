@@ -5,6 +5,7 @@ import { SahelFlowError } from "@/types/errors";
 import type { ConnectedPlatformClient } from "./client";
 import { HANDLERS } from "./command-handlers";
 import { commandFailure } from "./command-handlers/failure";
+import { approvedDeviceIds, readDeviceApprovals } from "./device-approvals";
 import { isRemoteCommandType } from "./command-policy";
 import { COMMAND_EXPIRY_MS, COMMAND_RESULT_TTL_MS } from "./contracts";
 import { createConnectedEnvelope, openConnectedEnvelope } from "./envelope";
@@ -83,6 +84,11 @@ export async function executeQueuedRemoteCommands(input: Readonly<{
     deviceList.devices.map(deviceRow).filter((value): value is RemoteDevice => value !== null)
       .map((device) => [device.deviceId, device] as const),
   );
+  // The relay's device list says which phones EXIST; only the seller's own approval on this computer says which may act. Read at
+  // most once per batch, and only when a command is about to be opened. A missing or damaged approvals file reads as "nobody".
+  let approved: Promise<ReadonlySet<string>> | null = null;
+  const approvedIds = (): Promise<ReadonlySet<string>> =>
+    (approved ??= readDeviceApprovals(shop.workspaceId).then(approvedDeviceIds));
   let completed = 0;
   for (const queued of page.commands) {
     if (!isConnectedEnvelope(queued.envelope) || queued.commandId !== queued.envelope.envelopeId) {
@@ -102,6 +108,10 @@ export async function executeQueuedRemoteCommands(input: Readonly<{
         envelope.workspaceId !== shop.workspaceId || envelope.shopId !== shop.shopId ||
         envelope.installationId !== shop.installationId
       ) throw new SahelFlowError("Remote command targets unavailable authority", "REMOTE_DEVICE_UNKNOWN", 403);
+      if (!(await approvedIds()).has(device.deviceId)) {
+        // Refused before the envelope is opened: a device only the relay knows about gets no decryption and no handler.
+        throw new SahelFlowError("Remote device is not approved on this computer", "REMOTE_DEVICE_UNKNOWN", 403);
+      }
       if (!isRemoteCommandType(envelope.messageType)) {
         throw new SahelFlowError("Remote command is unsupported", "REMOTE_COMMAND_UNSUPPORTED", 400);
       }

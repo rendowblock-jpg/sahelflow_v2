@@ -9,6 +9,9 @@ const hoisted = vi.hoisted(() => ({
   capi: vi.fn(async () => undefined),
   queue: vi.fn(),
   process: vi.fn(async () => undefined),
+  // Devices the seller approved on this computer (the desktop's own record, device-approvals-v1.json).
+  approvedIds: new Set<string>(),
+  approvalReads: vi.fn(),
 }));
 
 // Only the brand check of the trusted actor, the automations engine, the CAPI ledger and the WhatsApp queue are replaced.
@@ -34,6 +37,18 @@ vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
     trustedActorForRemoteCommand: (...args: unknown[]) => hoisted.trusted(...args),
   };
 });
+vi.mock("./device-approvals", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./device-approvals")>()),
+  readDeviceApprovals: async (workspaceId: string) => {
+    hoisted.approvalReads();
+    return {
+    version: 1 as const,
+    workspaceId,
+    approved: Object.fromEntries([...hoisted.approvedIds].map((id) => [id, 1])),
+    created: {},
+    };
+  },
+}));
 vi.mock("@/lib/automations/engine", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/automations/engine")>()),
   dispatchTrigger: hoisted.dispatch,
@@ -148,6 +163,7 @@ beforeEach(async () => {
   await db.message.deleteMany();
   await db.conversation.deleteMany();
   vi.clearAllMocks();
+  hoisted.approvedIds = new Set([DEVICE]);
   hoisted.actor = actor();
   hoisted.trusted.mockImplementation(async () => hoisted.actor);
   hoisted.queue.mockResolvedValue({ messageId: "msg-queued-1", effectKey: "effect-1", replayed: false });
@@ -462,5 +478,56 @@ describe("note from the phone: comments.write plus the read right of its own ent
     }
     expect(written).toBe(6); // order x2, conversation x2, confirmation x2 (a confirmation is an order's, so it asks orders.read)
     expect(await db.collaborationComment.count()).toBe(6);
+  });
+});
+
+describe("the seller's approval of the phone (the relay's device list alone is not enough)", () => {
+  const confirmPayload = (order: { id: string; version: number }) => ({ orderId: order.id, expectedVersion: order.version });
+
+  it("a phone the relay lists but the seller never approved here is refused before anything is opened or run", async () => {
+    hoisted.approvedIds = new Set();
+    const { order, product } = await canonicalOrder(7, 5);
+    const { done, out } = await run([sealed("command.orders.confirm", confirmPayload(order))]);
+    expect(done[0]).toMatchObject({ state: "rejected", code: "REMOTE_DEVICE_UNKNOWN" });
+    expect(out).toMatchObject({ completed: 1, nextCursor: 1 });
+    expect((await raw.order.findUnique({ where: { id: order.id } }))?.status).toBe("pending");
+    expect((await raw.product.findUnique({ where: { id: product.id } }))?.stock).toBe(7);
+    expect(hoisted.trusted).not.toHaveBeenCalled(); // no member lookup, no handler
+    expect(hoisted.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("of two listed phones only the approved one runs; the other is refused and the cursor still moves past it", async () => {
+    const { order, product } = await canonicalOrder(7, 5);
+    const other = "phone_exec_0002";
+    const listed = [
+      { device_id: DEVICE, member_id: MEMBER, signing_public_key: phone.signingPublicKey, encryption_public_key: phone.encryptionPublicKeyJwk, revocation_epoch: 0 },
+      { device_id: other, member_id: MEMBER, signing_public_key: phone.signingPublicKey, encryption_public_key: phone.encryptionPublicKeyJwk, revocation_epoch: 0 },
+    ];
+    const fromOther = sealed("command.orders.confirm", confirmPayload(order), { deviceId: other, senderId: other });
+    const fromApproved = sealed("command.orders.confirm", confirmPayload(order));
+    const { done, out } = await run([fromOther, fromApproved], { devices: listed });
+    expect(done.map((d) => [d.id, d.state, d.code])).toEqual([
+      [fromOther.envelopeId, "rejected", "REMOTE_DEVICE_UNKNOWN"],
+      [fromApproved.envelopeId, "committed", undefined],
+    ]);
+    expect(out).toMatchObject({ completed: 2, nextCursor: 2 });
+    expect((await raw.order.findUnique({ where: { id: order.id } }))?.status).toBe("confirmed");
+    expect((await raw.product.findUnique({ where: { id: product.id } }))?.stock).toBe(5);
+  });
+
+  it("an approved phone is unaffected, and the approval is read once per batch, not once per command", async () => {
+    const { order } = await canonicalOrder(7, 5);
+    const { done } = await run([
+      sealed("command.orders.confirm", confirmPayload(order)),
+      sealed("command.orders.confirm", { orderId: order.id, expectedVersion: order.version + 5 }),
+    ]);
+    expect(done.map((d) => d.state)).toEqual(["committed", "conflict"]);
+    expect(hoisted.approvalReads).toHaveBeenCalledTimes(1);
+  });
+
+  it("when no command arrives the approvals file is not read at all", async () => {
+    const { out } = await run([]);
+    expect(out).toMatchObject({ completed: 0 });
+    expect(hoisted.approvalReads).not.toHaveBeenCalled();
   });
 });
