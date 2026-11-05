@@ -211,11 +211,12 @@ export interface Message {
 
 export interface DashboardStats {
   ordersToday: number;
-  ordersTrend: number;
+  /** Percent change against the same hours of yesterday; null = nothing to compare against (shown as a dash). */
+  ordersTrend: number | null;
   revenueToday: number;
-  revenueTrend: number;
+  revenueTrend: number | null;
   realizedRevenueToday: number;
-  realizedRevenueTrend: number;
+  realizedRevenueTrend: number | null;
   newCustomers: number;
   activeConversations: number;
   pendingDeliveries: number;

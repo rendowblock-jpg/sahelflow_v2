@@ -33,11 +33,11 @@ type DashboardProjectionSource = Readonly<{
   todayCounts?: DashboardTodayCounts;
   stats: Readonly<{
     ordersToday: number;
-    ordersTrend: number;
+    ordersTrend: number | null;
     revenueToday: number;
-    revenueTrend: number;
+    revenueTrend: number | null;
     realizedRevenueToday: number;
-    realizedRevenueTrend: number;
+    realizedRevenueTrend: number | null;
     newCustomers: number;
     activeConversations: number;
     pendingDeliveries: number;
