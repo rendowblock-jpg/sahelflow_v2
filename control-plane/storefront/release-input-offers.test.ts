@@ -41,8 +41,14 @@ function release(releaseId: string, parent: string | null, offers?: unknown): Re
     draft: { name: "Sahel store", slug: "sahel-store", description: "", theme, selectedProductIds: ["product_12345678"], isActive: true },
     products: [{ id: "product_12345678", name: "Product", sku: "SKU-1", images: null, price: PRICE, stock: 20, productVariants: [] }],
   });
-  if (offers !== undefined) (body.allocations as Array<Record<string, unknown>>)[0].offers = offers;
+  if (offers !== undefined) firstAllocation(body).offers = offers;
   return body;
+}
+
+function firstAllocation(body: Record<string, unknown>): Record<string, unknown> {
+  const first = (body.allocations as Array<Record<string, unknown>>)[0];
+  if (!first) throw new Error("test body has no allocation");
+  return first;
 }
 
 function store(): { database: DatabaseSync; env: StorefrontWorkerEnvironment } {
@@ -70,8 +76,8 @@ describe("parseReleaseInput: allocations may carry an `offers` ladder", () => {
 
   it("keeps a valid ladder, normalised", () => {
     const parsed = parseReleaseInput(release(R1, null, [{ t: 5500, q: 2 }, { t: 7500, q: 3 }]));
-    expect(parsed?.allocations[0].offers).toEqual(TWO);
-    expect(JSON.stringify(parsed?.allocations[0].offers)).toBe(TWO_JSON);
+    expect(parsed?.allocations[0]?.offers).toEqual(TWO);
+    expect(JSON.stringify(parsed?.allocations[0]?.offers)).toBe(TWO_JSON);
   });
 
   it.each([
@@ -88,7 +94,7 @@ describe("parseReleaseInput: allocations may carry an `offers` ladder", () => {
 
   it("the ladder is checked against the allocation's own unit price", () => {
     const body = release(R1, null, TWO);
-    (body.allocations as Array<Record<string, unknown>>)[0].unitPriceDzd = 2000;
+    firstAllocation(body).unitPriceDzd = 2000;
     expect(parseReleaseInput(body)).toBeNull();
   });
 });

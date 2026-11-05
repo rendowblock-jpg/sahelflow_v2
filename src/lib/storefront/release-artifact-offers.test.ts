@@ -83,8 +83,8 @@ describe("release input with offers", () => {
     const request = build(new Map([[KEY_A, Object.freeze(ladderA.map((tier) => Object.freeze({ ...tier })))]]));
     const [a, v1, v2] = allocationsOf(request);
     expect(a).toEqual({ itemKey: KEY_A, unitPriceDzd: 3000, quantity: 10, offers: ladderA });
-    expect(Object.keys(v1)).toEqual(["itemKey", "unitPriceDzd", "quantity"]);
-    expect(Object.keys(v2)).toEqual(["itemKey", "unitPriceDzd", "quantity"]);
+    expect(Object.keys(v1 ?? {})).toEqual(["itemKey", "unitPriceDzd", "quantity"]);
+    expect(Object.keys(v2 ?? {})).toEqual(["itemKey", "unitPriceDzd", "quantity"]);
     expect(withoutTheme({ ...request, allocations: [] })).toBe(withoutTheme({ ...build(), allocations: [] }));
   });
 
@@ -105,7 +105,7 @@ describe("release input with offers", () => {
   it("copies the tiers: later changes to the caller's array do not reach the request", () => {
     const mutable = [{ q: 2, t: 5_500 }];
     const request = build(new Map([[KEY_A, mutable]]));
-    mutable[0]!.t = 1;
+    mutable.splice(0, 1, { q: 2, t: 1 });
     expect(allocationsOf(request)[0]?.offers).toEqual([{ q: 2, t: 5_500 }]);
   });
 
