@@ -19,6 +19,7 @@ import type { getI18n } from "@/lib/i18n-server";
 import type { Locale } from "@/lib/i18n";
 import type { projectDashboardForTrustedActor, resolveDashboardFieldAccess } from "@/lib/identity/dashboard-projection";
 import type { getFirstRunCounts } from "@/lib/data/first-run-counts";
+import type { StaleOrderAges } from "@/lib/data/confirmation-queue";
 import type { getRiskAnalyticsReport } from "@/lib/risk-engine";
 import { moneyNameKey } from "@/lib/analytics/money-names";
 
@@ -34,6 +35,8 @@ export interface DashboardViewProps {
   firstRunCounts: Awaited<ReturnType<typeof getFirstRunCounts>>;
   riskReport: Awaited<ReturnType<typeof getRiskAnalyticsReport>> | null;
   staleConfirmations: number;
+  /** How long the late confirmations have waited; left out = no bar under the lead figure. */
+  staleAges?: StaleOrderAges | null;
 }
 
 /** Pure view: renders already-loaded data, loads nothing. */
@@ -47,6 +50,7 @@ export function DashboardView({
   firstRunCounts,
   riskReport,
   staleConfirmations,
+  staleAges,
 }: DashboardViewProps) {
   const dateLocale =
     intlLocale(locale);
@@ -181,6 +185,34 @@ export function DashboardView({
         description={t("dashboard.activityOverview")}
       />
 
+      {/* The work ranks above the analytics: what waits for the seller comes first (item 1, 5 Nov 2026). */}
+      {hasAttentionAuthority ? (
+        <AttentionCenter
+          title={t("dashboard.filterAlerts")}
+          items={attentionItems}
+          allClearLabel={t("confirmationQueue.allCaughtUp")}
+          leadId="confirmation-stale"
+          leadActionLabel={t("nav.confirmationQueue")}
+          eyebrow={t("dashboard.attention.eyebrow")}
+          {...(fieldAccess.orders && staleAges
+            ? {
+                leadBreakdown: [
+                  { id: "mid", label: t("dashboard.attention.age.mid"), value: staleAges.from2to6h, tone: "muted" as const },
+                  { id: "late", label: t("dashboard.attention.age.late"), value: staleAges.from6to24h, tone: "warning" as const },
+                  { id: "oldest", label: t("dashboard.attention.age.oldest"), value: staleAges.over24h, tone: "danger" as const },
+                ],
+              }
+            : {})}
+        />
+      ) : (
+        <StateSurface
+          icon={LockKeyhole}
+          title={t("error.forbidden")}
+          tone="info"
+          size="inline"
+        />
+      )}
+
       <div className="card-grid-4">
         <StatCard
           label={t("dashboard.todaysOrders")}
@@ -265,21 +297,6 @@ export function DashboardView({
           }
         />
       </div>
-
-      {hasAttentionAuthority ? (
-        <AttentionCenter
-          title={t("dashboard.filterAlerts")}
-          items={attentionItems}
-          allClearLabel={t("confirmationQueue.allCaughtUp")}
-        />
-      ) : (
-        <StateSurface
-          icon={LockKeyhole}
-          title={t("error.forbidden")}
-          tone="info"
-          size="inline"
-        />
-      )}
 
       <div
         data-dashboard-operational-grid="true"

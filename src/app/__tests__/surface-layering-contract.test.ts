@@ -28,6 +28,14 @@ import { normalizeChartColor } from "../../components/charts/chart-color";
  *   5. the colours the components repeat as literals (global-error.tsx, the
  *      appearance panel previews) equal the CSS tokens.
  *
+ *   6. (5 Nov 2026, item 1) dark readability in APCA, because a WCAG ratio hides how weak mid-grey text on a
+ *      dark ground reads: muted text Lc >= 60 on the page, card, surface-2 and popover; body text Lc >= 90 on
+ *      the same; the label on the solid accent Lc >= 60 in all 8 looks. The dark card lift bar is 1.20 (seen at
+ *      full size with a sealed picture: 1.13 reads flat, 1.23 reads layered); light keeps 1.12 until its own
+ *      pictures are looked at.
+ *   7. the dark tints (--accent, --sidebar-accent) keep the look's own hue, within 10 degrees of --primary
+ *      (a color-mix in oklch averaged the hue with the blue-grey surface: Sahel emerald showed blue-slate, F-0050).
+ *
  * Authority (read in code): globals.css defines NO surface/background/card/border/
  * sidebar token (its :root/.dark blocks only keep radius, feedback colours and
  * shadows), so the cascade winners are
@@ -51,6 +59,12 @@ const RAISED_BAR = 1.07;
 const SIDEBAR_BAR = 1.02;
 const BODY_TEXT_BAR = 7;
 const MUTED_TEXT_BAR = 4.5;
+/** Dark is stricter since 5 Nov 2026 (item 1). Light keeps the old bar until its own pictures are looked at. */
+const LIFT_BAR_BY_MODE = { dark: 1.2, light: LIFT_BAR } as const;
+const APCA_MUTED_BAR = 60;
+const APCA_STRONG_BAR = 90;
+const APCA_LABEL_BAR = 60;
+const TINT_HUE_BAR = 10;
 
 const PRESETS = ["sahel", "atlas", "oasis", "dune"] as const;
 type Preset = (typeof PRESETS)[number];
@@ -191,6 +205,36 @@ function ratio(a: Rgb, b: Rgb): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/**
+ * APCA contrast (SAPC 0.0.98G-4g, the same maths the browser audit uses): absolute Lc, 0 when below the noise floor.
+ * Light text on a darker ground is the "reverse polarity" branch.
+ */
+function apcaLc(text: Rgb, ground: Rgb): number {
+  const y = (rgb: Rgb) => {
+    const [r = 0, g = 0, b = 0] = rgb.map((channel) => (channel / 255) ** 2.4);
+    const value = 0.2126729 * r + 0.7151522 * g + 0.072175 * b;
+    return value >= 0.022 ? value : value + (0.022 - value) ** 1.414;
+  };
+  const yText = y(text);
+  const yGround = y(ground);
+  if (yGround > yText) {
+    const sapc = (yGround ** 0.56 - yText ** 0.57) * 1.14;
+    return sapc < 0.1 ? 0 : (sapc - 0.027) * 100;
+  }
+  const sapc = (yGround ** 0.65 - yText ** 0.62) * 1.14;
+  return sapc > -0.1 ? 0 : Math.abs((sapc + 0.027) * 100);
+}
+
+const hueOf = (value: string | undefined): number => {
+  const match = (value ?? "").match(/^oklch\(\s*[\d.]+\s+[\d.]+\s+([\d.]+)/i);
+  if (!match) throw new Error(`not an oklch() literal with a hue: ${value}`);
+  return Number(match[1]);
+};
+const hueDistance = (a: number, b: number): number => {
+  const delta = Math.abs(a - b) % 360;
+  return delta > 180 ? 360 - delta : delta;
+};
+
 const hex = (rgb: Rgb) => `#${rgb.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
 
 const LOOKS: Array<{ label: string; preset: Preset; mode: Mode; layer: Declarations }> = (["light", "dark"] as const).flatMap(
@@ -239,8 +283,8 @@ describe("surface layering contract (F-0026)", () => {
     for (const look of LOOKS) {
       const measured = layers(look);
       const where = `${look.label}: page ${hex(measured.page)} card ${hex(measured.card)}`;
-      it(`${look.label}: card/page lift >= ${LIFT_BAR}:1 (hard rule, the hairline cannot stand in for it)`, () => {
-        expect(measured.lift, `${where}: lift ${measured.lift.toFixed(3)}:1`).toBeGreaterThanOrEqual(LIFT_BAR);
+      it(`${look.label}: card/page lift >= ${LIFT_BAR_BY_MODE[look.mode]}:1 (hard rule, the hairline cannot stand in for it)`, () => {
+        expect(measured.lift, `${where}: lift ${measured.lift.toFixed(3)}:1`).toBeGreaterThanOrEqual(LIFT_BAR_BY_MODE[look.mode]);
       });
       it(`${look.label}: hairline >= ${HAIRLINE_TOKEN_BAR}:1 as a token and >= ${HAIRLINE_EFFECTIVE_BAR[look.mode]}:1 as drawn (border-border/70)`, () => {
         expect(measured.hairline, `${where}: token hairline ${measured.hairline.toFixed(3)}:1`).toBeGreaterThanOrEqual(HAIRLINE_TOKEN_BAR);
@@ -390,6 +434,50 @@ describe("surface layering contract (F-0026)", () => {
         expect(rail && rgba(rail), `${preset} preview rail = dark --sidebar ${resolveValue(tokens, "--sidebar")}`).toBe(rgba(resolveValue(tokens, "--sidebar") ?? ""));
       }
     });
+  });
+
+  describe("6. dark readability in APCA (item 1)", () => {
+    for (const look of LOOKS.filter((entry) => entry.mode === "dark")) {
+      const grounds: Array<[string, string]> = [
+        ["page", "--background"],
+        ["card", "--card"],
+        ["surface-2", "--surface-2"],
+        ["popover", "--popover"],
+      ];
+      it(`${look.label}: muted text Lc >= ${APCA_MUTED_BAR} and body text Lc >= ${APCA_STRONG_BAR} on the page, card, surface-2 and popover`, () => {
+        const muted = opaque(look.layer, "--muted-foreground");
+        const body = opaque(look.layer, "--foreground");
+        const weak = grounds.flatMap(([label, token]) => {
+          const ground = opaque(look.layer, token);
+          const mutedLc = apcaLc(muted, ground);
+          const bodyLc = apcaLc(body, ground);
+          return [
+            ...(mutedLc < APCA_MUTED_BAR ? [`muted on ${label} ${hex(ground)}: Lc ${mutedLc.toFixed(1)}`] : []),
+            ...(bodyLc < APCA_STRONG_BAR ? [`body on ${label} ${hex(ground)}: Lc ${bodyLc.toFixed(1)}`] : []),
+          ];
+        });
+        expect(weak, `${look.label}: ${weak.join("; ")}`).toEqual([]);
+      });
+    }
+
+    for (const look of LOOKS) {
+      it(`${look.label}: the label on the solid accent (--primary-foreground on --primary) is Lc >= ${APCA_LABEL_BAR}`, () => {
+        const lc = apcaLc(opaque(look.layer, "--primary-foreground"), opaque(look.layer, "--primary"));
+        expect(lc, `${look.label}: label on accent Lc ${lc.toFixed(1)}`).toBeGreaterThanOrEqual(APCA_LABEL_BAR);
+      });
+    }
+  });
+
+  describe("7. the dark tints keep the look's own hue (F-0050)", () => {
+    for (const look of LOOKS.filter((entry) => entry.mode === "dark")) {
+      it(`${look.label}: --accent and --sidebar-accent are within ${TINT_HUE_BAR} degrees of --primary`, () => {
+        const primaryHue = hueOf(resolveValue(look.layer, "--primary"));
+        for (const token of ["--accent", "--sidebar-accent"]) {
+          const hue = hueOf(resolveValue(look.layer, token));
+          expect(hueDistance(hue, primaryHue), `${look.label}: ${token} hue ${hue.toFixed(1)} vs --primary ${primaryHue.toFixed(1)}`).toBeLessThanOrEqual(TINT_HUE_BAR);
+        }
+      });
+    }
   });
 
   it.skipIf(!process.env["SURFACE_TABLE"])("prints the numbers of all 8 looks", () => {

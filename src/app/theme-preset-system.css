@@ -18,55 +18,63 @@ html.dark[data-theme-preset] {
      0.145/0.178/0.215/0.255, so page vs card measured 1.05:1. They are now 0.190/0.242/0.280/0.320
      (card vs page 1.13:1, hairline on the card about 1.6:1; a card at 0.240 rounds to 1.118:1, under the
      1.12 bar). Held by app/__tests__/surface-layering-contract.test.ts. */
+  /* 5 Nov 2026 (item 1, foundation): the Founder still saw the dark look as flat. Seen at full size with a sealed
+     picture: the card at 0.272 (page to card 1.233) reads layered; the steps are now 0.190 / 0.272 / 0.318 / 0.360.
+     The second well stays at 0.360, not the prototype's 0.400, because muted text on 0.400 fell to 3.7:1.
+     Muted text 0.72 -> 0.80 (APCA Lc 51 -> 64 on the card). The dark primaries are lighter so the label on the solid
+     accent reads at Lc 60 or more (Sahel 0.70 -> 0.74, Atlas 0.72 -> 0.77 in gamut, Oasis 0.72 -> 0.74; Dune already did). The tints below are authored in the look's own hue:
+     color-mix in oklch averaged the hue with the blue-grey surface (Sahel 150 -> 246, F-0050). Held by the same test. */
   --surface-0: oklch(0.190 0.006 260);
-  --surface-1: oklch(0.242 0.007 260);
-  --surface-2: oklch(0.280 0.008 260);
-  --surface-3: oklch(0.320 0.009 260);
+  --surface-1: oklch(0.272 0.008 260);
+  --surface-2: oklch(0.318 0.009 260);
+  --surface-3: oklch(0.360 0.010 260);
   --background: var(--surface-0);
   --foreground: oklch(0.955 0.006 90);
   --card: var(--surface-1);
   --card-foreground: var(--foreground);
   /* A popover floats above a card: it sits on the surface-2 step, never below the card. */
-  --popover: oklch(0.280 0.008 260);
+  --popover: oklch(0.318 0.009 260);
   --popover-foreground: var(--foreground);
   --secondary: var(--surface-2);
   --secondary-foreground: var(--foreground);
   --muted: var(--surface-2);
-  --muted-foreground: oklch(0.72 0.010 90);
+  --muted-foreground: oklch(0.80 0.010 90);
   --border: oklch(0.94 0.006 90 / 0.16);
   --input: oklch(0.94 0.006 90 / 0.16);
   --sidebar: oklch(0.205 0.006 260);
   --sidebar-foreground: oklch(0.93 0.006 90);
   --sidebar-border: oklch(0.94 0.006 90 / 0.12);
   --sf-chart-grid: oklch(0.90 0.006 90 / 0.105);
-  --sf-chart-axis: oklch(0.72 0.010 90);
+  --sf-chart-axis: oklch(0.80 0.010 90);
   --sf-surface-highlight: oklch(1 0 0 / 0.035);
+  /* The 1 px light edge on the top of a card (.dark .shadow-layer in globals.css). */
+  --sf-card-edge: oklch(1 0 0 / 0.07);
 }
 
 /* Sahel — emerald identity on neutral charcoal. */
 html.dark[data-theme-preset="sahel"] {
-  --primary: oklch(0.70 0.16 150);
+  --primary: oklch(0.74 0.16 150);
   --primary-foreground: oklch(0.13 0.018 150);
   --ring: var(--primary);
-  --accent: color-mix(in oklch, var(--primary) 13%, var(--surface-2));
+  --accent: oklch(0.368 0.029 150);
   --accent-foreground: oklch(0.95 0.018 150);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: color-mix(in oklch, var(--primary) 12%, var(--surface-2));
+  --sidebar-accent: oklch(0.330 0.026 150);
   --sidebar-accent-foreground: oklch(0.95 0.018 150);
   --sidebar-ring: var(--ring);
 }
 
 /* Atlas — violet identity without a purple canvas. */
 html.dark[data-theme-preset="atlas"] {
-  --primary: oklch(0.72 0.15 285);
+  --primary: oklch(0.77 0.122 285);
   --primary-foreground: oklch(0.14 0.024 285);
   --ring: var(--primary);
-  --accent: color-mix(in oklch, var(--primary) 14%, var(--surface-2));
+  --accent: oklch(0.374 0.029 285);
   --accent-foreground: oklch(0.95 0.018 285);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: color-mix(in oklch, var(--primary) 13%, var(--surface-2));
+  --sidebar-accent: oklch(0.337 0.026 285);
   --sidebar-accent-foreground: oklch(0.95 0.018 285);
   --sidebar-ring: var(--ring);
   --chart-1: oklch(0.72 0.15 285);
@@ -78,14 +86,14 @@ html.dark[data-theme-preset="atlas"] {
 
 /* Oasis — teal identity without a cyan/green canvas. */
 html.dark[data-theme-preset="oasis"] {
-  --primary: oklch(0.72 0.125 190);
+  --primary: oklch(0.74 0.125 190);
   --primary-foreground: oklch(0.13 0.024 190);
   --ring: var(--primary);
-  --accent: color-mix(in oklch, var(--primary) 13%, var(--surface-2));
+  --accent: oklch(0.370 0.024 190);
   --accent-foreground: oklch(0.95 0.018 190);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: color-mix(in oklch, var(--primary) 12%, var(--surface-2));
+  --sidebar-accent: oklch(0.333 0.022 190);
   --sidebar-accent-foreground: oklch(0.95 0.018 190);
   --sidebar-ring: var(--ring);
   --chart-1: oklch(0.71 0.13 205);
@@ -100,11 +108,11 @@ html.dark[data-theme-preset="dune"] {
   --primary: oklch(0.76 0.125 70);
   --primary-foreground: oklch(0.16 0.024 65);
   --ring: var(--primary);
-  --accent: color-mix(in oklch, var(--primary) 14%, var(--surface-2));
+  --accent: oklch(0.380 0.025 70);
   --accent-foreground: oklch(0.96 0.018 72);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: color-mix(in oklch, var(--primary) 13%, var(--surface-2));
+  --sidebar-accent: oklch(0.342 0.023 70);
   --sidebar-accent-foreground: oklch(0.96 0.018 72);
   --sidebar-ring: var(--ring);
   --chart-1: oklch(0.76 0.13 55);

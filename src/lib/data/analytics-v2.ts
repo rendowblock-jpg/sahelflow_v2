@@ -8,6 +8,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { getProfitabilitySeries } from "@/lib/accounting/profitability";
+import { percentChange as pctChange } from "@/lib/data/percent-change";
 
 export interface DateRange {
   from: Date;
@@ -502,14 +503,7 @@ export async function getPeriodComparison(
     previousDelivered + previousReturned > 0
       ? (previousReturned / (previousDelivered + previousReturned)) * 100
       : 0;
-  // Growth from nothing has no meaningful percentage ("+100 %" would be
-  // false); null lets the page show a dash, like the summary cards do.
-  const pctChange = (value: number, baseline: number): number | null =>
-    baseline === 0
-      ? value > 0
-        ? null
-        : 0
-      : ((value - baseline) / baseline) * 100;
+  // pctChange is the shared rule (lib/data/percent-change.ts, F-0049): growth from nothing is null, shown as a dash.
 
   return {
     current: {

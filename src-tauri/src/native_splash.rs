@@ -288,11 +288,11 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
             border: (0xCDCFC3, 100),
         },
         (Theme::Dark, Preset::Sahel) => Tokens {
-            top: 0x1E2023,
+            top: 0x25272B,
             bottom: 0x121417,
             ink: 0xF2F0EC,
-            muted: 0xA7A49E,
-            primary: 0x43B966,
+            muted: 0xC0BDB7,
+            primary: 0x51C672,
             border: (0xEDEBE7, 16),
         },
         (Theme::Light, Preset::Atlas) => Tokens {
@@ -304,11 +304,11 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
             border: (0xCCCCD9, 100),
         },
         (Theme::Dark, Preset::Atlas) => Tokens {
-            top: 0x1E2023,
+            top: 0x25272B,
             bottom: 0x121417,
             ink: 0xF2F0EC,
-            muted: 0xA7A49E,
-            primary: 0x9C95FE,
+            muted: 0xC0BDB7,
+            primary: 0xACA9FF,
             border: (0xEDEBE7, 16),
         },
         (Theme::Light, Preset::Oasis) => Tokens {
@@ -320,11 +320,11 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
             border: (0xC2D1D3, 100),
         },
         (Theme::Dark, Preset::Oasis) => Tokens {
-            top: 0x1E2023,
+            top: 0x25272B,
             bottom: 0x121417,
             ink: 0xF2F0EC,
-            muted: 0xA7A49E,
-            primary: 0x00BDB6,
+            muted: 0xC0BDB7,
+            primary: 0x16C3BC,
             border: (0xEDEBE7, 16),
         },
         (Theme::Light, Preset::Dune) => Tokens {
@@ -336,10 +336,10 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
             border: (0xD7CBC1, 100),
         },
         (Theme::Dark, Preset::Dune) => Tokens {
-            top: 0x1E2023,
+            top: 0x25272B,
             bottom: 0x121417,
             ink: 0xF2F0EC,
-            muted: 0xA7A49E,
+            muted: 0xC0BDB7,
             primary: 0xE4A250,
             border: (0xEDEBE7, 16),
         },

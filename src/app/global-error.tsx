@@ -155,14 +155,14 @@ export default function GlobalError({
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>{s.title}</h1>
-            {/* oklch(0.72 0.01 90) — dark muted-foreground */}
-            <p style={{ fontSize: "0.95rem", color: "oklch(0.72 0.01 90)", margin: 0, lineHeight: 1.6, maxWidth: 420 }}>
+            {/* oklch(0.80 0.01 90) — dark muted-foreground */}
+            <p style={{ fontSize: "0.95rem", color: "oklch(0.80 0.01 90)", margin: 0, lineHeight: 1.6, maxWidth: 420 }}>
               {error.message && !expected ? error.message : s.message}
             </p>
           </div>
 
           {!expected && (
-            <p style={{ fontSize: "0.8rem", color: "oklch(0.72 0.01 90 / 0.75)", margin: 0 }}>{s.reported}</p>
+            <p style={{ fontSize: "0.8rem", color: "oklch(0.80 0.01 90 / 0.75)", margin: 0 }}>{s.reported}</p>
           )}
 
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
@@ -171,10 +171,10 @@ export default function GlobalError({
               style={{
                 padding: "0.6rem 1.25rem",
                 borderRadius: 8,
-                // oklch(0.94 0.006 90 / 0.16) / oklch(0.280 0.008 260) / oklch(0.955 0.006 90)
+                // oklch(0.94 0.006 90 / 0.16) / oklch(0.318 0.009 260) / oklch(0.955 0.006 90)
                 // — dark input border, surface-2 and foreground tokens
                 border: "1px solid oklch(0.94 0.006 90 / 0.16)",
-                background: "oklch(0.280 0.008 260)",
+                background: "oklch(0.318 0.009 260)",
                 color: "oklch(0.955 0.006 90)",
                 fontSize: "0.9rem",
                 fontWeight: 600,
@@ -189,9 +189,9 @@ export default function GlobalError({
                 padding: "0.6rem 1.25rem",
                 borderRadius: 8,
                 border: "none",
-                // oklch(0.70 0.16 150) / oklch(0.13 0.018 150) — sahel dark
+                // oklch(0.74 0.16 150) / oklch(0.13 0.018 150) — sahel dark
                 // primary + primary-foreground (theme-preset-system.css)
-                background: "oklch(0.70 0.16 150)",
+                background: "oklch(0.74 0.16 150)",
                 color: "oklch(0.13 0.018 150)",
                 fontSize: "0.9rem",
                 fontWeight: 600,
