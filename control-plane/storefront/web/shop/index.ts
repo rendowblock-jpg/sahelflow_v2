@@ -92,6 +92,7 @@ export const renderStorePage: RenderStorePage = (input) => {
       preload: page.preload,
       jsonLd: page.jsonLd,
       script: true,
+      trackId: product.id,
       bodyAttrs: `data-page="product"${page.bar ? " data-sticky" : ""}${style ? ` data-mode="${store ? "store" : "landing"}"` : ""}`,
       main: page.main,
       bar: page.bar,
