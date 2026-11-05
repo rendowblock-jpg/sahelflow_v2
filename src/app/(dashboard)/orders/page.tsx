@@ -1,20 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  CheckCircle2,
-  Clock,
-  ShieldAlert,
-  ShoppingBag,
-  TrendingUp,
-} from "lucide-react";
+import { CheckCircle2, ShieldAlert } from "lucide-react";
 
 import { OrdersDataTable } from "@/components/orders/orders-data-table";
 import { OrdersHeaderActions } from "@/components/orders/orders-header-actions";
+import { OrdersKpiItem, OrdersKpiStrip } from "@/components/orders/orders-kpi-strip";
 import { CreateParamDialog } from "@/components/shared/create-param-dialog";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OrdersStatusTabsList } from "@/components/orders/orders-status-tabs-list";
@@ -327,43 +321,24 @@ export default async function OrdersPage({
         }
       />
 
-      <div className="card-grid-4 card-grid-phone-2x2">
-        <StatCard
+      {/* Item 1 (5 Nov 2026): one quiet strip instead of four equal cards. Pending lives in its tab and in the queue button. */}
+      <OrdersKpiStrip label={t("orders.kpiStrip")}>
+        <OrdersKpiItem
           label={t("orders.activeOrders")}
           value={activeOrders}
-          icon={<ShoppingBag />}
           href={statusTabHref("all")}
-          hrefLabel={t("orders.activeOrders")}
-          selected={!statusFilter}
-          compactOnPhone
         />
-        <StatCard
-          label={t("orders.pendingLabel")}
-          value={pendingCount}
-          icon={<Clock />}
-          href={statusTabHref("pending")}
-          hrefLabel={t("orders.pendingLabel")}
-          selected={statusFilter === "pending"}
-          compactOnPhone
-        />
-        <StatCard
+        <OrdersKpiItem
           label={t("orders.deliveredToday")}
           value={deliveredTodayCount}
-          icon={<CheckCircle2 />}
           href={statusTabHref("delivered")}
-          hrefLabel={t("orders.deliveredToday")}
-          selected={statusFilter === "delivered"}
-          compactOnPhone
         />
-        <StatCard
+        <OrdersKpiItem
           label={t("money.revenueDeliveredToday")}
           value={todayRevenue === null ? "—" : formatDZD(todayRevenue, locale)}
-          icon={<TrendingUp />}
           href="/analytics"
-          hrefLabel={t("nav.analytics")}
-          compactOnPhone
         />
-      </div>
+      </OrdersKpiStrip>
 
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:flex-nowrap">
         <Tabs defaultValue={statusFilter ?? "all"} className="min-w-0 flex-1">
