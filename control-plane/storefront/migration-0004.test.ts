@@ -18,7 +18,8 @@ function oldDatabase(): DatabaseSync {
   expect(SCHEMA).toContain(NEW_LIST);
   const database = new Sqlite(":memory:");
   database.exec("PRAGMA foreign_keys = ON");
-  database.exec(SCHEMA.replace(NEW_LIST, OLD_LIST));
+  // A database at 0004 time has no offers_json yet (migration 0005 adds it afterwards), so strip that column from today's schema.
+  database.exec(SCHEMA.replace(NEW_LIST, OLD_LIST).replace("  offers_json TEXT,\n", ""));
   return database;
 }
 
