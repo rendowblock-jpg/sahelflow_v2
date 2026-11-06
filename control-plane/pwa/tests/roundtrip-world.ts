@@ -6,6 +6,7 @@ import worker from "../../connected/worker";
 import { RELAY, createWorld } from "../../connected/__tests__/harness";
 import { ConnectedPlatformClient } from "../../../src/lib/connected-platform/client";
 import { executeQueuedRemoteCommands } from "../../../src/lib/connected-platform/remote-command-executor";
+import { updateDeviceApprovals, withDeviceApproved } from "../../../src/lib/connected-platform/device-approvals";
 import { publishRemoteDashboardProjection } from "../../../src/lib/connected-platform/desktop-projection";
 import { buildDesktopPairingLink } from "../../../src/lib/connected-platform/pairing-link";
 import { encodeDesktopKeyProof, importDesktopSigningPrivateKey, signDesktopEncryptionKey } from "../../../src/lib/connected-platform/pairing-trust";
@@ -61,6 +62,9 @@ export async function buildRig(deviceId: string) {
   };
   const paired = await runPairing({ link: taken.link, online: true, keygen, store, onStep: () => undefined, transport: createFetchTransport({ baseUrl: RELAY, fetchImpl: relayFetch }) });
   if (!paired.ok) throw new Error(`setup: pairing ${paired.reason}`);
+  // The seller's "It matches, approve" on the desktop. The executor runs a phone command only from an approved device, so the
+  // rig records the approval through the app's own function (the file under this test's SF_DATA_DIR), as the approve route does.
+  await updateDeviceApprovals(relayShop.workspaceId, (state) => withDeviceApproved(state, deviceId, Date.now()));
   let cursor = 0;
   return {
     world, client, desktop, db, relayFetch,

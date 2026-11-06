@@ -1,5 +1,7 @@
 import { ID, ITEM_KEY, WILAYA, isTemplateId, validPublicArtifact } from "./shared";
 import type { PublicArtifact, TemplateId } from "./shared";
+import { parseOfferLadder } from "./offer-ladder";
+import type { OfferTier } from "./offer-ladder";
 
 export type ReleaseAllocation = {
   itemKey: string;
@@ -12,6 +14,8 @@ export type ReleaseAllocation = {
    * capped at what that release still has unsold. Absent means 0.
    */
   freshQuantity?: number;
+  /** Fixed-price bundles for this item (see offer-ladder.ts). Absent means none; an empty list is dropped. */
+  offers?: readonly OfferTier[];
 };
 
 export type ReleaseShippingRule = {
@@ -74,9 +78,11 @@ export function parseReleaseInput(value: unknown): ParsedReleaseInput | null {
       freshQuantity < 0 ||
       freshQuantity > quantity
     ) return null;
+    const offers = parseOfferLadder(unitPriceDzd, row.offers);
+    if (offers === null) return null;
     allocationKeys.add(itemKey);
-    // Only a positive value is kept, so a request without it hashes exactly as before.
-    allocations.push({ itemKey, unitPriceDzd, quantity, ...(freshQuantity > 0 ? { freshQuantity } : {}) });
+    // Only a positive freshQuantity and a non-empty ladder are kept, so a request without them hashes exactly as before.
+    allocations.push({ itemKey, unitPriceDzd, quantity, ...(freshQuantity > 0 ? { freshQuantity } : {}), ...(offers.length > 0 ? { offers } : {}) });
   }
   const productKeys = new Set(input.publicArtifact.products.map((product) => product.itemKey));
   if (

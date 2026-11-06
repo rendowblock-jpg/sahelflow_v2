@@ -1,4 +1,5 @@
 import type { ReleaseAllocation } from "./release-input";
+import { serialiseOfferLadder } from "./offer-ladder";
 import type { D1Database, D1Statement } from "./types";
 
 /**
@@ -29,7 +30,7 @@ export function appendConservedAllocationStatements(
     statements.push(
       database.prepare(
         `INSERT INTO storefront_allocation
-          (release_id, item_key, unit_price_dzd, delegated_quantity, remaining_quantity)
+          (release_id, item_key, unit_price_dzd, delegated_quantity, remaining_quantity, offers_json)
          VALUES (
            ?1, ?2, ?3,
            CASE
@@ -73,7 +74,8 @@ export function appendConservedAllocationStatements(
                   AND line.item_key = ?2
                   AND receipt.state = 'received'
              ), 0))
-           END
+           END,
+           ?7
          )`,
       ).bind(
         releaseId,
@@ -82,6 +84,7 @@ export function appendConservedAllocationStatements(
         parentReleaseId,
         allocation.quantity,
         allocation.freshQuantity ?? 0,
+        serialiseOfferLadder(allocation.offers),
       ),
     );
   }
