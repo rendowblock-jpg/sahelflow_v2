@@ -825,49 +825,59 @@ describe("accessibility matrix: the four color-contrast causes (every preset, li
   });
 
   /**
-   * F-0055 (6 Nov 2026): the "high" risk word and the "review" decision word are Tailwind orange, which is not one of the five
-   * feedback kinds above, so the "ink on a tint" rule never covered it. text-orange-700 measured 4.05:1 from pixels in the
-   * flagged queue row. The class is read from the SOURCE of both badge files and checked on every surface, preset and mode.
+   * F-0055 + F-0057 (6 Nov 2026): the pills of the order queue and of the customer risk card draw Tailwind palette colours
+   * (orange, teal, zinc, emerald, amber, red) on a 10 % tint, or the score on bg-muted/30. Orange, teal and zinc are not one of the
+   * five feedback kinds above and the palette dark variants were never measured: text-orange-700 measured 4.05:1 from pixels in the
+   * flagged queue row, text-teal-700 (the default "standard" decision) 4.21:1 on the page, text-red-400 (critical, dark) 4.18:1 on the
+   * sunk step. Every pill class is read from the SOURCE of both badge files and checked on every surface, preset and mode.
    */
-  it("cause 5 (F-0055): the orange risk words reach 4.5:1 on their own tint and on the muted chip, on every surface, preset and mode", () => {
-    const classesOf = (src: string, key: string, after?: string): string[] => {
-      const from = after === undefined ? 0 : src.indexOf(after);
-      if (from < 0) throw new Error(`"${after}" not found in the source under test`);
-      const match = src.slice(from).match(new RegExp(`\\b${key}:\\s*"([^"]*)"`));
-      if (!match?.[1]) throw new Error(`${key} is not a string entry in the source under test`);
-      return match[1].split(/\s+/);
-    };
+  it("cause 5 (F-0055, F-0057): every pill text of the two risk badge files reaches 4.5:1 on its tint and on the muted chip, on every surface, preset and mode", () => {
+    type Pill = { what: string; classes: string[]; muted: boolean };
     const badges = source("../../risk/risk-badges.tsx");
     const badge = source("../../risk/risk-badge.tsx");
-    const cases = [
-      { what: "risk-badges.tsx level high", classes: classesOf(badges, "high", "const LEVEL_STYLES"), muted: false },
-      { what: "risk-badges.tsx decision review", classes: classesOf(badges, "review"), muted: false },
-      { what: "risk-badge.tsx score high (on bg-muted/30)", classes: classesOf(badge, "high", "const TEXT_COLORS"), muted: true },
-    ];
-    for (const { what, classes, muted } of cases) {
-      const shade = (prefix: string): string => {
-        const found = classes.find((name) => name.startsWith(prefix))?.slice(prefix.length);
-        if (!found) throw new Error(`${what}: no ${prefix}NNN class in ${classes.join(" ")}`);
-        return found;
-      };
-      const lightInk = tailwindPalette(`orange-${shade("text-orange-")}`);
-      const darkInk = tailwindPalette(`orange-${shade("dark:text-orange-")}`);
-      const tintMatch = classes.find((name) => /^bg-orange-\d+\/\d+$/.test(name))?.match(/^bg-orange-(\d+)\/(\d+)$/);
-      const fails: string[] = [];
+    const pills: Pill[] = [];
+    for (const map of badges.matchAll(/const (\w+_STYLES)\b[^=]*=\s*\{([\s\S]*?)\n\};/g)) {
+      for (const entry of (map[2] ?? "").matchAll(/(\w+):\s*"([^"]*)"/g)) {
+        pills.push({ what: `risk-badges.tsx ${map[1]}.${entry[1]}`, classes: (entry[2] ?? "").split(/\s+/), muted: false });
+      }
+    }
+    expect(badge, "risk-badge.tsx draws the score on bg-muted/30").toContain("bg-muted/30");
+    const textColors = badge.match(/const TEXT_COLORS\b[^=]*=\s*\{([\s\S]*?)\n\};/)?.[1] ?? "";
+    for (const entry of textColors.matchAll(/(\w+):\s*"([^"]*)"/g)) {
+      pills.push({ what: `risk-badge.tsx TEXT_COLORS.${entry[1]}`, classes: (entry[2] ?? "").split(/\s+/), muted: true });
+    }
+    expect(pills.length, "the parser found the pill maps (4 + 6 + 4 at the time of writing)").toBeGreaterThanOrEqual(14);
+    const inkFor = (cls: string, preset: PresetName, mode: "light" | "dark"): Oklch => {
+      const feedback = cls.match(/^text-(destructive|success|warning)(-ink)?$/);
+      if (feedback?.[1]) {
+        const kind = feedback[1] as FeedbackKind;
+        return feedback[2] ? feedbackInk(lightFeedbackCascade(preset), kind) : colorToken(presetCascade(preset, mode), `--${kind}`);
+      }
+      const palette = cls.match(/^text-([a-z]+-\d+)$/)?.[1];
+      if (!palette) throw new Error(`cannot resolve the text colour "${cls}" to a token or a Tailwind palette colour`);
+      return tailwindPalette(palette);
+    };
+    const fails: string[] = [];
+    for (const { what, classes, muted } of pills) {
+      const tintClass = classes.find((name) => /^bg-[a-z]+-\d+\/\d+$/.test(name))?.match(/^bg-([a-z]+-\d+)\/(\d+)$/);
+      expect(muted || tintClass, `${what}: the pill is filled with bg-<palette>-NNN/NN`).toBeTruthy();
+      const lightClass = classes.find((name) => /^text-(?!xs$|sm$)/.test(name));
+      const darkClass = classes.find((name) => name.startsWith("dark:text-"))?.slice("dark:".length);
+      expect(lightClass && darkClass, `${what}: has a light and a dark text colour (${classes.join(" ")})`).toBeTruthy();
       for (const preset of PRESETS) for (const mode of MODES) {
         const cascade = presetCascade(preset, mode);
-        const ink = mode === "light" ? lightInk : darkInk;
-        const tint = muted ? colorToken(cascade, "--muted") : tailwindPalette(`orange-${tintMatch?.[1] ?? "500"}`);
-        const alpha = muted ? 0.3 : Number(tintMatch?.[2] ?? "10") / 100;
-        expect(muted || tintMatch, `${what}: the pill is filled with bg-orange-NNN/NN`).toBeTruthy();
+        const used = (mode === "light" ? lightClass : darkClass) ?? "";
+        const ink = inkFor(used, preset, mode);
+        const tint = muted ? colorToken(cascade, "--muted") : tailwindPalette(tintClass?.[1] ?? "zinc-500");
+        const alpha = muted ? 0.3 : Number(tintClass?.[2] ?? "10") / 100;
         for (const surface of CHIP_SURFACES) {
           const ratio = inkOnChip(ink, tint, alpha, cascade, surface);
-          if (ratio < AA_NORMAL_TEXT) fails.push(`${preset} ${mode} on ${surface.name}: ${ratio.toFixed(2)}`);
+          if (ratio < AA_NORMAL_TEXT) fails.push(`${what} ${preset} ${mode} (${used}) on ${surface.name}: ${ratio.toFixed(2)}`);
         }
       }
-      const shown = fails.length > 6 ? [...fails.slice(0, 6), `... and ${fails.length - 6} more`] : fails;
-      expect(shown, `${what}: ${fails.length} surface(s) under 4.5:1 (classes: ${classes.join(" ")})`).toEqual([]);
     }
+    const shown = fails.length > 12 ? [...fails.slice(0, 12), `... and ${fails.length - 12} more`] : fails;
+    expect(shown, `${fails.length} pill/preset/mode/surface combination(s) under 4.5:1, of ${pills.length} pills`).toEqual([]);
   });
 });
 
@@ -1107,7 +1117,7 @@ describe("ink on a tint, part two: the primary ink and palette tints (F-0013)", 
       ["components/shared/photo-upload.tsx", 'className="bg-primary-soft text-title-2 text-primary-ink"', 1],
       ["components/layout/topbar.tsx", 'className="bg-primary-soft text-xs font-semibold text-primary-ink"', 1],
       ["components/returns/return-status-badge.tsx", 'text: "text-primary-ink"', 1],
-      ["components/risk/risk-badges.tsx", 'bg-red-500/10 text-destructive-ink dark:text-red-400', 2],
+      ["components/risk/risk-badges.tsx", 'bg-red-500/10 text-destructive-ink', 2], // the dark shade is checked by cause 5 above
     ];
     for (const [file, literal, count] of pinned) {
       const found = readFileSync(join(srcDir, file), "utf8").split(literal).length - 1;
