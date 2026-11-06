@@ -56,6 +56,20 @@ async function until(done: () => boolean, ms = 8000): Promise<void> {
   if (!done()) throw new Error("timed out waiting for the page");
 }
 
+// The whole page text for the wording checks, minus ONE field: the random receipt key in <script id="sf-data">.
+// textContent includes script text (the page's own wording strings live there too, so they must stay scanned), but the key is ~340 random
+// base64url characters and '-' is a word boundary, so a key holding e.g. "-7h-" or "-cib-" tripped the regexes by chance (about 1 run in 950).
+function pageTextWithoutKey(): string {
+  const clone = document.body.cloneNode(true) as HTMLElement;
+  const data = clone.querySelector("script#sf-data");
+  if (data) {
+    const parsed = JSON.parse(data.textContent ?? "{}") as Record<string, unknown>;
+    delete parsed.key;
+    data.textContent = JSON.stringify(parsed);
+  }
+  return clone.textContent ?? "";
+}
+
 const settle = async () => {
   for (let i = 0; i < 12; i++) await new Promise((resolve) => setTimeout(resolve, 0));
 };
@@ -69,7 +83,7 @@ function realReceiptKey(): string {
   return receiptKey;
 }
 
-async function mount(locale: "ar" | "fr" | "en" = "en") {
+async function mount(locale: "ar" | "fr" | "en" = "en", key: string = realReceiptKey()) {
   const net = installNet();
   const store = await publishTestStore({ locale, template: "sahara" });
   let html: string | null;
@@ -78,7 +92,7 @@ async function mount(locale: "ar" | "fr" | "en" = "en") {
       { wilayaCode: code, mode: "home" as const, feeDzd: 300 + Number(code) * 10 },
       { wilayaCode: code, mode: "desk" as const, feeDzd: 200 + Number(code) * 10 },
     ]);
-    html = renderStorePage(renderInputFor(store, { productId: "product_00000001", receiptKey: realReceiptKey(), shipping, assets: { ...renderInputFor(store).assets, communes: "/_sf/c.test" } }));
+    html = renderStorePage(renderInputFor(store, { productId: "product_00000001", receiptKey: key, shipping, assets: { ...renderInputFor(store).assets, communes: "/_sf/c.test" } }));
   } finally {
     store.database.close();
   }
@@ -287,13 +301,36 @@ describe("cash on delivery wording is honest", () => {
   for (const locale of ["ar", "fr", "en"] as const) {
     it(`promises no delivery time and no card payment (${locale})`, async () => {
       const c = await mount(locale);
-      const text = document.body.textContent ?? "";
+      const text = pageTextWithoutKey();
       expect(text).not.toMatch(/\b\d+\s*(h|hrs?|hours?|heures?|days?|jours?)\b/i);
       expect(text).not.toMatch(/[٠-٩\d]+\s*(ساعة|ساعات|يوم|أيام|ايام)/);
       expect(text).not.toMatch(/visa|mastercard|carte bancaire|credit card|بطاقة|edahabia|cib\b/i);
       expect(c.html).toMatch(/cash on delivery|paiement à la livraison|payez à la réception|الدفع عند الاستلام/i);
     });
   }
+});
+
+describe("the wording check ignores the random receipt key but still scans the rest of the page data", () => {
+  // Seen once in CI (job 127395065416, 5 Nov): the random key happened to hold "-7h-", so all three locales failed together.
+  it("a key that contains '-7h-', '-cib-' and 'VisA' does not fail the wording check", async () => {
+    await mount("en", JSON.stringify({ kty: "RSA", n: "abc-7h-cib-VisA-xyz", e: "AQAB" }));
+    // the fixture works: the poisoned key really is in the page text that the old reading used
+    expect(document.body.textContent).toContain("abc-7h-cib-VisA-xyz");
+    const text = pageTextWithoutKey();
+    expect(text).not.toContain("abc-7h-cib");
+    // and only the key was removed: the rest of the data script (the store slug, the wording strings) is still part of the text that is checked
+    expect(text).toContain("sahel-store");
+    expect(text).not.toMatch(/\b\d+\s*(h|hrs?|hours?|heures?|days?|jours?)\b/i);
+    expect(text).not.toMatch(/visa|mastercard|carte bancaire|credit card|بطاقة|edahabia|cib\b/i);
+  });
+
+  it("a delivery-time promise in the page data is still caught", async () => {
+    await mount("en");
+    const data = document.querySelector("script#sf-data");
+    if (!data) throw new Error("the product page has no data script");
+    data.textContent = JSON.stringify({ ...JSON.parse(data.textContent ?? "{}"), note: "Delivered in 48 hours" });
+    expect(pageTextWithoutKey()).toMatch(/\b\d+\s*(h|hrs?|hours?|heures?|days?|jours?)\b/i);
+  });
 });
 
 describe("a photo that fails to load", () => {
