@@ -28,10 +28,10 @@ const DOT_COLORS: Record<RiskLevel, string> = {
 };
 
 const TEXT_COLORS: Record<RiskLevel, string> = {
-  low: "text-success dark:text-emerald-400",
-  medium: "text-warning dark:text-amber-400",
-  high: "text-orange-700 dark:text-orange-400",
-  critical: "text-destructive dark:text-red-400",
+  low: "text-success-ink dark:text-emerald-400",
+  medium: "text-warning-ink dark:text-amber-400",
+  high: "text-orange-800 dark:text-orange-400",
+  critical: "text-destructive-ink dark:text-red-300",
 };
 
 export function RiskBadge({ level, score, href }: RiskBadgeProps) {
