@@ -136,6 +136,8 @@ export function bucketStartMs(atMs: number, bucketMinutes: number): number {
   return Math.floor(atMs / width) * width;
 }
 
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Only an id-like token may enter a marker. Anything with a space, a plus, an
  * at-sign, a long run of digits (a phone number) or more than 64 characters is
@@ -144,6 +146,10 @@ export function bucketStartMs(atMs: number, bucketMinutes: number): number {
 export function safeToken(value: string | undefined | null): string {
   if (typeof value !== "string") return "none";
   if (!/^[A-Za-z0-9._:-]{1,64}$/.test(value)) return "none";
+  // A canonical UUID (8-4-4-4-12 hex) is an id, never a phone number, and its 12-character last group is all digits for
+  // about 3 UUIDs in 100. Without this line the digit rule below turned those ids into "none", so two different held
+  // sends on one day could share one event key (whatsapp.held:<day>:none) and make ONE row.
+  if (UUID_SHAPE.test(value)) return value;
   if (/\d{9,}/.test(value)) return "none";
   return value;
 }
