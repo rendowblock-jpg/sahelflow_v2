@@ -10,10 +10,11 @@ let host: SettingsHost | null = null;
 export function attachSettingsHost(h: SettingsHost | null): void { host = h; controller = h ? createSettingsController(h) : null; }
 
 function attrs(el: Element): ActData {
-  const out: { id?: string; lang?: string; theme?: string } = {};
+  const out: { id?: string; lang?: string; theme?: string; look?: string } = {};
   const id = el.closest("[data-id]")?.getAttribute("data-id"); if (id) out.id = id;
   const lang = el.getAttribute("data-s-lang"); if (lang) out.lang = lang;
   const theme = el.getAttribute("data-s-theme"); if (theme) out.theme = theme;
+  const look = el.getAttribute("data-s-look"); if (look) out.look = look;
   return out;
 }
 

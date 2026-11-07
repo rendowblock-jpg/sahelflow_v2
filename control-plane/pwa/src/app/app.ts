@@ -21,6 +21,7 @@ import type { UpdateController, UpdateOptions } from "../sw/update";
 import { createInflight } from "../sw/update-safety";
 import { createRelayClient } from "../today/relay-source";
 import { freshness, type Projection, type ProjectionSource } from "../today/projection";
+import { LOOK_KEY, parseLook } from "../look";
 import { effectiveScreen, isLazyScreen, renderApp, type ScreenId, type Theme, type View } from "../views/view";
 import { createInboxHost } from "../views/inbox/host";
 import { createCommandStack, type CommandStack } from "./commands";
@@ -56,11 +57,11 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   const source: ProjectionSource = options.source ?? relay.source;
   const transport = options.transport ?? createFetchTransport({ baseUrl: __RELAY_URL__, fetchImpl: trackedFetch });
   const standalone = matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  const savedLocale = store.get("sf.locale"); const savedTheme = store.get("sf.theme");
+  const savedLocale = store.get("sf.locale"); const savedTheme = store.get("sf.theme"); const savedLook = store.get(LOOK_KEY);
   const qScreen = new URLSearchParams(location.search).get("screen");
   let view: View = {
     locale: isLocale(savedLocale) ? savedLocale : DEFAULT_LOCALE,
-    theme: savedTheme === "light" || savedTheme === "dark" ? savedTheme : "system",
+    theme: savedTheme === "light" || savedTheme === "dark" ? savedTheme : "system", look: parseLook(savedLook),
     screen: SCREENS.find((s) => s === qScreen) ?? "welcome", state: "empty", now: Date.now(), online: navigator.onLine,
     updateReady: false, canInstall: false, installed: standalone, ios: /iPad|iPhone|iPod/.test(navigator.userAgent) && !standalone,
     projection: null, step: null, fingerprint: null, failure: null, lockMode: "enter", lockNotice: null, hasLock: false,
@@ -119,6 +120,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   const paint = (): void => {
     const v = previewOn ? applyPreview(view, location.search) : derive(view);
     document.documentElement.lang = v.locale; document.documentElement.dir = dirOf(v.locale);
+    document.documentElement.dataset.look = parseLook(v.look);
     document.documentElement.dataset.theme = v.theme === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : v.theme;
     // "Your PC is off" on every screen that shows shop data (Today and Orders draw their own strip; this one is added once, only when none is there).
     const focusKey = focusKeyOf(document.activeElement, root); const shown = effectiveScreen(v);
@@ -267,12 +269,13 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     const mod = await import("../views/settings/screen"); if (settingsHost) return;
     const s = await getStack().catch(() => null);
     const h = createSettingsHost({
-      now: Date.now, locale: () => view.locale, online: () => navigator.onLine, theme: () => view.theme, hasLock: () => view.hasLock, revoked: () => view.revoked === true,
+      now: Date.now, locale: () => view.locale, online: () => navigator.onLine, theme: () => view.theme, look: () => parseLook(view.look), hasLock: () => view.hasLock, revoked: () => view.revoked === true,
       projectionAt: () => view.projection?.generatedAt ?? null,
       pairedAt: async () => { const r = await readResume(await getDb(), Date.now()); return r.kind === "none" ? null : r.pairedAt; },
       db: getDb, flush: async () => { await s?.outbox.flush(); }, refresh: async () => { await s?.outbox.refresh(); },
       setLocale: (l) => { store.set("sf.locale", l); previewOn = false; set({ locale: l }); },
       setTheme: (x) => { store.set("sf.theme", x); previewOn = false; set({ theme: x }); },
+      setLook: (x) => { store.set(LOOK_KEY, x); previewOn = false; set({ look: x }); },
       startLockSetup: () => { returnTo = "settings"; set({ screen: "lock", lockMode: "set", lockNotice: null }); sync.onScreen(); },
       wipe: async () => { const r = await wipe(); settingsHost?.notify(); return { ok: r.ok }; },
     });
@@ -328,6 +331,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     const mouse = event as MouseEvent;
     if (el.dataset.nav) { if (mouse.metaKey || mouse.ctrlKey) return; event.preventDefault(); go(el.dataset.nav as ScreenId); return; }
     if (el.dataset.lang && isLocale(el.dataset.lang)) { store.set("sf.locale", el.dataset.lang); previewOn = false; set({ locale: el.dataset.lang as Locale }); return; }
+    if (el.dataset.look) { const x = parseLook(el.dataset.look); store.set(LOOK_KEY, x); previewOn = false; set({ look: x }); return; }
     if (el.dataset.theme) { store.set("sf.theme", el.dataset.theme); previewOn = false; set({ theme: el.dataset.theme as Theme }); return; }
     switch (el.dataset.act) {
       case "install": void installEvent?.prompt().then(() => { installEvent = null; set({ canInstall: false }); }); break;

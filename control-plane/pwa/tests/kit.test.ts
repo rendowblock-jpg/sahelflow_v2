@@ -14,8 +14,6 @@ import { esc } from "../src/views/view";
 
 const css = readFileSync(new URL("../src/styles/app.css", import.meta.url), "utf8");
 const kitCss = css.slice(css.indexOf("/* kit */"));
-const lum = (hex: string): number => { const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * (c[0] ?? 0) + 0.7152 * (c[1] ?? 0) + 0.0722 * (c[2] ?? 0); };
-const ratio = (a: string, b: string): number => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return ((x ?? 0) + 0.05) / ((y ?? 0) + 0.05); };
 
 describe("state strip", () => {
   const at = Date.UTC(2026, 9, 31, 7, 42);
@@ -62,8 +60,9 @@ describe("kit CSS", () => {
     expect(kitCss).not.toMatch(/\b(margin|padding)-(left|right)\b|(^|[\s{;])(left|right)\s*:|text-align\s*:\s*(left|right)|border-(left|right)/);
     expect(kitCss).toMatch(/min-block-size:\s*44px/); expect(kitCss).not.toMatch(/font-size:\s*(1[0-5]|[0-9])px/);
   });
-  it("Carnet tokens keep 4.5:1 contrast", () => {
-    for (const [fg, bg] of [["#15171B", "#FAF7F0"], ["#15171B", "#F3EEE4"], ["#B93A2B", "#FAF7F0"], ["#2D6A4F", "#FAF7F0"]] as const) expect(ratio(fg, bg), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+  it("paints with the look tokens only, never a colour typed into the kit rules (contrast of the tokens: tests/looks-contrast.test.ts)", () => {
+    expect(kitCss).not.toMatch(/#[0-9A-Fa-f]{3,8}\b/);
+    expect(kitCss).toMatch(/var\(--card\)/); expect(kitCss).toMatch(/var\(--foreground\)/);
   });
 });
 describe("lazy screens", () => {

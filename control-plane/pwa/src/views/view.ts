@@ -1,13 +1,15 @@
 import { dirOf, formatDzd, formatNumber, formatTime, formatWeekday, t, type Locale } from "../i18n";
 import type { PairFailure, PairStep } from "../pair/flow";
 import type { Projection } from "../today/projection";
+import type { Look } from "../look";
 
 export type ScreenId = "welcome" | "pair" | "today" | "settings" | "lock" | "orders" | "order" | "inbox" | "conversation" | "install" | "devices";
 export type ViewState = "loading" | "empty" | "error" | "stale" | "offline" | "ready" | "expired" | "keygen" | "waiting" | "pcoff";
 export type Theme = "light" | "dark" | "system";
+export type { Look };
 export type LockNotice = null | Readonly<{ kind: "wrong"; left: number }> | Readonly<{ kind: "wait"; seconds: number }> | Readonly<{ kind: "mismatch" | "invalid" | "checking" }>;
 export type View = Readonly<{
-  locale: Locale; theme: Theme; screen: ScreenId; state: ViewState; now: number; online: boolean;
+  locale: Locale; theme: Theme; look?: Look; screen: ScreenId; state: ViewState; now: number; online: boolean;
   updateReady: boolean; canInstall: boolean; installed: boolean; ios: boolean;
   // W4SEC-07: the update is 24 h old and something unsent or open keeps it from applying itself: a modal with one Update button replaces the small banner.
   updateBlocking?: boolean;
@@ -110,12 +112,13 @@ function settings(v: View, tr: Tr): string {
   const seg = (attr: string, id: string, label: string, on: boolean, lang = ""): string => `<button type="button" class="seg" data-${attr}="${id}" aria-pressed="${on}"${lang}>${label}</button>`;
   const langs = (["ar", "fr", "en"] as const).map((l) => seg("lang", l, l === "ar" ? "العربية" : l === "fr" ? "Français" : "English", v.locale === l, ` lang="${l}"`)).join("");
   const themes = (["light", "dark", "system"] as const).map((x) => seg("theme", x, tr(`settings.theme.${x}`), v.theme === x)).join("");
+  const looks = (["sahel", "atlas", "oasis", "dune"] as const).map((x) => seg("look", x, tr(`settings.look.${x}`), v.look === x)).join("");
   const remove = v.removed ? `<p class="stamp stamp-ok" role="status">${tr("settings.remove.done")}</p>`
     : v.confirmRemove ? `<div class="note alert" role="alertdialog" aria-labelledby="rm-t"><h2 id="rm-t">${tr("settings.remove.title")}</h2><p>${tr("settings.remove.body")}</p><div class="actions">${button("remove-yes", tr("settings.remove.confirm"), "danger")}${button("remove-no", tr("settings.remove.cancel"), "ghost")}</div></div>`
     : `<p>${tr("settings.remove.body")}</p>${button("remove", tr("settings.remove.button"), "ghost")}`;
   const err = v.removeError ? note("alert", "alert", "", tr("settings.remove.error", { steps: esc(v.removeError) })) : "";
   const lock = v.hasLock ? `<p class="stamp stamp-ok">${tr("settings.lock.active")}</p>` : `<p class="hint">${tr("settings.lock.hint")}</p>${button("lock-set", tr("settings.lock.set"), "ghost")}`;
-  return `<h1>${tr("settings.title")}</h1><section class="sheet" aria-labelledby="s-l"><h2 id="s-l">${tr("settings.language")}</h2><div class="segs" role="group" aria-labelledby="s-l">${langs}</div></section><section class="sheet" aria-labelledby="s-t"><h2 id="s-t">${tr("settings.theme")}</h2><div class="segs" role="group" aria-labelledby="s-t">${themes}</div></section><section class="sheet" aria-labelledby="s-k"><h2 id="s-k">${tr("settings.lock")}</h2>${lock}</section><section class="sheet" aria-labelledby="s-r"><h2 id="s-r">${tr("settings.remove.title")}</h2>${err}${remove}</section><p class="version num" dir="ltr">${tr("settings.version", { version: esc(v.version) })}</p>`;
+  return `<h1>${tr("settings.title")}</h1><section class="sheet" aria-labelledby="s-l"><h2 id="s-l">${tr("settings.language")}</h2><div class="segs" role="group" aria-labelledby="s-l">${langs}</div></section><section class="sheet" aria-labelledby="s-t"><h2 id="s-t">${tr("settings.theme")}</h2><div class="segs" role="group" aria-labelledby="s-t">${themes}</div></section><section class="sheet" aria-labelledby="s-y"><h2 id="s-y">${tr("settings.look")}</h2><div class="segs" role="group" aria-labelledby="s-y">${looks}</div></section><section class="sheet" aria-labelledby="s-k"><h2 id="s-k">${tr("settings.lock")}</h2>${lock}</section><section class="sheet" aria-labelledby="s-r"><h2 id="s-r">${tr("settings.remove.title")}</h2>${err}${remove}</section><p class="version num" dir="ltr">${tr("settings.version", { version: esc(v.version) })}</p>`;
 }
 
 function lock(v: View, tr: Tr): string {

@@ -21,10 +21,12 @@ describe("alert boxes in app.css (.margin and .alert)", () => {
       expect(body(selector)).not.toMatch(/\b(double|dashed|dotted|groove|ridge)\b/);
     });
   }
-  it(".margin keeps the red tint and the red border colour (it must still read as the alert of the screen)", () => {
-    const rule = body(".margin");
-    expect(rule).toMatch(/background\s*:\s*var\(--red-bg\)/);
-    expect(rule).toMatch(/border(-color)?\s*:[^;]*var\(--red\)/);
+  it(".margin keeps the amber tint and its own border colour, .alert the red ones (the box must still read as the call of the screen)", () => {
+    const margin = body(".margin"), alert = body(".alert");
+    expect(margin).toMatch(/background\s*:\s*var\(--warning-tint\)/);
+    expect(margin).toMatch(/border(-color)?\s*:[^;]*var\(--warning-line\)/);
+    expect(alert).toMatch(/background\s*:\s*var\(--destructive-tint\)/);
+    expect(alert).toMatch(/border(-color)?\s*:[^;]*var\(--destructive-line\)/);
   });
   it(".margin inherits its width from .note (1 px) or sets one even width of at most 2 px", () => {
     const rule = body(".margin");

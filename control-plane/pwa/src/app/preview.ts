@@ -1,3 +1,4 @@
+import { parseLook } from "../look";
 import { isLocale } from "../i18n";
 import type { PairFailure, PairStep } from "../pair/flow";
 import type { Projection } from "../today/projection";
@@ -23,8 +24,8 @@ export function applyPreview(base: View, search: string): View {
   const q = new URLSearchParams(search);
   const screen = SCREENS.find((s) => s === q.get("screen")) ?? base.screen;
   const state = STATES.find((s) => s === q.get("state")) ?? null;
-  const lang = q.get("lang"); const theme = q.get("theme");
-  let v: View = { ...base, screen, locale: isLocale(lang) ? lang : base.locale, theme: theme === "light" || theme === "dark" || theme === "system" ? (theme as Theme) : base.theme };
+  const lang = q.get("lang"); const theme = q.get("theme"); const look = q.get("look");
+  let v: View = { ...base, screen, look: look === null ? base.look : parseLook(look), locale: isLocale(lang) ? lang : base.locale, theme: theme === "light" || theme === "dark" || theme === "system" ? (theme as Theme) : base.theme };
   if (q.get("ios") === "1") v = { ...v, ios: true, canInstall: false };
   if (!state) return v;
   v = { ...v, state, online: state !== "offline" };

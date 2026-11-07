@@ -9,9 +9,9 @@ import { NOW, rec } from "./orders-fixtures";
 function mk(read: SettingsRead, o: { online?: boolean; remove?: () => Promise<boolean> } = {}) {
   const log: string[] = [];
   const host: SettingsHost = {
-    now: () => NOW, locale: () => "en", online: () => o.online ?? true, timeZone: "UTC", theme: () => "system", hasLock: () => false, read: () => read,
+    now: () => NOW, locale: () => "en", online: () => o.online ?? true, timeZone: "UTC", theme: () => "system", look: () => "sahel", hasLock: () => false, read: () => read,
     reload: async () => { log.push("reload"); }, retry: async (id) => { log.push(`retry:${id}`); }, discard: async (id) => { log.push(`discard:${id}`); },
-    setLocale: (l) => { log.push(`lang:${l}`); }, setTheme: (x) => { log.push(`theme:${x}`); }, startLockSetup: () => { log.push("lock"); },
+    setLocale: (l) => { log.push(`lang:${l}`); }, setTheme: (x) => { log.push(`theme:${x}`); }, setLook: (x) => { log.push(`look:${x}`); }, startLockSetup: () => { log.push("lock"); },
     remove: o.remove ?? (async () => true), subscribe: () => () => undefined,
   };
   return { host, log, c: createSettingsController(host) };
@@ -23,7 +23,7 @@ describe("settings screen: states", () => {
     const h = mk(ready()).c.html();
     expect(h).toContain("Last update"); expect(h).toContain("07:00"); expect(h).not.toContain("10:00");
     expect(h).toContain("Paired since"); expect(h).toContain("The PIN only locks the screen. It does not encrypt your data.");
-    for (const a of ['data-s-lang="ar"', 'data-s-lang="fr"', 'data-s-lang="en"', 'data-s-theme="dark"', 'data-act="s-lock-set"', 'data-act="s-remove"']) expect(h).toContain(a);
+    for (const a of ['data-s-lang="ar"', 'data-s-lang="fr"', 'data-s-lang="en"', 'data-s-theme="dark"', 'data-s-look="sahel"', 'data-s-look="atlas"', 'data-s-look="oasis"', 'data-s-look="dune"', 'data-act="s-lock-set"', 'data-act="s-remove"']) expect(h).toContain(a);
     expect(h).not.toMatch(/deliver/i);
   });
   it("loading is a skeleton with no controls; revoked says it and offers nothing", () => {
@@ -63,9 +63,9 @@ describe("settings screen: acts", () => {
   });
   it("language, theme, retry and discard reach the host; junk is ignored", async () => {
     const x = mk(ready());
-    await x.c.act("s-lang", { lang: "fr" }); await x.c.act("s-lang", { lang: "de" }); await x.c.act("s-theme", { theme: "dark" }); await x.c.act("s-theme", { theme: "pink" });
+    await x.c.act("s-lang", { lang: "fr" }); await x.c.act("s-lang", { lang: "de" }); await x.c.act("s-theme", { theme: "dark" }); await x.c.act("s-theme", { theme: "pink" }); await x.c.act("s-look", { look: "dune" }); await x.c.act("s-look", { look: "carnet" });
     await x.c.act("s-retry", { id: "q1" }); await x.c.act("s-discard", { id: "q1" }); await x.c.act("s-retry", {}); await x.c.act("retry", { id: "q1" });
-    expect(x.log).toEqual(["lang:fr", "theme:dark", "retry:q1", "discard:q1"]);
+    expect(x.log).toEqual(["lang:fr", "theme:dark", "look:dune", "retry:q1", "discard:q1"]);
   });
   it("the app's own acts (retry, remove, lang) are never reused: every act here starts with s-", () => {
     const acts = Array.from(mk(ready()).c.html().matchAll(/data-act="([^"]+)"/g)).map((m) => m[1]);

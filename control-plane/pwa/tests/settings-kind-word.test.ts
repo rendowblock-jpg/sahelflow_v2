@@ -7,9 +7,9 @@ import { NOW, rec } from "./orders-fixtures";
 type L = "en" | "fr" | "ar";
 function html(locale: L, commands: OutboxRecord[]): string {
   const host: SettingsHost = {
-    now: () => NOW, locale: () => locale, online: () => true, timeZone: "UTC", theme: () => "system", hasLock: () => false,
+    now: () => NOW, locale: () => locale, online: () => true, timeZone: "UTC", theme: () => "system", look: () => "sahel", hasLock: () => false,
     read: () => ({ status: "ready", asOf: NOW, pairedAt: NOW, commands }), reload: async () => undefined, retry: async () => undefined, discard: async () => undefined,
-    setLocale: () => undefined, setTheme: () => undefined, startLockSetup: () => undefined, remove: async () => true, subscribe: () => () => undefined,
+    setLocale: () => undefined, setTheme: () => undefined, setLook: () => undefined, startLockSetup: () => undefined, remove: async () => true, subscribe: () => () => undefined,
   };
   return createSettingsController(host).html();
 }
