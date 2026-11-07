@@ -442,7 +442,7 @@ describe("discounted hosted receipts (item 2 money)", () => {
     expect(result).toMatchObject({ imported: 1, replayed: 0, nextCursor: 20 });
     expect(completions).toEqual([expect.objectContaining({ receiptId: "receipt_discnt01", state: "imported" })]);
     expect(createCanonicalSourceOrder).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(createCanonicalSourceOrder).mock.calls[0]![1]).toMatchObject({
+    expect(vi.mocked(createCanonicalSourceOrder).mock.calls[0]?.[1]).toMatchObject({
       discount: 1_500,
       deliveryCost: 500,
       items: [expect.objectContaining({ quantity: 3, unitPrice: 3_000 })],
@@ -461,7 +461,7 @@ describe("discounted hosted receipts (item 2 money)", () => {
       });
 
       expect(completions).toEqual([expect.objectContaining({ state: "imported" })]);
-      const input = vi.mocked(createCanonicalSourceOrder).mock.calls[0]![1] as Record<string, unknown>;
+      const input = vi.mocked(createCanonicalSourceOrder).mock.calls[0]?.[1] as Record<string, unknown>;
       expect(input).toMatchObject({ discount: 0, deliveryCost: 500 });
       expect(input.sourceDetails).not.toHaveProperty("hostedDiscountDzd");
     },
