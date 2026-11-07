@@ -27,3 +27,21 @@ export function assertOrderTotalWithinLimit(
     throw new ValidationError("The order total is too large", field);
   }
 }
+
+/**
+ * Refuse an order-level discount that is not a whole number of dinars, or that
+ * is larger than the items it comes off (a discount can never make the items
+ * cost less than nothing). The delivery cost is not discounted.
+ */
+export function assertDiscountWithinItems(
+  discountDzd: number,
+  itemsTotal: number,
+  field: string,
+): void {
+  if (!Number.isSafeInteger(discountDzd) || discountDzd < 0) {
+    throw new ValidationError("The discount must be a whole number of dinars, zero or more", field);
+  }
+  if (discountDzd > itemsTotal) {
+    throw new ValidationError("The discount is larger than the items", field);
+  }
+}

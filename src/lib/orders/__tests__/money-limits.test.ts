@@ -8,6 +8,7 @@ import { manualOrderEditSchema } from "@/lib/orders/manual-order-edit";
 import { manualOrderLinesEditSchema } from "@/lib/orders/manual-order-lines-edit";
 import {
   MAX_MONEY_DZD,
+  assertDiscountWithinItems,
   assertOrderTotalWithinLimit,
 } from "@/lib/orders/money-limits";
 
@@ -53,6 +54,30 @@ const returnRequest = {
 describe("MAX_MONEY_DZD", () => {
   it("is one dinar below one billion", () => {
     expect(MAX_MONEY_DZD).toBe(999_999_999);
+  });
+});
+
+describe("assertDiscountWithinItems", () => {
+  it("accepts a discount equal to the items, and 0", () => {
+    expect(() => assertDiscountWithinItems(9000, 9000, "discount")).not.toThrow();
+    expect(() => assertDiscountWithinItems(0, 0, "discount")).not.toThrow();
+  });
+
+  it("refuses one dinar more than the items with a coded 400 on the named field", () => {
+    expect(() => assertDiscountWithinItems(9001, 9000, "discount")).toThrow(
+      expect.objectContaining({
+        code: "VALIDATION_ERROR",
+        statusCode: 400,
+        field: "discount",
+        message: "The discount is larger than the items",
+      }),
+    );
+  });
+
+  it.each([-1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])("refuses the amount %s", (amount) => {
+    expect(() => assertDiscountWithinItems(amount, Number.MAX_SAFE_INTEGER, "discount")).toThrow(
+      expect.objectContaining({ code: "VALIDATION_ERROR", field: "discount" }),
+    );
   });
 });
 
