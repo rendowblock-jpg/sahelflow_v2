@@ -113,6 +113,10 @@ export function refundableItemValue(
   requestedQuantity: number,
   lineDiscountDzd: number,
 ): number {
+  // A line bought in 0 pieces would divide by zero (NaN), and a NaN maximum makes every "amount above the maximum" check false.
+  if (!Number.isSafeInteger(line.quantity) || line.quantity < 1) {
+    throw new RangeError("A line must have been bought in a whole number of pieces, at least one");
+  }
   return (
     lineTotalOf(line.unitPrice, requestedQuantity) -
     ceilDiv(lineDiscountDzd * requestedQuantity, line.quantity)

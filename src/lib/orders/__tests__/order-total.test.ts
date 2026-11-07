@@ -278,6 +278,14 @@ describe("refundableItemValue", () => {
     expect(refundableItemValue(line, 2, 0)).toBe(6000);
   });
 
+  it.each([[0], [-1], [1.5], [Number.NaN]])(
+    "refuses a line bought in a quantity of %s: it is not a count of pieces, and 0 or NaN would give a refund cap that never bites",
+    (quantity) => {
+      expect(() => refundableItemValue({ unitPrice: 3000, quantity }, 1, 0)).toThrow(RangeError);
+      expect(() => refundableItemValue({ unitPrice: 3000, quantity }, 1, 500)).toThrow(RangeError);
+    },
+  );
+
   it("refunding the pieces one at a time never adds up to more than was paid on 300 random lines", () => {
     const next = mulberry32(0x4efd);
     for (let n = 0; n < 300; n += 1) {

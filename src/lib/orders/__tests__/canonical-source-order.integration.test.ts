@@ -382,6 +382,45 @@ describe("canonical source order with an order-level discount (item 2 money)", (
     expect(await db.order.count()).toBe(1);
   });
 
+  it("refuses a discounted order that would be free: the kernel keeps its own rule, not only the receipt (D3)", async () => {
+    const product = await seedProduct(3000);
+
+    await expect(
+      createCanonicalSourceOrder(
+        context,
+        discounted(product.id, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", { discount: 9000, deliveryCost: 0 }),
+      ),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", field: "discount" });
+    expect(await db.order.count()).toBe(0);
+    expect(await db.businessCommand.count()).toBe(0);
+
+    // One dinar short of the whole items, or any delivery cost, leaves something to collect.
+    const almost = await createCanonicalSourceOrder(
+      context,
+      discounted(product.id, "cccccccc-cccc-4ccc-8ccc-cccccccccccc", { discount: 8999, deliveryCost: 0 }),
+    );
+    expect(almost.result.order).toMatchObject({ totalPrice: 1, discountDzd: 8999 });
+  });
+
+  it("writes the discount into the audit row of the created order only when there is one", async () => {
+    const product = await seedProduct(3000);
+    const withDiscount = await createCanonicalSourceOrder(
+      context,
+      discounted(product.id, "dddddddd-dddd-4ddd-8ddd-dddddddddddd"),
+    );
+    const without = await createCanonicalSourceOrder(
+      context,
+      discounted(product.id, "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", { discount: undefined }),
+    );
+    const afterOf = async (orderId: string) => {
+      const row = await db.auditLog.findFirstOrThrow({ where: { entityId: orderId, action: "order.source.created.v1" } });
+      return JSON.parse(row.after ?? "{}") as Record<string, unknown>;
+    };
+
+    expect(await afterOf(withDiscount.result.order.id)).toMatchObject({ totalPrice: 8000, discountDzd: 1500 });
+    expect(await afterOf(without.result.order.id)).not.toHaveProperty("discountDzd");
+  });
+
   it("refuses a discount from any source but a hosted storefront receipt, and still takes the same order without one", async () => {
     const product = await seedProduct(3000);
     const fromWhatsapp = {
@@ -390,7 +429,9 @@ describe("canonical source order with an order-level discount (item 2 money)", (
       sourceIdentity: "213555123456@s.whatsapp.net",
     };
 
-    await expect(createCanonicalSourceOrder(context, { ...fromWhatsapp, discount: 1 })).rejects.toThrow(/discount/);
+    await expect(createCanonicalSourceOrder(context, { ...fromWhatsapp, discount: 1 })).rejects.toThrow(
+      /Only an authoritative storefront receipt may carry an order discount/,
+    );
     expect(await db.order.count()).toBe(0);
 
     const plain = await createCanonicalSourceOrder(context, fromWhatsapp);

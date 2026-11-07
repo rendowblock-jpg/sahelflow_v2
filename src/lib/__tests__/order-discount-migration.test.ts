@@ -42,8 +42,11 @@ function databaseBefore(): InstanceType<typeof DatabaseSync> {
   return db;
 }
 
-/** Inserts one Order naming only the columns that have no default, whatever the table looks like today. */
-function insertOrder(db: InstanceType<typeof DatabaseSync>, id: string): void {
+/**
+ * Inserts one Order naming only the columns that have no default, whatever the table looks like today. `values` sets the ones
+ * a test cares about (a column that has a default is only written when it is named there).
+ */
+function insertOrder(db: InstanceType<typeof DatabaseSync>, id: string, values: Record<string, number> = {}): void {
   const columns = (
     db.prepare('PRAGMA table_info("Order")').all() as Array<{
       name: string;
@@ -52,8 +55,10 @@ function insertOrder(db: InstanceType<typeof DatabaseSync>, id: string): void {
       dflt_value: string | null;
       pk: number;
     }>
-  ).filter((column) => column.pk > 0 || (column.notnull === 1 && column.dflt_value === null));
-  const values = columns.map((column) => {
+  ).filter((column) => column.pk > 0 || (column.notnull === 1 && column.dflt_value === null) || column.name in values);
+  const row = columns.map((column) => {
+    const named = values[column.name];
+    if (named !== undefined) return named;
     if (column.name === "id") return id;
     if (column.type === "INTEGER") return 0;
     if (column.type === "DATETIME") return "2026-11-01 00:00:00";
@@ -61,12 +66,13 @@ function insertOrder(db: InstanceType<typeof DatabaseSync>, id: string): void {
   });
   db.prepare(
     `INSERT INTO "Order" (${columns.map((column) => `"${column.name}"`).join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
-  ).run(...values);
+  ).run(...row);
 }
 
 describe("Order.discountDzd migration (item 2 money)", () => {
-  it("is the newest migration and changes nothing but adding one column that defaults to 0", () => {
-    expect(migrationNames().at(-1)).toBe(NEW_MIGRATION);
+  it("exists and changes nothing but adding one column that defaults to 0", () => {
+    // Not "the newest migration": the next unrelated migration must not have to edit this test.
+    expect(migrationNames()).toContain(NEW_MIGRATION);
     const sql = sqlOf(NEW_MIGRATION);
     const statements = statementsOf(sql);
     expect(statements).toEqual(['ALTER TABLE "Order" ADD COLUMN "discountDzd" INTEGER NOT NULL DEFAULT 0']);
@@ -75,13 +81,14 @@ describe("Order.discountDzd migration (item 2 money)", () => {
 
   it("gives every order that existed before the migration a discount of 0 and keeps its other values", () => {
     const db = databaseBefore();
-    insertOrder(db, "old-1");
-    insertOrder(db, "old-2");
+    // Distinct, non-zero values: a migration that rewrote or zeroed a total or a delivery cost would show here.
+    insertOrder(db, "old-1", { totalPrice: 4200, deliveryCost: 500 });
+    insertOrder(db, "old-2", { totalPrice: 1500, deliveryCost: 0 });
     db.exec(sqlOf(NEW_MIGRATION));
-    const rows = db.prepare('SELECT "id", "discountDzd", "totalPrice" FROM "Order" ORDER BY "id"').all();
+    const rows = db.prepare('SELECT "id", "discountDzd", "totalPrice", "deliveryCost" FROM "Order" ORDER BY "id"').all();
     expect(rows).toEqual([
-      { id: "old-1", discountDzd: 0, totalPrice: 0 },
-      { id: "old-2", discountDzd: 0, totalPrice: 0 },
+      { id: "old-1", discountDzd: 0, totalPrice: 4200, deliveryCost: 500 },
+      { id: "old-2", discountDzd: 0, totalPrice: 1500, deliveryCost: 0 },
     ]);
   });
 

@@ -21,9 +21,17 @@ const norm = (value: string) => value.replace(/\s+/g, " ");
 
 describe.each(PAGE_LOCALES)("OrderTotals (%s)", (locale) => {
   const t = makeT(locale);
+  // The block shows the stored total and works nothing out, but the fixture is kept honest: 9000 - 1500 + 500 = 8000, and 9000 + 500 = 9500 without a discount.
   const view = (discountDzd?: number | null) =>
     render(
-      <OrderTotals t={t} locale={locale} itemsTotal={9000} deliveryCost={500} totalPrice={8000} discountDzd={discountDzd} />,
+      <OrderTotals
+        t={t}
+        locale={locale}
+        itemsTotal={9000}
+        deliveryCost={500}
+        totalPrice={discountDzd ? 9000 - discountDzd + 500 : 9500}
+        discountDzd={discountDzd}
+      />,
     ).container;
   /** The label of each row of the block, in order (the separator has no label). */
   const labels = (container: HTMLElement) =>
@@ -59,7 +67,7 @@ describe.each(PAGE_LOCALES)("OrderTotals (%s)", (locale) => {
     expect(labels(container)).toEqual([t("orders.detail.subtotal"), t("orders.detail.shipping"), t("orders.total")]);
     expect(text).toContain(norm(formatDZD(9000, locale)));
     expect(text).toContain(norm(formatDZD(500, locale)));
-    expect(text).toContain(norm(formatDZD(8000, locale)));
+    expect(text).toContain(norm(formatDZD(9500, locale)));
   });
 
   it("keeps the em dash for a free delivery", () => {

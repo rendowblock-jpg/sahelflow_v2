@@ -3251,14 +3251,15 @@ mod tests {
 
         assert_eq!(applied_migration_count(&database_path), migrations.len());
         let connection = Connection::open(&database_path).expect("open upgraded database");
-        let order: (String, i64) = connection
+        // "discountDzd" is the column the newest migration adds (item 2 money): an order written before it must read back as 0.
+        let order: (String, i64, i64) = connection
             .query_row(
-                r#"SELECT "orderNumber", "totalPrice" FROM "Order" WHERE "id" = 'order-1'"#,
+                r#"SELECT "orderNumber", "totalPrice", "discountDzd" FROM "Order" WHERE "id" = 'order-1'"#,
                 [],
-                |row| Ok((row.get(0)?, row.get(1)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )
             .expect("read preserved order");
-        assert_eq!(order, ("SF-1001".to_string(), 4200));
+        assert_eq!(order, ("SF-1001".to_string(), 4200, 0));
         let automation: (String, bool) = connection
             .query_row(
                 r#"SELECT "name", "dryRun" FROM "Automation" WHERE "id" = 'automation-1'"#,

@@ -317,6 +317,11 @@ export async function createCanonicalSourceOrder(
 
       const { itemsTotal, totalPrice } = orderTotalOf(canonicalItems, data.deliveryCost, data.discount);
       assertDiscountWithinItems(data.discount, itemsTotal, "discount");
+      // D3: a discounted order still has something to collect. A total of 0 can never be delivered (the cash-on-delivery receivable
+      // must be positive), so the kernel refuses it itself and does not rely on the receipt rule that runs before it.
+      if (data.discount > 0 && totalPrice === 0) {
+        throw new ValidationError("A discounted order must still have something to collect", "discount");
+      }
       assertOrderTotalWithinLimit(totalPrice, "items");
       const orderNumber = await nextOrderNumber(
         tx as unknown as BusinessPrincipalContext["prisma"],
@@ -421,6 +426,7 @@ export async function createCanonicalSourceOrder(
             version: order.version,
             customerId: order.customerId,
             totalPrice: order.totalPrice,
+            ...(data.discount > 0 ? { discountDzd: data.discount } : {}),
             itemCount: order.items.length,
             source: data.source,
           },
