@@ -342,6 +342,8 @@ const SWITCHED_CALLERS = [
   "src/lib/orders/manual-order-lines-edit.ts",
   "src/lib/orders/canonical-customer-return.ts",
   "src/lib/data/order-service.ts",
+  "src/lib/accounting/canonical-refund.ts",
+  "src/lib/orders/canonical-customer-return-projections.ts",
 ];
 
 function codeOf(relativePath: string): string {
@@ -354,12 +356,12 @@ describe("order total source contract", () => {
   it.each(SWITCHED_CALLERS)("%s uses the shared order-total functions", (file) => {
     const code = codeOf(file);
     expect(code).toMatch(/from "@\/lib\/orders\/order-total"/);
-    expect(code).toMatch(/\b(orderTotalOf|lineTotalOf|sumLineTotals)\(/);
+    expect(code).toMatch(/\b(orderTotalOf|lineTotalOf|sumLineTotals|refundableItemValue)\(/);
   });
 
   it.each(SWITCHED_CALLERS)("%s has no inline unitPrice x quantity arithmetic", (file) => {
     const code = codeOf(file);
-    expect(code).not.toMatch(/unitPrice\s*\*\s*[\w.]*quantity/);
-    expect(code).not.toMatch(/quantity\s*\*\s*[\w.]*unitPrice/);
+    expect(code).not.toMatch(/unitPrice\s*\*\s*[\w.]*quantity/i);
+    expect(code).not.toMatch(/quantity\s*\*\s*[\w.]*unitPrice/i);
   });
 });

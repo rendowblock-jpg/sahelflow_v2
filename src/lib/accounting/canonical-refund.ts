@@ -23,6 +23,7 @@ import {
   returnProjectionKeys,
   updateCanonicalReturnProjection,
 } from "@/lib/orders/canonical-return-authority";
+import { allocateOrderDiscount, refundableItemValue } from "@/lib/orders/order-total";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 
 const idempotencyKeySchema = z.string().trim().min(8).max(200);
@@ -123,6 +124,8 @@ async function returnRefundLimit(
       unitPrice: number;
     }>;
     deliveryCost: number;
+    /** The order-level discount; the returned items are valued net of their pro-rata share of it. */
+    discountDzd: number;
     includeDeliveryCost: boolean;
   },
 ): Promise<{
@@ -139,6 +142,7 @@ async function returnRefundLimit(
     throw new ConflictError("Return case has no canonical requested-item facts");
   }
   const byOrderItem = new Map(input.orderItems.map((item) => [item.id, item]));
+  const discountShares = allocateOrderDiscount(input.orderItems, input.discountDzd);
   let itemValue = 0;
   for (const item of requested) {
     const orderItem = byOrderItem.get(item.orderItemId);
@@ -147,7 +151,7 @@ async function returnRefundLimit(
         `Return item authority is invalid for '${item.orderItemId}'`,
       );
     }
-    itemValue += orderItem.unitPrice * item.quantity;
+    itemValue += refundableItemValue(orderItem, item.quantity, discountShares.get(orderItem.id) ?? 0);
   }
   const fullOrderReturn =
     requested.length === input.orderItems.length &&
@@ -253,6 +257,7 @@ export async function issueCanonicalRefund(
           unitPrice: item.unitPrice,
         })),
         deliveryCost: order.deliveryCost,
+        discountDzd: order.discountDzd,
         includeDeliveryCost: data.includeDeliveryCost,
       });
       const before = await effectiveRefundAmount(tx, order.id);

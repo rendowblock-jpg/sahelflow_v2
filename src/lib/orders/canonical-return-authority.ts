@@ -21,6 +21,7 @@ interface ReturnOrderProjectionRow {
   version: number | bigint;
   totalPrice: number | bigint;
   deliveryCost: number | bigint | null;
+  discountDzd: number | bigint;
   wilaya: string;
   commune: string;
   fulfillmentState: string | null;
@@ -53,6 +54,8 @@ export interface CanonicalReturnOrder {
   version: number;
   totalPrice: number;
   deliveryCost: number;
+  /** Item 2: the order-level discount in whole dinars; a return is valued net of its share of it. */
+  discountDzd: number;
   wilaya: string;
   commune: string;
   address: string;
@@ -120,7 +123,7 @@ export async function loadCanonicalReturnOrder(
   const rows = await tx.$queryRaw<ReturnOrderProjectionRow[]>`
     SELECT
       "id", "orderNumber", "customerId", "source", "sourceMetadata",
-      "status", "version", "totalPrice", "deliveryCost", "wilaya",
+      "status", "version", "totalPrice", "deliveryCost", "discountDzd", "wilaya",
       "commune", "fulfillmentState", "deliveryState", "inventoryState",
       "codState", "returnState", "refundState"
     FROM "Order"
@@ -168,6 +171,7 @@ export async function loadCanonicalReturnOrder(
     version: integer(projection.version, "order version"),
     totalPrice: integer(projection.totalPrice, "order total"),
     deliveryCost: integer(projection.deliveryCost, "delivery cost"),
+    discountDzd: integer(projection.discountDzd, "order discount"),
     customer,
     items,
   };

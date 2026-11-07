@@ -78,6 +78,8 @@ interface SeedOptions {
   price?: number;
   cost?: number;
   deliveryCost?: number;
+  /** Item 2: an order-level discount stored on the order (the hosted-bundle receipt's discountDzd). */
+  discountDzd?: number;
 }
 
 async function seedDeliveredOrder(options: SeedOptions = {}) {
@@ -86,6 +88,7 @@ async function seedDeliveredOrder(options: SeedOptions = {}) {
   const stock = options.stock ?? 10;
   const price = options.price ?? 2500;
   const deliveryCost = options.deliveryCost ?? 0;
+  const discountDzd = options.discountDzd ?? 0;
   const category = await db.category.create({
     data: { name: `Customer return category ${sequence}` },
   });
@@ -119,8 +122,9 @@ async function seedDeliveredOrder(options: SeedOptions = {}) {
       inventoryState: "unreserved",
       codState: "not_expected",
       customerId: customer.id,
-      totalPrice: price * quantity + deliveryCost,
+      totalPrice: price * quantity - discountDzd + deliveryCost,
       deliveryCost,
+      discountDzd,
       wilaya: "Alger",
       commune: "Alger Centre",
       address: "Test",
@@ -716,5 +720,93 @@ describe("canonical customer returns, exchanges and refunds", () => {
       orderVersion: requested.result.orderVersion,
       availableActions: ["approve", "reject", "cancel"],
     });
+  });
+});
+
+/**
+ * Item 2 money (M2a, task 5): the lines of a discounted order stay at the plain unit price, so a return must be valued net of its
+ * share of the order discount. The refund limit reads the Order table through an explicit column list, so a column that is not
+ * named there would silently leave every refund at the plain price.
+ */
+describe("returns and refunds of an order that carries a discount (item 2 money)", () => {
+  async function returnedOrder(options: {
+    quantity: number;
+    returned: number;
+    discountDzd: number;
+    key: string;
+    price?: number;
+  }) {
+    const { order } = await seedDeliveredOrder({
+      quantity: options.quantity,
+      price: options.price ?? 3000,
+      deliveryCost: 500,
+      discountDzd: options.discountDzd,
+    });
+    const orderItem = required(order.items[0], "order item");
+    const requested = await requestReturn({
+      orderId: order.id,
+      expectedVersion: 5,
+      orderItemId: orderItem.id,
+      quantity: options.returned,
+      key: `${options.key}-request`,
+    });
+    const lifecycle = await completeReturn({
+      orderId: order.id,
+      returnId: requested.result.returnId,
+      orderItemId: orderItem.id,
+      quantity: options.returned,
+      startVersion: requested.result.orderVersion,
+    });
+    return { order, returnId: requested.result.returnId, version: lifecycle.completed.result.orderVersion };
+  }
+  const refund = (
+    returned: { order: { id: string }; returnId: string; version: number },
+    amount: number,
+    key: string,
+    extra: { includeDeliveryCost?: boolean } = {},
+  ) =>
+    issueCanonicalRefund(context, {
+      orderId: returned.order.id,
+      returnId: returned.returnId,
+      expectedVersion: returned.version,
+      amount,
+      method: "cash",
+      reasonCode: "discount-refund",
+      occurredAt: new Date("2026-07-30T13:15:00.000Z"),
+      idempotencyKey: key,
+      ...extra,
+    });
+
+  it.each([
+    [1500, 2500],
+    [1000, 2666],
+  ])("returning 1 of 3 pieces of 3000 under a discount of %d refunds at most %d, and the position says so", async (discountDzd, most) => {
+    const returned = await returnedOrder({ quantity: 3, returned: 1, discountDzd, key: `discount-partial-${discountDzd}` });
+
+    await expect(refund(returned, most + 1, `discount-over-${discountDzd}`)).rejects.toThrow(/exact returned item value/i);
+    const position = await getCanonicalCustomerReturnPosition(context, returned.order.id);
+    expect(position.returnCase).toMatchObject({ itemValue: most, fullOrderReturn: false, maximumWithDeliveryCost: most });
+
+    const issued = await refund(returned, most, `discount-exact-${discountDzd}`);
+    expect(issued.result).toMatchObject({ effectiveRefundAmount: most });
+    expect(await db.canonicalRefund.count()).toBe(1);
+  });
+
+  it("returning every piece values the items net of the whole discount, and the delivery cost comes on top up to the stored total", async () => {
+    const returned = await returnedOrder({ quantity: 3, returned: 3, discountDzd: 1500, key: "discount-full" });
+
+    await expect(refund(returned, 7501, "discount-full-over")).rejects.toThrow(/exact returned item value/i);
+    const position = await getCanonicalCustomerReturnPosition(context, returned.order.id);
+    expect(position.returnCase).toMatchObject({ itemValue: 7500, fullOrderReturn: true, maximumWithDeliveryCost: 8000 });
+
+    const issued = await refund(returned, 8000, "discount-full-exact", { includeDeliveryCost: true });
+    expect(issued.result).toMatchObject({ effectiveRefundAmount: 8000 });
+  });
+
+  it("an order without a discount keeps refunding at the plain price", async () => {
+    const returned = await returnedOrder({ quantity: 3, returned: 1, discountDzd: 0, key: "discount-none" });
+
+    await expect(refund(returned, 3001, "discount-none-over")).rejects.toThrow(/exact returned item value/i);
+    expect((await refund(returned, 3000, "discount-none-exact")).result).toMatchObject({ effectiveRefundAmount: 3000 });
   });
 });

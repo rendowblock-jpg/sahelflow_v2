@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { BusinessPrincipalContext } from "@/lib/business-truth/principal";
+import { allocateOrderDiscount, refundableItemValue } from "@/lib/orders/order-total";
 import {
   canonicalReceivableAmount,
   canonicalReturnCaseForOrder,
@@ -199,8 +200,15 @@ export async function getCanonicalCustomerReturnPosition(
           requested.find((entry) => entry.orderItemId === item.id)
             ?.requestedQuantity === item.quantity,
       );
+    const discountShares = allocateOrderDiscount(order.items, order.discountDzd);
     const itemValue = requested.reduce(
-      (sum, item) => sum + item.unitPrice * item.requestedQuantity,
+      (sum, item) =>
+        sum +
+        refundableItemValue(
+          { unitPrice: item.unitPrice, quantity: item.purchasedQuantity },
+          item.requestedQuantity,
+          discountShares.get(item.orderItemId) ?? 0,
+        ),
       0,
     );
     const returnRefunds = refunds.filter(
