@@ -1,4 +1,5 @@
 // The look picker in Settings: four choices, one pressed, saved under sf.look, a bad saved value means the default look.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_LOOK, LOOK_KEY, LOOKS, parseLook } from "../src/look";
 import { renderSettings } from "../src/views/settings/render";
@@ -30,6 +31,14 @@ describe("Settings shows the picker", () => {
       }
     });
   }
+  it("the four looks sit two by two in a grid, in both Settings templates (a flex row left Dune alone on a second line)", () => {
+    const shell = renderApp({ locale: "fr", theme: "system", look: "sahel", screen: "settings", state: "ready", now: 0, online: true, updateReady: false, canInstall: false, installed: false, ios: false,
+      projection: null, step: null, fingerprint: null, failure: null, lockMode: "enter", lockNotice: null, hasLock: false, version: "0.1.0", confirmRemove: false, removeError: null, removed: false } as unknown as View);
+    for (const h of [renderSettings(model("sahel")), shell]) expect(h).toContain('<div class="segs segs-grid" role="group" aria-labelledby="s-y">');
+    const css = readFileSync(new URL("../src/styles/app.css", import.meta.url), "utf8");
+    expect(css).toMatch(/\.segs-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/);
+    expect(css).toMatch(/\.segs-grid \.seg\{justify-content:center\}/);
+  });
   it("the desktop's words: Color style / Style de couleur / نمط الألوان and الساحل الأطلس الواحة الكثبان", () => {
     expect(catalogs.en["settings.look"]).toBe("Color style"); expect(catalogs.fr["settings.look"]).toBe("Style de couleur"); expect(catalogs.ar["settings.look"]).toBe("نمط الألوان");
     expect(LOOKS.map((l) => catalogs.ar[`settings.look.${l}`])).toEqual(["الساحل", "الأطلس", "الواحة", "الكثبان"]);

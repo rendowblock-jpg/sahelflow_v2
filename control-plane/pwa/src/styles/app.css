@@ -39,6 +39,9 @@ p{margin:0 0 12px}
 .btn:disabled{opacity:.6;cursor:not-allowed}
 .actions{display:flex;flex-wrap:wrap;gap:12px;margin-block:12px}
 .segs{display:flex;flex-wrap:wrap;gap:8px}
+/* the look picker: four choices, always two by two (a flex row left "Dune" alone on a second line at every phone width) */
+.segs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.segs-grid .seg{justify-content:center}
 /* the look picker: one dot per look, in that look's own primary (--sw-* come from looks.css) */
 .seg[data-s-look],.seg[data-look]{display:inline-flex;align-items:center;gap:8px}
 .seg[data-s-look]::before,.seg[data-look]::before{content:"";flex:none;inline-size:12px;block-size:12px;border-radius:50%;background:var(--sw);border:1px solid var(--edge)}
