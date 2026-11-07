@@ -35,6 +35,7 @@ export async function buildPwa({ outDir = join(HERE, "dist"), relayUrl = "https:
   }
 
   let css = await readFile(join(HERE, "src/styles/app.css"), "utf8");
+  css = await readFile(join(HERE, "src/styles/looks.css"), "utf8") + "\n" + css; // the four looks x light/dark, generated from the desktop app (tools/gen-looks.mjs)
   css += "\n" + await readFile(join(HERE, "src/styles/orders.css"), "utf8"); // W3-F4: orders + notes rules, one line
   css += "\n" + await readFile(join(HERE, "src/styles/inbox.css"), "utf8"); // W3-F5: inbox + chat rules, one line
   css = css.replace(/__FONT:([\w-]+)__/g, (_m, n) => assets[n] ?? (() => { throw new Error(`font ${n} missing`); })());
@@ -65,14 +66,14 @@ export async function buildPwa({ outDir = join(HERE, "dist"), relayUrl = "https:
   for (const base of reach) for (const dep of parts.keys()) if (!reach.has(dep) && parts.get(base).includes(dep)) reach.add(dep);
   for (const base of reach) assets[base === "app.js" ? "app" : base.replace(/\.js$/, "")] = `/assets/${await nameOf(base)}`;
 
-  const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"><meta name="theme-color" content="#F3EEE4" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#14161A" media="(prefers-color-scheme: dark)"><meta name="referrer" content="no-referrer"><title>SahelFlow</title><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/icon-192.png"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"><link rel="stylesheet" href="${assets.css}">`;
+  const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"><meta name="theme-color" content="#EFEFE9" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)"><meta name="referrer" content="no-referrer"><title>SahelFlow</title><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/icon-192.png"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"><link rel="stylesheet" href="${assets.css}">`;
   await writeFile(join(outDir, "index.html"), `<!doctype html><html lang="ar" dir="rtl"><head>${head}<script src="${assets.boot}"></script></head><body><div id="app"></div><script type="module" src="${assets.app}"></script></body></html>`);
   await writeFile(join(outDir, "offline.html"), `<!doctype html><html lang="ar" dir="rtl"><head>${head}<script src="${assets.boot}"></script></head><body><div id="app"><main><h1>SahelFlow</h1><div class="note"><p lang="ar">لا يوجد اتصال، والتطبيق غير محفوظ بعد على هذا الهاتف. اتصل بالإنترنت مرة واحدة ثم أعد المحاولة.</p><p lang="fr" dir="ltr">Pas de connexion et l'application n'est pas encore enregistrée sur ce téléphone. Connectez-vous une fois, puis réessayez.</p><p lang="en" dir="ltr">No connection, and the app is not saved on this phone yet. Connect once, then try again.</p></div><a class="btn btn-primary" href="/">SahelFlow</a></main></div></body></html>`);
 
   const manifest = {
     id: "/", name: "SahelFlow", short_name: "SahelFlow", description: "SahelFlow companion for the shop owner", lang: "ar", dir: "rtl",
     start_url: "/", scope: "/", display: "standalone", display_override: ["standalone", "minimal-ui"], orientation: "portrait",
-    theme_color: "#F3EEE4", background_color: "#F3EEE4", categories: ["business", "productivity"],
+    theme_color: "#EFEFE9", background_color: "#EFEFE9", categories: ["business", "productivity"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

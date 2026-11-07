@@ -24,7 +24,7 @@ describe("manifest: the Chrome installability criteria that can be checked stati
     expect(String(x.start_url).startsWith(String(x.scope))).toBe(true);
     expect(["standalone", "fullscreen", "minimal-ui"]).toContain(x.display);
     expect(x.dir).toBe("rtl"); expect(x.lang).toBe("ar");
-    expect(x.theme_color).toBe("#F3EEE4"); expect(x.background_color).toBe("#F3EEE4");
+    expect(x.theme_color).toBe("#EFEFE9"); expect(x.background_color).toBe("#EFEFE9");
     expect(x.shortcuts).toBeUndefined(); expect(x.prefers_related_applications).toBeUndefined();
   });
   it("has real PNG icons of the declared size: 192 and 512 any, 512 maskable", async () => {

@@ -6,17 +6,18 @@ import { isOpen } from "../outbox/state";
 import type { Db } from "../storage/idb";
 import type { SettingsHost } from "../views/settings/controller";
 import type { SettingsRead } from "../views/settings/render";
+import type { Look } from "../look";
 import type { Theme } from "../views/view";
 
 export type SettingsHostDeps = Readonly<{
-  now(): number; locale(): Locale; online(): boolean; timeZone?: string; theme(): Theme; hasLock(): boolean; revoked(): boolean;
+  now(): number; locale(): Locale; online(): boolean; timeZone?: string; theme(): Theme; look(): Look; hasLock(): boolean; revoked(): boolean;
   /** The time of the sealed copy the Today numbers come from (never "now"); null before the first one. */
   projectionAt(): number | null;
   pairedAt(): Promise<number | null>;
   db(): Promise<Db>;
   flush(): Promise<void>;
   refresh(): Promise<void>;
-  setLocale(l: Locale): void; setTheme(x: Theme): void; startLockSetup(): void;
+  setLocale(l: Locale): void; setTheme(x: Theme): void; setLook(x: Look): void; startLockSetup(): void;
   wipe(): Promise<Readonly<{ ok: boolean }>>;
 }>;
 export type SettingsHostHandle = SettingsHost & Readonly<{ notify(): void }>;
@@ -40,7 +41,7 @@ export function createSettingsHost(deps: SettingsHostDeps): SettingsHostHandle {
     notify();
   }
   return {
-    now: deps.now, locale: deps.locale, online: deps.online, theme: deps.theme, hasLock: deps.hasLock, ...(deps.timeZone ? { timeZone: deps.timeZone } : {}),
+    now: deps.now, locale: deps.locale, online: deps.online, theme: deps.theme, look: deps.look, hasLock: deps.hasLock, ...(deps.timeZone ? { timeZone: deps.timeZone } : {}),
     read(): SettingsRead {
       if (deps.revoked()) return { status: "revoked" };
       if (snap) return { status: "ready", asOf: deps.projectionAt(), pairedAt: snap.pairedAt, commands: snap.commands };
@@ -60,6 +61,7 @@ export function createSettingsHost(deps: SettingsHostDeps): SettingsHostHandle {
     },
     setLocale(l) { deps.setLocale(l); notify(); },
     setTheme(x) { deps.setTheme(x); notify(); },
+    setLook(x) { deps.setLook(x); notify(); },
     startLockSetup: deps.startLockSetup,
     async remove() {
       const result = await deps.wipe();

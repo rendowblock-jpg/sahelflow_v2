@@ -9,11 +9,11 @@ function setup(records: OutboxRecord[] = [], o: { revoked?: boolean; wipeOk?: bo
   const db = memDb(); const log: string[] = []; let broken = o.dbThrows === true;
   const ready = Promise.all(records.map((r) => db.put("outbox", r.commandId, r)));
   const deps: SettingsHostDeps = {
-    now: () => NOW, locale: () => "en", online: () => true, theme: () => "system", hasLock: () => false, revoked: () => o.revoked === true,
+    now: () => NOW, locale: () => "en", online: () => true, theme: () => "system", look: () => "sahel", hasLock: () => false, revoked: () => o.revoked === true,
     projectionAt: () => NOW - 3 * 3_600_000, pairedAt: async () => NOW - 86_400_000,
     db: async () => { if (broken) throw new Error("idb"); await ready; return db; },
     flush: async () => { log.push("flush"); }, refresh: async () => { log.push("refresh"); },
-    setLocale: (l) => { log.push(`lang:${l}`); }, setTheme: (x) => { log.push(`theme:${x}`); }, startLockSetup: () => { log.push("lock"); },
+    setLocale: (l) => { log.push(`lang:${l}`); }, setTheme: (x) => { log.push(`theme:${x}`); }, setLook: (x) => { log.push(`look:${x}`); }, startLockSetup: () => { log.push("lock"); },
     wipe: async () => { log.push("wipe"); return { ok: o.wipeOk !== false }; },
   };
   return { host: createSettingsHost(deps), db, log, fix: () => { broken = false; } };

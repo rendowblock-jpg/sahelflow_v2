@@ -2,13 +2,14 @@
 import { formatTime, t, type Locale } from "../../i18n";
 import { renderSkeleton } from "../../kit/skeleton";
 import type { OutboxRecord } from "../../outbox/state";
+import type { Look } from "../../look";
 import { esc, type Theme } from "../view";
 
 export type SettingsRead =
   | Readonly<{ status: "loading" }> | Readonly<{ status: "error" }> | Readonly<{ status: "revoked" }>
   | Readonly<{ status: "ready"; asOf: number | null; pairedAt: number | null; commands: readonly OutboxRecord[] }>;
 export type SettingsModel = Readonly<{
-  locale: Locale; theme: Theme; online: boolean; timeZone?: string; hasLock: boolean; read: SettingsRead;
+  locale: Locale; theme: Theme; look: Look; online: boolean; timeZone?: string; hasLock: boolean; read: SettingsRead;
   confirmRemove: boolean; removeError: boolean; removed: boolean;
 }>;
 
@@ -43,6 +44,7 @@ export function renderSettings(m: SettingsModel): string {
   const seg = (a: string, id: string, label: string, on: boolean, lang = ""): string => `<button type="button" class="seg" data-act="s-${a}" data-s-${a}="${id}" aria-pressed="${on}"${lang}>${label}</button>`;
   const langs = (["ar", "fr", "en"] as const).map((l) => seg("lang", l, l === "ar" ? "العربية" : l === "fr" ? "Français" : "English", L === l, ` lang="${l}"`)).join("");
   const themes = (["light", "dark", "system"] as const).map((x) => seg("theme", x, tr(`settings.theme.${x}`), m.theme === x)).join("");
+  const looks = (["sahel", "atlas", "oasis", "dune"] as const).map((x) => seg("look", x, tr(`settings.look.${x}`), m.look === x)).join("");
   const lock = `${m.hasLock ? `<p class="stamp stamp-ok">${tr("settings.lock.active")}</p>` : `<p class="hint">${tr("settings.lock.hint")}</p>${btn("s-lock-set", tr("settings.lock.set"), "ghost")}`}<p class="hint" data-testid="pin-note">${tr("settings.pinNote")}</p>`;
   const list = r.status !== "ready" ? "" : `<section class="sheet" aria-labelledby="s-c"><h2 id="s-c">${tr("settings.commands.title")}</h2>${r.commands.length === 0 ? `<p class="hint">${tr("settings.commands.empty")}</p>` : `<ul class="cmds">${r.commands.map((c) => commandRow(c, m)).join("")}</ul>`}</section>`;
   const remove = m.removed ? `<p class="stamp stamp-ok" role="status">${tr("settings.remove.done")}</p>`
@@ -50,5 +52,5 @@ export function renderSettings(m: SettingsModel): string {
     : `<p>${tr("settings.remove.body")}</p>${btn("s-remove", tr("settings.remove.button"), "ghost")}`;
   const err = m.removeError ? `<div class="note alert" role="alert"><p>${tr("settings.error.wipe")}</p></div>` : "";
   const off = m.online ? "" : `<p class="banner" role="status">${tr("settings.offline.note")}</p>`;
-  return wrap(m.online ? r.status : "offline", `${off}${info}<section class="sheet" aria-labelledby="s-l"><h2 id="s-l">${tr("settings.language")}</h2><div class="segs" role="group" aria-labelledby="s-l">${langs}</div></section><section class="sheet" aria-labelledby="s-t"><h2 id="s-t">${tr("settings.theme")}</h2><div class="segs" role="group" aria-labelledby="s-t">${themes}</div></section><section class="sheet" aria-labelledby="s-k"><h2 id="s-k">${tr("settings.lock")}</h2>${lock}</section>${list}<section class="sheet" aria-labelledby="rm-h"><h2 id="rm-h">${tr("settings.remove.title")}</h2>${err}${remove}</section>`);
+  return wrap(m.online ? r.status : "offline", `${off}${info}<section class="sheet" aria-labelledby="s-l"><h2 id="s-l">${tr("settings.language")}</h2><div class="segs" role="group" aria-labelledby="s-l">${langs}</div></section><section class="sheet" aria-labelledby="s-t"><h2 id="s-t">${tr("settings.theme")}</h2><div class="segs" role="group" aria-labelledby="s-t">${themes}</div></section><section class="sheet" aria-labelledby="s-y"><h2 id="s-y">${tr("settings.look")}</h2><div class="segs segs-grid" role="group" aria-labelledby="s-y">${looks}</div></section><section class="sheet" aria-labelledby="s-k"><h2 id="s-k">${tr("settings.lock")}</h2>${lock}</section>${list}<section class="sheet" aria-labelledby="rm-h"><h2 id="rm-h">${tr("settings.remove.title")}</h2>${err}${remove}</section>`);
 }
