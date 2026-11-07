@@ -5,7 +5,10 @@
  * Verified in the code (audit lead S03c-05):
  *   - Order.totalPrice = Σ items + deliveryCost at creation
  *     (manual-order.ts, canonical-source-order.ts) and again on any
- *     price-bearing edit (order-service.ts);
+ *     price-bearing edit (order-service.ts). A hosted bundle (item 2 money)
+ *     also carries an order-level discount: there totalPrice = Σ items -
+ *     discount + deliveryCost, so the courier collects the discounted amount
+ *     and the line prices are never summed by a booking path;
  *   - a canonical order cannot be edited at all, and a legacy order's price
  *     fields are locked once it is confirmed, which is the status a shipment
  *     needs before it can be booked, so the total cannot drift between the
@@ -76,13 +79,15 @@ describe("courier COD amount == order total (S03c-05)", () => {
   });
 
   it("the order total includes the delivery cost when the order is created and when it is re-priced", () => {
-    // The sum (items + delivery cost) lives in orders/order-total.ts; both
-    // creators must pass their delivery cost to it.
+    // The sum (items - discount + delivery cost) lives in orders/order-total.ts; both
+    // creators must pass their delivery cost to it, and the source-order creator
+    // (the only one that can carry a discount) must pass its discount too: if it
+    // dropped it, the courier would be asked to collect the plain price.
     expect(manualOrder).toMatch(
       /orderTotalOf\(canonicalItems, data\.deliveryCost\)/,
     );
     expect(canonicalSourceOrder).toMatch(
-      /orderTotalOf\(canonicalItems, data\.deliveryCost\)/,
+      /orderTotalOf\(canonicalItems, data\.deliveryCost, data\.discount\)/,
     );
     expect(orderService).toContain("effectiveDeliveryCost");
     expect(orderService).toContain("recomputedTotalPrice");
