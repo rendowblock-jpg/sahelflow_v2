@@ -7,6 +7,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { orderService } from "@/lib/data/order-service";
 import { createCanonicalSourceOrder } from "../canonical-source-order";
 import { submitCanonicalSourceDraft } from "../canonical-source-draft";
 import {
@@ -877,5 +878,99 @@ describe("editing the lines of a pending order that came from another source", (
     await expect(
       executeManualOrderLinesEdit(context, linesCommand(order.id, "lines-wa-meta", [{ id: item.id, quantity: 9 }])),
     ).rejects.toMatchObject({ code: "ORDER_LINES_NOT_EDITABLE_FOR_SOURCE" });
+  });
+});
+
+/**
+ * Item 2 money (M2a, task 3): the order-level discount lives on the order. A recompute of the total (lines edit, legacy edit)
+ * has to carry the stored discount or it silently charges the plain price.
+ */
+describe("editing the lines of an order that carries a discount (item 2 money)", () => {
+  const sourceContext = {
+    prisma: db as never,
+    businessPrincipal: sourceBusinessPrincipal("storefront", "lines-test"),
+  };
+
+  async function discountedStorefrontOrder(sourceDetails?: Record<string, unknown>) {
+    const { product } = await seedProduct("Bundle product", 2500);
+    const created = await createCanonicalSourceOrder(sourceContext, {
+      idempotencyKey: `discount-intake-${sequence}`,
+      source: "storefront",
+      sourceIdentity: "lines-test",
+      sourceOrderId: `order-discount-${sequence}`,
+      ...(sourceDetails ? { sourceDetails } : {}),
+      newCustomer: { name: "Bundle customer", phone: "05 55 12 34 56", wilaya: "Alger", commune: "Alger Centre", address: "1 Bundle Street" },
+      items: [{ productId: product.id, quantity: 2 }],
+      wilaya: "Alger",
+      commune: "Alger Centre",
+      address: "1 Bundle Street",
+      phone: "05 55 12 34 56",
+      deliveryCost: 600,
+      discount: 500,
+    });
+    const order = await db.order.findUniqueOrThrow({ where: { id: created.result.order.id }, include: { items: true } });
+    return { order, item: order.items[0] as (typeof order.items)[number] };
+  }
+
+  it("keeps the stored discount when the lines change: 2500 - 500 + 600", async () => {
+    const { order, item } = await discountedStorefrontOrder();
+    expect(order).toMatchObject({ totalPrice: 5100, discountDzd: 500, version: 1 });
+
+    const edited = await executeManualOrderLinesEdit(context, linesCommand(order.id, "lines-discount-keep", [{ id: item.id, quantity: 1 }]));
+
+    expect(edited.result).toMatchObject({ itemsTotal: 2500, deliveryCost: 600, totalPrice: 2600, version: 2 });
+    expect(await db.order.findUniqueOrThrow({ where: { id: order.id } })).toMatchObject({ totalPrice: 2600, discountDzd: 500 });
+  });
+
+  it("refuses lines that are worth less than the discount, and leaves the order as it was", async () => {
+    const { order, item } = await discountedStorefrontOrder();
+
+    await expect(
+      executeManualOrderLinesEdit(context, linesCommand(order.id, "lines-discount-too-big", [{ id: item.id, quantity: 1, unitPrice: 400 }])),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", field: "lines" });
+
+    expect(await db.order.findUniqueOrThrow({ where: { id: order.id } })).toMatchObject({ totalPrice: 5100, discountDzd: 500, version: 1 });
+    expect(await db.orderItem.findUniqueOrThrow({ where: { id: item.id } })).toMatchObject({ quantity: 2, unitPrice: 2500 });
+  });
+
+  it("still refuses a hosted order, and its stored discount stays what the receipt said", async () => {
+    const { order, item } = await discountedStorefrontOrder({ hostedDelegationAuthority: "v1", hostedReleaseId: "release-00000001" });
+    expect(order.discountDzd).toBe(500);
+
+    await expect(
+      executeManualOrderLinesEdit(context, linesCommand(order.id, "lines-discount-hosted", [{ id: item.id, quantity: 1 }])),
+    ).rejects.toMatchObject({ code: "ORDER_LINES_NOT_EDITABLE_FOR_SOURCE", statusCode: 409 });
+    expect(await db.order.findUniqueOrThrow({ where: { id: order.id } })).toMatchObject({ totalPrice: 5100, discountDzd: 500 });
+  });
+});
+
+describe("the legacy order edit keeps a stored discount (item 2 money)", () => {
+  async function legacyOrderWithDiscount() {
+    const seeded = await seedOrder({ source: "whatsapp", sourceMetadata: null });
+    const order = await db.order.update({
+      where: { id: seeded.order.id },
+      data: { discountDzd: 300, totalPrice: 2500 * 2 - 300 + 600 },
+      include: { items: true },
+    });
+    return { order, item: seeded.item };
+  }
+
+  it("a new delivery cost recomputes items - discount + delivery", async () => {
+    const { order } = await legacyOrderWithDiscount();
+    expect(order.totalPrice).toBe(5300);
+
+    await orderService.update(context, order.id, { deliveryCost: 800 });
+
+    expect(await db.order.findUniqueOrThrow({ where: { id: order.id } })).toMatchObject({ totalPrice: 5500, deliveryCost: 800, discountDzd: 300 });
+  });
+
+  it("new lines recompute items - discount + the stored delivery cost", async () => {
+    const { order, item } = await legacyOrderWithDiscount();
+
+    await orderService.update(context, order.id, {
+      items: [{ id: item.id, productName: item.productName, quantity: 3, unitPrice: 2500, total: 7500 }],
+    });
+
+    expect(await db.order.findUniqueOrThrow({ where: { id: order.id } })).toMatchObject({ totalPrice: 7500 - 300 + 600, discountDzd: 300 });
   });
 });

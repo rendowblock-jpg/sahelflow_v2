@@ -49,6 +49,8 @@ const receiptSchema = z.object({
   subtotalDzd: z.number().int().nonnegative(),
   shippingDzd: z.number().int().nonnegative(),
   totalDzd: z.number().int().nonnegative(),
+  // Item 2: one order-level discount for a hosted bundle. Absent means 0. Lines stay at the plain unit price.
+  discountDzd: z.number().int().nonnegative().optional(),
   createdAt: z.string().datetime(),
   lines: z.array(z.object({
     itemKey: z.string().regex(ITEM_KEY),
@@ -95,7 +97,15 @@ function validateReceiptTotals(receipt: z.infer<typeof receiptSchema>): void {
     }
     subtotal += total;
   }
-  if (subtotal !== receipt.subtotalDzd || subtotal + receipt.shippingDzd !== receipt.totalDzd) {
+  const discount = receipt.discountDzd ?? 0;
+  // total = subtotal - discount + shipping; the discount cannot exceed the subtotal, and a discounted order cannot be free
+  // (a delivered order needs one positive COD receivable).
+  if (
+    subtotal !== receipt.subtotalDzd ||
+    discount > subtotal ||
+    subtotal - discount + receipt.shippingDzd !== receipt.totalDzd ||
+    (discount > 0 && receipt.totalDzd === 0)
+  ) {
     throw new Error("Storefront receipt totals are inconsistent");
   }
 }
@@ -457,6 +467,7 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
             hostedReleaseId: receipt.releaseId,
             hostedDeliveryMode: receipt.deliveryMode,
             hostedTotalDzd: receipt.totalDzd,
+            ...((receipt.discountDzd ?? 0) > 0 ? { hostedDiscountDzd: receipt.discountDzd } : {}),
           },
           newCustomer: {
             name: customer.name,
@@ -471,6 +482,7 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
           address: customer.address,
           phone: customer.phone,
           deliveryCost: receipt.shippingDzd,
+          discount: receipt.discountDzd ?? 0,
           notes: customer.notes,
         },
       );

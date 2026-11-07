@@ -7,7 +7,13 @@ import {
   MAX_MONEY_DZD,
   assertOrderTotalWithinLimit,
 } from "@/lib/orders/money-limits";
-import { lineTotalOf, orderTotalOf, sumLineTotals } from "../order-total";
+import {
+  allocateOrderDiscount,
+  lineTotalOf,
+  orderTotalOf,
+  refundableItemValue,
+  sumLineTotals,
+} from "../order-total";
 
 interface Line {
   unitPrice: number;
@@ -156,6 +162,151 @@ describe("orderTotalOf (properties)", () => {
   });
 });
 
+describe("orderTotalOf with a discount", () => {
+  it("takes the discount off the items and leaves the delivery alone", () => {
+    expect(orderTotalOf([{ unitPrice: 3000, quantity: 3 }], 500, 1500)).toEqual({
+      itemsTotal: 9000,
+      totalPrice: 8000,
+    });
+  });
+
+  it("gives the old result for no discount, undefined or 0", () => {
+    const lines: Line[] = [
+      { unitPrice: 1200, quantity: 2 },
+      { unitPrice: 990, quantity: 1 },
+    ];
+    expect(orderTotalOf(lines, 500)).toEqual({ itemsTotal: 3390, totalPrice: 3890 });
+    expect(orderTotalOf(lines, 500, undefined)).toEqual({ itemsTotal: 3390, totalPrice: 3890 });
+    expect(orderTotalOf(lines, 500, 0)).toEqual({ itemsTotal: 3390, totalPrice: 3890 });
+  });
+
+  it("matches an exact BigInt sum minus the discount on 300 random carts", () => {
+    const next = mulberry32(0xd15c0);
+    for (let cart = 0; cart < 300; cart += 1) {
+      const random: Line[] = [];
+      for (let i = 0; i < 1 + Math.floor(next() * 8); i += 1) {
+        random.push({
+          unitPrice: Math.floor(next() * (MAX_MONEY_DZD + 1)),
+          quantity: 1 + Math.floor(next() * 999),
+        });
+      }
+      const delivery = Math.floor(next() * (MAX_MONEY_DZD + 1));
+      const discount = Math.floor(next() * (sumLineTotals(random) + 1));
+      const result = orderTotalOf(random, delivery, discount);
+      expect(BigInt(result.totalPrice), `cart ${cart}`).toBe(
+        referenceTotal(random, delivery) - BigInt(discount),
+      );
+    }
+  });
+});
+
+/** Shares as a plain object sorted by id, so two maps compare without caring about insertion order. */
+function sharesOf(map: ReadonlyMap<string, number>): Record<string, number> {
+  return Object.fromEntries([...map.entries()].sort(([x], [y]) => (x < y ? -1 : 1)));
+}
+
+describe("allocateOrderDiscount", () => {
+  const a = { id: "a", unitPrice: 3000, quantity: 1 };
+  const b = { id: "b", unitPrice: 2000, quantity: 3 };
+
+  it("gives each line its proportional share and the leftover dinar to the larger line", () => {
+    expect(sharesOf(allocateOrderDiscount([a, b], 1000))).toEqual({ a: 333, b: 667 });
+  });
+
+  it("gives the same shares whatever the order of the lines", () => {
+    expect(sharesOf(allocateOrderDiscount([b, a], 1000))).toEqual({ a: 333, b: 667 });
+  });
+
+  it("breaks a tie between equal lines by id", () => {
+    const x = { id: "x", unitPrice: 1000, quantity: 1 };
+    const y = { id: "y", unitPrice: 1000, quantity: 1 };
+    expect(sharesOf(allocateOrderDiscount([y, x], 1))).toEqual({ x: 1, y: 0 });
+  });
+
+  it("gives every line its whole value when the discount equals the items", () => {
+    expect(sharesOf(allocateOrderDiscount([a, b], 9000))).toEqual({ a: 3000, b: 6000 });
+  });
+
+  it("gives zero shares for no discount, and an empty map for no lines", () => {
+    expect(sharesOf(allocateOrderDiscount([a, b], 0))).toEqual({ a: 0, b: 0 });
+    expect(allocateOrderDiscount([], 0).size).toBe(0);
+  });
+
+  it.each([9001, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])("refuses the discount %s", (discount) => {
+    expect(() => allocateOrderDiscount([a, b], discount)).toThrow(RangeError);
+  });
+
+  it("sums exactly to the discount, never passes a line value, and stays within one dinar of exact on 300 random carts", () => {
+    const next = mulberry32(0xa110c);
+    for (let cart = 0; cart < 300; cart += 1) {
+      const lines = Array.from({ length: 1 + Math.floor(next() * 6) }, (_unused, i) => ({
+        id: `line${i}`,
+        unitPrice: 1 + Math.floor(next() * MAX_MONEY_DZD),
+        quantity: 1 + Math.floor(next() * 999),
+      }));
+      const items = sumLineTotals(lines);
+      const discount = Math.floor(next() * (items + 1));
+      const shares = allocateOrderDiscount(lines, discount);
+      let sum = 0;
+      for (const line of lines) {
+        const share = shares.get(line.id) ?? Number.NaN;
+        const value = lineTotalOf(line.unitPrice, line.quantity);
+        const exactFloor = (BigInt(discount) * BigInt(value)) / BigInt(items);
+        expect(Number.isInteger(share), `cart ${cart} ${line.id}`).toBe(true);
+        expect(share, `cart ${cart} ${line.id}`).toBeLessThanOrEqual(value);
+        expect(BigInt(share), `cart ${cart} ${line.id}`).toBeGreaterThanOrEqual(exactFloor);
+        expect(BigInt(share), `cart ${cart} ${line.id}`).toBeLessThanOrEqual(exactFloor + 1n);
+        sum += share;
+      }
+      expect(sum, `cart ${cart}`).toBe(discount);
+    }
+  });
+});
+
+describe("refundableItemValue", () => {
+  const line = { unitPrice: 3000, quantity: 3 };
+
+  it.each([
+    [1, 2666],
+    [2, 5333],
+    [3, 8000],
+  ])("returning %d of 3 pieces of 3000 with a line discount of 1000 refunds %d", (requested, expected) => {
+    expect(refundableItemValue(line, requested, 1000)).toBe(expected);
+  });
+
+  it("refunds the plain price when the line has no discount", () => {
+    expect(refundableItemValue(line, 2, 0)).toBe(6000);
+  });
+
+  it.each([[0], [-1], [1.5], [Number.NaN]])(
+    "refuses a line bought in a quantity of %s: it is not a count of pieces, and 0 or NaN would give a refund cap that never bites",
+    (quantity) => {
+      expect(() => refundableItemValue({ unitPrice: 3000, quantity }, 1, 0)).toThrow(RangeError);
+      expect(() => refundableItemValue({ unitPrice: 3000, quantity }, 1, 500)).toThrow(RangeError);
+    },
+  );
+
+  it("refunding the pieces one at a time never adds up to more than was paid on 300 random lines", () => {
+    const next = mulberry32(0x4efd);
+    for (let n = 0; n < 300; n += 1) {
+      const random = {
+        unitPrice: 1 + Math.floor(next() * MAX_MONEY_DZD),
+        quantity: 1 + Math.floor(next() * 999),
+      };
+      const value = lineTotalOf(random.unitPrice, random.quantity);
+      const lineDiscount = Math.floor(next() * (value + 1));
+      let oneByOne = 0;
+      for (let piece = 0; piece < random.quantity; piece += 1) {
+        const refund = refundableItemValue(random, 1, lineDiscount);
+        expect(refund, `line ${n}`).toBeGreaterThanOrEqual(0);
+        oneByOne += refund;
+      }
+      expect(oneByOne, `line ${n}`).toBeLessThanOrEqual(value - lineDiscount);
+      expect(refundableItemValue(random, random.quantity, lineDiscount), `line ${n}`).toBe(value - lineDiscount);
+    }
+  });
+});
+
 describe("orderTotalOf with the shared ceiling", () => {
   const tooLarge = { code: "VALIDATION_ERROR", statusCode: 400, message: "The order total is too large" };
 
@@ -199,6 +350,8 @@ const SWITCHED_CALLERS = [
   "src/lib/orders/manual-order-lines-edit.ts",
   "src/lib/orders/canonical-customer-return.ts",
   "src/lib/data/order-service.ts",
+  "src/lib/accounting/canonical-refund.ts",
+  "src/lib/orders/canonical-customer-return-projections.ts",
 ];
 
 function codeOf(relativePath: string): string {
@@ -211,12 +364,12 @@ describe("order total source contract", () => {
   it.each(SWITCHED_CALLERS)("%s uses the shared order-total functions", (file) => {
     const code = codeOf(file);
     expect(code).toMatch(/from "@\/lib\/orders\/order-total"/);
-    expect(code).toMatch(/\b(orderTotalOf|lineTotalOf|sumLineTotals)\(/);
+    expect(code).toMatch(/\b(orderTotalOf|lineTotalOf|sumLineTotals|refundableItemValue)\(/);
   });
 
   it.each(SWITCHED_CALLERS)("%s has no inline unitPrice x quantity arithmetic", (file) => {
     const code = codeOf(file);
-    expect(code).not.toMatch(/unitPrice\s*\*\s*[\w.]*quantity/);
-    expect(code).not.toMatch(/quantity\s*\*\s*[\w.]*unitPrice/);
+    expect(code).not.toMatch(/unitPrice\s*\*\s*[\w.]*quantity/i);
+    expect(code).not.toMatch(/quantity\s*\*\s*[\w.]*unitPrice/i);
   });
 });

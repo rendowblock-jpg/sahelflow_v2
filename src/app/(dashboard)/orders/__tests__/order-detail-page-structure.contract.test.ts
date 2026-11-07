@@ -99,4 +99,20 @@ describe("order detail page structure", () => {
     // The deep link the stepper wrapper answers to is still on the rail.
     expect(rail).toContain('href="#order-tracking"');
   });
+
+  it("hands the stored discount to the totals block, the edit panel and the slip (item 2 money): each to its own element, and the page never works it out", () => {
+    // Comments are removed first, so a string left in a comment cannot satisfy a check.
+    const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+    const totals = code.match(/<OrderTotals\b[\s\S]*?\/>/)?.[0] ?? "";
+    // The opening tag of the panel ends at the first line that holds only ">" (its props contain arrow functions).
+    const panel = code.match(/<OrderEditPanel\b[\s\S]*?\n\s*>\s*\n/)?.[0] ?? "";
+    const slip = code.match(/const slipData: DeliverySlipData = \{[\s\S]*?\n  \};/)?.[0] ?? "";
+
+    expect(totals).toContain("discountDzd={order.discountDzd}");
+    expect(panel).toContain("initialDiscount={order.discountDzd}");
+    expect(slip).toContain("discountDzd: order.discountDzd");
+    // No arithmetic on a discount, whichever side the operator is on.
+    expect(code).not.toMatch(/discount\w*\s*[-+*]/i);
+    expect(code).not.toMatch(/[-+*]\s*[\w.]*discount/i);
+  });
 });

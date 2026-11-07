@@ -65,6 +65,8 @@ export interface DeliverySlipData {
   items: DeliverySlipItemData[];
   itemsTotal: number | null;
   deliveryCost: number | null;
+  /** Item 2: whole dinars taken off the items. Null/absent/0 = no row. Null also means "redacted" like the other money. */
+  discountDzd?: number | null;
   total: number | null;
   provider: string | null;
   trackingNumber: string | null;
@@ -203,6 +205,12 @@ export function DeliverySlip({
               {formatDZD(data.itemsTotal ?? 0, locale)}
             </span>
           </div>
+          {data.discountDzd != null && data.discountDzd > 0 ? (
+            <div className="flex items-center justify-between">
+              <span>{t("orders.detail.discount")}</span>
+              <bdi className="tabular-nums">{`\u2212${formatDZD(data.discountDzd, locale)}`}</bdi>
+            </div>
+          ) : null}
           <div className="flex items-center justify-between">
             <span>{t("orders.detail.shipping")}</span>
             <span className="tabular-nums">
@@ -436,6 +444,7 @@ interface OrderDetailWire {
   notes: string | null;
   totalPrice: number | null;
   deliveryCost: number | null;
+  discountDzd?: number | null;
   items: Array<{
     productName: string;
     productVariantName: string | null;
@@ -504,6 +513,7 @@ export async function fetchDeliverySlipData(
     })),
     itemsTotal,
     deliveryCost: hasFinancials ? order.deliveryCost : null,
+    discountDzd: hasFinancials ? (order.discountDzd ?? null) : null,
     total: hasFinancials ? order.totalPrice : null,
     provider,
     trackingNumber,

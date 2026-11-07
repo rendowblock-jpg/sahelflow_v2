@@ -43,6 +43,7 @@ const ORDER: Order = {
   ],
   totalPrice: 3_500,
   deliveryCost: 500,
+  discountDzd: 500,
   wilaya: "Alger",
   commune: "Bab Ezzouar",
   address: "Street 1",
@@ -94,6 +95,7 @@ describe("order field projections", () => {
       notes: null,
       totalPrice: null,
       deliveryCost: null,
+      discountDzd: null,
       fieldAccess: { contact: false, financials: false },
     });
     expect(projected.items[0]).toMatchObject({
@@ -116,6 +118,7 @@ describe("order field projections", () => {
       notes: "Call after 18:00",
       totalPrice: null,
       deliveryCost: null,
+      discountDzd: null,
       fieldAccess: { contact: true, financials: false },
     });
   });
@@ -128,6 +131,7 @@ describe("order field projections", () => {
       address: "Street 1",
       totalPrice: 3_500,
       deliveryCost: 500,
+      discountDzd: 500,
       fieldAccess: { contact: true, financials: true },
     });
     expect(projected.items[0]).toMatchObject({ unitPrice: 1_500, total: 3_000 });
@@ -140,5 +144,21 @@ describe("order field projections", () => {
         ORDER,
       ),
     ).toThrow(/orders\.read/);
+  });
+
+  it("never lets the order discount through for an actor without orders.financials.read, whatever else they may read", () => {
+    const withMoneyOnly = projectOrderForTrustedActor(
+      context("operator", ["orders.read", "orders.financials.read"]),
+      ORDER,
+    );
+    expect(withMoneyOnly).toMatchObject({ discountDzd: 500, totalPrice: 3_500, phone: null });
+
+    for (const projected of [
+      projectOrderForTrustedActor(context("viewer"), ORDER),
+      projectOrderForTrustedActor(context("operator", ["orders.read", "customers.contact.read"]), ORDER),
+    ]) {
+      expect(JSON.stringify(projected)).not.toContain('"discountDzd":500');
+      expect(projected.discountDzd).toBeNull();
+    }
   });
 });

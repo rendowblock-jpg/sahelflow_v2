@@ -15,7 +15,11 @@ import {
   canonicalSourceOrderSourceMetadata,
   type CanonicalOrderSource,
 } from "@/lib/orders/manual-order-authority";
-import { assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
+import {
+  assertDiscountWithinItems,
+  assertOrderTotalWithinLimit,
+  orderMoneySchema,
+} from "@/lib/orders/money-limits";
 import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import type { Order } from "@/types/domain";
 import { NotFoundError, ValidationError } from "@/types/errors";
@@ -55,6 +59,8 @@ export const canonicalSourceOrderSchema = z
     address: z.string().trim().min(1).max(500),
     phone: z.string().trim().min(1).max(40),
     deliveryCost: orderMoneySchema.default(0),
+    // Item 2: one order-level discount in whole dinars, from a hosted bundle receipt. The lines stay at the plain unit price.
+    discount: orderMoneySchema.default(0),
     notes: z.string().trim().max(2000).nullable().optional(),
   })
   .superRefine((value, context) => {
@@ -70,6 +76,13 @@ export const canonicalSourceOrderSchema = z
         code: z.ZodIssueCode.custom,
         path: ["initialStatus"],
         message: "Only AI-created canonical source orders may enter as draft",
+      });
+    }
+    if (value.discount > 0 && value.source !== "storefront") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["discount"],
+        message: "Only an authoritative storefront receipt may carry an order discount",
       });
     }
     const commercePriced = ["shopify", "woocommerce", "youcan"].includes(value.source);
@@ -142,6 +155,36 @@ function canonicalAlgerianPhone(value: string, field: string): string {
   return normalized;
 }
 
+/**
+ * The command payload that is hashed for idempotency. It has exactly the keys it had before the discount existed, in the same
+ * order, and gains `discount` only when the discount is above 0: an order without one hashes byte for byte as it always did, so
+ * a retry of an old command is still recognised.
+ */
+export function sourceOrderCommandPayload(
+  data: CanonicalSourceOrderInput,
+  orderPhone: string,
+  newCustomer: z.infer<typeof newCustomerSchema> | undefined,
+): Record<string, unknown> {
+  return {
+    source: data.source,
+    sourceIdentity: data.sourceIdentity,
+    sourceOrderId: data.sourceOrderId,
+    sourceRevision: data.sourceRevision ?? null,
+    sourceDetails: data.sourceDetails ?? null,
+    initialStatus: data.initialStatus,
+    customerId: data.customerId ?? null,
+    newCustomer: newCustomer ?? null,
+    items: data.items,
+    wilaya: data.wilaya,
+    commune: data.commune,
+    address: data.address,
+    phone: orderPhone,
+    deliveryCost: data.deliveryCost,
+    notes: data.notes ?? null,
+    ...(data.discount > 0 ? { discount: data.discount } : {}),
+  };
+}
+
 export async function createCanonicalSourceOrder(
   context: BusinessPrincipalContext,
   input: unknown,
@@ -172,23 +215,7 @@ export async function createCanonicalSourceOrder(
       },
       actor: "source",
       correlationId,
-      payload: {
-        source: data.source,
-        sourceIdentity: data.sourceIdentity,
-        sourceOrderId: data.sourceOrderId,
-        sourceRevision: data.sourceRevision ?? null,
-        sourceDetails: data.sourceDetails ?? null,
-        initialStatus: data.initialStatus,
-        customerId: data.customerId ?? null,
-        newCustomer: normalizedNewCustomer ?? null,
-        items: data.items,
-        wilaya: data.wilaya,
-        commune: data.commune,
-        address: data.address,
-        phone: orderPhone,
-        deliveryCost: data.deliveryCost,
-        notes: data.notes ?? null,
-      },
+      payload: sourceOrderCommandPayload(data, orderPhone, normalizedNewCustomer),
     },
     async ({ tx, commandId, principal }) => {
       let customerCreated = false;
@@ -288,7 +315,13 @@ export async function createCanonicalSourceOrder(
         };
       });
 
-      const { totalPrice } = orderTotalOf(canonicalItems, data.deliveryCost);
+      const { itemsTotal, totalPrice } = orderTotalOf(canonicalItems, data.deliveryCost, data.discount);
+      assertDiscountWithinItems(data.discount, itemsTotal, "discount");
+      // D3: a discounted order still has something to collect. A total of 0 can never be delivered (the cash-on-delivery receivable
+      // must be positive), so the kernel refuses it itself and does not rely on the receipt rule that runs before it.
+      if (data.discount > 0 && totalPrice === 0) {
+        throw new ValidationError("A discounted order must still have something to collect", "discount");
+      }
       assertOrderTotalWithinLimit(totalPrice, "items");
       const orderNumber = await nextOrderNumber(
         tx as unknown as BusinessPrincipalContext["prisma"],
@@ -314,6 +347,7 @@ export async function createCanonicalSourceOrder(
           customerId: customer.id,
           totalPrice,
           deliveryCost: data.deliveryCost,
+          discountDzd: data.discount,
           wilaya: data.wilaya,
           commune: data.commune,
           address: data.address,
@@ -341,6 +375,7 @@ export async function createCanonicalSourceOrder(
           status: data.initialStatus,
           itemCount: canonicalItems.length,
           totalPrice,
+          ...(data.discount > 0 ? { discountDzd: data.discount } : {}),
           commandId,
           authority: "canonical-source-v1",
           source: data.source,
@@ -391,6 +426,7 @@ export async function createCanonicalSourceOrder(
             version: order.version,
             customerId: order.customerId,
             totalPrice: order.totalPrice,
+            ...(data.discount > 0 ? { discountDzd: data.discount } : {}),
             itemCount: order.items.length,
             source: data.source,
           },

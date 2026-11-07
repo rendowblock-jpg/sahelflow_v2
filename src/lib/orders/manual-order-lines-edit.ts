@@ -11,7 +11,7 @@ import {
   resolveCatalogLine,
   type CatalogLine,
 } from "@/lib/orders/manual-order-catalog-line";
-import { assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
+import { assertDiscountWithinItems, assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
 import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import { redactPii } from "@/lib/redact-pii";
 import {
@@ -270,7 +270,9 @@ export async function executeManualOrderLinesEdit(
         ...creates,
       ];
       const deliveryCost = order.deliveryCost ?? 0;
-      const { itemsTotal, totalPrice } = orderTotalOf(finalLines, deliveryCost);
+      // An order-level discount (item 2) belongs to the order, not to a line: it stays, and the new lines must still cover it.
+      const { itemsTotal, totalPrice } = orderTotalOf(finalLines, deliveryCost, order.discountDzd);
+      assertDiscountWithinItems(order.discountDzd, itemsTotal, "lines");
       assertOrderTotalWithinLimit(totalPrice, "lines");
       const orderVersion = data.expectedVersion + 1;
 

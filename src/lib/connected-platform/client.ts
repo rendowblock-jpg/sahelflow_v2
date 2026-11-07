@@ -63,6 +63,8 @@ export type StorefrontReceipt = Readonly<{
   subtotalDzd: number;
   shippingDzd: number;
   totalDzd: number;
+  /** Item 2: order-level discount in whole dinars (hosted bundles). Absent = 0. total = subtotal - discount + shipping. */
+  discountDzd?: number;
   createdAt: string;
   lines: ReadonlyArray<{
     itemKey: string;

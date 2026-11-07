@@ -15,7 +15,7 @@ import {
   SahelFlowError,
   ValidationError,
 } from "@/types/errors";
-import { assertOrderTotalWithinLimit } from "@/lib/orders/money-limits";
+import { assertDiscountWithinItems, assertOrderTotalWithinLimit } from "@/lib/orders/money-limits";
 import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import { updateOrderSchema } from "@/lib/validation";
 import {
@@ -351,6 +351,7 @@ export const orderService = {
             sourceMetadata: true,
             status: true,
             deliveryCost: true,
+            discountDzd: true,
           },
         });
         if (!authority) throw new NotFoundError("Order", id);
@@ -432,16 +433,21 @@ export const orderService = {
             data.deliveryCost !== undefined
               ? (data.deliveryCost ?? 0)
               : (authority.deliveryCost ?? 0);
-          recomputedTotalPrice = orderTotalOf(
+          // Canonical orders never get here today; a stored discount is carried anyway so a future loosening cannot drop it.
+          const recomputed = orderTotalOf(
             data.items,
             effectiveDeliveryCost,
-          ).totalPrice;
+            authority.discountDzd,
+          );
+          recomputedTotalPrice = recomputed.totalPrice;
+          assertDiscountWithinItems(authority.discountDzd, recomputed.itemsTotal, "items");
           assertOrderTotalWithinLimit(recomputedTotalPrice, "items");
         } else if (data.deliveryCost !== undefined) {
           const existing = await tx.orderItem.findMany({ where: { orderId: id } });
           recomputedTotalPrice = orderTotalOf(
             existing,
             data.deliveryCost,
+            authority.discountDzd,
           ).totalPrice;
           assertOrderTotalWithinLimit(recomputedTotalPrice, "deliveryCost");
         }

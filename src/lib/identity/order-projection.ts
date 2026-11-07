@@ -19,6 +19,7 @@ export type ProjectedOrder = Omit<
   | "notes"
   | "totalPrice"
   | "deliveryCost"
+  | "discountDzd"
   | "items"
 > & {
   phone: string | null;
@@ -26,6 +27,8 @@ export type ProjectedOrder = Omit<
   notes: string | null;
   totalPrice: number | null;
   deliveryCost: number | null;
+  /** Money like the total: null for an actor without orders.financials.read. */
+  discountDzd: number | null;
   items: ProjectedOrderItem[];
   fieldAccess: Readonly<{
     contact: boolean;
@@ -65,6 +68,7 @@ export function projectOrderForTrustedActor(
     notes: contact ? order.notes : null,
     totalPrice: financials ? order.totalPrice : null,
     deliveryCost: financials ? order.deliveryCost : null,
+    discountDzd: financials ? order.discountDzd : null,
     items: order.items.map((item) =>
       Object.freeze({
         ...item,

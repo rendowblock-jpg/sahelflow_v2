@@ -19,6 +19,7 @@
  *   junk used to throw and stall ingestion for ever. When the key is NOT healthy
  *   the page is refused (durable retry, no poison-reject data loss).
  */
+import { createHash } from "node:crypto";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/orders/canonical-source-order", () => ({
@@ -390,5 +391,114 @@ describe("hosted storefront receipt ingestion poison contract (C1)", () => {
     })).rejects.toThrow();
 
     expect(completions).toHaveLength(0);
+  });
+});
+
+/**
+ * Item 2 money (M2a, task 4): a hosted bundle receipt keeps every line at the plain unit price and carries ONE order-level
+ * discount. The desktop accepts the key before the Worker ever produces it; every inconsistent receipt is refused, with the
+ * same rejection and delegation release as any other totals problem.
+ */
+describe("discounted hosted receipts (item 2 money)", () => {
+  const BUNDLE_LINES = [{ itemKey: "product_12345678:base", quantity: 3, unitPriceDzd: 3_000 }];
+  const digestOf = (receiptId: string, requestDigest: string, code: string) =>
+    createHash("sha256").update(`${receiptId}\n${requestDigest}\nrejected\n${code}`, "utf8").digest("hex");
+
+  async function runOne(overrides: Record<string, unknown>) {
+    const keys = await encryptWithFreshKeys();
+    const receipt = baseReceipt({
+      receiptId: "receipt_discnt01",
+      requestDigest: "d".repeat(64),
+      encryptedCustomer: keys.encryptedCustomer,
+      wrappedCustomerKey: keys.wrappedCustomerKey,
+      ...overrides,
+    } as Partial<StorefrontReceipt>);
+    const { client, completions } = fakeClient({ receipts: [receipt], nextCursor: 20 });
+    vi.mocked(createCanonicalSourceOrder).mockResolvedValue({
+      replayed: false,
+      result: { order: { id: "order_canonical2", createdAt: new Date("2026-08-13T12:05:00.000Z") }, automation: {} },
+    } as never);
+    const result = await importHostedStorefrontReceipts({
+      client,
+      context,
+      workspaceId: context.shop.workspaceId,
+      encryptionPrivateKeyPkcs8: keys.privateKeyPkcs8,
+      after: 10,
+    });
+    return { result, completions };
+  }
+  const bundle = (overrides: Record<string, unknown> = {}) => ({
+    lines: BUNDLE_LINES,
+    subtotalDzd: 9_000,
+    shippingDzd: 500,
+    totalDzd: 8_000,
+    discountDzd: 1_500,
+    ...overrides,
+  });
+
+  it("imports a receipt whose total is subtotal - discount + shipping, and gives the kernel the discount with the plain-price lines", async () => {
+    const { result, completions } = await runOne(bundle());
+
+    expect(result).toMatchObject({ imported: 1, replayed: 0, nextCursor: 20 });
+    expect(completions).toEqual([expect.objectContaining({ receiptId: "receipt_discnt01", state: "imported" })]);
+    expect(createCanonicalSourceOrder).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(createCanonicalSourceOrder).mock.calls[0]?.[1]).toMatchObject({
+      discount: 1_500,
+      deliveryCost: 500,
+      items: [expect.objectContaining({ quantity: 3, unitPrice: 3_000 })],
+      sourceDetails: expect.objectContaining({ hostedTotalDzd: 8_000, hostedDiscountDzd: 1_500 }),
+    });
+  });
+
+  it.each([[undefined], [0]])(
+    "a receipt with a discount of %s reaches the kernel as discount 0, with no hostedDiscountDzd in its details",
+    async (discountDzd) => {
+      const { completions } = await runOne({
+        subtotalDzd: 2_500,
+        shippingDzd: 500,
+        totalDzd: 3_000,
+        ...(discountDzd === undefined ? {} : { discountDzd }),
+      });
+
+      expect(completions).toEqual([expect.objectContaining({ state: "imported" })]);
+      const input = vi.mocked(createCanonicalSourceOrder).mock.calls[0]?.[1] as Record<string, unknown>;
+      expect(input).toMatchObject({ discount: 0, deliveryCost: 500 });
+      expect(input.sourceDetails).not.toHaveProperty("hostedDiscountDzd");
+    },
+  );
+
+  it.each([
+    ["a total that ignores the discount", bundle({ totalDzd: 9_500 })],
+    ["a discount above the subtotal, even when the arithmetic closes", bundle({ discountDzd: 9_001, totalDzd: 499 })],
+    ["a free order: discount = subtotal and no shipping", bundle({ discountDzd: 9_000, shippingDzd: 0, totalDzd: 0 })],
+  ])("rejects %s as an integrity problem, releases the delegation and creates nothing", async (_name, overrides) => {
+    const { result, completions } = await runOne(overrides);
+
+    expect(result).toMatchObject({ imported: 0, replayed: 0, nextCursor: 20 });
+    expect(completions).toEqual([
+      expect.objectContaining({
+        receiptId: "receipt_discnt01",
+        state: "rejected",
+        resultDigest: digestOf("receipt_discnt01", "d".repeat(64), "receipt_integrity"),
+      }),
+    ]);
+    expect(releaseRejectedStorefrontReceiptDelegation).toHaveBeenCalledTimes(1);
+    expect(createCanonicalSourceOrder).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a fractional discount", bundle({ discountDzd: 1.5 })],
+    ["a negative discount", bundle({ discountDzd: -1 })],
+    ["an unknown key named discount instead of discountDzd", bundle({ discountDzd: undefined, discount: 1_500 })],
+  ])("rejects %s as a malformed receipt: the receipt schema stays strict", async (_name, overrides) => {
+    const { completions } = await runOne(overrides);
+
+    expect(completions).toEqual([
+      expect.objectContaining({
+        state: "rejected",
+        resultDigest: digestOf("receipt_discnt01", "d".repeat(64), "malformed_receipt"),
+      }),
+    ]);
+    expect(createCanonicalSourceOrder).not.toHaveBeenCalled();
   });
 });
