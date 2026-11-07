@@ -10,7 +10,11 @@ import {
   type BusinessPrincipalContext,
 } from "@/lib/business-truth/principal";
 import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
-import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+import {
+  canonicalSourceOrderSchema,
+  createCanonicalSourceOrder,
+  sourceOrderCommandPayload,
+} from "@/lib/orders/canonical-source-order";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 
 const db = new PrismaClient();
@@ -269,5 +273,142 @@ describe("canonical source order intake", () => {
 
     expect(await db.order.count()).toBe(2);
     expect(await db.customer.count()).toBe(1);
+  });
+});
+
+/**
+ * Item 2 money (M2a, task 3): a hosted bundle receipt carries one order-level discount. The kernel stores it in Order.discountDzd,
+ * keeps totalPrice = items - discount + delivery, and leaves the hashed command payload byte-identical when there is no discount.
+ */
+describe("sourceOrderCommandPayload (item 2 money)", () => {
+  const TODAYS_KEYS = [
+    "source",
+    "sourceIdentity",
+    "sourceOrderId",
+    "sourceRevision",
+    "sourceDetails",
+    "initialStatus",
+    "customerId",
+    "newCustomer",
+    "items",
+    "wilaya",
+    "commune",
+    "address",
+    "phone",
+    "deliveryCost",
+    "notes",
+  ];
+  const parsed = (extra: Record<string, unknown> = {}) =>
+    canonicalSourceOrderSchema.parse({ ...request("product-1", "33333333-3333-4333-8333-333333333333"), ...extra });
+
+  it("has exactly today's 15 keys in today's order when there is no discount, so existing command digests do not change", () => {
+    expect(Object.keys(sourceOrderCommandPayload(parsed(), "0551234567", undefined))).toEqual(TODAYS_KEYS);
+  });
+
+  it("is the same for no discount and for an explicit discount of 0", () => {
+    expect(JSON.stringify(sourceOrderCommandPayload(parsed({ discount: 0 }), "0551234567", undefined))).toBe(
+      JSON.stringify(sourceOrderCommandPayload(parsed(), "0551234567", undefined)),
+    );
+  });
+
+  it("adds a sixteenth key, discount, only when the discount is above 0", () => {
+    const payload = sourceOrderCommandPayload(parsed({ discount: 1500 }), "0551234567", undefined);
+    expect(Object.keys(payload)).toEqual([...TODAYS_KEYS, "discount"]);
+    expect(payload.discount).toBe(1500);
+  });
+});
+
+describe("canonical source order with an order-level discount (item 2 money)", () => {
+  const discounted = (productId: string, submissionId: string, overrides: Record<string, unknown> = {}) => ({
+    ...request(productId, submissionId),
+    items: [{ productId, quantity: 3 }],
+    deliveryCost: 500,
+    discount: 1500,
+    ...overrides,
+  });
+
+  it("stores the discount, keeps the lines at the plain price and takes the discount off the items only", async () => {
+    const product = await seedProduct(3000);
+    const result = await createCanonicalSourceOrder(
+      context,
+      discounted(product.id, "44444444-4444-4444-8444-444444444444"),
+    );
+
+    expect(result.result.order).toMatchObject({ totalPrice: 8000, deliveryCost: 500, discountDzd: 1500 });
+    expect(result.result.order.items).toEqual([
+      expect.objectContaining({ quantity: 3, unitPrice: 3000, total: 9000 }),
+    ]);
+    const stored = await db.order.findUniqueOrThrow({ where: { id: result.result.order.id } });
+    expect(stored).toMatchObject({ totalPrice: 8000, discountDzd: 1500 });
+  });
+
+  it("writes the discount into the creation record only when there is one", async () => {
+    const product = await seedProduct(3000);
+    const withDiscount = await createCanonicalSourceOrder(
+      context,
+      discounted(product.id, "55555555-5555-4555-8555-555555555555"),
+    );
+    const without = await createCanonicalSourceOrder(
+      context,
+      discounted(product.id, "66666666-6666-4666-8666-666666666666", { discount: undefined }),
+    );
+    const payloadOf = async (orderId: string) => {
+      const change = await db.orderChange.findFirstOrThrow({ where: { orderId, actionType: "created" } });
+      return JSON.parse(change.payload ?? "{}") as Record<string, unknown>;
+    };
+
+    expect(await payloadOf(withDiscount.result.order.id)).toMatchObject({ totalPrice: 8000, discountDzd: 1500 });
+    expect(await payloadOf(without.result.order.id)).not.toHaveProperty("discountDzd");
+    expect(await db.order.findUniqueOrThrow({ where: { id: without.result.order.id } })).toMatchObject({
+      totalPrice: 9500,
+      discountDzd: 0,
+    });
+  });
+
+  it("accepts a discount equal to the items and refuses one dinar more, naming the field and writing nothing", async () => {
+    const product = await seedProduct(3000);
+    const whole = await createCanonicalSourceOrder(
+      context,
+      discounted(product.id, "77777777-7777-4777-8777-777777777777", { discount: 9000 }),
+    );
+    expect(whole.result.order).toMatchObject({ totalPrice: 500, discountDzd: 9000 });
+
+    await expect(
+      createCanonicalSourceOrder(
+        context,
+        discounted(product.id, "88888888-8888-4888-8888-888888888888", { discount: 9001 }),
+      ),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", field: "discount" });
+    expect(await db.order.count()).toBe(1);
+  });
+
+  it("refuses a discount from any source but a hosted storefront receipt, and still takes the same order without one", async () => {
+    const product = await seedProduct(3000);
+    const fromWhatsapp = {
+      ...request(product.id, "99999999-9999-4999-8999-999999999999"),
+      source: "whatsapp" as const,
+      sourceIdentity: "213555123456@s.whatsapp.net",
+    };
+
+    await expect(createCanonicalSourceOrder(context, { ...fromWhatsapp, discount: 1 })).rejects.toThrow(/discount/);
+    expect(await db.order.count()).toBe(0);
+
+    const plain = await createCanonicalSourceOrder(context, fromWhatsapp);
+    expect(plain.result.order).toMatchObject({ totalPrice: 6000, discountDzd: 0 });
+  });
+
+  it("replays a retry of the same discounted order without a second row, and refuses the same key with another discount", async () => {
+    const product = await seedProduct(3000);
+    const input = discounted(product.id, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+
+    const first = await createCanonicalSourceOrder(context, input);
+    const replay = await createCanonicalSourceOrder(context, input);
+    expect(replay).toEqual({ ...first, replayed: true });
+    expect(await db.order.count()).toBe(1);
+
+    await expect(createCanonicalSourceOrder(context, { ...input, discount: 1000 })).rejects.toThrow(
+      /already bound to different command content/i,
+    );
+    expect(await db.order.count()).toBe(1);
   });
 });
