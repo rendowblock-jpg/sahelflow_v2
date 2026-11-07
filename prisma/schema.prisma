@@ -150,6 +150,7 @@ model Order {
   items           OrderItem[]
   totalPrice      Int
   deliveryCost    Int?
+  discountDzd     Int         @default(0) // item 2: order-level discount in whole dinars (hosted bundles); totalPrice = items - discountDzd + deliveryCost
   wilaya          String
   commune         String
   address         String
