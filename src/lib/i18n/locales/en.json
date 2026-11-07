@@ -1726,6 +1726,7 @@
   "orders.detail.breadcrumbLabel": "Breadcrumb",
   "orders.detail.customerAddress": "Customer and delivery address",
   "orders.detail.customerNotFound": "Customer not found",
+  "orders.detail.discount": "Discount",
   "orders.detail.edit": "Edit",
   "orders.detail.editConflict": "This order changed in the meantime. Refresh the page and try again.",
   "orders.detail.editFailed": "Failed to save changes",

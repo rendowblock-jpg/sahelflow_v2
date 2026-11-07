@@ -71,6 +71,8 @@ interface OrderEditPanelProps {
   linesEditable?: boolean;
   initialItems: OrderItem[];
   initialDeliveryCost: number;
+  /** Item 2: the stored order-level discount (whole dinars). The panel only shows it; the server keeps it. 0/absent = none. */
+  initialDiscount?: number;
   initialWilaya: string;
   initialCommune: string;
   initialAddress: string;
@@ -87,6 +89,7 @@ export function OrderEditPanel({
   linesEditable = false,
   initialItems,
   initialDeliveryCost,
+  initialDiscount = 0,
   initialWilaya,
   initialCommune,
   initialAddress,
@@ -314,7 +317,8 @@ export function OrderEditPanel({
   const itemsTotal = linesEditable
     ? linesItemsTotal(lines)
     : items.reduce((sum, i) => sum + i.total, 0);
-  const total = itemsTotal + (parseInt(deliveryCost) || 0);
+  // The stored total is items - discount + delivery (item 2); the panel shows the same number the order page does.
+  const total = itemsTotal - initialDiscount + (parseInt(deliveryCost) || 0);
 
   return (
     <div className="space-y-4">
@@ -395,6 +399,12 @@ export function OrderEditPanel({
               <span className="text-muted-foreground">{t("orders.detail.subtotal")}</span>
               <span className="tabular-nums">{formatDZD(itemsTotal, locale)}</span>
             </div>
+            {initialDiscount > 0 ? (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("orders.detail.discount")}</span>
+                <bdi className="tabular-nums">{`\u2212${formatDZD(initialDiscount, locale)}`}</bdi>
+              </div>
+            ) : null}
             <div className="flex justify-between items-center text-sm gap-3">
               <span className="text-muted-foreground">{t("orders.detail.shipping")}</span>
               <Input

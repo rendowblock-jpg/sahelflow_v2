@@ -53,6 +53,8 @@ export interface Order {
   items: OrderItem[];
   totalPrice: number;
   deliveryCost: number | null;
+  /** Item 2: the order-level discount in whole dinars (0 = none). totalPrice already has it taken off the items. */
+  discountDzd: number;
   wilaya: string;
   commune: string;
   address: string;

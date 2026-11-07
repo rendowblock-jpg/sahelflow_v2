@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { OrderLifecycleRail } from "@/components/orders/order-lifecycle-rail";
 import { OrderStepper, terminalStepFor } from "@/components/orders/order-stepper";
 import { OrderSummaryStrip } from "@/components/orders/order-summary-strip";
+import { OrderTotals } from "@/components/orders/order-totals";
 import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
 import {
   DeliverySlipPrintButton,
@@ -179,6 +180,7 @@ export default async function OrderDetailPage({
     })),
     itemsTotal,
     deliveryCost: order.deliveryCost,
+    discountDzd: order.discountDzd,
     total: order.totalPrice,
     provider: delivery?.provider ?? null,
     trackingNumber: delivery?.trackingNumber ?? null,
@@ -463,6 +465,7 @@ export default async function OrderDetailPage({
                 total: i.total,
               }))}
               initialDeliveryCost={deliveryCost}
+              initialDiscount={order.discountDzd}
               initialWilaya={order.wilaya}
               initialCommune={order.commune}
               initialAddress={order.address}
@@ -505,31 +508,14 @@ export default async function OrderDetailPage({
                     ))}
                   </ul>
 
-                  <div className="ms-auto w-full max-w-xs space-y-2 border-t pt-4">
-                    <div className="flex justify-between gap-4 text-sm">
-                      <span className="text-muted-foreground">
-                        {t("orders.detail.subtotal")}
-                      </span>
-                      <span className="tabular-nums">
-                        {formatDZD(itemsTotal, locale)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-4 text-sm">
-                      <span className="text-muted-foreground">
-                        {t("orders.detail.shipping")}
-                      </span>
-                      <span className="tabular-nums">
-                        {deliveryCost > 0 ? formatDZD(deliveryCost, locale) : "—"}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className="flex items-baseline justify-between gap-4 text-lg font-semibold">
-                      <span>{t("orders.total")}</span>
-                      <span className="tabular-nums">
-                        {formatDZD(order.totalPrice, locale)}
-                      </span>
-                    </div>
-                  </div>
+                  <OrderTotals
+                    t={t}
+                    locale={locale}
+                    itemsTotal={itemsTotal}
+                    deliveryCost={deliveryCost}
+                    totalPrice={order.totalPrice}
+                    discountDzd={order.discountDzd}
+                  />
 
                   {order.notes ? (
                     <div className="space-y-1 border-t pt-4">

@@ -15,6 +15,7 @@ const SOURCES = [
   "src/app/(dashboard)/orders/[id]/page.tsx",
   "src/components/orders/order-summary-strip.tsx",
   "src/components/orders/order-stepper.tsx",
+  "src/components/orders/delivery-slip.tsx",
 ];
 const LOCALES = ["en", "fr", "ar"] as const;
 const FORMS = ["zero", "one", "two", "few", "many", "other"] as const;
@@ -37,6 +38,8 @@ describe("order detail page keys", () => {
       expect.arrayContaining([
         "orders.detail.breadcrumbLabel",
         "orders.detail.customerAddress",
+        "orders.detail.discount",
+        "orders.detail.subtotal",
         "orders.detail.itemsCount",
         "orders.detail.risk.moreFactors",
         "orders.detail.summary.total",

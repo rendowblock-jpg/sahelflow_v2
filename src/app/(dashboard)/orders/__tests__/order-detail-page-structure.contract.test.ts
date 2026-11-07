@@ -99,4 +99,12 @@ describe("order detail page structure", () => {
     // The deep link the stepper wrapper answers to is still on the rail.
     expect(rail).toContain('href="#order-tracking"');
   });
+
+  it("hands the stored discount to the totals block and to the slip (item 2 money): the page only reads it, it never works it out", () => {
+    expect(page).toContain("<OrderTotals");
+    expect(page).toContain("discountDzd={order.discountDzd}");
+    expect(page).toContain("initialDiscount={order.discountDzd}");
+    expect(page).toContain("discountDzd: order.discountDzd");
+    expect(page).not.toMatch(/discount\w*\s*[-+*]/i);
+  });
 });
