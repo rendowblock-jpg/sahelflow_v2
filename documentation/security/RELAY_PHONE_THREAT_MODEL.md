@@ -88,12 +88,12 @@ States: **in the code and pinned by a test**, **in the code, not pinned by a tes
 | Code over both phone keys, typed on the PC; exchange refuses when its counters fail | done in code |
 | Who creates the pairing secret (PC-made, relay stores a hash) | open; design decision |
 | Bootstrap proves possession of the desktop key and is rate limited | open |
-| Phone token lifetime and rotation | open; needs the owner |
-| Relay migrations `control-plane/connected/migrations/0002_rate_limits.sql` and `control-plane/connected/migrations/0003_pairing_key_proof.sql` applied | needs the owner; `/healthz` checks four tables, not the key proof column (`control-plane/connected/worker.ts:1372-1386`) |
+| Phone token lifetime and rotation (W4SEC-05, `0004_device_token_lifetime.sql`) | done in code and pinned by tests; D1 migration deploy needs the owner |
+| Relay migrations `0002_rate_limits.sql`, `0003_pairing_key_proof.sql` and `0004_device_token_lifetime.sql` applied | needs the owner; `/healthz` checks token-lifetime column; key-proof check still open |
 | `PWA_ORIGINS` set to the exact phone origin | needs the owner |
 | `PHONE_APP_ORIGIN` (`src/lib/connected-platform/pairing-link.ts:10`) and the relay host in the page policy (`control-plane/pwa/build.mjs:13`) match hosts that exist | needs the owner; neither exists yet |
 | Retention rule for finished commands | open; needs the owner |
-| Forced update for old shells; HSTS at the zone | open |
+| Safe automatic shell update (W4SEC-07, 24 h blocking prompt) | done in code and pinned by tests; HSTS at Cloudflare zone still open |
 | Real-phone test and an independent review | open |
 | Set `PHONE_PAIRING_AVAILABLE` to true | last, after the rows above |
 
