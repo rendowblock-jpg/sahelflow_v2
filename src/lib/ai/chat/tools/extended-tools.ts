@@ -25,6 +25,7 @@ import "server-only";
 
 import { z } from "zod";
 import type { ChatTool, ToolContext, ToolResult } from "./registry";
+import { netOrderItemRevenues } from "@/lib/orders/order-total";
 import { registerGatedTool, registerTool } from "./registry";
 import { assessOrderRisk } from "@/lib/wilaya-risk/engine";
 import type { DbClient } from "@/lib/db";
@@ -607,15 +608,37 @@ registerTool({
         where: start
           ? { order: { createdAt: { gte: start }, deletedAt: null } }
           : { order: { deletedAt: null } },
-        select: { productName: true, quantity: true, total: true },
+        select: {
+          id: true,
+          orderId: true,
+          productName: true,
+          quantity: true,
+          total: true,
+          order: { select: { discountDzd: true } },
+        },
       });
 
-      const map = new Map<string, { quantity: number; revenue: number }>();
+      const byOrder = new Map<string, { discountDzd: number; lines: typeof items }>();
       for (const item of items) {
-        const existing = map.get(item.productName) ?? { quantity: 0, revenue: 0 };
-        existing.quantity += item.quantity;
-        existing.revenue += item.total;
-        map.set(item.productName, existing);
+        const oid = item.orderId ?? "__none__";
+        const entry = byOrder.get(oid) ?? {
+          discountDzd: item.order?.discountDzd ?? 0,
+          lines: [],
+        };
+        entry.lines.push(item);
+        byOrder.set(oid, entry);
+      }
+
+      const map = new Map<string, { quantity: number; revenue: number }>();
+      for (const { discountDzd, lines } of byOrder.values()) {
+        const netRevenues = netOrderItemRevenues(lines, discountDzd);
+        for (let i = 0; i < lines.length; i++) {
+          const item = lines[i];
+          const existing = map.get(item.productName) ?? { quantity: 0, revenue: 0 };
+          existing.quantity += item.quantity;
+          existing.revenue += netRevenues[i];
+          map.set(item.productName, existing);
+        }
       }
 
       const sorted = Array.from(map.entries())

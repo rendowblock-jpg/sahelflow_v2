@@ -9,6 +9,7 @@
  * Queries are scoped to the active shop via the DbClient routing in
  * src/lib/db.ts (multi-shop), so no explicit shopId filter is needed.
  */
+import { netOrderItemRevenues } from "@/lib/orders/order-total";
 import "server-only";
 import type { ServiceContext } from "./service-base";
 import type { OrderStatus } from "@/types/domain";
@@ -159,11 +160,13 @@ export const analyticsService = {
             status: true,
             totalPrice: true,
             deliveryCost: true,
+            discountDzd: true,
             wilaya: true,
             createdAt: true,
             deliveredAt: true,
             items: {
               select: {
+                id: true,
                 productId: true,
                 productName: true,
                 quantity: true,
@@ -353,7 +356,9 @@ export const analyticsService = {
   buildTopProducts(
     orders: Array<{
       status?: string;
+      discountDzd?: number;
       items: Array<{
+        id?: string;
         productId: string | null;
         productName: string;
         quantity: number;
@@ -365,18 +370,21 @@ export const analyticsService = {
     const map = new Map<string, TopProduct>();
     for (const order of orders) {
       if (order.status !== undefined && EXCLUDED_FROM_REVENUE.includes(order.status as OrderStatus)) continue;
-      for (const item of order.items) {
+      const netRevenues = netOrderItemRevenues(order.items, order.discountDzd ?? 0);
+      for (let i = 0; i < order.items.length; i++) {
+        const item = order.items[i];
+        const lineRevenue = netRevenues[i];
         const key = item.productId ?? item.productName;
         const existing = map.get(key);
         if (existing) {
-          existing.revenue += item.total;
+          existing.revenue += lineRevenue;
           existing.units += item.quantity;
           existing.orders += 1;
         } else {
           map.set(key, {
             key,
             name: item.productName,
-            revenue: item.total,
+            revenue: lineRevenue,
             units: item.quantity,
             orders: 1,
           });
