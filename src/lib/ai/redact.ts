@@ -455,6 +455,7 @@ function serializeOrderDetails(value: unknown): unknown {
     orderNumber: safeString(order.orderNumber),
     status: safeString(order.status),
     totalPrice: safeNumber(order.totalPrice),
+    discountDzd: safeNumber(order.discountDzd),
     deliveryCost: safeNumber(order.deliveryCost),
     wilaya: safeWilaya(order.wilaya),
     commune: safeCommune(order.commune, order.wilaya),

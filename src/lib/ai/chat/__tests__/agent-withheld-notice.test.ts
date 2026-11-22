@@ -129,7 +129,7 @@ describe("execute(): the stored result of a call whose fields were withheld", ()
   it("is an envelope that lists the withheld fields and keeps the data without the hidden numbers", async () => {
     const out = await execute({ name: "get_order_details", args: {} }, context("operator"), "fr");
     const stored = out.result as { withheld_for_role: string[]; data: Record<string, unknown> };
-    expect(stored.withheld_for_role).toEqual(["totalPrice", "deliveryCost", "items.unitPrice", "items.total"]);
+    expect(stored.withheld_for_role).toEqual(["totalPrice", "discountDzd", "deliveryCost", "items.unitPrice", "items.total"]);
     expect(stored.data.orderNumber).toBe("ORD-1");
     expect(stored.data).not.toHaveProperty("totalPrice");
     expect(JSON.stringify(out)).not.toContain(SECRET_TEXT);
@@ -174,7 +174,7 @@ describe("a restricted member asks for an order total", () => {
   it("Gemini: the model is told the fields are hidden by role, and never sees the number", async () => {
     const { out, saw, wire } = await viaGemini("operator");
     expect(out.error).toBeUndefined();
-    expect(saw.withheld_for_role).toEqual(["totalPrice", "deliveryCost", "items.unitPrice", "items.total"]);
+    expect(saw.withheld_for_role).toEqual(["totalPrice", "discountDzd", "deliveryCost", "items.unitPrice", "items.total"]);
     expect(String(saw.note)).toMatch(/role/i);
     expect((saw.data as Record<string, unknown>).orderNumber).toBe("ORD-1");
     expect(wire).not.toContain(SECRET_TEXT);
@@ -185,7 +185,7 @@ describe("a restricted member asks for an order total", () => {
     const gemini = await viaGemini("operator");
     const groq = await viaGroq("operator");
     expect(groq.saw).toEqual(gemini.saw);
-    expect(groq.saw.withheld_for_role).toEqual(["totalPrice", "deliveryCost", "items.unitPrice", "items.total"]);
+    expect(groq.saw.withheld_for_role).toEqual(["totalPrice", "discountDzd", "deliveryCost", "items.unitPrice", "items.total"]);
     expect(groq.wire).not.toContain(SECRET_TEXT);
     expect(groq.out.toolCalls[0]?.result).toEqual(gemini.out.toolCalls[0]?.result);
   });
@@ -209,7 +209,7 @@ describe("a stored envelope is replayed to the model intact on the next turn", (
     vi.stubGlobal("fetch", fetchMock);
     await runAgent(history, "et le coût de livraison ?", context("operator"), "fr");
     const saw = geminiSaw(fetchMock, 0);
-    expect(saw.withheld_for_role).toEqual(["totalPrice", "deliveryCost", "items.unitPrice", "items.total"]);
+    expect(saw.withheld_for_role).toEqual(["totalPrice", "discountDzd", "deliveryCost", "items.unitPrice", "items.total"]);
     expect(String(saw.note)).toMatch(/role/i);
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain(SECRET_TEXT);
   });

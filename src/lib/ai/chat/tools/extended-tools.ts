@@ -81,6 +81,7 @@ registerTool({
           orderNumber: order.orderNumber,
           status: order.status,
           totalPrice: order.totalPrice,
+          discountDzd: order.discountDzd,
           deliveryCost: order.deliveryCost,
           wilaya: order.wilaya,
           commune: order.commune,
