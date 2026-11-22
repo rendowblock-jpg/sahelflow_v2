@@ -12,6 +12,10 @@ import {
   type ConnectedEnvelope,
 } from "../../src/lib/connected-platform/protocol";
 import { allowedOrigin, corsHeaders, parseAllowedOrigins } from "./cors";
+import {
+  canonicalBootstrapProofBytes,
+  parseBootstrapProof,
+} from "../../src/lib/connected-platform/bootstrap-proof";
 import { tokenRotationProofBytes } from "../../src/lib/connected-platform/token-rotation-proof";
 import {
   MAX_ROTATE_BODY_BYTES,
@@ -49,6 +53,8 @@ export interface ConnectedWorkerEnvironment {
   SF_LICENSE_PERMANENT_PUBLIC_KEYS: string;
   /** Comma list of exact phone-app origins allowed to call the relay from a browser. */
   PWA_ORIGINS?: string;
+  /** Retention window for terminal commands in seconds (default 7 days, min 60s). */
+  COMMAND_RETENTION_SECONDS?: string;
 }
 
 type WorkspaceRow = {
@@ -119,6 +125,9 @@ const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const MAX_JWK_CHARS = 4096;
 const PAIRING_TTL_MS = 10 * 60 * 1000;
 const MAX_POLL_LIMIT = 100;
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+const DEFAULT_COMMAND_RETENTION_SECONDS = 7 * 24 * 60 * 60;
+const COMMAND_PRUNE_BATCH = 200;
 // Body limits for the two routes a phone (or a stranger) can reach. Read BEFORE parsing and before the token is
 // checked, so nobody can make the worker buffer megabytes. 512 KiB is the ciphertext cap in protocol.ts, plus 16 KiB of fields.
 const MAX_COMMAND_BODY_BYTES = 512 * 1024 + 16 * 1024;
@@ -531,6 +540,9 @@ async function verifyEnvelopeSignature(
 async function bootstrap(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
   const bounded = await readBoundedJson(request, MAX_BOOTSTRAP_BODY_BYTES);
   if (!bounded.ok) return bounded.response;
+  const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const ipLimited = await hitRate(environment, "bootstrap_ip", await subjectHash(ip), true);
+  if (ipLimited) return ipLimited;
   const body = bounded.value;
   if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "invalid_request" }, 400);
   const input = body as {
@@ -538,6 +550,7 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
     desktopSigningPublicKey?: unknown;
     desktopEncryptionPublicKey?: unknown;
     recoveryTransfer?: unknown;
+    desktopBootstrapProof?: unknown;
   };
   if (
     typeof input.desktopSigningPublicKey !== "string" ||
@@ -546,6 +559,10 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
     !validRsaEncryptionJwk(input.desktopEncryptionPublicKey)
   ) {
     return json({ error: "invalid_keys" }, 400);
+  }
+  const parsedProof = parseBootstrapProof(input.desktopBootstrapProof, Date.now());
+  if (!parsedProof.ok) {
+    return json({ error: "desktop_key_proof_invalid" }, 403);
   }
   let entitlement: SignedEntitlement;
   try { entitlement = await verifyEntitlement(input.entitlement, environment); }
@@ -557,6 +574,21 @@ async function bootstrap(request: Request, environment: ConnectedWorkerEnvironme
     !claims.features.includes(STOREFRONT_FEATURE)
   ) {
     return json({ error: "connected_not_entitled" }, 403);
+  }
+  const proofOk = await verifyEd25519(
+    input.desktopSigningPublicKey,
+    parsedProof.proof.signature,
+    canonicalBootstrapProofBytes({
+      workspaceId: claims.workspaceId,
+      installationId: claims.installationId,
+      deviceBinding: claims.deviceBinding,
+      desktopSigningPublicKey: input.desktopSigningPublicKey,
+      desktopEncryptionPublicKey: input.desktopEncryptionPublicKey,
+      issuedAt: parsedProof.proof.issuedAt,
+    }),
+  );
+  if (!proofOk) {
+    return json({ error: "desktop_key_proof_invalid" }, 403);
   }
   const token = randomToken();
   const tokenHash = await sha256Hex(token);
@@ -772,17 +804,33 @@ async function createPairing(request: Request, environment: ConnectedWorkerEnvir
   const bounded = await readBoundedJson(request, MAX_PAIRING_CREATE_BODY_BYTES);
   if (!bounded.ok) return bounded.response;
   const body = bounded.value;
-  const input = body as { workspaceId?: unknown; memberId?: unknown; deviceId?: unknown; desktopKeyProof?: unknown };
+  const input = body as {
+    workspaceId?: unknown;
+    memberId?: unknown;
+    deviceId?: unknown;
+    desktopKeyProof?: unknown;
+    pairingTokenHash?: unknown;
+  };
   if (!validIdentity(input.workspaceId) || !validIdentity(input.memberId) || !validIdentity(input.deviceId)) {
     return json({ error: "invalid_request" }, 400);
   }
   const keyProof = parseDesktopKeyProofField(input.desktopKeyProof);
   if (!keyProof.ok) return json({ error: "invalid_key_proof" }, 400);
+  let clientTokenHash: string | null = null;
+  if (input.pairingTokenHash !== undefined && input.pairingTokenHash !== null) {
+    if (typeof input.pairingTokenHash !== "string" || !SHA256_HEX.test(input.pairingTokenHash)) {
+      return json({ error: "invalid_pairing_token_hash" }, 400);
+    }
+    clientTokenHash = input.pairingTokenHash;
+  }
   const workspace = await authenticateDesktop(request, environment, input.workspaceId);
   if (!workspace) return json({ error: "unauthorized" }, 401);
+  const pairLimited = await hitRate(environment, "pairing_create", await subjectHash(input.workspaceId), false);
+  if (pairLimited) return pairLimited;
   const pairingId = `pair_${crypto.randomUUID().replace(/-/g, "")}`;
-  const pairingToken = randomToken();
-  const tokenHash = await sha256Hex(pairingToken);
+  // W4SEC-02: when the desktop sends pairingTokenHash, the relay stores ONLY the hash and never mints or sees plaintext.
+  const pairingToken = clientTokenHash ? null : randomToken();
+  const tokenHash = clientTokenHash ?? (await sha256Hex(pairingToken!));
   const expiresAt = new Date(Date.now() + PAIRING_TTL_MS).toISOString();
   const result = await environment.DB.prepare(
     `INSERT INTO connected_pairing
@@ -838,7 +886,10 @@ async function createPairing(request: Request, environment: ConnectedWorkerEnvir
   ).run();
   if (!result.success) return json({ error: "pairing_unavailable" }, 503);
   if (result.meta?.changes !== 1) return json({ error: "entitlement_limit_reached" }, 403);
-  return json({ pairingId, pairingToken, expiresAt }, 201);
+  return json(
+    pairingToken !== null ? { pairingId, pairingToken, expiresAt } : { pairingId, expiresAt },
+    201,
+  );
 }
 
 async function exchangePairing(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
@@ -1334,6 +1385,7 @@ async function pollCommands(request: Request, environment: ConnectedWorkerEnviro
     `UPDATE connected_command SET state = 'expired', completed_at = CURRENT_TIMESTAMP
       WHERE workspace_id = ?1 AND state = 'queued' AND expires_at <= ?2`,
   ).bind(workspaceId, new Date().toISOString()).run();
+  await pruneFinishedCommands(environment).catch(() => {});
   const rows = await environment.DB.prepare(
     `SELECT relay_sequence, command_id, envelope_json
        FROM connected_command
@@ -1411,6 +1463,7 @@ async function completeCommand(
       WHERE workspace_id = ?4 AND command_id = ?5 AND state = 'queued'`,
   ).bind(input.state, digest, JSON.stringify(envelope), envelope.workspaceId, commandId).run();
   if (!result.success || result.meta?.changes === 0) return json({ error: "command_completion_conflict" }, 409);
+  await pruneFinishedCommands(environment).catch(() => {});
   return json({ commandId, state: input.state }, 200);
 }
 
@@ -1492,6 +1545,8 @@ async function health(environment: ConnectedWorkerEnvironment): Promise<Response
     await environment.DB.prepare("SELECT device_id FROM connected_device LIMIT 1").first<{ device_id: string }>();
     await environment.DB.prepare("SELECT command_id FROM connected_command LIMIT 1").first<{ command_id: string }>();
     await environment.DB.prepare("SELECT bucket FROM connected_rate_limit LIMIT 1").first<{ bucket: string }>();
+    // Migration 0003 (pairing key proof): without it createPairing and exchange fail, so say so here first.
+    await environment.DB.prepare("SELECT desktop_key_proof FROM connected_pairing LIMIT 1").first<{ desktop_key_proof: string | null }>();
     // Migration 0004 (device token lifetime): without it every phone call would fail, so say so here first.
     await environment.DB.prepare("SELECT token_issued_at FROM connected_device LIMIT 1").first<{ token_issued_at: number | null }>();
     parsedKeyring(environment.SF_LICENSE_TRIAL_PUBLIC_KEYS);
@@ -1554,4 +1609,42 @@ async function routeRequest(
   return json({ error: "not_found" }, 404);
 }
 
-export default { fetch: handleConnectedRequest };
+function commandRetentionSeconds(environment: ConnectedWorkerEnvironment): number {
+  const parsed = Number(environment.COMMAND_RETENTION_SECONDS);
+  return Number.isSafeInteger(parsed) && parsed >= 60 ? parsed : DEFAULT_COMMAND_RETENTION_SECONDS;
+}
+
+/**
+ * Retention rule for finished commands: removes sealed terminal rows older than
+ * COMMAND_RETENTION_SECONDS (default 7 days) in bounded batches so old ciphertexts
+ * do not accumulate indefinitely in D1. Active queued commands are never touched.
+ */
+export async function pruneFinishedCommands(
+  environment: ConnectedWorkerEnvironment,
+  nowMs = Date.now(),
+): Promise<number> {
+  const cutoffIso = new Date(nowMs - commandRetentionSeconds(environment) * 1000)
+    .toISOString()
+    .replace("T", " ")
+    .replace(/\.\d{3}Z$/, "");
+  const deleted = await environment.DB.prepare(
+    `DELETE FROM connected_command
+      WHERE rowid IN (
+        SELECT rowid FROM connected_command
+         WHERE state IN ('committed', 'rejected', 'conflict', 'expired', 'revoked')
+           AND completed_at IS NOT NULL
+           AND datetime(completed_at) <= datetime(?1)
+         LIMIT ?2
+      )`,
+  ).bind(cutoffIso, COMMAND_PRUNE_BATCH).run();
+  return Number(deleted.meta?.changes ?? 0);
+}
+
+export async function handleConnectedScheduled(
+  _controller: unknown,
+  environment: ConnectedWorkerEnvironment,
+): Promise<void> {
+  await pruneFinishedCommands(environment);
+}
+
+export default { fetch: handleConnectedRequest, scheduled: handleConnectedScheduled };

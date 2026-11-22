@@ -203,9 +203,18 @@ export class ConnectedPlatformClient {
     }
   }
 
-  /** desktopKeyProof: "<signature>.<context>", the desktop's signature over its RSA key (the relay stores and returns it). */
-  createPairing(input: { workspaceId: string; memberId: string; deviceId: string; desktopKeyProof?: string }) {
-    return this.requestJson<{ pairingId: string; pairingToken: string; expiresAt: string }>(
+  /**
+   * desktopKeyProof: "<signature>.<context>", the desktop's signature over its RSA key.
+   * pairingTokenHash (W4SEC-02): SHA-256 hex of a PC-generated 32-byte pairing token so the relay never sees the secret.
+   */
+  createPairing(input: {
+    workspaceId: string;
+    memberId: string;
+    deviceId: string;
+    desktopKeyProof?: string;
+    pairingTokenHash?: string;
+  }) {
+    return this.requestJson<{ pairingId: string; pairingToken?: string; expiresAt: string }>(
       "control",
       "/v1/desktop/pairings",
       { method: "POST", body: input },
@@ -471,6 +480,7 @@ export class ConnectedPlatformClient {
     desktopSigningPublicKey: string,
     desktopEncryptionPublicKey: string,
     recoveryTransfer = false,
+    desktopBootstrapProof?: { issuedAt: number; signature: string },
   ) {
     return this.requestJson<{
       workspaceId: string;
@@ -480,7 +490,13 @@ export class ConnectedPlatformClient {
     }>("control", "/v1/bootstrap", {
       method: "POST",
       token: "none",
-      body: { entitlement, desktopSigningPublicKey, desktopEncryptionPublicKey, recoveryTransfer },
+      body: {
+        entitlement,
+        desktopSigningPublicKey,
+        desktopEncryptionPublicKey,
+        recoveryTransfer,
+        ...(desktopBootstrapProof ? { desktopBootstrapProof } : {}),
+      },
     });
   }
 
