@@ -175,6 +175,7 @@ export function renderProduct(ctx: Ctx, product: ShopProduct, legalLine = ""): P
     ? `<div class="sf-form sf-form--out"><p>${esc(t("storefront.view.landing.soldOut"))}</p></div>`
     : `<form id="order" class="sf-form" novalidate autocomplete="on" aria-labelledby="order-title">
 <h2 id="order-title" class="sf-h3">${esc(t("storefront.view.completeOrder"))}</h2>
+<input class="sf-hp" id="f-aux" name="sf_aux_code" type="text" value="" tabindex="-1" autocomplete="off" aria-hidden="true" data-sf-hp="1">
 <p class="sf-cod">${icon("check")}<span${arabicAttrs(ctx, codText)}>${esc(codText)}</span></p>
 <div class="sf-qty"><span id="qty-label">${esc(t("storefront.view.landing.quantity"))}</span><div class="sf-stepper" role="group" aria-labelledby="qty-label"><button type="button" data-sf="qty-minus" aria-label="${esc(t("storefront.view.decreaseQty"))}">${icon("minus")}</button><output data-sf="qty" aria-live="polite">1</output><button type="button" data-sf="qty-plus" aria-label="${esc(t("storefront.view.increaseQty"))}">${icon("plus")}</button></div></div>
 <fieldset class="sf-grp"><legend>${esc(t("storefront.shop.stepContact"))}</legend>

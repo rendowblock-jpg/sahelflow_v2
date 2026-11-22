@@ -18,7 +18,8 @@ const PRODUCT = "product_00000001";
 const CSP_TODAY =
   "default-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; img-src 'self' https:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self'";
 // sha256 of the page HTML of a store WITHOUT pixel ids, measured on the code before this feature (see the M4 note).
-const GOLDEN: Record<string, string> = { home: "a60b74ed9bae33b854a4f329ff6c25fcf6854ff4da0bf0c4d6c145f328ab1783", product: "ce867eda8571947104f00c15fe66ab970b9cc2d1c6822ec9a66fae6c50828d8e" };
+// Updated product hash for Fake-Order Gate M2 honeypot input on #order; home stays byte-identical.
+const GOLDEN: Record<string, string> = { home: "a60b74ed9bae33b854a4f329ff6c25fcf6854ff4da0bf0c4d6c145f328ab1783", product: "369d221083708e82b0deedc3e576ade82556281536c4baa5a9cccad2e4febf93" };
 const ASSETS = { css: "/_sf/test.css", js: "/_sf/test.js", trk: "/_sf/trk.0123456789.js", communes: "/_sf/c.test", fonts: {}, skins: {} };
 
 type Tracking = { metaPixelId?: string; tiktokPixelId?: string };
