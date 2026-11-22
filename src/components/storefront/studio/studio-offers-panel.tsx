@@ -13,12 +13,9 @@ import {
   type OfferTier,
   type StorefrontDraftOffers,
 } from "@/lib/storefront/studio-offers";
+import { formatDZD } from "@/lib/utils";
 import { PanelHeader } from "./studio-controls";
 import type { StorefrontStudioDraft, StorefrontStudioProduct } from "./studio-types";
-
-function formatDzd(value: number): string {
-  return `${value.toLocaleString("en-US")} DA`;
-}
 
 export function StudioOffersPanel({
   draft,
@@ -29,7 +26,7 @@ export function StudioOffersPanel({
   products: readonly StorefrontStudioProduct[];
   commit: (next: StorefrontStudioDraft) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [percentInputs, setPercentInputs] = useState<Record<string, string>>({});
   const saleItems = saleItemsFromStudioProducts(products, draft.selectedProductIds);
 
@@ -123,7 +120,7 @@ export function StudioOffersPanel({
                     </h3>
                     <p className="text-[11px] tabular-nums text-muted-foreground">
                       {t("storefront.offersPanel.unitPrice", {
-                        price: formatDzd(item.unitPrice),
+                        price: formatDZD(item.unitPrice, locale),
                       })}
                     </p>
                   </div>
@@ -272,11 +269,11 @@ export function StudioOffersPanel({
                             {rowValid
                               ? t("storefront.offersPanel.buyerPaysPreview", {
                                   count: tier.q,
-                                  total: formatDzd(tier.t),
-                                  savings: formatDzd(savings),
+                                  total: formatDZD(tier.t, locale),
+                                  savings: formatDZD(savings, locale),
                                 })
                               : t("storefront.offersPanel.tierMustBeCheaper", {
-                                  normal: formatDzd(normalTotal),
+                                  normal: formatDZD(normalTotal, locale),
                                 })}
                           </p>
                         </div>
