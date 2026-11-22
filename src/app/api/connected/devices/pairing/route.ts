@@ -33,7 +33,7 @@ export const POST = withErrorHandler(async () => {
   // W4SEC-02: generate the 32-byte pairing secret on the PC and send ONLY its SHA-256 hash to the relay.
   const localPairingToken = randomBytes(32).toString("base64url");
   const pairingTokenHash = createHash("sha256").update(localPairingToken).digest("hex");
-  let pairing: Awaited<ReturnType<typeof runtime.client.createPairing>>;
+  let pairing: { pairingId: string; expiresAt: string };
   try {
     // One string "<signature>.<context>": the relay stores it and the phone reads it back after the exchange.
     pairing = await runtime.client.createPairing({

@@ -176,9 +176,10 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
     const netRevenues = netOrderItemRevenues(group, discountByOrder.get(oid) ?? 0);
     for (let i = 0; i < group.length; i++) {
       const item = group[i];
+      if (!item) continue;
       const existing = productMap.get(item.productName) ?? { quantity: 0, revenue: 0 };
       existing.quantity += item.quantity;
-      existing.revenue += netRevenues[i];
+      existing.revenue += netRevenues[i] ?? item.total;
       productMap.set(item.productName, existing);
     }
   }

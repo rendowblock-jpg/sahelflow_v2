@@ -3,7 +3,6 @@
  */
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getTranslations } from "@/lib/i18n";
 import type { StorefrontStudioDraft } from "@/lib/storefront/studio-draft";
 import { createDefaultStorefrontTheme } from "@/lib/storefront/theme-default";
 import { render } from "@/test-utils/render";

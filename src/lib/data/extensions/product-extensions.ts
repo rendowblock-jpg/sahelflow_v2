@@ -134,8 +134,13 @@ export const productServiceExtensions = {
         let lineMap = netByOrder.get(item.orderId);
         if (!lineMap) {
           const nets = netOrderItemRevenues(item.order.items, discount);
-          lineMap = new Map(item.order.items.map((line, idx) => [line.id, nets[idx]]));
-          netByOrder.set(item.orderId, lineMap);
+          const freshMap = new Map<string, number>();
+          for (let idx = 0; idx < item.order.items.length; idx++) {
+            const line = item.order.items[idx];
+            if (line) freshMap.set(line.id, nets[idx] ?? line.total);
+          }
+          lineMap = freshMap;
+          netByOrder.set(item.orderId, freshMap);
         }
         revenue += lineMap.get(item.id) ?? item.total;
       } else {

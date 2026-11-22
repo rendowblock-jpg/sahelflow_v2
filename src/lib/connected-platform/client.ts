@@ -212,9 +212,22 @@ export class ConnectedPlatformClient {
     memberId: string;
     deviceId: string;
     desktopKeyProof?: string;
+    pairingTokenHash: string;
+  }): Promise<{ pairingId: string; expiresAt: string }>;
+  createPairing(input: {
+    workspaceId: string;
+    memberId: string;
+    deviceId: string;
+    desktopKeyProof?: string;
+  }): Promise<{ pairingId: string; pairingToken: string; expiresAt: string }>;
+  createPairing(input: {
+    workspaceId: string;
+    memberId: string;
+    deviceId: string;
+    desktopKeyProof?: string;
     pairingTokenHash?: string;
   }) {
-    return this.requestJson<{ pairingId: string; pairingToken?: string; expiresAt: string }>(
+    return this.requestJson<{ pairingId: string; pairingToken: string; expiresAt: string }>(
       "control",
       "/v1/desktop/pairings",
       { method: "POST", body: input },

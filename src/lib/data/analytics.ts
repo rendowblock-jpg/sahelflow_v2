@@ -373,7 +373,8 @@ export const analyticsService = {
       const netRevenues = netOrderItemRevenues(order.items, order.discountDzd ?? 0);
       for (let i = 0; i < order.items.length; i++) {
         const item = order.items[i];
-        const lineRevenue = netRevenues[i];
+        if (!item) continue;
+        const lineRevenue = netRevenues[i] ?? item.total;
         const key = item.productId ?? item.productName;
         const existing = map.get(key);
         if (existing) {

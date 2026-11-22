@@ -634,9 +634,10 @@ registerTool({
         const netRevenues = netOrderItemRevenues(lines, discountDzd);
         for (let i = 0; i < lines.length; i++) {
           const item = lines[i];
+          if (!item) continue;
           const existing = map.get(item.productName) ?? { quantity: 0, revenue: 0 };
           existing.quantity += item.quantity;
-          existing.revenue += netRevenues[i];
+          existing.revenue += netRevenues[i] ?? item.total;
           map.set(item.productName, existing);
         }
       }

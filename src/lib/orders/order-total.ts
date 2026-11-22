@@ -145,7 +145,9 @@ export function netOrderItemRevenues(
   const shares = new Array<number>(items.length).fill(0);
   let given = 0;
   for (let i = 0; i < items.length; i++) {
-    const value = Math.max(0, items[i].total);
+    const item = items[i];
+    if (!item) continue;
+    const value = Math.max(0, item.total);
     const share = Number((BigInt(clamped) * BigInt(value)) / BigInt(itemsTotal));
     shares[i] = share;
     given += share;
@@ -160,10 +162,11 @@ export function netOrderItemRevenues(
     .sort((x, y) => y.value - x.value || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
   for (const entry of order) {
     if (leftover === 0) break;
-    if (shares[entry.index] < entry.value) {
-      shares[entry.index] += 1;
+    const current = shares[entry.index] ?? 0;
+    if (current < entry.value) {
+      shares[entry.index] = current + 1;
       leftover -= 1;
     }
   }
-  return items.map((item, i) => item.total - shares[i]);
+  return items.map((item, i) => item.total - (shares[i] ?? 0));
 }
