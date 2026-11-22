@@ -55,8 +55,14 @@ export function availableModes(fees: FeeTable, wilaya: string): Mode[] {
   return (["home", "desk"] as const).filter((mode) => feeFor(fees, wilaya, mode) !== null);
 }
 
-export function totals(unit: number, quantity: number, fee: number | null): { subtotal: number; shipping: number | null; total: number } {
-  const subtotal = unit * quantity;
+export function totals(
+  unit: number,
+  quantity: number,
+  fee: number | null,
+  offers?: ReadonlyArray<readonly [number, number]>,
+): { subtotal: number; shipping: number | null; total: number } {
+  const match = offers?.find((tier) => tier[0] === quantity);
+  const subtotal = match ? match[1] : unit * quantity;
   return { subtotal, shipping: fee, total: subtotal + (fee ?? 0) };
 }
 

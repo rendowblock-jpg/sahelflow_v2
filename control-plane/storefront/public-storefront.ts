@@ -1,3 +1,4 @@
+import { readOfferLadder } from "./offer-ladder";
 import { json } from "./shared";
 import type {
   AllocationRow,
@@ -31,7 +32,7 @@ export async function publicStorefront(
   if (!release) return json({ error: "release_unavailable" }, 503);
 
   const allocations = await environment.DB.prepare(
-    `SELECT item_key, unit_price_dzd, remaining_quantity
+    `SELECT item_key, unit_price_dzd, remaining_quantity, offers_json
        FROM storefront_allocation
       WHERE release_id = ?1
       ORDER BY item_key ASC`,
@@ -39,6 +40,7 @@ export async function publicStorefront(
     .bind(release.release_id)
     .all<AllocationRow>();
 
+  const offersEnabled = environment.OFFERS_PRICING_DISABLED !== "1";
   return json({
     storefrontId: storefront.storefront_id,
     releaseId: release.release_id,
@@ -46,11 +48,15 @@ export async function publicStorefront(
     locale: release.locale,
     artifactDigest: release.artifact_digest,
     publicArtifact: JSON.parse(release.artifact_json) as unknown,
-    catalog: (allocations.results ?? []).map((row) => ({
-      itemKey: row.item_key,
-      unitPriceDzd: row.unit_price_dzd,
-      available: row.remaining_quantity > 0,
-    })),
+    catalog: (allocations.results ?? []).map((row) => {
+      const offers = offersEnabled ? readOfferLadder(row.unit_price_dzd, row.offers_json) : [];
+      return {
+        itemKey: row.item_key,
+        unitPriceDzd: row.unit_price_dzd,
+        available: row.remaining_quantity > 0,
+        ...(offers.length > 0 ? { offers } : {}),
+      };
+    }),
     receiptEncryptionPublicKey: storefront.receipt_encryption_public_key,
   });
 }

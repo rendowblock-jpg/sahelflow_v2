@@ -29,7 +29,7 @@ import {
   type Mode,
 } from "./logic";
 
-type Item = { k: string; l: string | null; p: number; r: number; s: string };
+type Item = { k: string; l: string | null; p: number; r: number; s: string; o?: Array<[number, number]> };
 type Data = {
   slug: string;
   storefrontId: string;
@@ -101,6 +101,9 @@ function boot(): void {
   };
   const modeInputs = Array.from(form.querySelectorAll<HTMLInputElement>('input[name="mode"]'));
   const variantInputs = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="variant"]'));
+  const offersBox = form.querySelector<HTMLElement>('[data-sf="offers"]');
+  const offerLists = Array.from(form.querySelectorAll<HTMLElement>('[data-sf="offers-list"]'));
+  const qtyBox = form.querySelector<HTMLElement>(".sf-qty");
   const priceEl = document.querySelector<HTMLElement>('[data-sf="price"]');
   const stockEl = document.querySelector<HTMLElement>('[data-sf="stock"]');
   const bar = document.getElementById("sf-sticky");
@@ -127,8 +130,24 @@ function boot(): void {
     el.classList.add("is-bump");
   }
 
+  function syncOffers(): void {
+    if (!offersBox) return;
+    const has = Boolean(current.o?.length);
+    offersBox.hidden = !has;
+    if (qtyBox) qtyBox.hidden = has;
+    for (const list of offerLists) {
+      const active = has && list.dataset.item === current.k;
+      list.hidden = !active;
+      if (active) {
+        const picked = list.querySelector<HTMLInputElement>("input:checked") ?? list.querySelector<HTMLInputElement>("input");
+        if (picked) { picked.checked = true; quantity = Number(picked.value) || 1; }
+      }
+    }
+  }
+
   function refresh(): void {
-    quantity = clampQuantity(quantity, current.r);
+    const cap = current.o && current.o.length > 0 ? 100 : 50;
+    quantity = clampQuantity(quantity, current.r, cap);
     put(els.qty, String(quantity));
     els.minus.disabled = quantity <= 1;
     els.plus.disabled = quantity >= clampQuantity(Number.MAX_SAFE_INTEGER, current.r);
@@ -151,7 +170,7 @@ function boot(): void {
     els.address.required = mode !== "desk";
     if (mode === "desk") clearFieldError("address");
     const fee = wilaya && mode ? feeFor(d.fees, wilaya, mode) : null;
-    const sums = totals(current.p, quantity, fee);
+    const sums = totals(current.p, quantity, fee, current.o);
     put(els.subtotal, money(sums.subtotal));
     put(els.shipping, fee === null ? (wilaya ? d.i.noDelivery ?? "" : d.i.pick ?? "") : fee === 0 ? d.i.free ?? "0" : money(fee));
     put(els.total, money(sums.total));
@@ -286,9 +305,16 @@ function boot(): void {
     if (isValidPhone(els.phone.value)) els.phone.value = formatPhone(normalizePhone(els.phone.value));
   });
   for (const input of modeInputs) input.addEventListener("change", () => { mode = input.value as Mode; clearFieldError("mode"); refresh(); });
+  offersBox?.addEventListener("change", (event) => {
+    const target = event.target as HTMLInputElement | null;
+    if (!target || target.type !== "radio") return;
+    const next = Number(target.value);
+    if (next >= 1) { quantity = next; refresh(); }
+  });
   for (const input of variantInputs) {
     input.addEventListener("change", () => {
       current = d.items.find((item) => item.k === input.value) ?? current;
+      syncOffers();
       refresh();
     });
   }
@@ -361,13 +387,15 @@ function boot(): void {
     try {
       const response = await fetch(`/v1/storefront/${d.slug}`, { headers: { Accept: "application/json" } });
       if (!response.ok) return false;
-      const json = (await response.json()) as { storefrontId: string; releaseId: string; receiptEncryptionPublicKey: string; catalog?: Array<{ itemKey: string; unitPriceDzd: number; available: boolean }> };
+      const json = (await response.json()) as { storefrontId: string; releaseId: string; receiptEncryptionPublicKey: string; catalog?: Array<{ itemKey: string; unitPriceDzd: number; available: boolean; offers?: Array<{ q: number; t: number }> }> };
       d.storefrontId = json.storefrontId;
       d.releaseId = json.releaseId;
       d.key = json.receiptEncryptionPublicKey;
       const entry = (json.catalog ?? []).find((candidate) => candidate.itemKey === current.k);
       if (!entry || !entry.available) return false;
       current.p = entry.unitPriceDzd;
+      current.o = entry.offers?.length ? entry.offers.map((tier) => [tier.q, tier.t] as [number, number]) : undefined;
+      syncOffers();
       refresh();
       return true;
     } catch { return false; }

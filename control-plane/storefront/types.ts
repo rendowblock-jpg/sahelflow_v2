@@ -45,6 +45,8 @@ export interface StorefrontWorkerEnvironment {
   CHECKOUT_SHOP_RATE_LIMITER?: RateLimiter;
   /** Cloudflare Turnstile secret. Absent (the default): no challenge, nothing calls Cloudflare. */
   TURNSTILE_SECRET?: string;
+  /** Emergency kill switch: set to "1" to ignore stored offer ladders during checkout and page render. */
+  OFFERS_PRICING_DISABLED?: string;
 }
 
 export type StorefrontRow = {
@@ -71,6 +73,7 @@ export type AllocationRow = {
   item_key: string;
   unit_price_dzd: number;
   remaining_quantity: number;
+  offers_json?: string | null;
 };
 
 export type ReceiptState = "received" | "imported" | "rejected" | "reconciled";

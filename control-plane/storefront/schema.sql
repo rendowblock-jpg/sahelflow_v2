@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS storefront_receipt (
   wilaya_code TEXT NOT NULL,
   delivery_mode TEXT NOT NULL,
   subtotal_dzd INTEGER NOT NULL,
+  discount_dzd INTEGER NOT NULL DEFAULT 0 CHECK(discount_dzd >= 0),
   shipping_dzd INTEGER NOT NULL,
   total_dzd INTEGER NOT NULL,
   state TEXT NOT NULL DEFAULT 'received' CHECK(state IN ('received','imported','rejected','reconciled')),

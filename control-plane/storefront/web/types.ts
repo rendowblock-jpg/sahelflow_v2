@@ -2,7 +2,9 @@ import type { PublicArtifact } from "../shared";
 import type { PublicLocale } from "./locale";
 import type { Assets, ShippingRow } from "./shop/ui";
 
-export type StockRow = { unitPriceDzd: number; remaining: number };
+import type { OfferTier } from "../offer-ladder";
+
+export type StockRow = { unitPriceDzd: number; remaining: number; offers?: readonly OfferTier[] };
 
 export type RenderStorePageInput = {
   /** https://shop.sahelflow.com (taken from the request). */

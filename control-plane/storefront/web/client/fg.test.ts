@@ -121,6 +121,6 @@ describe("fake-order gate M2: hosted storefront traps (fg.ts)", () => {
     const fgCode = readFileSync(join(pub, String(fgPath)), "utf8");
     const shopCode = readFileSync(join(pub, manifest.js), "utf8");
     expect(gzipSync(fgCode).length).toBeLessThan(800);
-    expect(gzipSync(shopCode).length).toBeLessThan(8_010);
+    expect(gzipSync(shopCode).length).toBeLessThan(8_400);
   });
 });

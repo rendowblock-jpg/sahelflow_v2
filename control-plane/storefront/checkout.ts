@@ -158,8 +158,8 @@ export async function checkout(
       `INSERT INTO storefront_receipt
         (receipt_id, storefront_id, release_id, idempotency_key, request_digest,
          encrypted_customer, wrapped_customer_key, wilaya_code, delivery_mode,
-         subtotal_dzd, shipping_dzd, total_dzd, state)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 'received')`,
+         subtotal_dzd, discount_dzd, shipping_dzd, total_dzd, state)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 'received')`,
     ).bind(
       receiptId,
       storefront.storefront_id,
@@ -171,6 +171,7 @@ export async function checkout(
       input.wilayaCode,
       input.deliveryMode,
       pricing.subtotalDzd,
+      pricing.discountDzd,
       pricing.shippingDzd,
       pricing.totalDzd,
     ),

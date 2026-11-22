@@ -90,7 +90,8 @@ describe("generated page files", () => {
     // 31 Oct 2026, STORE-WILAYA69 slice 2: the "formerly <wilaya>" line, the greyed row for a wilaya the shop does not deliver to, the
     // alias ranking and the reform.json fetch cost 546 bytes gzip more than 7,456 (the alias list and the old-wilaya names are DATA in
     // c.<hash>/reform.json, not in this script; they cost 1,043 more when they were): 8002.
-    expect(gzipSync(js).length).toBeLessThan(8_010);
+    // Item 2 Quantity Offers M4 (D4 in item2-offers-design.md): offer ladder selector + totals parity raises the JS budget 8,010 -> 8,400.
+    expect(gzipSync(js).length).toBeLessThan(8_400);
     expect(js).not.toMatch(/\beval\(|new Function\(|document\.write|innerHTML\s*=\s*[^"'`]/);
     expect(js).not.toMatch(/https?:\/\/(?!wa\.me)/);
     expect(js).toContain("/v1/storefront/");

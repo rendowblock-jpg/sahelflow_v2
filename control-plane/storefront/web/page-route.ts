@@ -1,3 +1,4 @@
+import { readOfferLadder } from "../offer-ladder";
 import { validPublicArtifact, type PublicArtifact } from "../shared";
 import { pagePixels, widenCsp } from "./tracking";
 import { withMotherFeeFallback } from "../wilaya-fallback";
@@ -121,7 +122,7 @@ async function build(
   legalKind: string | null = null,
 ): Promise<Built> {
   let row: PageRow | null;
-  let allocations: Array<{ item_key: string; unit_price_dzd: number; remaining_quantity: number }> = [];
+  let allocations: Array<{ item_key: string; unit_price_dzd: number; remaining_quantity: number; offers_json?: string | null }> = [];
   let shipping: Array<{ wilaya_code: string; delivery_mode: "home" | "desk"; fee_dzd: number }> = [];
   try {
     row = await environment.DB.prepare(
@@ -137,11 +138,11 @@ async function build(
     if (row?.release_id) {
       const [stock, rules] = await Promise.all([
         environment.DB.prepare(
-          `SELECT item_key, unit_price_dzd, remaining_quantity
+          `SELECT item_key, unit_price_dzd, remaining_quantity, offers_json
              FROM storefront_allocation WHERE release_id = ?1 ORDER BY item_key ASC`,
         )
           .bind(row.release_id)
-          .all<{ item_key: string; unit_price_dzd: number; remaining_quantity: number }>(),
+          .all<{ item_key: string; unit_price_dzd: number; remaining_quantity: number; offers_json?: string | null }>(),
         environment.DB.prepare(
           `SELECT wilaya_code, delivery_mode, fee_dzd
              FROM storefront_shipping_rule WHERE release_id = ?1 ORDER BY wilaya_code ASC`,
@@ -175,11 +176,21 @@ async function build(
     return notice("error", 503, fallbackLocale, deps, 0, { "Retry-After": "300" }, noticeExit("error", slug, productId, requested, legalKind));
   }
 
+  const offersEnabled = environment.OFFERS_PRICING_DISABLED !== "1";
   const stock = new Map<string, StockRow>(
-    allocations.map((allocation) => [
-      allocation.item_key,
-      { unitPriceDzd: allocation.unit_price_dzd, remaining: allocation.remaining_quantity },
-    ]),
+    allocations.map((allocation) => {
+      const offers = offersEnabled
+        ? readOfferLadder(allocation.unit_price_dzd, allocation.offers_json)
+        : [];
+      return [
+        allocation.item_key,
+        {
+          unitPriceDzd: allocation.unit_price_dzd,
+          remaining: allocation.remaining_quantity,
+          ...(offers.length > 0 ? { offers } : {}),
+        },
+      ];
+    }),
   );
   // Wilayas 59..69 (Loi 26-06) with no rule of their own are offered on their mother's fees; checkout prices them the same way.
   const rules: ShippingRow[] = withMotherFeeFallback(

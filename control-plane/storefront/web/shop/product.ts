@@ -117,6 +117,7 @@ export function renderProduct(ctx: Ctx, product: ShopProduct, legalLine = ""): P
   const contact = theme.builder.contact;
   const wa = contact.whatsapp ? whatsappDigits(contact.whatsapp) : "";
   const showBar = !sold && theme.checkout.layout !== "inline";
+  const hasOffers = product.variants.some((variant) => Boolean(variant.offers && variant.offers.length > 0));
 
   const i = {
     fix: t("storefront.shop.fixFields"),
@@ -142,6 +143,7 @@ export function renderProduct(ctx: Ctx, product: ShopProduct, legalLine = ""): P
     communeCount: t("storefront.shop.communeCount", { count: "{{count}}" }),
     communeFormerly: t("storefront.shop.communeFormerly", { wilaya: "{{wilaya}}" }),
     communeNoDelivery: t("storefront.shop.communeNoDelivery", { wilaya: "{{wilaya}}" }),
+
   };
   const data = {
     v: 1,
@@ -153,7 +155,7 @@ export function renderProduct(ctx: Ctx, product: ShopProduct, legalLine = ""): P
     tag: localeTag(locale),
     suffix: currencySuffix(locale),
     name: product.name,
-    items: product.variants.map((variant) => ({ k: variant.itemKey, l: variant.label, p: variant.price, r: variant.remaining, s: theme.showStock && variant.remaining > 0 && variant.remaining <= 5 ? t("storefront.view.lowStock", { count: variant.remaining }) : "" })),
+    items: product.variants.map((variant) => ({ k: variant.itemKey, l: variant.label, p: variant.price, r: variant.remaining, s: theme.showStock && variant.remaining > 0 && variant.remaining <= 5 ? t("storefront.view.lowStock", { count: variant.remaining }) : "", ...(variant.offers && variant.offers.length > 0 ? { o: variant.offers.map((tier) => [tier.q, tier.t] as const) } : {}) })),
     fees,
     cdir: ctx.assets.communes,
     wa,
@@ -171,13 +173,31 @@ export function renderProduct(ctx: Ctx, product: ShopProduct, legalLine = ""): P
     `<label class="sf-mode"><input type="radio" name="mode" value="${mode}"><span class="sf-mode-in"><b>${esc(label)}</b><small data-sf="fee-${mode}">—</small></span></label>`;
 
   const codText = theme.checkout.showCodPromise && theme.checkout.codPromiseText.trim() ? theme.checkout.codPromiseText.trim() : t("storefront.view.landing.codBadge");
+  const currentHasOffers = Boolean(current.offers && current.offers.length > 0);
+  const offerCard = (name: string, q: number, total: number, normal: number, checked: boolean, disabled: boolean) => {
+    const qtyLabel = q === 1 ? t("storefront.shop.offerOne") : t("storefront.shop.offerQty", { count: q });
+    const save = normal - total;
+    const badge = save > 0 ? `<em class="sf-offer-save">${esc(t("storefront.shop.offerSave", { amount: formatPrice(save, locale) }))}</em>` : "";
+    const strike = save > 0 ? `<s>${esc(formatPrice(normal, locale))}</s>` : "";
+    return `<label class="sf-mode"><input type="radio" name="${esc(name)}" value="${q}"${checked ? " checked" : ""}${disabled ? " disabled" : ""}><span class="sf-mode-in sf-offer-in"><span class="sf-offer-g"><b>${esc(qtyLabel)}</b>${badge}</span><span class="sf-offer-g">${strike}<b>${esc(formatPrice(total, locale))}</b></span></span></label>`;
+  };
+  const offersBlock = hasOffers
+    ? `<fieldset class="sf-modes" data-sf="offers"${currentHasOffers ? "" : " hidden"}><legend>${esc(t("storefront.shop.chooseOffer"))}</legend>${product.variants
+        .filter((v) => v.offers && v.offers.length > 0)
+        .map((v, idx) => {
+          const active = v.itemKey === current.itemKey;
+          const radioName = idx === 0 ? "offer" : `offer-${idx}`;
+          return `<div class="sf-offers-grid" data-sf="offers-list" data-item="${esc(v.itemKey)}"${active ? "" : " hidden"}>${[offerCard(radioName, 1, v.price, v.price, true, false), ...(v.offers ?? []).map((tier) => offerCard(radioName, tier.q, tier.t, tier.q * v.price, false, tier.q > v.remaining))].join("")}</div>`;
+        })
+        .join("")}</fieldset>`
+    : "";
   const form = sold
     ? `<div class="sf-form sf-form--out"><p>${esc(t("storefront.view.landing.soldOut"))}</p></div>`
     : `<form id="order" class="sf-form" novalidate autocomplete="on" aria-labelledby="order-title">
 <h2 id="order-title" class="sf-h3">${esc(t("storefront.view.completeOrder"))}</h2>
 <input class="sf-hp" id="f-aux" name="sf_aux_code" type="text" value="" tabindex="-1" autocomplete="off" aria-hidden="true" data-sf-hp="1">
 <p class="sf-cod">${icon("check")}<span${arabicAttrs(ctx, codText)}>${esc(codText)}</span></p>
-<div class="sf-qty"><span id="qty-label">${esc(t("storefront.view.landing.quantity"))}</span><div class="sf-stepper" role="group" aria-labelledby="qty-label"><button type="button" data-sf="qty-minus" aria-label="${esc(t("storefront.view.decreaseQty"))}">${icon("minus")}</button><output data-sf="qty" aria-live="polite">1</output><button type="button" data-sf="qty-plus" aria-label="${esc(t("storefront.view.increaseQty"))}">${icon("plus")}</button></div></div>
+${offersBlock}<div class="sf-qty"${currentHasOffers ? " hidden" : ""}><span id="qty-label">${esc(t("storefront.view.landing.quantity"))}</span><div class="sf-stepper" role="group" aria-labelledby="qty-label"><button type="button" data-sf="qty-minus" aria-label="${esc(t("storefront.view.decreaseQty"))}">${icon("minus")}</button><output data-sf="qty" aria-live="polite">1</output><button type="button" data-sf="qty-plus" aria-label="${esc(t("storefront.view.increaseQty"))}">${icon("plus")}</button></div></div>
 <fieldset class="sf-grp"><legend>${esc(t("storefront.shop.stepContact"))}</legend>
 ${field("name", t("storefront.view.fullName"), '<input id="f-name" name="name" type="text" autocomplete="name" enterkeyhint="next" maxlength="120" required aria-describedby="e-name">')}
 ${field("phone", t("storefront.view.phone"), '<input id="f-phone" name="phone" type="tel" inputmode="tel" enterkeyhint="next" autocomplete="tel-national" dir="ltr" maxlength="20" placeholder="05 55 12 34 56" required aria-describedby="e-phone">')}
