@@ -34,6 +34,11 @@ export async function StorefrontStudioRoute({ id }: { id: string }) {
       sku: true,
       stock: true,
       images: true,
+      productVariants: {
+        where: { isActive: true },
+        select: { id: true, name: true, price: true, stock: true, isActive: true },
+        orderBy: { name: "asc" },
+      },
     },
     orderBy: { name: "asc" },
   });

@@ -91,6 +91,8 @@ export interface StorefrontBuilderState {
   shippingRules: StorefrontShippingRule[];
   /** WIRE/DB shape of the legal block (no column): the Studio lifts it into StorefrontStudioDraft.legal and the public artifact never carries it. */
   legal?: StorefrontLegal;
+  /** WIRE/DB shape of quantity offer ladders (no column): the Studio lifts it into StorefrontStudioDraft.offers and the public artifact never carries it. */
+  offers?: Record<string, Array<{ q: number; t: number }>>;
 }
 
 export interface StorefrontTheme {

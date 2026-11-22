@@ -12,6 +12,7 @@ import {
 import type { StorefrontTheme } from "./presentation-types";
 import { normalizeStorefrontTheme } from "./theme-normalize";
 import { normalizeStorefrontTracking } from "./studio-tracking";
+import { normalizeStorefrontOffers, type StorefrontDraftOffers } from "./studio-offers";
 
 export interface StorefrontStudioDraft {
   name: string;
@@ -22,10 +23,22 @@ export interface StorefrontStudioDraft {
   isActive: boolean;
   /** Hosted legal pages; absent on drafts saved before they existed. */
   legal?: StorefrontLegal;
+  /** Per-item quantity offer ladders; absent when no product has offers. */
+  offers?: StorefrontDraftOffers;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Raw theme JSON from a saved row -> the theme without builder.legal / builder.offers, and the private draft blocks that travelled in it. */
+export function splitDraftPrivateFromThemeJson(raw: unknown): { theme: unknown; legal: unknown; offers: unknown } {
+  if (!isRecord(raw) || !isRecord(raw.builder)) return { theme: raw, legal: undefined, offers: undefined };
+  const hasLegal = "legal" in raw.builder;
+  const hasOffers = "offers" in raw.builder;
+  if (!hasLegal && !hasOffers) return { theme: raw, legal: undefined, offers: undefined };
+  const { legal, offers, ...builder } = raw.builder;
+  return { theme: { ...raw, builder }, legal, offers };
 }
 
 /** Raw theme JSON from a saved row -> the theme without builder.legal, and the legal block that travelled in it (unvalidated). */
@@ -35,7 +48,7 @@ export function splitLegalFromThemeJson(raw: unknown): { theme: unknown; legal: 
   return { theme: { ...raw, builder }, legal };
 }
 
-/** The theme as it goes on the wire and into the draft column: the working draft.legal travels at theme.builder.legal. */
+/** The theme as it goes on the wire and into the draft column: draft.legal and draft.offers travel on theme.builder. */
 export function studioThemeForWire(draft: StorefrontStudioDraft): StorefrontTheme {
   let theme = draft.theme;
   if (theme.tracking !== undefined) {
@@ -44,16 +57,26 @@ export function studioThemeForWire(draft: StorefrontStudioDraft): StorefrontThem
     const kept = normalizeStorefrontTracking(tracking);
     theme = kept ? { ...rest, tracking: kept } : rest;
   }
-  return draft.legal ? { ...theme, builder: { ...theme.builder, legal: draft.legal } } : theme;
+  const offers = normalizeStorefrontOffers(draft.offers);
+  if (!draft.legal && !offers) return theme;
+  return {
+    ...theme,
+    builder: {
+      ...theme.builder,
+      ...(draft.legal ? { legal: draft.legal } : {}),
+      ...(offers ? { offers } : {}),
+    },
+  };
 }
 
 export function createStorefrontStudioDraft(
   config: StorefrontConfig,
 ): StorefrontStudioDraft {
   const theme = normalizeStorefrontTheme(config.theme);
-  // The legal block travels inside the theme JSON; the Studio works on ONE copy, draft.legal.
-  const { legal, ...builderWithoutLegal } = theme.builder;
-  theme.builder = builderWithoutLegal;
+  // Private draft blocks travel inside the theme JSON; the Studio works on ONE copy at draft.legal / draft.offers.
+  const { legal, offers: rawOffers, ...builderWithoutPrivate } = theme.builder;
+  theme.builder = builderWithoutPrivate;
+  const offers = normalizeStorefrontOffers(rawOffers);
   const contact = theme.builder.contact;
   const hasDraftContact = Boolean(
     contact.phone || contact.whatsapp || contact.email || contact.address,
@@ -76,6 +99,7 @@ export function createStorefrontStudioDraft(
     selectedProductIds: [...config.productIds],
     isActive: config.isActive,
     ...(legal ? { legal } : {}),
+    ...(offers ? { offers } : {}),
   };
 }
 
