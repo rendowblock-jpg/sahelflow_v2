@@ -11,6 +11,7 @@
 import "server-only";
 
 import { customerHistoryBefore } from "./history";
+import { findFakeRejectedOrderIds } from "./rejected-history";
 
 import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import type { ServiceContext } from "@/lib/data/service-base";
@@ -219,12 +220,24 @@ export async function buildAssessmentInputFromOrder(
       source: order.source,
       createdAt: order.createdAt,
     },
-    customerHistory: customerHistoryBefore(
-      customerOrders,
-      { id: orderId, createdAt: order.createdAt },
-      order.customerId,
-      isBlacklisted,
-    ),
+    customerHistory: await (async () => {
+      const prior = customerOrders.filter(
+        (entry) => entry.id !== orderId && entry.createdAt <= order.createdAt,
+      );
+      const cancelledPriorIds = prior
+        .filter((entry) => entry.status === "cancelled")
+        .map((entry) => entry.id);
+      const fakeIds = await findFakeRejectedOrderIds(context, cancelledPriorIds);
+      return {
+        ...customerHistoryBefore(
+          customerOrders,
+          { id: orderId, createdAt: order.createdAt },
+          order.customerId,
+          isBlacklisted,
+        ),
+        rejectedAsFakeCount: fakeIds.size,
+      };
+    })(),
     wilayaRisk: wilayaRiskRow
       ? {
           riskLevel: wilayaRiskRow.riskLevel,

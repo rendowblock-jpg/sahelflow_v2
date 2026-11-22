@@ -140,6 +140,7 @@ export interface RiskAssessmentInput {
     returnedCount: number;
     refusedCount: number;
     cancelledCount: number;
+    rejectedAsFakeCount?: number;
     totalSpent: number;
     firstOrderDate: Date | null;
     lastOrderDate: Date | null;

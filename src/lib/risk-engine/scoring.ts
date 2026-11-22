@@ -213,6 +213,28 @@ function factorOrderFrequency(
   };
 }
 
+/** Factor: prior order rejected as fake — flag-only memory, never auto-rejects (fake-order gate M3). */
+function factorRejectedAsFakeBefore(
+  input: RiskAssessmentInput,
+  weight: number,
+): RiskFactor | null {
+  const count = input.customerHistory?.rejectedAsFakeCount ?? 0;
+  if (count <= 0) return null;
+  const capped = Math.min(count, 3);
+  const points = Math.round(capped * 25 * weight);
+  return {
+    id: "rejected_as_fake_before",
+    labelKey: "risk.factors.rejectedAsFakeBefore",
+    value: count,
+    points,
+    direction: "risk",
+    explanation:
+      count === 1
+        ? "1 earlier order rejected as suspicious"
+        : `${count} earlier orders rejected as suspicious`,
+  };
+}
+
 // ── Confidence computation ───────────────────────────────────────────────────
 
 function computeConfidence(input: RiskAssessmentInput): number {
@@ -264,6 +286,7 @@ export function computeBaseScore(
     const f2 = factorCustomerLoyalty(input, chw);    if (f2) factors.push(f2);
     const f3 = factorNewCustomer(input, chw);        if (f3) factors.push(f3);
     const f4 = factorOrderFrequency(input, chw);     if (f4) factors.push(f4);
+    const f5 = factorRejectedAsFakeBefore(input, chw); if (f5) factors.push(f5);
   }
 
   // Geography (wilaya)

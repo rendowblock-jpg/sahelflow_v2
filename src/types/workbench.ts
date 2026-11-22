@@ -59,6 +59,7 @@ export interface OrdersWorkbenchResponse {
 
 export type ConfirmationQueueRiskReasonCode =
   | "blacklisted"
+  | "rejected_earlier"
   | "previous_returns"
   | "repeat_order_24h"
   | "weak_contact";

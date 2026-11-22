@@ -192,6 +192,7 @@ describe("Orders workbench risk projection", () => {
           returnedCount: 1,
           refusedCount: 0,
           cancelledCount: 0,
+          rejectedAsFakeCount: 0,
           totalSpent: 6_500,
           firstOrderDate: new Date("2026-07-01T09:00:00.000Z"),
           lastOrderDate: new Date("2026-07-10T09:00:00.000Z"),
