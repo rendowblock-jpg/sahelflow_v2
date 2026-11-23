@@ -125,8 +125,7 @@ function extractZipEntries(
     "Add-Type -AssemblyName System.IO.Compression.FileSystem",
     "$zip = [System.IO.Compression.ZipFile]::OpenRead($env:SF_ZIP_ARCHIVE)",
     "try {",
-    "  $wanted = @($env:SF_ZIP_ENTRIES | ConvertFrom-Json)",
-    "  foreach ($name in $wanted) {",
+    "  foreach ($name in $env:SF_ZIP_ENTRIES.Split('|')) {",
     "    $entry = $zip.GetEntry($name)",
     "    if ($null -eq $entry) { throw ('Missing archive entry: ' + $name) }",
     "    $rel = $name -replace '/', [IO.Path]::DirectorySeparatorChar",
@@ -148,7 +147,7 @@ function extractZipEntries(
         ...process.env,
         SF_ZIP_ARCHIVE: archivePath,
         SF_ZIP_DEST: extractDir,
-        SF_ZIP_ENTRIES: JSON.stringify(entries),
+        SF_ZIP_ENTRIES: entries.join("|"),
       },
     },
   );
