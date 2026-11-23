@@ -240,4 +240,11 @@ describe("Item 3 relay go-live security gates", () => {
     // Scheduled handler runs cleanly as a no-op when nothing else is past retention.
     await expect(handleConnectedScheduled({}, w.env)).resolves.toBeUndefined();
   });
+
+  it("Gate 5: pairing creation fails closed (503) when connected_rate_limit is unavailable", async () => {
+    const w = await createWorld();
+    w.d1.sqlite.exec("DROP TABLE connected_rate_limit");
+    const res = await w.createPairing("device_fail_closed_01", "member_owner");
+    expect(res.response.status).toBe(503);
+  });
 });

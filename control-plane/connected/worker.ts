@@ -825,7 +825,7 @@ async function createPairing(request: Request, environment: ConnectedWorkerEnvir
   }
   const workspace = await authenticateDesktop(request, environment, input.workspaceId);
   if (!workspace) return json({ error: "unauthorized" }, 401);
-  const pairLimited = await hitRate(environment, "pairing_create", await subjectHash(input.workspaceId), false);
+  const pairLimited = await hitRate(environment, "pairing_create", await subjectHash(input.workspaceId), true);
   if (pairLimited) return pairLimited;
   const pairingId = `pair_${crypto.randomUUID().replace(/-/g, "")}`;
   // W4SEC-02: when the desktop sends pairingTokenHash, the relay stores ONLY the hash and never mints or sees plaintext.

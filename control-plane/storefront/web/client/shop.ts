@@ -393,8 +393,16 @@ function boot(): void {
       d.key = json.receiptEncryptionPublicKey;
       const entry = (json.catalog ?? []).find((candidate) => candidate.itemKey === current.k);
       if (!entry || !entry.available) return false;
+      const nextOffers = entry.offers?.length ? entry.offers.map((tier) => [tier.q, tier.t] as [number, number]) : undefined;
+      const offersChanged =
+        (Boolean(current.o?.length) || Boolean(nextOffers?.length)) &&
+        (current.p !== entry.unitPriceDzd || JSON.stringify(current.o ?? []) !== JSON.stringify(nextOffers ?? []));
       current.p = entry.unitPriceDzd;
-      current.o = entry.offers?.length ? entry.offers.map((tier) => [tier.q, tier.t] as [number, number]) : undefined;
+      current.o = nextOffers;
+      if (offersChanged) {
+        window.location.reload();
+        return false;
+      }
       syncOffers();
       refresh();
       return true;
