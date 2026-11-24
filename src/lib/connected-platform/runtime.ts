@@ -4,7 +4,9 @@ import type { ServiceContext } from "@/lib/data/service-base";
 import { env } from "@/lib/env";
 import { createSecretIfAbsent, getSecret } from "@/lib/secrets";
 import { signedEntitlementSchema } from "@/lib/license/entitlement";
+import { signBootstrapProof } from "./bootstrap-proof";
 import { ConnectedPlatformClient } from "./client";
+import { importDesktopSigningPrivateKey } from "./pairing-trust";
 import {
   ensureConnectedInstallationAuthority,
   LEGACY_CONNECTED_BACKUP_TOKEN_SECRET,
@@ -128,11 +130,27 @@ export async function refreshConnectedEnrollmentIfConfigured(
   }
   const current = await ensureConnectedInstallationAuthority(context);
   if (connected) {
+    const signingKey = await importDesktopSigningPrivateKey(current.desktopKeys.signingPrivateKeyPkcs8);
+    if (!signingKey) {
+      throw new Error("Connected enrollment cannot sign desktop bootstrap proof");
+    }
+    const desktopBootstrapProof = await signBootstrapProof(
+      {
+        workspaceId: entitlement.claims.workspaceId,
+        installationId: entitlement.claims.installationId,
+        deviceBinding: entitlement.claims.deviceBinding,
+        desktopSigningPublicKey: current.desktopKeys.signingPublicKey,
+        desktopEncryptionPublicKey: current.desktopKeys.encryptionPublicKeyJwk,
+        issuedAt: Date.now(),
+      },
+      signingKey,
+    );
     const result = await client.bootstrapConnected(
       entitlement,
       current.desktopKeys.signingPublicKey,
       current.desktopKeys.encryptionPublicKeyJwk,
       !current.controlToken,
+      desktopBootstrapProof,
     );
     if (result.workspaceId !== entitlement.claims.workspaceId) {
       throw new Error("Connected enrollment returned another workspace authority");

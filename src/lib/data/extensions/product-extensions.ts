@@ -7,6 +7,7 @@
  */
 import { foldedRowIds, rowSignature } from "@/lib/search/list-search-candidates";
 import "server-only";
+import { netOrderItemRevenues } from "@/lib/orders/order-total";
 import type { ServiceContext } from "../service-base";
 
 export interface ProductStats {
@@ -110,11 +111,42 @@ export const productServiceExtensions = {
           status: { notIn: ["draft", "returned", "cancelled", "refused"] },
         },
       },
-      select: { quantity: true, total: true, orderId: true },
+      select: {
+        id: true,
+        quantity: true,
+        total: true,
+        orderId: true,
+        order: {
+          select: {
+            discountDzd: true,
+            items: { select: { id: true, total: true } },
+          },
+        },
+      },
     });
 
     const unitsSold = items.reduce((sum, i) => sum + i.quantity, 0);
-    const revenue = items.reduce((sum, i) => sum + i.total, 0);
+    const netByOrder = new Map<string, Map<string, number>>();
+    let revenue = 0;
+    for (const item of items) {
+      const discount = item.order?.discountDzd ?? 0;
+      if (discount > 0 && item.order?.items?.length && item.id) {
+        let lineMap = netByOrder.get(item.orderId);
+        if (!lineMap) {
+          const nets = netOrderItemRevenues(item.order.items, discount);
+          const freshMap = new Map<string, number>();
+          for (let idx = 0; idx < item.order.items.length; idx++) {
+            const line = item.order.items[idx];
+            if (line) freshMap.set(line.id, nets[idx] ?? line.total);
+          }
+          lineMap = freshMap;
+          netByOrder.set(item.orderId, freshMap);
+        }
+        revenue += lineMap.get(item.id) ?? item.total;
+      } else {
+        revenue += item.total;
+      }
+    }
     const orderCount = new Set(items.map((i) => i.orderId)).size;
 
     const product = await ctx.prisma.product.findFirst({

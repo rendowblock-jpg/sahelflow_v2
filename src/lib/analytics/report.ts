@@ -48,11 +48,13 @@ export async function getAnalyticsReportForRange(
           status: true,
           totalPrice: true,
           deliveryCost: true,
+          discountDzd: true,
           wilaya: true,
           createdAt: true,
           deliveredAt: true,
           items: {
             select: {
+              id: true,
               productId: true,
               productName: true,
               quantity: true,

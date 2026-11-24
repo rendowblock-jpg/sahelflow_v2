@@ -141,9 +141,14 @@ export function bucketStartMs(atMs: number, bucketMinutes: number): number {
  * at-sign, a long run of digits (a phone number) or more than 64 characters is
  * replaced by "none": the marker loses precision rather than carry personal data.
  */
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function safeToken(value: string | undefined | null): string {
   if (typeof value !== "string") return "none";
   if (!/^[A-Za-z0-9._:-]{1,64}$/.test(value)) return "none";
+  // A canonical UUID (8-4-4-4-12 hex) is an id, never a phone number, and its 12-character last group is all digits for
+  // about 3 UUIDs in 100. Without this check the digit rule below turned those ids into "none", colliding held-send keys.
+  if (UUID_SHAPE.test(value)) return value;
   if (/\d{9,}/.test(value)) return "none";
   return value;
 }

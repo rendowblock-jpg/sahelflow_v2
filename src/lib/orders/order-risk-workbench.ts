@@ -8,6 +8,7 @@ import {
   type RiskAssessment,
   type RiskAssessmentInput,
 } from "@/lib/risk-engine";
+import { findFakeRejectedOrderIds } from "@/lib/risk-engine/rejected-history";
 
 type OrderRiskRow = {
   id: string;
@@ -91,7 +92,7 @@ export async function batchAssessOrdersForWorkbench(
       db.order.findMany({
         where: { customerId: { in: customerIds }, deletedAt: null },
         select: {
-          ...(options.excludeSelfFromHistory ? { id: true } : {}),
+          id: true,
           customerId: true,
           status: true,
           totalPrice: true,
@@ -115,6 +116,9 @@ export async function batchAssessOrdersForWorkbench(
       getRiskConfig(context),
       getRiskRules(context),
     ]);
+
+  const cancelledIds = customerOrders.filter((row) => row.status === "cancelled" && typeof row.id === "string").map((row) => row.id as string);
+  const fakeRejectedIds = await findFakeRejectedOrderIds(context, cancelledIds);
 
   const ordersByCustomer = new Map<string, CustomerOrderHistoryRow[]>();
   for (const row of customerOrders) {
@@ -149,6 +153,12 @@ export async function batchAssessOrdersForWorkbench(
     const cancelledCount = history.filter(
       (entry) => entry.status === "cancelled",
     ).length;
+    const rejectedAsFakeCount = history.filter(
+      (entry) =>
+        entry.status === "cancelled" &&
+        typeof entry.id === "string" &&
+        fakeRejectedIds.has(entry.id),
+    ).length;
     const totalSpent = history
       .filter((entry) => !["cancelled", "draft"].includes(entry.status))
       .reduce((sum, entry) => sum + entry.totalPrice, 0);
@@ -171,6 +181,7 @@ export async function batchAssessOrdersForWorkbench(
         returnedCount,
         refusedCount,
         cancelledCount,
+        rejectedAsFakeCount,
         totalSpent,
         firstOrderDate: totalOrders > 0 ? history[0]!.createdAt : null,
         lastOrderDate:

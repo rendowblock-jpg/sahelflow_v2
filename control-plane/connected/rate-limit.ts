@@ -3,6 +3,8 @@
 // every counter row is keyed by (bucket, subject, window start).
 
 export type RateBucket =
+  | "bootstrap_ip"
+  | "pairing_create"
   | "exchange_ip"
   | "exchange_pairing_failure"
   | "command_submit"
@@ -15,6 +17,10 @@ export type RateRule = Readonly<{ limit: number; windowMs: number }>;
 const MINUTE_MS = 60_000;
 
 export const RATE_RULES: Readonly<Record<RateBucket, RateRule>> = {
+  // Bootstrap verifies an entitlement + Ed25519 key proof: 10/min per IP leaves room for retries and stops flooding.
+  bootstrap_ip: { limit: 10, windowMs: MINUTE_MS },
+  // Pairing creation per workspace: prevents a leaked desktop token from flooding D1 pairing rows.
+  pairing_create: { limit: 20, windowMs: MINUTE_MS },
   exchange_ip: { limit: 10, windowMs: MINUTE_MS },
   exchange_pairing_failure: { limit: 5, windowMs: MINUTE_MS },
   command_submit: { limit: 30, windowMs: MINUTE_MS },

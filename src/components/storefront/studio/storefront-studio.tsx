@@ -54,6 +54,8 @@ import { PanelHeader } from "./studio-controls";
 import { ProductsPanel, ThemePanel } from "./studio-design-panels";
 import { StudioRail, type StudioPanel } from "./studio-rail";
 import { legalPublishBlock } from "@/lib/storefront/studio-legal";
+import { offersPublishBlock, saleItemsFromStudioProducts } from "@/lib/storefront/studio-offers";
+import { StudioOffersPanel } from "./studio-offers-panel";
 import { CheckoutPanel, ContactPanel, LegalPanel, SeoPanel, TrackingPanel } from "./studio-settings-panels";
 import { StudioTopBar, type StudioSaveState } from "./studio-top-bar";
 import type { StorefrontStudioDevice, StorefrontStudioProduct } from "./studio-types";
@@ -214,6 +216,15 @@ export function StorefrontStudio({
       setMessage(t(legalBlock.messageKey), "warning");
       return;
     }
+    const offersBlock = draft.isActive
+      ? offersPublishBlock(draft.offers, saleItemsFromStudioProducts(products, draft.selectedProductIds))
+      : null;
+    if (offersBlock) {
+      setPanel("offers");
+      setPanelCollapsed(false);
+      setMessage(t(offersBlock.messageKey), "warning");
+      return;
+    }
     if (draft.isActive && draft.theme.builder.shippingRules.length === 0) {
       setPanel("checkout");
       setPanelCollapsed(false);
@@ -306,7 +317,7 @@ export function StorefrontStudio({
     } finally {
       publishingRef.current = false;
     }
-  }, [config.id, dirty, draft, locale, persist, saveState, setMessage, t, version]);
+  }, [config.id, dirty, draft, locale, persist, products, saveState, setMessage, t, version]);
 
   // Autosave: a quiet pause after the last edit writes the private draft.
   useEffect(() => {
@@ -396,6 +407,9 @@ export function StorefrontStudio({
   }
 
   const shippingMissing = draft.isActive && draft.theme.builder.shippingRules.length === 0;
+  const offersInvalid =
+    draft.isActive &&
+    offersPublishBlock(draft.offers, saleItemsFromStudioProducts(products, draft.selectedProductIds)) !== null;
 
   return (
     <div
@@ -469,7 +483,7 @@ export function StorefrontStudio({
             panel={panel}
             collapsed={panelCollapsed}
             onSelect={selectPanel}
-            badges={{ checkout: shippingMissing }}
+            badges={{ checkout: shippingMissing, offers: offersInvalid }}
           />
           {panelCollapsed ? null : (
             <div
@@ -522,6 +536,7 @@ export function StorefrontStudio({
                   onSetAll={(selectedProductIds) => commitDraft({ ...draft, selectedProductIds })}
                 />
               ) : null}
+              {panel === "offers" ? <StudioOffersPanel draft={draft} products={products} commit={commitDraft} /> : null}
               {panel === "checkout" ? <CheckoutPanel draft={draft} commit={commitDraft} /> : null}
               {panel === "contact" ? <ContactPanel draft={draft} commit={commitDraft} /> : null}
               {panel === "legal" ? <LegalPanel draft={draft} commit={commitDraft} /> : null}

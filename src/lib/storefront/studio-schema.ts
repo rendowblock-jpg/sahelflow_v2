@@ -4,6 +4,33 @@ import { STOREFRONT_PAGE_MODES, STOREFRONT_TEMPLATE_IDS } from "./presentation-t
 import { STOREFRONT_TRACKING_PATTERNS } from "./studio-tracking";
 
 const color = z.string().regex(/^#[0-9a-f]{6}$/i);
+
+export const storefrontOfferTierSchema = z
+  .object({
+    q: z.number().int().min(2).max(100),
+    t: z.number().int().min(0).max(999_999_999),
+  })
+  .strict();
+
+export const storefrontOfferLadderSchema = z
+  .array(storefrontOfferTierSchema)
+  .max(5)
+  .superRefine((tiers, context) => {
+    for (let i = 1; i < tiers.length; i += 1) {
+      if (tiers[i]!.q <= tiers[i - 1]!.q) {
+        context.addIssue({
+          code: "custom",
+          path: [i, "q"],
+          message: "Offer tier quantities must be strictly increasing",
+        });
+      }
+    }
+  });
+
+export const storefrontOffersSchema = z.record(
+  z.string().regex(/^[A-Za-z0-9._:-]{1,200}$/),
+  storefrontOfferLadderSchema,
+);
 const text = (max: number) => z.string().max(max);
 const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/);
 const httpsUrl = z
@@ -373,6 +400,8 @@ const storefrontBuilderSchema = z
       .max(138),
     // Wire/DB home of the legal block (theme JSON, like contact): the Studio lifts it into draft.legal on load.
     legal: storefrontLegalSchema.optional(),
+    // Wire/DB home of quantity offer ladders: the Studio lifts it into draft.offers on load; never enters publicArtifact.theme.
+    offers: storefrontOffersSchema.optional(),
   })
   .strict()
   .superRefine((builder, context) => {
@@ -444,5 +473,6 @@ export const storefrontStudioDraftSchema = z
     selectedProductIds: z.array(z.string().min(2).max(128)).min(1).max(500),
     isActive: z.boolean(),
     legal: storefrontLegalSchema.optional(),
+    offers: storefrontOffersSchema.optional(),
   })
   .strict();

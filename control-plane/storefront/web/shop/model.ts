@@ -1,3 +1,4 @@
+import type { OfferTier } from "../../offer-ladder";
 import type { PublicArtifact } from "../../shared";
 import type { StockRow } from "../types";
 
@@ -35,7 +36,7 @@ export type ShopTheme = {
   };
 };
 
-export type ShopVariant = { itemKey: string; label: string | null; price: number; remaining: number };
+export type ShopVariant = { itemKey: string; label: string | null; price: number; remaining: number; offers?: readonly OfferTier[] };
 
 export type ShopProduct = {
   id: string;
@@ -89,6 +90,7 @@ export function buildShopModel(artifact: PublicArtifact, stock: ReadonlyMap<stri
       label: entry.optionLabel?.trim() || null,
       price: row.unitPriceDzd,
       remaining: row.remaining,
+      ...(row.offers && row.offers.length > 0 ? { offers: row.offers } : {}),
     };
     const existing = byProduct.get(entry.productId);
     if (existing) {

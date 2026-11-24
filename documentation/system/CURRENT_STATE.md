@@ -19,11 +19,12 @@ Only the Founder can report this. Nothing converts until an installed observatio
 - In-place installs recorded since: Internal.27 to 34 (the last on 2026-09-05), 37 (2026-09-11, visually rejected before any row converted), 39 (2026-10-01), 40 (2026-10-03) and 41 (2026-10-08). No installation of Internal.35, 36, 38 or 42 is recorded.
 - Internal.42 was evidently in use for the installed audit behind PR #490 and FD-071; the Founder should confirm. On 2026-10-17 he said he was installing Internal.43; completion is not recorded. No installation of Internal.44 is recorded.
 - **Internal.45** was installed in place and reported on 2026-10-20. No campaign row has converted on Internal.42 to 45.
-- **Internal.46** was published on 2026-10-23 (FD-081). That day the Founder started the in-app update from Internal.45 and reported that the rest of the app stopped responding while the download percentage counted. A screenshot he sent that evening shows Internal.46's startup card, so it ran on his PC; how it was installed is not recorded. No campaign row has converted on it.
+- **Internal.46** (2026-10-23, FD-081): Founder reported unresponsive UI during in-app update from Internal.45; startup card ran. No campaign row converted.
+- **Internal.47–51** (2026-11-01 to 2026-11-04, FD-083 to FD-087): signed internal builds published. Founder installed Internal.48–51 (Internal.51 reported 2026-11-05) and set a 3-item post-51 priority list (look/themes, Storefront Studio/offers/fake-order defence, phone PWA). No FRC row converted.
 
 Reported on Internal.46 (2026-10-23), observations only:
 
-- The redesigned startup card (#550) was judged low quality. Measured on his screenshot, the glow behind the logo climbs in flat bands 8 to 28 px wide, 3 to 5 brightness levels each; the layout and the text contrast (5.9 to 13.6 to 1) are fine. A repair merged on 2026-10-24 is in no build and has not been seen on a Windows screen.
+- The redesigned startup card (#550) was judged low quality (flat 8–28 px glow bands; contrast 5.9–13.6:1). A repair shipped in later builds; full preset/mode Founder sign-off is still owed.
 - His startup trace shows 39.6 s from click to usable, 27.2 s of it between the runtime being ready and the page being ready (one launch, one PC).
 
 Reported on Internal.45 (2026-10-20), observations only:
@@ -61,8 +62,8 @@ A provider can be certified for tracking while create, edit and cancel remain un
 - Live Shopify, WooCommerce, YouCan and courier action certification is not established by adapter source alone.
 - Algerian-network trial readiness (#230) is not closed.
 - Beta and Stable are not established.
-- Nothing merged after Internal.46 is in a signed build or seen by the Founder, the Carnet look included.
-- The phone app is not deployed or paired against a real database; the pairing trust question is open.
+- Nothing merged after Internal.51 is in a signed build or seen by the Founder (Carnet was removed in Internal.48; post-51 merges live on `main` only).
+- The phone app is not deployed or paired against a real database; pairing secret creation and desktop-key bootstrap proof stay open.
 
 ## 6. Open decisions and pending records
 
@@ -74,7 +75,7 @@ A provider can be certified for tracking while create, edit and cancel remain un
 - **Residency** (tray and start with Windows): decide after a new build's startup is measured.
 - The deferred items in the "Not in the next release" table of `../operations/TRANSFORMATION_REGISTER.md` (each waits for a Founder decision, a migration or a Windows test).
 
-**Recorded in `../product/DECISIONS.md`:** the storefront decisions of October 2026 (store address FD-074, Workers plan FD-075, hosted photos FD-076, Arabic first FD-077, template names FD-078) and the per-machine Windows install (FD-079, decided by the agent under the Founder's delegation).
+**Recorded in `../product/DECISIONS.md`:** storefront FD-074 to FD-078, per-machine Windows install FD-079, and internal releases through FD-087.
 
 **Ask for after the next build is installed**
 

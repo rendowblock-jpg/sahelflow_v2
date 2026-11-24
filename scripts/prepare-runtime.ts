@@ -114,6 +114,51 @@ async function downloadPinnedAsset(url: string, label: string): Promise<Buffer> 
   throw new Error(lastFailure);
 }
 
+function extractZipEntries(
+  archivePath: string,
+  extractDir: string,
+  entries: readonly string[],
+  label: string,
+): void {
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    "Add-Type -AssemblyName System.IO.Compression.FileSystem",
+    "$zip = [System.IO.Compression.ZipFile]::OpenRead($env:SF_ZIP_ARCHIVE)",
+    "try {",
+    "  foreach ($name in $env:SF_ZIP_ENTRIES.Split('|')) {",
+    "    $entry = $zip.GetEntry($name)",
+    "    if ($null -eq $entry) { throw ('Missing archive entry: ' + $name) }",
+    "    $rel = $name -replace '/', [IO.Path]::DirectorySeparatorChar",
+    "    $dest = Join-Path $env:SF_ZIP_DEST $rel",
+    "    $parent = Split-Path -Parent $dest",
+    "    if (-not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }",
+    "    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dest, $true)",
+    "  }",
+    "} finally {",
+    "  $zip.Dispose()",
+    "}",
+  ].join("; ");
+  const extraction = spawnSync(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-Command", script],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        SF_ZIP_ARCHIVE: archivePath,
+        SF_ZIP_DEST: extractDir,
+        SF_ZIP_ENTRIES: entries.join("|"),
+      },
+    },
+  );
+  if (extraction.status !== 0) {
+    const details = [extraction.stderr, extraction.stdout]
+      .filter((s) => typeof s === "string" && s.trim().length > 0)
+      .join("\n");
+    throw new Error(details || `Failed to extract the pinned ${label} archive`);
+  }
+}
+
 if (process.platform !== "win32" || process.arch !== "x64") {
   throw new Error("SahelFlow 1.0 runtime preparation supports Windows x64 only");
 }
@@ -139,26 +184,12 @@ try {
   }
 
   mkdirSync(extractDir);
-  const extraction = spawnSync(
-    "powershell.exe",
-    [
-      "-NoProfile",
-      "-NonInteractive",
-      "-Command",
-      "Expand-Archive -LiteralPath $env:SF_NODE_ARCHIVE -DestinationPath $env:SF_NODE_EXTRACT -Force",
-    ],
-    {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        SF_NODE_ARCHIVE: archivePath,
-        SF_NODE_EXTRACT: extractDir,
-      },
-    },
+  extractZipEntries(
+    archivePath,
+    extractDir,
+    [`${NODE_DIRECTORY}/node.exe`, `${NODE_DIRECTORY}/LICENSE`],
+    "Node.js",
   );
-  if (extraction.status !== 0) {
-    throw new Error(extraction.stderr || "Failed to extract the pinned Node.js archive");
-  }
 
   const nodeSource = resolve(extractDir, NODE_DIRECTORY, "node.exe");
   const nodeLicenseSource = resolve(extractDir, NODE_DIRECTORY, "LICENSE");
@@ -189,28 +220,12 @@ try {
   }
 
   mkdirSync(bunExtractDir);
-  const bunExtraction = spawnSync(
-    "powershell.exe",
-    [
-      "-NoProfile",
-      "-NonInteractive",
-      "-Command",
-      "Expand-Archive -LiteralPath $env:SF_BUN_COMPILER_ARCHIVE -DestinationPath $env:SF_BUN_COMPILER_EXTRACT -Force",
-    ],
-    {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        SF_BUN_COMPILER_ARCHIVE: bunArchivePath,
-        SF_BUN_COMPILER_EXTRACT: bunExtractDir,
-      },
-    },
+  extractZipEntries(
+    bunArchivePath,
+    bunExtractDir,
+    [`${BUN_COMPILER_ASSET.replace(/\.zip$/, "")}/bun.exe`],
+    "Bun compiler",
   );
-  if (bunExtraction.status !== 0) {
-    throw new Error(
-      bunExtraction.stderr || "Failed to extract the pinned Bun compiler",
-    );
-  }
 
   const bunCompilerSource = resolve(
     bunExtractDir,

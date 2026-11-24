@@ -3,6 +3,14 @@ export type { StorefrontStudioDraft } from "@/lib/storefront/studio-draft";
 
 export type StorefrontStudioDevice = "desktop" | "tablet" | "mobile";
 
+export interface StorefrontStudioProductVariant {
+  id: string;
+  name: string;
+  price: number | null;
+  stock: number;
+  isActive?: boolean;
+}
+
 export interface StorefrontStudioProduct {
   id: string;
   name: string;
@@ -10,6 +18,7 @@ export interface StorefrontStudioProduct {
   sku: string | null;
   stock: number;
   images: string | null;
+  productVariants?: readonly StorefrontStudioProductVariant[];
 }
 
 export interface StorefrontPreviewProps {

@@ -107,6 +107,7 @@ const READ_FIXTURES: Record<string, unknown> = {
     orderNumber: "ORD-1",
     status: "pending",
     totalPrice: SECRET,
+    discountDzd: SECRET,
     deliveryCost: SECRET,
     wilaya: "Alger",
     commune: "Bab El Oued",
@@ -377,6 +378,7 @@ describe("Operator preset cannot read profit, revenue, cost or order money", () 
     expect(data.orderNumber).toBe("ORD-1");
     expect(data.phone).toBe("0555000000");
     expect(data).not.toHaveProperty("totalPrice");
+    expect(data).not.toHaveProperty("discountDzd");
     expect(data).not.toHaveProperty("deliveryCost");
     expect(data.items[0]).toMatchObject({ productName: "Widget", quantity: 2 });
     expect(data.items[0]).not.toHaveProperty("unitPrice");

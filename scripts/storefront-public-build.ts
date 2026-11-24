@@ -198,6 +198,9 @@ export async function buildStorefrontPublic(): Promise<StorefrontPublicFiles> {
   // The ad-pixel script: referenced only by pages of shops that set a pixel id, never by shop.js.
   const trkJs = await buildScript("client/tracking.ts");
   const trkPath = `/_sf/trk.${short(trkJs)}.js`;
+  // The optional fake-order gate trap script (separate file so shop.js stays within budget).
+  const fgJs = await buildScript("client/fg.ts");
+  const fgPath = `/_sf/fg.${short(fgJs)}.js`;
   const skinFiles = new Map<string, string>();
   const skins: Record<string, { css: string; js?: string }> = {};
   for (const id of SKINS) {
@@ -214,12 +217,13 @@ export async function buildStorefrontPublic(): Promise<StorefrontPublicFiles> {
     ["control-plane/storefront/web/messages.generated.json", buildMessages()],
     [
       "control-plane/storefront/web/asset-manifest.generated.json",
-      `${JSON.stringify({ css: cssPath, js: jsPath, photos: photosPath, trk: trkPath, communes: `/_sf/c.${communes.hash}`, fonts: fonts.paths, skins }, null, 2)}\n`,
+      `${JSON.stringify({ css: cssPath, js: jsPath, photos: photosPath, trk: trkPath, fg: fgPath, communes: `/_sf/c.${communes.hash}`, fonts: fonts.paths, skins }, null, 2)}\n`,
     ],
     [`${REL_PUBLIC}${cssPath}`, css],
     [`${REL_PUBLIC}${jsPath}`, js],
     [`${REL_PUBLIC}${photosPath}`, photosJs],
     [`${REL_PUBLIC}${trkPath}`, trkJs],
+    [`${REL_PUBLIC}${fgPath}`, fgJs],
     [
       `${REL_PUBLIC}/_headers`,
       "/_sf/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n",

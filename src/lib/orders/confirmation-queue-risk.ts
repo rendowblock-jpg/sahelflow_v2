@@ -17,18 +17,20 @@ import type {
  */
 const REASON_KEYS: Record<ConfirmationQueueRiskReasonCode, string> = {
   blacklisted: "confirmationQueue.risk.reason.blacklisted",
+  rejected_earlier: "confirmationQueue.risk.reason.rejectedEarlier",
   previous_returns: "confirmationQueue.risk.reason.previousReturns",
   repeat_order_24h: "confirmationQueue.risk.reason.repeatOrder24h",
   weak_contact: "confirmationQueue.risk.reason.weakContact",
 };
 const REASON_ORDER: readonly ConfirmationQueueRiskReasonCode[] = [
   "blacklisted",
+  "rejected_earlier",
   "previous_returns",
   "repeat_order_24h",
   "weak_contact",
 ];
 const FLAGGED_AT_ANY_LEVEL: ReadonlySet<ConfirmationQueueRiskReasonCode> =
-  new Set(["blacklisted", "repeat_order_24h"]);
+  new Set(["blacklisted", "rejected_earlier", "repeat_order_24h"]);
 
 function addsRisk(factor: RiskFactor | undefined): factor is RiskFactor {
   return factor !== undefined && factor.direction === "risk" && factor.points > 0;
@@ -41,6 +43,7 @@ export function buildConfirmationQueueRisk(
   const factor = (id: string) => assessment.factors.find((entry) => entry.id === id);
   const found = new Set<ConfirmationQueueRiskReasonCode>();
   if (assessment.action === "blacklisted") found.add("blacklisted");
+  if (addsRisk(factor("rejected_as_fake_before"))) found.add("rejected_earlier");
   if (addsRisk(factor("customer_return_rate"))) found.add("previous_returns");
   if (addsRisk(factor("order_frequency"))) found.add("repeat_order_24h");
   const contact = factor("contact_quality");

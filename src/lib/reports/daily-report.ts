@@ -20,6 +20,7 @@ import "server-only";
 
 import { db } from "@/lib/db";
 import { getProfitabilityProjection } from "@/lib/accounting/profitability";
+import { netOrderItemRevenues } from "@/lib/orders/order-total";
 import { formatDZDBare as formatDZD } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n";
 import { loadTranslationsSync } from "@/lib/i18n-server";
@@ -112,7 +113,7 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
       // W2-9: half-open [startOfYesterday, endOfYesterday) — end is now
       // exclusive (startOfTodayAlgiers) instead of inclusive (23:59:59.999).
       where: { createdAt: { gte: startOfYesterday, lt: endOfYesterday }, deletedAt: null },
-      select: { id: true, status: true, totalPrice: true },
+      select: { id: true, status: true, totalPrice: true, discountDzd: true },
     }),
     getProfitabilityProjection(db, {
       from: startOfYesterday,
@@ -123,7 +124,7 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
     }),
     db.orderItem.findMany({
       where: { order: { createdAt: { gte: startOfYesterday, lt: endOfYesterday }, deletedAt: null } },
-      select: { productName: true, quantity: true, total: true },
+      select: { id: true, orderId: true, productName: true, quantity: true, total: true },
     }),
     db.product.findMany({
       where: { isActive: true, stock: { lte: db.product.fields.lowStockThreshold }, deletedAt: null },
@@ -161,13 +162,26 @@ export async function generateDailyReport(locale: Locale = "fr"): Promise<DailyR
     }
   }
 
-  // Aggregate top products by quantity
-  const productMap = new Map<string, { quantity: number; revenue: number }>();
+  // Aggregate top products by quantity (deducting pro-rata order discounts, F-0067)
+  const discountByOrder = new Map(orders.map((o) => [o.id, o.discountDzd ?? 0]));
+  const itemsByOrder = new Map<string, typeof topProductItems>();
   for (const item of topProductItems) {
-    const existing = productMap.get(item.productName) ?? { quantity: 0, revenue: 0 };
-    existing.quantity += item.quantity;
-    existing.revenue += item.total;
-    productMap.set(item.productName, existing);
+    const bucketKey = item.orderId ?? "__none__";
+    const group = itemsByOrder.get(bucketKey) ?? [];
+    group.push(item);
+    itemsByOrder.set(bucketKey, group);
+  }
+  const productMap = new Map<string, { quantity: number; revenue: number }>();
+  for (const [oid, group] of itemsByOrder) {
+    const netRevenues = netOrderItemRevenues(group, discountByOrder.get(oid) ?? 0);
+    for (let i = 0; i < group.length; i++) {
+      const item = group[i];
+      if (!item) continue;
+      const existing = productMap.get(item.productName) ?? { quantity: 0, revenue: 0 };
+      existing.quantity += item.quantity;
+      existing.revenue += netRevenues[i] ?? item.total;
+      productMap.set(item.productName, existing);
+    }
   }
   const topProducts = Array.from(productMap.entries())
     .map(([name, stats]) => ({ name, ...stats }))

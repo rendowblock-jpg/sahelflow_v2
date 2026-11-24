@@ -130,7 +130,8 @@ export function createStorefrontReleaseInput(input: Readonly<{
       if (!Number.isSafeInteger(fresh) || fresh < 0 || fresh > saleItem.stock) {
         throw new Error("Published storefront fresh allocation is invalid");
       }
-      const offers = parseOfferLadder(saleItem.price, offersFor(input.offersByItemKey, itemKey));
+      const offersSource = input.offersByItemKey ?? draft.offers;
+      const offers = parseOfferLadder(saleItem.price, offersFor(offersSource, itemKey));
       if (offers === null) throw new Error("Published storefront offer ladder is invalid");
       allocations.push({
         itemKey,
@@ -141,7 +142,7 @@ export function createStorefrontReleaseInput(input: Readonly<{
       });
     }
   }
-  const { domain: _privateDomain, shippingRules, legal: _privateLegal, ...publicBuilder } = draft.theme.builder;
+  const { domain: _privateDomain, shippingRules, legal: _privateLegal, offers: _privateOffers, ...publicBuilder } = draft.theme.builder;
   // Empty = removed: a store with no pixel id carries no `tracking` key at all (the deployed worker checks theme keys strictly).
   const { tracking: draftTracking, ...themeWithoutTracking } = draft.theme;
   const publicTracking = normalizeStorefrontTracking(draftTracking);

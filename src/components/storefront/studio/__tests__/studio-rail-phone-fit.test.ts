@@ -36,7 +36,7 @@ describe("Studio phone rail with eight entries", () => {
   });
 
   it("at 375 and 390 px seven cells fit and the eighth shows partly at the edge (the scroll hint)", () => {
-    expect(STUDIO_PANELS.length).toBe(8);
+    expect(STUDIO_PANELS.length).toBe(9);
     for (const width of [375, 390]) {
       expect(7 * CELL).toBeLessThan(width);
       expect(8 * CELL).toBeGreaterThan(width);

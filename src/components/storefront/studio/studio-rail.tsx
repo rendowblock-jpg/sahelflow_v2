@@ -8,6 +8,7 @@ import {
   Phone,
   Scale,
   Search,
+  Tag,
   Truck,
   type LucideIcon,
 } from "lucide-react";
@@ -19,6 +20,7 @@ export type StudioPanel =
   | "sections"
   | "theme"
   | "products"
+  | "offers"
   | "checkout"
   | "contact"
   | "legal"
@@ -33,6 +35,7 @@ export const STUDIO_PANELS: ReadonlyArray<{
   { id: "sections", labelKey: "storefront.studio.panels.sections", icon: Layers },
   { id: "theme", labelKey: "storefront.studio.panels.theme", icon: Palette },
   { id: "products", labelKey: "storefront.studio.panels.products", icon: Package },
+  { id: "offers", labelKey: "storefront.studio.panels.offers", icon: Tag },
   { id: "checkout", labelKey: "storefront.studio.panels.checkout", icon: Truck },
   { id: "contact", labelKey: "storefront.studio.panels.contact", icon: Phone },
   { id: "legal", labelKey: "storefront.legalPanel.nav", icon: Scale },

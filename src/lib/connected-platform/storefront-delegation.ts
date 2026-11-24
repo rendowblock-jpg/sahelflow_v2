@@ -17,7 +17,7 @@ import type { ServiceContext } from "@/lib/data/service-base";
 import type { StorefrontAllocationTransfer } from "./client";
 import type { StorefrontReleaseProduct } from "@/lib/storefront/release-artifact";
 import { storefrontReleaseItemKey } from "@/lib/storefront/release-artifact";
-import { splitLegalFromThemeJson, type StorefrontStudioDraft } from "@/lib/storefront/studio-draft";
+import { splitDraftPrivateFromThemeJson, type StorefrontStudioDraft } from "@/lib/storefront/studio-draft";
 import { storefrontStudioDraftSchema } from "@/lib/storefront/studio-schema";
 import { StorefrontVersionConflictError } from "@/lib/storefront/service";
 import { ConflictError, NotFoundError } from "@/types/errors";
@@ -245,8 +245,10 @@ export async function prepareStorefrontPublish(
       ) {
         throw new StorefrontVersionConflictError();
       }
-      // The legal block travels in the theme JSON (theme.builder.legal); the prepared draft holds it once, at draft.legal.
-      const { theme: draftTheme, legal: draftLegal } = splitLegalFromThemeJson(JSON.parse(row.draftTheme ?? row.theme) as unknown);
+      // Private blocks travel in the theme JSON (theme.builder.legal / offers); the prepared draft holds them once.
+      const { theme: draftTheme, legal: draftLegal, offers: draftOffers } = splitDraftPrivateFromThemeJson(
+        JSON.parse(row.draftTheme ?? row.theme) as unknown,
+      );
       const draft = storefrontStudioDraftSchema.parse({
         name: row.draftName ?? row.name,
         slug: row.draftSlug ?? row.slug,
@@ -255,6 +257,7 @@ export async function prepareStorefrontPublish(
         selectedProductIds: JSON.parse(row.draftProductIds ?? row.productIds) as unknown,
         isActive: row.draftIsActive ?? row.isActive,
         ...(draftLegal === undefined ? {} : { legal: draftLegal }),
+        ...(draftOffers === undefined ? {} : { offers: draftOffers }),
       });
       const slugConflict = await tx.storefrontConfig.findFirst({
         where: { slug: draft.slug, id: { not: row.id } },

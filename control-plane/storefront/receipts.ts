@@ -18,6 +18,7 @@ type ReceiptPollRow = {
   wilaya_code: string;
   delivery_mode: "home" | "desk";
   subtotal_dzd: number;
+  discount_dzd: number;
   shipping_dzd: number;
   total_dzd: number;
   created_at: string;
@@ -74,7 +75,7 @@ export async function pollReceipts(
        SELECT r.relay_sequence, r.receipt_id, r.storefront_id, r.release_id,
               r.idempotency_key, r.request_digest, r.encrypted_customer,
               r.wrapped_customer_key, r.wilaya_code, r.delivery_mode,
-              r.subtotal_dzd, r.shipping_dzd, r.total_dzd,
+              r.subtotal_dzd, r.discount_dzd, r.shipping_dzd, r.total_dzd,
               strftime('%Y-%m-%dT%H:%M:%fZ', r.created_at) AS created_at,
               s.shop_id, s.slug AS storefront_slug
          FROM storefront_receipt r
@@ -105,6 +106,7 @@ export async function pollReceipts(
     wilayaCode: string;
     deliveryMode: "home" | "desk";
     subtotalDzd: number;
+    discountDzd?: number;
     shippingDzd: number;
     totalDzd: number;
     createdAt: string;
@@ -127,6 +129,7 @@ export async function pollReceipts(
         wilayaCode: row.wilaya_code,
         deliveryMode: row.delivery_mode,
         subtotalDzd: row.subtotal_dzd,
+        ...(row.discount_dzd > 0 ? { discountDzd: row.discount_dzd } : {}),
         shippingDzd: row.shipping_dzd,
         totalDzd: row.total_dzd,
         createdAt: row.created_at,

@@ -204,7 +204,7 @@ ${page.bar ?? ""}
 </main>
 ${renderFooter(ctx, page.tagline, page.legalNav ?? "")}
 ${page.tabs ?? ""}
-${page.script ? `<script src="${esc(assets.js)}" defer></script>` : assets.photos ? `<script src="${esc(assets.photos)}" defer></script>` : ""}${(page.script || page.fx) && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}${trackingTags(theme, assets.trk, page.trackId, esc)}
+${page.script ? `<script src="${esc(assets.js)}" defer></script>${assets.fg ? `<script src="${esc(assets.fg)}" defer></script>` : ""}` : assets.photos ? `<script src="${esc(assets.photos)}" defer></script>` : ""}${(page.script || page.fx) && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}${trackingTags(theme, assets.trk, page.trackId, esc)}
 </body>
 </html>`;
 }

@@ -58,7 +58,7 @@ const context = (who: TrustedActorContext | undefined): ToolContext => ({
   ...(who ? { actor: who } : {}),
 });
 
-const MONEY_PATHS = ["totalPrice", "deliveryCost", "items.unitPrice", "items.total"];
+const MONEY_PATHS = ["totalPrice", "discountDzd", "deliveryCost", "items.unitPrice", "items.total"];
 
 describe("the vocabulary of withholdable fields", () => {
   it("is exactly the set of paths the read-access table can remove", () => {
@@ -163,6 +163,7 @@ describe("the registry gate reports what it removed", () => {
         data: {
           orderNumber: "ORD-1",
           totalPrice: SECRET,
+          discountDzd: SECRET,
           deliveryCost: SECRET,
           phone: "0555000000",
           items: [{ productName: "Widget", quantity: 2, unitPrice: SECRET, total: SECRET }],

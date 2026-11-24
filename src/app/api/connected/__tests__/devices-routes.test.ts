@@ -2,6 +2,7 @@
  * Owner-only phone routes: every method x (owner, member, no permission, no
  * licence, not enrolled), the repeats, and the relay's refusals as typed errors.
  */
+import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -157,7 +158,13 @@ describe("POST /api/connected/devices/pairing", () => {
     expect(link.includes("?")).toBe(false);
     expect(link.split("#")).toHaveLength(2);
     const fragment = parseDesktopPairingHash(`#${link.split("#")[1]}`);
-    expect(fragment?.pairingToken).toBe(TOKEN);
+    // W4SEC-02: pairingToken is generated locally on the PC (32 bytes = 43 base64url chars) and ONLY its SHA-256 hash goes to the relay.
+    expect(fragment?.pairingToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(fragment?.pairingToken).not.toBe(TOKEN);
+    const sent = (h.createPairing.mock.calls[0]?.[0] ?? {}) as { pairingTokenHash?: string };
+    expect(sent.pairingTokenHash).toBe(
+      createHash("sha256").update(fragment!.pairingToken).digest("hex"),
+    );
     const desktopSigningKey = h.desktopKeys.signingPublicKey;
     if (!desktopSigningKey) throw new Error("the harness has no desktop signing key");
     expect(body.desktopFingerprint).toBe(await deviceFingerprint(desktopSigningKey));
@@ -178,7 +185,11 @@ describe("POST /api/connected/devices/pairing", () => {
   it("creates the pairing for the owner's member id with a fresh phone id, records it and writes an audit row without the token", async () => {
     const { body } = await callPairing();
     expect(h.createPairing).toHaveBeenCalledWith({
-      workspaceId: WS, memberId: "member_owner_1", deviceId: body.deviceId, desktopKeyProof: expect.any(String),
+      workspaceId: WS,
+      memberId: "member_owner_1",
+      deviceId: body.deviceId,
+      desktopKeyProof: expect.any(String),
+      pairingTokenHash: expect.stringMatching(/^[0-9a-f]{64}$/),
     });
     expect(String(body.deviceId)).toMatch(/^phone_[0-9a-f]{32}$/);
     expect((await readDeviceApprovals(WS)).created[String(body.deviceId)]).toBeTypeOf("number");

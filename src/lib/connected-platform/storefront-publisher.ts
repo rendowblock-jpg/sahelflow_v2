@@ -171,6 +171,7 @@ export async function publishHostedStorefront(input: Readonly<{
     draft: input.prepared.draft,
     products: photos.products,
     requireLegalReview: true,
+    ...(input.prepared.draft.offers ? { offersByItemKey: input.prepared.draft.offers } : {}),
     ...(parentReleaseId ? { freshByItemKey: provisional } : {}),
   });
   const published = await input.client.publishStorefrontRelease(

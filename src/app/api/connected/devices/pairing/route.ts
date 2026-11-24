@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -29,7 +30,10 @@ export const POST = withErrorHandler(async () => {
     throw new SahelFlowError("This computer cannot sign its pairing key", "PHONE_KEY_PROOF_UNAVAILABLE", 503);
   }
   const deviceId = `phone_${crypto.randomUUID().replaceAll("-", "")}`;
-  let pairing: Awaited<ReturnType<typeof runtime.client.createPairing>>;
+  // W4SEC-02: generate the 32-byte pairing secret on the PC and send ONLY its SHA-256 hash to the relay.
+  const localPairingToken = randomBytes(32).toString("base64url");
+  const pairingTokenHash = createHash("sha256").update(localPairingToken).digest("hex");
+  let pairing: { pairingId: string; expiresAt: string };
   try {
     // One string "<signature>.<context>": the relay stores it and the phone reads it back after the exchange.
     pairing = await runtime.client.createPairing({
@@ -37,13 +41,14 @@ export const POST = withErrorHandler(async () => {
       memberId,
       deviceId,
       desktopKeyProof: `${proof.signature}.${proof.context}`,
+      pairingTokenHash,
     });
   } catch (error) {
     throw relayFailure(error);
   }
   const built = await buildDesktopPairingLink({
     pairingId: pairing.pairingId,
-    pairingToken: pairing.pairingToken,
+    pairingToken: localPairingToken,
     desktopSigningPublicKey: keys.signingPublicKey,
   });
   if (!built) {

@@ -63,7 +63,7 @@ describe("get_order_details", () => {
     await db.order.create({
       data: {
         orderNumber: "ORD-0001", status: "confirmed", customerId: customer.id,
-        totalPrice: 5000, wilaya: "Alger", commune: "Bab Ezzouar",
+        totalPrice: 4500, discountDzd: 500, wilaya: "Alger", commune: "Bab Ezzouar",
         address: "123", phone: "0551234567", source: "manual",
         items: {
           create: [{ productId: product.id, productName: "Widget", quantity: 2, unitPrice: 2500, total: 5000 }],
@@ -75,8 +75,10 @@ describe("get_order_details", () => {
     const result = await tool.execute({ orderNumber: "ORD-0001" }, ctx());
 
     expect(result.success).toBe(true);
-    const data = result.data as { orderNumber: string; status: string; items: unknown[]; customer: { name: string } };
+    const data = result.data as { orderNumber: string; status: string; totalPrice: number; discountDzd: number; items: unknown[]; customer: { name: string } };
     expect(data.orderNumber).toBe("ORD-0001");
+    expect(data.totalPrice).toBe(4500);
+    expect(data.discountDzd).toBe(500);
     expect(data.status).toBe("confirmed");
     expect(data.items).toHaveLength(1);
     expect(data.customer.name).toBe("Amine");

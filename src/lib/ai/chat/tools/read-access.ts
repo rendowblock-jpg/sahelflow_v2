@@ -88,7 +88,7 @@ const CHAT_READ_ACCESS_TABLE: Record<string, ChatReadAccessRule> = {
     fieldGates: [
       {
         whenHeld: ORDER_MONEY,
-        paths: ["totalPrice", "deliveryCost", "items.unitPrice", "items.total"],
+        paths: ["totalPrice", "discountDzd", "deliveryCost", "items.unitPrice", "items.total"],
       },
       {
         whenHeld: ["customers.contact.read"],

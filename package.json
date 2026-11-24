@@ -88,7 +88,7 @@
     "framer-motion": "12.42.2",
     "googleapis": "^173.0.0",
     "lucide-react": "^0.525.0",
-    "next": "16.4.2",
+    "next": "16.4.6",
     "next-themes": "^0.4.6",
     "nuqs": "2.9.0",
     "papaparse": "^5.5.4",
@@ -148,7 +148,8 @@
     "follow-redirects": "1.16.2",
     "source-map-js": "1.2.2",
     "glob": "14.0.3",
-    "minimatch": "11.0.3"
+    "minimatch": "11.0.3",
+    "effect": "3.22.5"
   },
   "workspaces": [
     "sidecars/whatsapp"

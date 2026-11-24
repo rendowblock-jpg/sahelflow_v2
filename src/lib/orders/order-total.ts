@@ -122,3 +122,51 @@ export function refundableItemValue(
     ceilDiv(lineDiscountDzd * requestedQuantity, line.quantity)
   );
 }
+
+/**
+ * Net revenue per order line after deducting its pro-rata share of the order-level
+ * discount (F-0067). Uses the exact same BigInt floor + largest-line tie-break as
+ * allocateOrderDiscount, so the sum of net line revenues equals
+ * sum(line.total) - discountDzd exactly, and equals line.total when discountDzd is 0.
+ */
+export function netOrderItemRevenues(
+  items: ReadonlyArray<{ id?: string; total: number }>,
+  discountDzd = 0,
+): number[] {
+  if (items.length === 0) return [];
+  const itemsTotal = items.reduce((sum, item) => sum + item.total, 0);
+  const clamped =
+    !Number.isSafeInteger(discountDzd) || discountDzd <= 0
+      ? 0
+      : Math.min(discountDzd, Math.max(0, itemsTotal));
+  if (clamped === 0 || itemsTotal <= 0) {
+    return items.map((item) => item.total);
+  }
+  const shares = new Array<number>(items.length).fill(0);
+  let given = 0;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item) continue;
+    const value = Math.max(0, item.total);
+    const share = Number((BigInt(clamped) * BigInt(value)) / BigInt(itemsTotal));
+    shares[i] = share;
+    given += share;
+  }
+  let leftover = clamped - given;
+  const order = items
+    .map((item, index) => ({
+      index,
+      value: Math.max(0, item.total),
+      id: item.id ?? String(index),
+    }))
+    .sort((x, y) => y.value - x.value || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+  for (const entry of order) {
+    if (leftover === 0) break;
+    const current = shares[entry.index] ?? 0;
+    if (current < entry.value) {
+      shares[entry.index] = current + 1;
+      leftover -= 1;
+    }
+  }
+  return items.map((item, i) => item.total - (shares[i] ?? 0));
+}
