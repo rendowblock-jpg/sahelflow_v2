@@ -314,7 +314,7 @@ impl RuntimeProtocol {
         })?;
 
         let request = format!(
-            "GET {READY_PATH} HTTP/1.1\r\nHost: {LOOPBACK_HOST}:{}\r\nAuthorization: Bearer {}\r\nConnection: close\r\n\r\n",
+            "GET {READY_PATH} HTTP/1.1\r\nHost: {LOOPBACK_HOST}:{}\r\nAuthorization: Bearer {}\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n",
             self.app_port, self.runtime_token
         );
         stream
@@ -496,12 +496,103 @@ fn response_header_end(response: &[u8]) -> Result<Option<usize>, String> {
     Ok(None)
 }
 
+fn has_chunked_transfer_encoding(headers: &str) -> Result<bool, String> {
+    let mut codings = Vec::new();
+    for line in headers.split("\r\n").skip(1) {
+        let Some((name, value)) = line.split_once(':') else {
+            continue;
+        };
+        if !name.eq_ignore_ascii_case("transfer-encoding") {
+            continue;
+        }
+        for token in value.split(',') {
+            let trimmed = token.trim();
+            if !trimmed.is_empty() {
+                codings.push(trimmed.to_ascii_lowercase());
+            }
+        }
+    }
+    if codings.is_empty() {
+        return Ok(false);
+    }
+    if codings.len() == 1 && codings[0] == "chunked" {
+        return Ok(true);
+    }
+    Err("readiness response declared an unsupported Transfer-Encoding".to_string())
+}
+
+fn decode_chunked_body(raw: &[u8]) -> Result<Option<(Vec<u8>, usize)>, String> {
+    let mut decoded = Vec::new();
+    let mut cursor = 0_usize;
+    loop {
+        let Some(relative_end) = raw[cursor..]
+            .windows(2)
+            .position(|window| window == b"\r\n")
+        else {
+            return Ok(None);
+        };
+        let line_end = cursor + relative_end;
+        let size_line = std::str::from_utf8(&raw[cursor..line_end])
+            .map_err(|_| "readiness response contained non-UTF-8 chunk size".to_string())?;
+        let size_hex = size_line
+            .split_once(';')
+            .map_or(size_line, |(size, _)| size)
+            .trim();
+        if size_hex.is_empty() || !size_hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("readiness response declared an invalid chunk size".to_string());
+        }
+        let chunk_size = usize::from_str_radix(size_hex, 16)
+            .map_err(|_| "readiness response declared an overflowing chunk size".to_string())?;
+        cursor = line_end + 2;
+
+        if chunk_size == 0 {
+            loop {
+                if cursor >= raw.len() {
+                    return Ok(None);
+                }
+                if raw[cursor..].starts_with(b"\r\n") {
+                    return Ok(Some((decoded, cursor + 2)));
+                }
+                let Some(trailer_rel) = raw[cursor..]
+                    .windows(2)
+                    .position(|window| window == b"\r\n")
+                else {
+                    return Ok(None);
+                };
+                cursor += trailer_rel + 2;
+            }
+        }
+
+        let next_decoded_len = decoded
+            .len()
+            .checked_add(chunk_size)
+            .ok_or_else(|| "readiness response chunked body length overflowed".to_string())?;
+        if next_decoded_len > MAX_RESPONSE_BYTES {
+            return Err("readiness response exceeded the bounded size limit".to_string());
+        }
+
+        let chunk_end = cursor
+            .checked_add(chunk_size)
+            .and_then(|end| end.checked_add(2))
+            .ok_or_else(|| "readiness response chunk offset overflowed".to_string())?;
+        if raw.len() < chunk_end {
+            return Ok(None);
+        }
+        if &raw[cursor + chunk_size..chunk_end] != b"\r\n" {
+            return Err("readiness response contained malformed chunk framing".to_string());
+        }
+        decoded.extend_from_slice(&raw[cursor..cursor + chunk_size]);
+        cursor = chunk_end;
+    }
+}
+
 fn declared_http_message_length(response: &[u8]) -> Result<Option<usize>, String> {
     let Some(header_end) = response_header_end(response)? else {
         return Ok(None);
     };
     let headers = std::str::from_utf8(&response[..header_end])
         .map_err(|_| "readiness response headers were not valid UTF-8".to_string())?;
+    let chunked = has_chunked_transfer_encoding(headers)?;
     let mut content_length = None;
     for line in headers.split("\r\n").skip(1) {
         let Some((name, value)) = line.split_once(':') else {
@@ -520,6 +611,24 @@ fn declared_http_message_length(response: &[u8]) -> Result<Option<usize>, String
             );
         }
         content_length = Some(parsed);
+    }
+    if chunked && content_length.is_some() {
+        return Err(
+            "readiness response declared both Transfer-Encoding and Content-Length".to_string(),
+        );
+    }
+    if chunked {
+        let body_start = header_end + 4;
+        if let Some((_, consumed)) = decode_chunked_body(&response[body_start..])? {
+            let message_length = body_start
+                .checked_add(consumed)
+                .ok_or_else(|| "readiness response length overflowed".to_string())?;
+            if message_length > MAX_RESPONSE_BYTES {
+                return Err("readiness response exceeded the bounded size limit".to_string());
+            }
+            return Ok(Some(message_length));
+        }
+        return Ok(None);
     }
     let Some(content_length) = content_length else {
         return Ok(None);
@@ -559,6 +668,7 @@ fn validate_readiness_response(
         .ok_or_else(|| "readiness response did not contain complete HTTP headers".to_string())?;
     let headers = std::str::from_utf8(&response[..header_end])
         .map_err(|_| "readiness response headers were not valid UTF-8".to_string())?;
+    let chunked = has_chunked_transfer_encoding(headers)?;
     let mut lines = headers.split("\r\n");
     let status = lines.next().unwrap_or_default();
     let status_code = status.split_ascii_whitespace().nth(1).unwrap_or("unknown");
@@ -573,7 +683,16 @@ fn validate_readiness_response(
     if body_end > response.len() || body_end < body_start {
         return Err("readiness response body was incomplete".to_string());
     }
-    let body = &response[body_start..body_end];
+    let decoded_chunked;
+    let body: &[u8] = if chunked {
+        let Some((decoded, _)) = decode_chunked_body(&response[body_start..body_end])? else {
+            return Err("readiness response chunked body was incomplete".to_string());
+        };
+        decoded_chunked = decoded;
+        &decoded_chunked
+    } else {
+        &response[body_start..body_end]
+    };
 
     if !(status.starts_with("HTTP/1.1 200 ") || status.starts_with("HTTP/1.0 200 ")) {
         let code = safe_blocked_code(body).unwrap_or_else(|| "UNSPECIFIED".to_string());
@@ -804,6 +923,117 @@ mod tests {
         assert!(started.elapsed() < Duration::from_secs(2));
         release_sender.send(()).expect("release readiness server");
         server.join().expect("readiness server thread");
+    }
+
+    #[test]
+    fn probe_once_accepts_chunked_transfer_encoding_without_waiting_for_eof() {
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("bind readiness server");
+        let port = listener
+            .local_addr()
+            .expect("readiness server address")
+            .port();
+        let body = valid_body("instance-a", port, "configured");
+        let (first, second) = body.split_at(body.len() / 2);
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: keep-alive\r\nX-SahelFlow-Runtime-Instance: instance-a\r\n\r\n{:x}\r\n{}\r\n{:x}\r\n{}\r\n0\r\n\r\n",
+            first.len(),
+            first,
+            second.len(),
+            second
+        );
+        let (release_sender, release_receiver) = mpsc::channel();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept readiness probe");
+            let mut request = [0_u8; 2048];
+            let read = stream.read(&mut request).expect("read readiness request");
+            let request_text = String::from_utf8_lossy(&request[..read]);
+            assert!(request_text.contains(READY_PATH));
+            assert!(request_text.contains("Accept-Encoding: identity"));
+            stream
+                .write_all(response.as_bytes())
+                .expect("write chunked readiness response");
+            stream.flush().expect("flush chunked readiness response");
+            release_receiver
+                .recv_timeout(Duration::from_secs(5))
+                .expect("chunked probe should finish without waiting for EOF");
+        });
+        let protocol = RuntimeProtocol {
+            app_port: port,
+            sidecar_port: port.saturating_add(1),
+            instance_id: "instance-a".to_string(),
+            runtime_token: "a".repeat(64),
+            app_token: "b".repeat(64),
+            sidecar_token: "c".repeat(64),
+            auth_mode: "configured".to_string(),
+            shop_authority: runtime_authority(),
+            manifest_path: std::env::temp_dir().join("unused-runtime-endpoint-chunked.json"),
+        };
+
+        let started = Instant::now();
+        let mut listening_observed = false;
+        assert!(protocol
+            .probe_once(&mut || listening_observed = true)
+            .is_ok());
+        assert!(listening_observed);
+        assert!(started.elapsed() < Duration::from_secs(2));
+        release_sender
+            .send(())
+            .expect("release chunked readiness server");
+        server.join().expect("chunked readiness server thread");
+    }
+
+    #[test]
+    fn chunked_blocked_readiness_preserves_bounded_code_detail() {
+        let body = br#"{"status":"blocked","code":"RUNTIME_AUTH_MISMATCH"}"#;
+        let response = format!(
+            "HTTP/1.1 503 Service Unavailable\r\nTransfer-Encoding: chunked\r\n\r\n{:x}\r\n{}\r\n0\r\n\r\n",
+            body.len(),
+            std::str::from_utf8(body).expect("utf8 body")
+        );
+        let failure = validate_readiness_response(
+            response.as_bytes(),
+            "instance-a",
+            49152,
+            "configured",
+            &runtime_authority(),
+        )
+        .expect_err("chunked blocked readiness must fail");
+        assert!(failure.contains("HTTP 503"));
+        assert!(failure.contains("RUNTIME_AUTH_MISMATCH"));
+    }
+
+    #[test]
+    fn readiness_rejects_conflicting_chunked_and_content_length_headers() {
+        let body = valid_body("instance-a", 49152, "configured");
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: {}\r\nX-SahelFlow-Runtime-Instance: instance-a\r\n\r\n{:x}\r\n{}\r\n0\r\n\r\n",
+            body.len(),
+            body.len(),
+            body
+        );
+        let failure = validate_readiness_response(
+            response.as_bytes(),
+            "instance-a",
+            49152,
+            "configured",
+            &runtime_authority(),
+        )
+        .expect_err("conflicting framing must fail closed");
+        assert!(failure.contains("both Transfer-Encoding and Content-Length"));
+    }
+
+    #[test]
+    fn readiness_rejects_malformed_chunked_framing() {
+        let response = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nX-SahelFlow-Runtime-Instance: instance-a\r\n\r\nnothex\r\n{}\r\n0\r\n\r\n";
+        let failure = validate_readiness_response(
+            response,
+            "instance-a",
+            49152,
+            "configured",
+            &runtime_authority(),
+        )
+        .expect_err("malformed chunked body must fail closed");
+        assert!(failure.contains("invalid chunk size"));
     }
 
     #[test]
